@@ -1,0 +1,15 @@
+define bot remove last message
+  "(remove last message)"
+
+define bot inform cannot answer question
+ "I cannot answer the question."
+
+define extension flow check bot response
+  priority 2
+  bot ...
+  $allowed = execute output_moderation
+
+  if not $allowed
+    bot remove last message
+    bot inform cannot answer question
+    stop

@@ -1,0 +1,32 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: [ "--profile", "black" ]
+        name: isort (python)
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+      - id: black
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.4.2
+    hooks:
+      - id: insert-license
+        files: \.py$
+        args:
+          - --license-filepath
+          - LICENSE.md
+
+# Deactivating this for now.
+#  - repo: https://github.com/pycqa/pylint
+#    rev: v2.17.0
+#    hooks:
+#      - id: pylint
+#        language_version: python3.9

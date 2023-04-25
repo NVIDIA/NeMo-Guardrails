@@ -1,0 +1,75 @@
+# Collection of all the prompts
+prompts:
+  general:
+    - content: |-
+        {general_instructions}
+
+        {history}
+        Assistant:
+
+  # Prompt for detecting the user message canonical form
+  detect_user_message_canonical_form:
+    - content: |-
+        """
+        {general_instruction}
+        """
+
+        # This is how a conversation between a user and the bot can go:
+
+        {sample_conversation}
+
+        # This how the user talks:
+
+        {examples}
+
+        # This is the current conversation between the user and the bot:
+
+        {sample_conversation_two_turns}
+        {history}
+
+  # Prompt for predicting the next step
+  predict_next_step:
+    - content: |-
+        """
+        {general_instruction}
+        """
+
+        # This is how a conversation between a user and the bot can go:
+
+        {sample_conversation}
+
+        # This how the bot thinks:
+
+        {examples}
+
+        # This is the current conversation between the user and the bot:
+
+        {sample_conversation_two_turns}
+        {history}
+
+
+  # Prompt for detecting the user message canonical form
+  generate_bot_message:
+    - content: |-
+        """
+        {general_instruction}
+        """
+
+        # This is how a conversation between a user and the bot can go:
+
+        {sample_conversation}
+
+        # This is some additional context:
+
+        ```markdown
+        {relevant_chunks}
+        ```
+
+        # This how the bot talks:
+
+        {examples}
+
+        # This is the current conversation between the user and the bot:
+
+        {sample_conversation_two_turns}
+        {history}

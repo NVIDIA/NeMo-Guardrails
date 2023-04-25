@@ -1,0 +1,48 @@
+define user ask about capabilities
+  "What can you do?"
+  "What can you help me with?"
+  "tell me what you can do"
+  "tell me about you"
+  "How can I use your help?"
+
+define flow
+  user ask about capabilities
+  bot inform capabilities
+
+define bot inform capabilities
+  "I am an AI assistant built to showcase Security features of NeMo Guardrails! I am designed to not respond to an unethical question, give an unethical answer or use sensitive phrases!"
+
+define user express greeting
+  "Hi"
+  "Hello!"
+  "Hey there!"
+
+define bot express greeting
+  "Hey there!"
+
+define bot ask how are you
+  "How are you feeling today?"
+
+define user express feeling good
+  "I'm feeling good"
+  "Good"
+  "Perfect"
+
+define user express feeling bad
+  "Not so good"
+  "Bad"
+  "Sad"
+
+define flow
+  user express greeting
+  bot express greeting
+  bot ask how are you
+
+  when user express feeling good
+    bot express positive emotion
+  else when user express feeling bad
+    bot express empathy
+
+define flow
+  user ask general question
+  bot response to general question

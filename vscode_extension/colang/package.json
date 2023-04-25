@@ -1,0 +1,15 @@
+{
+    "name": "colang",
+    "displayName": "Colang",
+    "description": "Syntax highlighting for Colang",
+    "version": "0.0.1",
+    "publisher": "Nvidia",
+    "engines": {
+      "vscode": "^1.0.0"
+    },
+    "fileExtensions": [
+      ".co",
+      ".colang"
+  ]
+
+  }

@@ -1,0 +1,23 @@
+define user ask capabilities
+  "What can you do?"
+  "What can you help me with?"
+  "tell me what you can do"
+  "tell me about you"
+
+define bot inform capabilities
+  "I am an AI assistant that helps answer mathematical questions. My core mathematical skills are powered by wolfram alpha."
+
+define flow
+  user ask capabilities
+  bot inform capabilities
+
+define flow
+  user ask math question
+  execute wolfram alpha request
+  bot respond to math question
+
+define user ask math question
+  "What is the square root of 53?"
+  "What is Pythagoras' theorem?"
+  "What is the integral of sin(x) with respect to x"
+  "Solve the following equation: x^2 + 2*x + 1 = 0"

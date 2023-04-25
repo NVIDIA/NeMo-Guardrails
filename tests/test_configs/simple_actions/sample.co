@@ -1,0 +1,30 @@
+define user express greeting
+  "hi"
+  "hello"
+  "hey"
+
+define user request help
+  "I need help"
+  "Can you help me with something?"
+
+define user request access
+  "I want access to X"
+
+define flow
+  user express greeting
+  $account = execute fetch_profile
+  bot express greeting
+
+define bot express greeting
+  "Hello!"
+
+define bot offer to help
+  "How can I help you today?"
+
+define flow access request
+  user request access
+  $is_allowed = execute check_access(account=$account)
+  if $is_allowed
+    bot inform access granted
+  else
+    bot inform access denied

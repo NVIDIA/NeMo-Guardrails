@@ -1,0 +1,8 @@
+define user ask summary
+  "Give me a summary of the doc"
+  "Please summarize this for me
+
+define flow summarize document
+  user ask about asteroids
+  $answer = execute analyze_document(document_path="tests/test_configs/summarization/article.txt")
+  bot $answer

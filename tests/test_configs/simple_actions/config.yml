@@ -1,0 +1,4 @@
+models:
+  - type: main
+    engine: fake
+    model: fake

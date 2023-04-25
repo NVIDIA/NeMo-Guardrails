@@ -1,0 +1,13 @@
+define bot inform cannot answer
+    "I am not able to answer the question."
+
+define extension flow check jailbreak
+  """We set the priority to 2 as we want this to have priority over normal flows"""
+  priority 2
+
+  user ...
+  $allowed = execute check_jailbreak
+
+  if not $allowed
+    bot inform cannot answer
+    stop

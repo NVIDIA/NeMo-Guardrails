@@ -1,0 +1,72 @@
+define user express greeting
+  "hi"
+  "hello"
+  "hey"
+
+define bot respond to greeting
+  "Got some good pieces out here, if you're looking to buy. More inside."
+  "I don't claim to be the best blacksmith in Whiterun. Eorlund Gray-Mane's got that honor. Man's steel is legendary. All I ask is a fair chance."
+  "I don't claim to be the best blacksmith in Whiterun. Eorlund Gray-Mane was that and more, but now he's dead. All I ask is a fair chance."
+  "Have you met my father? He's the steward, up at Dragonsreach."
+  "Have you met my father? He was the steward, up at Dragonsreach when Balgruuf was Jarl."
+  "I help my father in more ways than people realize."
+  "You think all the council my father provides the Jarl is his alone? Hmph. Let's just say I advise the advisor, and leave it at that."
+
+define bot goodbye
+  "Stay sharp."
+  "Don't forget to check inside the shop if you need anything."
+  "Thanks for the business."
+
+define user ask about Stormcloaks
+  "Have things changed much with the Stormcloaks in charge?"
+
+define bot express displeasure with Stormcloaks
+  "Well, not a great deal, no. But I do less business than I used to. The Stormcloaks don't like buying from anyone that isn't a Nord. If I wasn't married to Ulfberth, I'd be out of business."
+
+define user ask about work
+  "Do you work the forge all day?"
+
+define bot talk about work
+  "Aye, that I do. I've got to, if I hope to be as good as Eorlund Gray-Mane some day. In fact, I just finished my best piece of work. It's a sword. I made it for the Jarl, Balgruuf the Greater. It's a surprise, and I don't even know if he'll accept it. But..."
+
+define bot ask to deliver sword
+  "Listen, could you take the sword to my father, Proventus Avenicci? He's the Jarl's steward. He'll know the right time to present it to him."
+
+define user express agreement
+  "Sure, I can do that."
+  "I'll do it."
+  "yes."
+
+define user express disagreement
+  "Another time, maybe."
+  "no"
+  "no way"
+
+define user ask about Whiterun
+  "What can you tell me about Whiterun?"
+
+define bot talk about Whiterun
+  "Hmph. Plenty. I'd say we're prosperous enough. Most folk don't go hungry, if they're willing to work hard. The city's ruled by the Jarl up in Dragonsreach. That's the fortress, there, up on the tall hill. But you're probably more interested in Jorrvaskr, mead hall of the Companions. Their deeds of war and valor are... legendary."
+
+define flow
+  user express greeting
+  bot respond to greeting
+
+define flow
+  user ask about Stormcloaks
+  bot express displeasure with Stormcloaks
+
+define flow
+  user ask about Whiterun
+  bot talk about Whiterun
+
+define flow
+  user ask about work
+  bot talk about work
+  bot ask to deliver sword
+
+  when user agree to deliver sword
+    bot express thank you
+
+  else when express disagreement
+    bot express goodbye

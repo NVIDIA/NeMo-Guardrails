@@ -1,0 +1,5 @@
+# Using OpenAI
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003

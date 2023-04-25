@@ -1,0 +1,29 @@
+define flow generate user intent
+  """Turn the raw user utterance into a canonical form."""
+
+  event user_said(content="...")
+  execute generate_user_intent
+
+
+define flow generate next step
+  """Generate the next step when there isn't any.
+
+  We set the priority at 0.9 so it is lower than the default which is 1. So, if there
+  is a flow that has a next step, it will have priority over this one.
+  """
+  priority 0.9
+
+  user ...
+  execute generate_next_step
+
+
+define extension flow generate bot message
+  """Generate the bot utterance for a bot message.
+
+  We always want to generate an utterance after a bot intent, hence the high priority.
+  """
+  priority 100
+
+  bot ...
+  execute retrieve_relevant_chunks
+  execute generate_bot_message

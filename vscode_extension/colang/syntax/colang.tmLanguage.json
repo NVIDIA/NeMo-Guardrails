@@ -1,0 +1,20 @@
+{
+  "name": "Colang",
+  "scopeName": "source.colang",
+  "fileTypes": ["co"],
+  "patterns": [
+      {
+          "include": "#keywords"
+      }
+  ],
+  "repository": {
+      "keywords": {
+          "patterns": [
+              {
+                  "match": "\\b(user|bot|agent)\\b",
+                  "name": "keyword.colang"
+              }
+          ]
+      }
+  }
+}
