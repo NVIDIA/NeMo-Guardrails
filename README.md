@@ -1,9 +1,9 @@
 # NeMo Guardrails
 
-[![Tests](https://img.shields.io/badge/Tests-passing-green)]()
-[![Project Status](https://img.shields.io/badge/Status-alpha-orange)]()
-[![PyPI version](https://img.shields.io/badge/PyPI-0.1.0-blue)](https://pypi.org/project/your-package-name/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://github.com/NVIDIA/NeMo-Guardrails/blob/main/LICENSE)
+![Tests](https://img.shields.io/badge/Tests-passing-green)
+[![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://github.com/NVIDIA/NeMo-Guardrails/blob/main/LICENSE.md)
+![Project Status](https://img.shields.io/badge/Status-alpha-orange)
+[![PyPI version](https://badge.fury.io/py/nemoguardrails.svg)](https://badge.fury.io/py/nemoguardrails)
 [![Python 3.7+](https://img.shields.io/badge/python-3.7%2B-green)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
