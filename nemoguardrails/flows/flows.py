@@ -264,6 +264,7 @@ def compute_next_state(state: State, event: dict) -> State:
             else:
                 # If a flow finished, we mark it as completed
                 flow_state.status = FlowStatus.COMPLETED
+                new_state.flow_states.append(flow_state)
 
                 if flow_config.is_extension:
                     extension_flow_completed = True
@@ -361,22 +362,30 @@ def compute_next_state(state: State, event: dict) -> State:
     for flow_state in new_state.flow_states:
         if flow_state.status == FlowStatus.INTERRUPTED:
             # TODO: optimize this with a dict of statuses
-            for _flow_state in new_state.flow_states:
-                if _flow_state.uid == flow_state.interrupted_by:
-                    if _flow_state.status == FlowStatus.COMPLETED:
-                        flow_state.status = FlowStatus.ACTIVE
-                        flow_state.interrupted_by = []
+            # If already there are no more flows to interrupt, we should resume
+            should_resume = flow_state.interrupted_by is None
 
-                        flow_config = state.flow_configs[flow_state.flow_id]
-                        # Also, they can be used for decision as well.
+            # Check if it was waiting on a completed flow
+            if not should_resume:
+                for _flow_state in new_state.flow_states:
+                    if _flow_state.uid == flow_state.interrupted_by:
+                        if _flow_state.status == FlowStatus.COMPLETED:
+                            should_resume = True
+                        break
 
-                        if (
-                            new_state.next_step is None
-                            or next_step_priority < flow_config.priority
-                        ) and _is_actionable(flow_config.elements[flow_state.head]):
-                            new_state.next_step = flow_config.elements[flow_state.head]
-                            next_step_priority = flow_config.priority
-                    break
+            if should_resume:
+                flow_state.status = FlowStatus.ACTIVE
+                flow_state.interrupted_by = None
+
+                flow_config = state.flow_configs[flow_state.flow_id]
+                # Also, they can be used for decision as well.
+
+                if (
+                    new_state.next_step is None
+                    or next_step_priority < flow_config.priority
+                ) and _is_actionable(flow_config.elements[flow_state.head]):
+                    new_state.next_step = flow_config.elements[flow_state.head]
+                    next_step_priority = flow_config.priority
 
     return new_state
 

@@ -45,7 +45,6 @@ def test_1():
             '  "Hello there!"',
             '  "How are you feeling?"',
             "  express negative emotion",
-            "  retrieve_relevant_chunks",
             '  "I\'m sorry to hear that."',
         ],
     )
@@ -65,7 +64,6 @@ def test_2():
             '  "Hello there!"',
             '  "How are you feeling?"',
             "  express positive emotion",
-            "  retrieve_relevant_chunks",
             '  "Awesome!"',
         ],
     )
