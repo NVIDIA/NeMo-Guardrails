@@ -247,9 +247,6 @@ class Runtime:
                     var_name = parameter_name[11:]
                     kwargs[parameter_name] = context.get(var_name)
 
-            # We also add the "special" parameters.
-            parameters = inspect.signature(fn).parameters
-
             # If there are parameters which are variables, we replace with actual values.
             for k, v in kwargs.items():
                 if isinstance(v, str) and v.startswith("$"):

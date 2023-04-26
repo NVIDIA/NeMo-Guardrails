@@ -64,7 +64,7 @@ def _get_qa_chain(llm):
         os.path.join(
             os.path.dirname(__file__),
             "..",
-            "examples/topical_rail/sample_rails/kb/report.md",
+            "examples/grounding_rail/kb/report.md",
         )
     )
     docs = loader.load()
