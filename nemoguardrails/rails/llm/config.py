@@ -160,7 +160,7 @@ class RailsConfig(BaseModel):
 
         elif os.path.isdir(config_path):
             # Iterate all .yml files and join them
-            raw_config = {"instructions": default_config["instructions"]}
+            raw_config = {}
 
             for root, dirs, files in os.walk(config_path):
                 for file in files:
@@ -192,6 +192,10 @@ class RailsConfig(BaseModel):
         else:
             raise ValueError(f"Invalid config path {config_path}.")
 
+        # If there are no instructions, we use the default ones.
+        if len(raw_config.get("instructions", [])) == 0:
+            raw_config["instructions"] = default_config["instructions"]
+
         raw_config["config_path"] = config_path
 
         return RailsConfig.parse_object(raw_config)
@@ -201,7 +205,7 @@ class RailsConfig(BaseModel):
         colang_content: Optional[str] = None, yaml_content: Optional[str] = None
     ):
         """Loads a configuration from the provided colang/YAML content."""
-        raw_config = {"instructions": default_config["instructions"]}
+        raw_config = {}
 
         if colang_content:
             _join_config(
@@ -210,6 +214,10 @@ class RailsConfig(BaseModel):
 
         if yaml_content:
             _join_config(raw_config, yaml.safe_load(yaml_content))
+
+        # If there are no instructions, we use the default ones.
+        if len(raw_config.get("instructions", [])) == 0:
+            raw_config["instructions"] = default_config["instructions"]
 
         return RailsConfig.parse_object(raw_config)
 
