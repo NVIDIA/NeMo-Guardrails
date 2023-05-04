@@ -119,6 +119,17 @@ class LLMGenerationActions:
 
         items = []
         for flow in self.config.flows:
+            # We don't include the default system flows in the index because we don't want
+            # the LLM to predict system actions.
+            if flow.get("id") in [
+                "generate user intent",
+                "generate next step",
+                "generate bot message",
+            ]:
+                continue
+
+            # TODO: check if the flow has system actions and ignore the flow.
+
             colang_flow = flow.get("source_code") or flow_to_colang(flow)
 
             # We index on the full body for now
@@ -308,7 +319,7 @@ class LLMGenerationActions:
 
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
-                    examples += f"{result.text}\n"
+                    examples += f"{result.text}\n\n"
 
             predict_next_step_prompt = PromptTemplate(
                 input_variables=[
