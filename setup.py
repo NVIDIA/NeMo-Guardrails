@@ -68,7 +68,7 @@ setup(
     install_requires=[
         "pydantic==1.10.6",
         "aiohttp==3.8.4",
-        "langchain==0.0.137",
+        "langchain==0.0.157",
         "requests==2.28.2",
         "typer==0.7.0",
         "PyYAML~=6.0",

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Excluded the default system flows from the "next step generation" prompt.
+- Updated langchain to 0.0.157.
 
 ### Fixed
 
