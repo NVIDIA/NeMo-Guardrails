@@ -31,6 +31,7 @@ class Step(Enum):
     DETECT_USER_MESSAGE_CANONICAL_FORM = "detect_user_message_canonical_form"
     PREDICT_NEXT_STEP = "predict_next_step"
     GENERATE_BOT_MESSAGE = "generate_bot_message"
+    GENERATE_VALUE = "generate_value"
 
 
 # Load the dictionary of prompts from the `prompts.yml` file
@@ -66,5 +67,8 @@ def get_prompt(config: RailsConfig, step: Step) -> dict:
 
     if step == Step.GENERATE_BOT_MESSAGE:
         return _prompts["generate_bot_message"][0]
+
+    if step == Step.GENERATE_VALUE:
+        return _prompts["generate_value"][0]
 
     raise ValueError(f"Unknown step: {step}")
