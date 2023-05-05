@@ -44,7 +44,7 @@ def test_generate_value():
         else:
             return "Result unknown."
 
-    chat.app.register_action(mock_wolfram_alpha_request_action, "wolfram_alpha_request")
+    chat.app.register_action(mock_wolfram_alpha_request_action, "wolfram alpha request")
 
     chat >> "What is the largest prime factor for 1024"
     chat << "The largest prime factor for 1024 is 2."
