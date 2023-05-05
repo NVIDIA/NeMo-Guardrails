@@ -39,6 +39,10 @@ The user guide covers the core details of the Guardrails toolkit and how to conf
 * [Server Guide](./user_guide/server-guide.md): General explanation for the Guardrails Servers.
 * [Interface Guide](./user_guide/server-guide.md): Learn the different ways in which to interact with the bot!
 
+The following guides explain in more details various specific topics:
+
+* [Extract User Provided Values](./user_guide/advanced/extract-user-provided-values.md): Learn how to extract user-provided values like a name, a date or a query.
+
 ## Architecture Guide
 
 This guide sheds more light on the infrastructure details and the execution flow for a query when the runtime is used:
