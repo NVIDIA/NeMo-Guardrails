@@ -156,11 +156,11 @@ class LLMGenerationActions:
         self.kb.init()
         self.kb.build()
 
-    def _get_general_instruction(self):
+    def _get_instruction(self, instruction_type):
         """Helper to extract the general instruction."""
         text = ""
         for instruction in self.config.instructions:
-            if instruction.type == "general":
+            if instruction.type == instruction_type:
                 text = instruction.content
 
                 # We stop at the first one for now
@@ -240,7 +240,7 @@ class LLMGenerationActions:
                 history=history,
                 examples=examples,
                 sample_conversation=self.config.sample_conversation,
-                general_instruction=self._get_general_instruction(),
+                general_instruction=self._get_instruction("general"),
                 sample_conversation_two_turns=self._get_sample_conversation_two_turns(),
             )
             if self.verbose:
@@ -342,7 +342,7 @@ class LLMGenerationActions:
                 sample_conversation=remove_text_messages_from_history(
                     self.config.sample_conversation
                 ),
-                general_instruction=self._get_general_instruction(),
+                general_instruction=self._get_instruction("general"),
                 sample_conversation_two_turns=remove_text_messages_from_history(
                     self._get_sample_conversation_two_turns()
                 ),
@@ -419,6 +419,7 @@ class LLMGenerationActions:
                     "examples",
                     "sample_conversation",
                     "general_instruction",
+                    "bot_message_instruction",
                     "sample_conversation_two_turns",
                     "relevant_chunks",
                 ],
@@ -432,7 +433,8 @@ class LLMGenerationActions:
                 "examples": examples,
                 "relevant_chunks": relevant_chunks,
                 "sample_conversation": self.config.sample_conversation,
-                "general_instruction": self._get_general_instruction(),
+                "general_instruction": self._get_instruction("general"),
+                "bot_message_instruction": self._get_instruction("bot_message"),
                 "sample_conversation_two_turns": self._get_sample_conversation_two_turns(),
             }
             bot_message_prompt_string = bot_message_prompt.format(**prompt_inputs)
