@@ -53,6 +53,7 @@ prompts:
     - content: |-
         """
         {general_instruction}
+        {bot_message_instruction}
         """
 
         # This is how a conversation between a user and the bot can go:

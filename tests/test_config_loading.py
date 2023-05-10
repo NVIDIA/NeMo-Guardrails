@@ -47,6 +47,9 @@ def test_instructions_override():
         - type: "general"
           content: |
             Below is a conversation between a helpful AI assistant and a user.
+        - type: "bot_message"
+          content: |
+            Bot must responses in English.
         """,
     )
 
@@ -54,5 +57,9 @@ def test_instructions_override():
         Instruction(
             type="general",
             content="Below is a conversation between a helpful AI assistant and a user.\n",
-        )
+        ),
+        Instruction(
+            type="bot_message",
+            content="Bot must responses in English.\n",
+        ),
     ]
