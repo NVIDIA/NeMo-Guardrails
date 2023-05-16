@@ -53,5 +53,5 @@ def test_get_llm_provider_names():
 
     provider_names = get_llm_provider_names()
 
-    for provider_name in provider_names:
-        assert provider_name in supported_providers
+    for provider_name in supported_providers:
+        assert provider_name in provider_names
