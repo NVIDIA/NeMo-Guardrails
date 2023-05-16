@@ -200,3 +200,7 @@ class LLMRails:
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""
         self.runtime.register_action(action, name)
+
+    def register_action_param(self, name: str, value: Any):
+        """Registers a custom action parameter."""
+        self.runtime.register_action_param(name, value)

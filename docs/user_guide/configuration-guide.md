@@ -5,6 +5,8 @@ To set up a bot, we need the configuration to include the following:
 - **General Options** - which LM to use, general instructions (similar to system prompts), and sample conversation
 - **Guardrails Definitions** - files in Colang that define the dialog flows and guardrails
 - **Knowledge Base Documents**[Optional] - documents that can be used to provide context for bot responses
+- **Actions** - custom actions implemented in python
+- **Initialization Code** - custom python code performing additional initialization e.g. registering a new type of LLM
 
 These files are typically included in a folder (let's call it `config`) which can be referenced either when initializing a `RailsConfig` instance or when starting the CLI Chat or Server.
 
@@ -14,7 +16,40 @@ These files are typically included in a folder (let's call it `config`) which ca
 │   ├── file_1.co
 │   ├── file_2.co
 │   ├── ...
+│   ├── actions.py
+│   ├── config.py
 │   └── config.yml
+```
+
+The custom actions can be placed either in an `actions.py` module in the root of the config or in an `actions` sub-package:
+
+```
+.
+├── config
+│   ├── file_1.co
+│   ├── file_2.co
+│   ├── ...
+│   ├── actions
+│   │   ├── file_1.py
+│   │   ├── file_2.py
+│   │   └── ...
+│   ├── config.py
+│   └── config.yml
+```
+
+If present, the `config.py` module is loaded before initializing the `LLMRails` instance.
+
+If the `config.py` module contains an `init` function, it gets called as part of the initialization of the `LLMRails` instance. For example, you can use the `init` function to initialize the connection to a database and register it as a custom action parameter using the `register_action_param(...)` function:
+
+```python
+from nemoguardrails import LLMRails
+
+def init(app: LLMRails):
+    # Initialize the database connection
+    db = ...
+
+    # Register the action parameter
+    app.register_action_param("db", db)
 ```
 
 ## General Options
