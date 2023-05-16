@@ -15,6 +15,7 @@
 
 """LLM Rails entry point."""
 import asyncio
+import importlib.util
 import logging
 import os
 from typing import Any, List, Optional
@@ -59,6 +60,16 @@ class LLMRails:
         # We add the default flows to the config.
         self.config.flows.extend(default_flows)
 
+        # We check if the configuration has a config.py module associated with it.
+        config_module = None
+        if self.config.config_path:
+            filepath = os.path.join(self.config.config_path, "config.py")
+            if os.path.exists(filepath):
+                filename = os.path.basename(filepath)
+                spec = importlib.util.spec_from_file_location(filename, filepath)
+                config_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(config_module)
+
         # First, we initialize the runtime.
         self.runtime = Runtime(config=config, verbose=verbose)
 
@@ -71,6 +82,10 @@ class LLMRails:
         self.runtime.register_actions(actions)
         # We also register the kb as a parameter that can be passed to actions.
         self.runtime.register_action_param("kb", actions.kb)
+
+        # If we have a config_module with an `init` function, we call it.
+        if config_module is not None and hasattr(config_module, "init"):
+            config_module.init(self)
 
     def _init_llm(self):
         """Initializes the right LLM engine based on the configuration."""
