@@ -87,6 +87,30 @@ Supported values are: `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `
 **IMPORTANT**: while from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g. openai). For others, you can optimize the prompts yourself see [...](#) section.
 
 
+#### Custom LLM Models
+
+To register a custom LLM provider, you need to create a class that inherits from `BaseLangaugeModel` and register it using `register_llm_provider`.
+
+```python
+from langchain.base_language import BaseLanguageModel
+from nemoguardrails.llm.providers import register_llm_provider
+
+
+class CustomLLM(BaseLanguageModel):
+    """A custom LLM."""
+
+register_llm_provider("custom_llm", CustomLLM)
+```
+
+You can then use the custom LLM provider in your configuration:
+
+```yaml
+models:
+  - type: main
+    engine: custom_llm
+```
+
+
 ### General Instruction
 
 The general instruction (similar to a system prompt) gets appended at the beginning of every prompt, and you can configure it as shown below:
