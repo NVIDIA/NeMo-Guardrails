@@ -17,14 +17,15 @@
 import asyncio
 import logging
 import os
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from langchain.llms import BaseLLM, OpenAI
+from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
 from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.language.parser import parse_colang_file
+from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 
@@ -82,10 +83,30 @@ class LLMRails:
         #  to search for the main model config.
         main_llm_config = self.config.models[0]
 
-        if main_llm_config.engine == "openai":
-            self.llm = OpenAI(model_name=main_llm_config.model, temperature=0.1)
-        else:
+        if main_llm_config.engine not in get_llm_provider_names():
             raise Exception(f"Unknown LLM engine: {main_llm_config.engine}")
+
+        provider_cls = get_llm_provider(main_llm_config)
+
+        # We need to compute the kwargs for initializing the LLM
+        kwargs = main_llm_config.parameters
+
+        # We also need to pass the model, if specified
+        if main_llm_config.model:
+            # Some LLM providers use `model_name` instead of model. For backward compatibility
+            # we keep this hard-coded mapping.
+            if main_llm_config.engine in [
+                "azure",
+                "openai",
+                "gooseai",
+                "nlpcloud",
+                "petals",
+            ]:
+                kwargs["model_name"] = main_llm_config.model
+            else:
+                kwargs["model"] = main_llm_config.model
+
+        self.llm = provider_cls(**kwargs)
 
     async def generate_async(
         self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None

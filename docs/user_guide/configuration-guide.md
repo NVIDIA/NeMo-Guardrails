@@ -1,8 +1,8 @@
 # Configuration Guide
 
-To setup a bot, we need the configuration to include the following:
+To set up a bot, we need the configuration to include the following:
 
-- **General Options** - which LM to use, general instructions (similar to system prompts) and sample conversation
+- **General Options** - which LM to use, general instructions (similar to system prompts), and sample conversation
 - **Guardrails Definitions** - files in Colang that define the dialog flows and guardrails
 - **Knowledge Base Documents**[Optional] - documents that can be used to provide context for bot responses
 
@@ -37,8 +37,19 @@ The meaning of the attributes is as follows:
 - `type`: is set to "main" indicating the main LLM model. In the future, there is planned support for multiple LLMs that can be used for various tasks.
 - `engine`: the LLM provider; currently, only "openai" is supported.
 - `model`: the name of the model; currently, the recommended option is `text-davinci-003`
+- `parameters`: any additional parameters e.g. `temperature`, `top_k`, etc.
 
 Currently, only one model should be specified in the `models` key.
+
+#### Supported LLM Models
+
+You can use any LLM provider that is supported by LangChain.
+
+Supported values are: `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `bananadev`, `cerebriumai`, `cohere`, `deepinfra`, `forefrontai`, `google_palm`, `gooseai`, `gpt4all`, `huggingface_endpoint`, `huggingface_hub`, `huggingface_pipeline`, `huggingface_textgen_inference`, `human-input`, `llamacpp`, `modal`, `nlpcloud`, `openai`, `petals`, `pipelineai`, `replicate`, `rwkv`, `sagemaker_endpoint`, `self_hosted`, `self_hosted_hugging_face`, `stochasticai`.
+
+**NOTE**: to use any of the providers you will need to install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instruct you on what package should be installed.
+
+**IMPORTANT**: while from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g. openai). For others, you can optimize the prompts yourself see [...](#) section.
 
 
 ### General Instruction
@@ -58,7 +69,7 @@ In the future, multiple types of instructions will be supported, hence the `type
 
 ### Sample Conversation
 
-The sample conversation sets the tone for how the conversation between the user and the bot should go. It will help the LLM learn better the format, the tone of the conversation and how verbose responses should be. This section should have a minimum of two turns. Since we append this sample conversation to every prompt, it is recommended to keep it short and relevant.
+The sample conversation sets the tone for how the conversation between the user and the bot should go. It will help the LLM learn better the format, the tone of the conversation, and how verbose responses should be. This section should have a minimum of two turns. Since we append this sample conversation to every prompt, it is recommended to keep it short and relevant.
 
 ```yaml
 sample_conversation: |
@@ -109,4 +120,4 @@ By default, an `LLMRails` instance supports using a set of documents as context 
 │       └── ...
 ```
 
-Currently, only the markdown format is supported. Support for other formats will be added in the near future.
+Currently, only the Markdown format is supported. Support for other formats will be added in the near future.

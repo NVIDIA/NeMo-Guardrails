@@ -15,7 +15,7 @@
 
 """Module for the configuration of rails."""
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel
@@ -38,7 +38,11 @@ class Model(BaseModel):
 
     type: str
     engine: str
-    model: str
+    model: Optional[str] = Field(
+        default=None,
+        description="The name of the model. If not specified, it should be specified through the parameters attribute.",
+    )
+    parameters: Dict[str, Any] = Field(default_factory=dict)
 
 
 class Instruction(BaseModel):
