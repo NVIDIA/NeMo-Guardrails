@@ -617,21 +617,30 @@ def _process_ellipsis(elements):
        $math_query = generate_value("Extract the math query from the user's input")
        ```
     """
+    new_elements = []
 
     # Enumerate the elements using `enumerate`
-    for i, element in list(enumerate(elements)):
+    for i in range(len(elements)):
+        element = elements[i]
+
         if element["_type"] == "set" and element["expression"] == "...":
             instructions = element.get("_source_mapping", {}).get("comment")
             var_name = element["key"]
 
-            elements[i] = {
-                "_type": "run_action",
-                "action_name": "generate_value",
-                "action_params": {
-                    "instructions": instructions,
-                },
-                "action_result_key": var_name,
-            }
+            new_elements.append(
+                {
+                    "_type": "run_action",
+                    "action_name": "generate_value",
+                    "action_params": {
+                        "instructions": instructions,
+                    },
+                    "action_result_key": var_name,
+                }
+            )
+        else:
+            new_elements.append(element)
+
+    return new_elements
 
 
 def parse_flow_elements(items):
@@ -643,7 +652,7 @@ def parse_flow_elements(items):
     elements = _resolve_gotos(elements)
 
     # Finally, we proces the ellipsis syntax
-    _process_ellipsis(elements)
+    elements = _process_ellipsis(elements)
 
     return elements
 
