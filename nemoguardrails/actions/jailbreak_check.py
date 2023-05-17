@@ -21,6 +21,7 @@ from langchain import LLMChain, PromptTemplate
 from langchain.llms import BaseLLM
 
 from nemoguardrails.actions.actions import ActionResult, action
+from nemoguardrails.logging.callbacks import logging_callbacks
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +43,9 @@ async def check_jailbreak(
         )
 
         jailbreak_check_chain = LLMChain(prompt=prompt, llm=llm)
-        check = await jailbreak_check_chain.apredict(user_input=user_input)
+        check = await jailbreak_check_chain.apredict(
+            callbacks=logging_callbacks, user_input=user_input
+        )
 
         check = check.lower().strip()
         log.info(f"Jailbreak check result is {check}.")

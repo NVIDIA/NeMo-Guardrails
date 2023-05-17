@@ -14,13 +14,13 @@
 # limitations under the License.
 
 import logging
-import random
 from typing import Optional
 
 from langchain import LLMChain, PromptTemplate
 from langchain.llms import BaseLLM
 
 from nemoguardrails.actions import action
+from nemoguardrails.logging.callbacks import logging_callbacks
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,9 @@ async def output_moderation(
         )
 
         output_moderation_chain = LLMChain(prompt=prompt, llm=llm)
-        check = await output_moderation_chain.apredict(bot_response=bot_response)
+        check = await output_moderation_chain.apredict(
+            callbacks=logging_callbacks, bot_response=bot_response
+        )
 
         check = check.lower().strip()
         log.info(f"Output moderation check result is {check}.")

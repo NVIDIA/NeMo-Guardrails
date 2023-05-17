@@ -22,9 +22,12 @@ import uvicorn
 
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
+from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
 
 app = typer.Typer()
+
+logging.getLogger().setLevel(logging.WARNING)
 
 
 def _check_if_llm_provider_is_configured():
@@ -62,7 +65,7 @@ def chat(
 ):
     """Starts an interactive chat session."""
     if verbose:
-        logging.basicConfig(level=logging.INFO)
+        set_verbose(True)
 
     if len(config) > 1:
         typer.secho(f"Multiple configurations are not supported.", fg=typer.colors.RED)

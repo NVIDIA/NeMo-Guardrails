@@ -35,7 +35,6 @@ from nemoguardrails.actions.llm.utils import (
     get_last_user_utterance_event,
     get_multiline_response,
     get_retrieved_relevant_chunks,
-    print_completion,
     remove_text_messages_from_history,
     strip_quotes,
 )
@@ -43,6 +42,7 @@ from nemoguardrails.kb.basic import BasicEmbeddingsIndex
 from nemoguardrails.kb.index import IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.prompts.prompts import Step, get_prompt
+from nemoguardrails.logging.callbacks import logging_callbacks
 from nemoguardrails.rails.llm.config import RailsConfig
 
 log = logging.getLogger(__name__)
@@ -205,6 +205,7 @@ class LLMGenerationActions:
             #  or use the LLM to detect the canonical form. The below implementation
             #  is for the latter.
 
+            log.info("Phase 1: Generating user intent")
             # Compute the conversation history
             history = get_colang_history(events)
 
@@ -238,14 +239,13 @@ class LLMGenerationActions:
                 prompt=canonical_form_prompt, llm=self.llm, verbose=self.verbose
             )
             result = await chain.apredict(
+                callbacks=logging_callbacks,
                 history=history,
                 examples=examples,
                 sample_conversation=self.config.sample_conversation,
                 general_instruction=self._get_general_instruction(),
                 sample_conversation_two_turns=self._get_sample_conversation_two_turns(),
             )
-            if self.verbose:
-                print_completion(result)
             user_intent = get_first_nonempty_line(result)
 
             log.info("Canonical form for user intent: " + user_intent)
@@ -285,12 +285,11 @@ class LLMGenerationActions:
             chain = LLMChain(prompt=general_prompt, llm=self.llm, verbose=self.verbose)
 
             result = await chain.apredict(
+                callbacks=logging_callbacks,
                 general_instructions=general_instructions,
                 history=history,
                 stop=["User: "],
             )
-            if self.verbose:
-                print_completion(result)
 
             return ActionResult(
                 events=[{"type": "bot_said", "content": result.strip()}]
@@ -302,6 +301,8 @@ class LLMGenerationActions:
 
         Currently, only generates a next step after a user intent.
         """
+        log.info("Phase 2 :: Generating next step ...")
+
         # The last event should be the "start_action" and the one before it the "user_intent".
         event = get_last_user_intent_event(events)
 
@@ -338,6 +339,7 @@ class LLMGenerationActions:
                 prompt=predict_next_step_prompt, llm=self.llm, verbose=self.verbose
             )
             result = await chain.apredict(
+                callbacks=logging_callbacks,
                 history=history,
                 examples=examples,
                 sample_conversation=remove_text_messages_from_history(
@@ -348,8 +350,6 @@ class LLMGenerationActions:
                     self._get_sample_conversation_two_turns()
                 ),
             )
-            if self.verbose:
-                print_completion(result)
 
             result = get_first_nonempty_line(result)
 
@@ -377,6 +377,8 @@ class LLMGenerationActions:
     @action(is_system_action=True)
     async def generate_bot_message(self, events: List[dict], context: dict):
         """Generate a bot message based on the desired bot intent."""
+        log.info("Phase 3 :: Generating bot message ...")
+
         # The last event should be the "start_action" and the one before it the "bot_intent".
         event = get_last_bot_intent_event(events)
         assert event["type"] == "bot_intent"
@@ -444,10 +446,7 @@ class LLMGenerationActions:
                 prompt=bot_message_prompt, llm=self.llm, verbose=self.verbose
             )
             # TODO: catch openai.error.InvalidRequestError from exceeding max token length
-            result = await chain.apredict(**prompt_inputs)
-
-            if self.verbose:
-                print_completion(result)
+            result = await chain.apredict(callbacks=logging_callbacks, **prompt_inputs)
 
             result = get_multiline_response(result)
             result = strip_quotes(result)
@@ -513,6 +512,7 @@ class LLMGenerationActions:
             prompt=predict_next_step_prompt, llm=self.llm, verbose=self.verbose
         )
         result = await chain.apredict(
+            callbacks=logging_callbacks,
             history=history,
             examples=examples,
             sample_conversation=remove_text_messages_from_history(
@@ -525,8 +525,6 @@ class LLMGenerationActions:
             var_name=var_name,
             instructions=instructions,
         )
-        if self.verbose:
-            print_completion(result)
 
         # We only use the first line for now
         # TODO: support multi-line values?

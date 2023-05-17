@@ -19,6 +19,8 @@ from typing import Optional
 from langchain import LLMChain, PromptTemplate
 from langchain.llms import BaseLLM
 
+from nemoguardrails.logging.callbacks import logging_callbacks
+
 log = logging.getLogger(__name__)
 
 
@@ -43,7 +45,7 @@ async def check_facts(
 
         fact_check_chain = LLMChain(prompt=prompt, llm=llm)
         entails = await fact_check_chain.apredict(
-            evidence=evidence, response=bot_response
+            callbacks=logging_callbacks, evidence=evidence, response=bot_response
         )
 
         entails = entails.lower().strip()

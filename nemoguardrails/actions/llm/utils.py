@@ -219,7 +219,3 @@ def get_multiline_response(s: str):
                 break
 
     return result
-
-
-def print_completion(completion):
-    print(f"\033[42m\033[97m{completion}\033[0m")

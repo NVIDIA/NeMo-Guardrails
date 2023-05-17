@@ -139,6 +139,13 @@ class Runtime:
 
             log.info("Processing event: %s", last_event)
 
+            event_type = last_event["type"]
+            log.info(
+                "Event :: %s %s",
+                event_type,
+                str({k: v for k, v in last_event.items() if k != "type"}),
+            )
+
             # If we need to execute an action, we start doing that.
             if last_event["type"] == "start_action":
                 next_events = await self._process_start_action(events)
@@ -277,6 +284,7 @@ class Runtime:
                     if k in parameters:
                         kwargs[k] = v
 
+                log.info("Executing action :: %s", action_name)
                 result, status = await self.action_dispatcher.execute_action(
                     action_name, kwargs
                 )
