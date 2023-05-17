@@ -59,6 +59,22 @@ class Document(BaseModel):
     content: str
 
 
+class Prompt(BaseModel):
+    """Configuration for prompts that will be used for a specific task."""
+
+    task: str
+    content: str
+    inputs: List[str] = Field(
+        default_factory=list,
+        description="The list of inputs variables used in the prompt.",
+    )
+    models: Optional[List[str]] = Field(
+        default=None,
+        description="If specified, the prompt will be used only for the given LLM engines/models. "
+        "The format is a list of strings with the format: <engine> or <engine>/<model>.",
+    )
+
+
 # Load the default config values from the file
 with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as fc:
     default_config = yaml.safe_load(fc)
@@ -144,6 +160,11 @@ class RailsConfig(BaseModel):
     sample_conversation: Optional[str] = Field(
         default=default_config["sample_conversation"],
         description="The sample conversation that should be used inside the prompts.",
+    )
+
+    prompts: Optional[List[Prompt]] = Field(
+        default=None,
+        description="The prompts that should be used for the various LLM tasks.",
     )
 
     config_path: Optional[str] = Field(

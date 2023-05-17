@@ -41,7 +41,7 @@ from nemoguardrails.actions.llm.utils import (
 from nemoguardrails.kb.basic import BasicEmbeddingsIndex
 from nemoguardrails.kb.index import IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase
-from nemoguardrails.llm.prompts.prompts import Step, get_prompt
+from nemoguardrails.llm.prompts import Task, get_prompt
 from nemoguardrails.logging.callbacks import logging_callbacks
 from nemoguardrails.rails.llm.config import RailsConfig
 
@@ -229,9 +229,7 @@ class LLMGenerationActions:
                     "general_instruction",
                     "sample_conversation_two_turns",
                 ],
-                template=get_prompt(
-                    self.config, Step.DETECT_USER_MESSAGE_CANONICAL_FORM
-                )["content"],
+                template=get_prompt(self.config, Task.GENERATE_USER_INTENT).content,
             )
 
             # Create and run the general chain.
@@ -278,7 +276,7 @@ class LLMGenerationActions:
 
             general_prompt = PromptTemplate(
                 input_variables=["general_instructions", "history"],
-                template=get_prompt(self.config, Step.GENERAL)["content"],
+                template=get_prompt(self.config, Task.GENERAL).content,
             )
 
             # Create and run the general chain.
@@ -331,7 +329,7 @@ class LLMGenerationActions:
                     "general_instruction",
                     "sample_conversation_two_turns",
                 ],
-                template=get_prompt(self.config, Step.PREDICT_NEXT_STEP)["content"],
+                template=get_prompt(self.config, Task.GENERATE_NEXT_STEPS).content,
             )
 
             # Create and run the general chain.
@@ -425,7 +423,7 @@ class LLMGenerationActions:
                     "sample_conversation_two_turns",
                     "relevant_chunks",
                 ],
-                template=get_prompt(self.config, Step.GENERATE_BOT_MESSAGE)["content"],
+                template=get_prompt(self.config, Task.GENERATE_BOT_MESSAGE).content,
             )
 
             # Save the current bot message prompt in the context as a string.
@@ -504,7 +502,7 @@ class LLMGenerationActions:
                 "var_name",
                 "instructions",
             ],
-            template=get_prompt(self.config, Step.GENERATE_VALUE)["content"],
+            template=get_prompt(self.config, Task.GENERATE_VALUE).content,
         )
 
         # Create and run the general chain.
