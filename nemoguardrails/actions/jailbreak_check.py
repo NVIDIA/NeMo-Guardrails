@@ -38,7 +38,7 @@ async def check_jailbreak(
     user_input = context.get("last_user_message")
 
     if user_input:
-        jailbreak_check_template = get_prompt(config, Task.JAILBREAK_CHECK)
+        jailbreak_check_template = get_prompt(config, Task.JAILBREAK_CHECK).content
 
         prompt = PromptTemplate(
             template=jailbreak_check_template, input_variables=["user_input"]

@@ -37,7 +37,7 @@ async def output_moderation(
 
     bot_response = context.get("last_bot_message")
     if bot_response:
-        output_moderation_template = get_prompt(config, Task.OUTPUT_MODERATION)
+        output_moderation_template = get_prompt(config, Task.OUTPUT_MODERATION).content
 
         prompt = PromptTemplate(
             template=output_moderation_template, input_variables=["bot_response"]

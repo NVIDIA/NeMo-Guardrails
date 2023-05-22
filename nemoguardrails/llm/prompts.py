@@ -109,8 +109,6 @@ def get_prompt(config: RailsConfig, task: Task) -> Prompt:
             task_model += "/" + config.models[0].model
     task_name = str(task.value)
 
-    # TODO: also use the prompts from the config
-
     prompts = _prompts + (config.prompts or [])
     prompt = _get_prompt(task_name, task_model, prompts)
 

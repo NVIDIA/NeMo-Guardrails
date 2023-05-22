@@ -37,7 +37,7 @@ async def check_facts(
     bot_response = context.get("last_bot_message")
 
     if evidence:
-        fact_check_template = get_prompt(config, Task.FACT_CHECKING)
+        fact_check_template = get_prompt(config, Task.FACT_CHECKING).content
 
         prompt = PromptTemplate(
             template=fact_check_template, input_variables=["evidence", "response"]
