@@ -1,0 +1,11 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo
+
+prompts:
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+    content: |-
+      <<This is a placeholder for a custom prompt for generating the user intent>>

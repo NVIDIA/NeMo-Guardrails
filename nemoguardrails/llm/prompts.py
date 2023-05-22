@@ -111,7 +111,8 @@ def get_prompt(config: RailsConfig, task: Task) -> Prompt:
 
     # TODO: also use the prompts from the config
 
-    prompt = _get_prompt(task_name, task_model, _prompts)
+    prompts = _prompts + (config.prompts or [])
+    prompt = _get_prompt(task_name, task_model, prompts)
 
     if prompt:
         return prompt

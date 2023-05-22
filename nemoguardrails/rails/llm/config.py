@@ -105,6 +105,10 @@ def _join_config(dest_config: dict, additional_config: dict):
         "models", []
     )
 
+    dest_config["prompts"] = dest_config.get("prompts", []) + additional_config.get(
+        "prompts", []
+    )
+
     dest_config["docs"] = dest_config.get("docs", []) + additional_config.get(
         "docs", []
     )
