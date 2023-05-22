@@ -619,7 +619,6 @@ def _process_ellipsis(elements):
     """
     new_elements = []
 
-    # Enumerate the elements using `enumerate`
     for i in range(len(elements)):
         element = elements[i]
 
