@@ -78,9 +78,7 @@ Currently, only one model should be specified in the `models` key.
 
 #### Supported LLM Models
 
-You can use any LLM provider that is supported by LangChain.
-
-Supported values are: `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `bananadev`, `cerebriumai`, `cohere`, `deepinfra`, `forefrontai`, `google_palm`, `gooseai`, `gpt4all`, `huggingface_endpoint`, `huggingface_hub`, `huggingface_pipeline`, `huggingface_textgen_inference`, `human-input`, `llamacpp`, `modal`, `nlpcloud`, `openai`, `petals`, `pipelineai`, `replicate`, `rwkv`, `sagemaker_endpoint`, `self_hosted`, `self_hosted_hugging_face`, `stochasticai`.
+You can use any LLM provider that is supported by LangChain, e.g., `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `cohere`, `huggingface_endpoint`, `huggingface_hub`, `openai`, `self_hosted`, `self_hosted_hugging_face`. Check out the LangChain official documentation for the full list.
 
 **NOTE**: to use any of the providers you will need to install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instruct you on what package should be installed.
 
@@ -89,7 +87,7 @@ Supported values are: `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `
 
 #### Custom LLM Models
 
-To register a custom LLM provider, you need to create a class that inherits from `BaseLangaugeModel` and register it using `register_llm_provider`.
+To register a custom LLM provider, you need to create a class that inherits from `BaseLanguageModel` and register it using `register_llm_provider`.
 
 ```python
 from langchain.base_language import BaseLanguageModel
