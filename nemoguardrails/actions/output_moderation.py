@@ -19,10 +19,10 @@ from typing import Optional
 from langchain import LLMChain, PromptTemplate
 from langchain.llms.base import BaseLLM
 
-from nemoguardrails import RailsConfig
 from nemoguardrails.actions import action
 from nemoguardrails.llm.prompts import Task, get_prompt
 from nemoguardrails.logging.callbacks import logging_callbacks
+from nemoguardrails.rails.llm.config import RailsConfig
 
 log = logging.getLogger(__name__)
 
