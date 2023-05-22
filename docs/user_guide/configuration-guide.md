@@ -160,6 +160,32 @@ If an actions server is used, the URL must be configured in the `config.yml` as 
 actions_server_url: ACTIONS_SERVER_URL
 ```
 
+### LLM Prompts
+
+You can customize the prompts that are used for the various LLM tasks (e.g., generate user intent, generate next step, generate bot message) using the `prompts` key. For example, to override the prompt used for the `generate_user_intent` task for the `openai/gpt-3.5-turbo` model:
+
+```yaml
+prompts:
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+    content: |-
+      <<This is a placeholder for a custom prompt for generating the user intent>>
+```
+
+The full list of tasks used by the NeMo Guardrails toolkit is the following:
+
+- `general`: generate the next bot message, when no canonical forms are used;
+- `generate_user_intent`: generate the canonical user message;
+- `generate_next_steps`: generate the next thing the bot should do/say;
+- `generate_bot_message`: generate the next bot message;
+- `generate_value`: generate the value for a context variable (a.k.a. extract user-provided values);
+- `fact_checking`: check the facts from the bot response against the provided evidence;
+- `jailbreak_check`: check if there is an attempt to break moderation policies;
+- `output_moderation`: check if bot response is harmful, unethical or illegal.
+
+You can check the default prompts in the [prompts](../../nemoguardrails/llm/prompts) folder.
+
 ## Guardrails Definitions
 
 The dialog flows and guardrails are defined using Colang. You can include as many `.co` files as you want, including subdirectories. For getting started, please refer to the [Hello World](../getting_started/hello-world.md) example. More concrete examples of guardrails configuration can be found in the [Examples](../../examples) folder.
