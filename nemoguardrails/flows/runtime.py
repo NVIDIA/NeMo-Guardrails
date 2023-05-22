@@ -248,7 +248,7 @@ class Runtime:
                 parameters = fn.input_keys
                 action_type = "chain"
 
-            # For every parameters that start with "__context__", we pass the value
+            # For every parameter that start with "__context__", we pass the value
             for parameter_name in parameters:
                 if parameter_name.startswith("__context__"):
                     var_name = parameter_name[11:]
@@ -278,6 +278,9 @@ class Runtime:
 
                 if "context" in parameters:
                     kwargs["context"] = context
+
+                if "config" in parameters:
+                    kwargs["config"] = self.config
 
                 # Add any additional registered parameters
                 for k, v in self.registered_action_params.items():

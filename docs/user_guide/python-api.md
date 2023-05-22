@@ -137,9 +137,10 @@ Actions can take any number of parameters. Since actions are invoked from Colang
 
 The following parameters are special and are provided automatically by the NeMo Guardrails toolkit, if they appear in the signature of an action:
 
-- `events`: the history of events so far; the last one is the one triggering the action itself.
+- `events`: the history of events so far; the last one is the one triggering the action itself;
 - `context`: the context data available to the action;
-- `llm`: access to the LLM instance (BaseLLM from LangChain)
+- `llm`: access to the LLM instance (BaseLLM from LangChain);
+- `config`: the full `RailsConfig` instance.
 
 These parameters are only meant to be used in advanced use cases.
 
