@@ -17,8 +17,10 @@ import logging
 from typing import Optional
 
 from langchain import LLMChain, PromptTemplate
-from langchain.llms import BaseLLM
+from langchain.llms.base import BaseLLM
 
+from nemoguardrails import RailsConfig
+from nemoguardrails.llm.prompts import Task, get_prompt
 from nemoguardrails.logging.callbacks import logging_callbacks
 
 log = logging.getLogger(__name__)
@@ -27,6 +29,7 @@ log = logging.getLogger(__name__)
 async def check_facts(
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
+    config: Optional[RailsConfig] = None,
 ):
     """Checks the facts for the bot response."""
 
@@ -34,10 +37,7 @@ async def check_facts(
     bot_response = context.get("last_bot_message")
 
     if evidence:
-        fact_check_template = """
-            You are given a task to identify if the hypothesis is grounded and entailed to the evidence.
-            You will only use the contents of the evidence and not rely on external knowledge.
-            Answer with yes/no. "evidence": {evidence} "hypothesis": {response} "entails":"""
+        fact_check_template = get_prompt(config, Task.FACT_CHECKING)
 
         prompt = PromptTemplate(
             template=fact_check_template, input_variables=["evidence", "response"]

@@ -34,6 +34,10 @@ class Task(Enum):
     GENERATE_BOT_MESSAGE = "generate_bot_message"
     GENERATE_VALUE = "generate_value"
 
+    FACT_CHECKING = "fact_checking"
+    JAILBREAK_CHECK = "jailbreak_check"
+    OUTPUT_MODERATION = "output_moderation"
+
 
 def _load_prompts() -> List[Prompt]:
     """Load the predefined prompts from the `prompts` directory."""
