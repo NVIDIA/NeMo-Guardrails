@@ -20,6 +20,7 @@ from langchain import LLMChain, PromptTemplate
 from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions import action
+from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task, get_prompt
 from nemoguardrails.logging.callbacks import logging_callbacks
 from nemoguardrails.rails.llm.config import RailsConfig
@@ -44,9 +45,11 @@ async def output_moderation(
         )
 
         output_moderation_chain = LLMChain(prompt=prompt, llm=llm)
-        check = await output_moderation_chain.apredict(
-            callbacks=logging_callbacks, bot_response=bot_response
-        )
+
+        with llm_params(llm, temperature=0):
+            check = await output_moderation_chain.apredict(
+                callbacks=logging_callbacks, bot_response=bot_response
+            )
 
         check = check.lower().strip()
         log.info(f"Output moderation check result is {check}.")

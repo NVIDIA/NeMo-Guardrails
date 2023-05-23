@@ -19,6 +19,7 @@ from typing import Optional
 from langchain import LLMChain, PromptTemplate
 from langchain.llms.base import BaseLLM
 
+from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task, get_prompt
 from nemoguardrails.logging.callbacks import logging_callbacks
 from nemoguardrails.rails.llm.config import RailsConfig
@@ -44,9 +45,10 @@ async def check_facts(
         )
 
         fact_check_chain = LLMChain(prompt=prompt, llm=llm)
-        entails = await fact_check_chain.apredict(
-            callbacks=logging_callbacks, evidence=evidence, response=bot_response
-        )
+        with llm_params(llm, temperature=0):
+            entails = await fact_check_chain.apredict(
+                callbacks=logging_callbacks, evidence=evidence, response=bot_response
+            )
 
         entails = entails.lower().strip()
         log.info(f"Entailment result is {entails}.")

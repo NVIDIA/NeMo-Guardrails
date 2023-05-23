@@ -41,6 +41,7 @@ from nemoguardrails.actions.llm.utils import (
 from nemoguardrails.kb.basic import BasicEmbeddingsIndex
 from nemoguardrails.kb.index import IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase
+from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task, get_prompt
 from nemoguardrails.logging.callbacks import logging_callbacks
 from nemoguardrails.rails.llm.config import RailsConfig
@@ -236,14 +237,18 @@ class LLMGenerationActions:
             chain = LLMChain(
                 prompt=canonical_form_prompt, llm=self.llm, verbose=self.verbose
             )
-            result = await chain.apredict(
-                callbacks=logging_callbacks,
-                history=history,
-                examples=examples,
-                sample_conversation=self.config.sample_conversation,
-                general_instruction=self._get_general_instruction(),
-                sample_conversation_two_turns=self._get_sample_conversation_two_turns(),
-            )
+
+            # We make this call with temperature 0 to have it as deterministic as possible.
+            with llm_params(self.llm, temperature=0.0):
+                result = await chain.apredict(
+                    callbacks=logging_callbacks,
+                    history=history,
+                    examples=examples,
+                    sample_conversation=self.config.sample_conversation,
+                    general_instruction=self._get_general_instruction(),
+                    sample_conversation_two_turns=self._get_sample_conversation_two_turns(),
+                )
+
             user_intent = get_first_nonempty_line(result)
 
             log.info("Canonical form for user intent: " + user_intent)
@@ -336,18 +341,21 @@ class LLMGenerationActions:
             chain = LLMChain(
                 prompt=predict_next_step_prompt, llm=self.llm, verbose=self.verbose
             )
-            result = await chain.apredict(
-                callbacks=logging_callbacks,
-                history=history,
-                examples=examples,
-                sample_conversation=remove_text_messages_from_history(
-                    self.config.sample_conversation
-                ),
-                general_instruction=self._get_general_instruction(),
-                sample_conversation_two_turns=remove_text_messages_from_history(
-                    self._get_sample_conversation_two_turns()
-                ),
-            )
+
+            # We use temperature 0 for next step prediction as well
+            with llm_params(self.llm, temperature=0.0):
+                result = await chain.apredict(
+                    callbacks=logging_callbacks,
+                    history=history,
+                    examples=examples,
+                    sample_conversation=remove_text_messages_from_history(
+                        self.config.sample_conversation
+                    ),
+                    general_instruction=self._get_general_instruction(),
+                    sample_conversation_two_turns=remove_text_messages_from_history(
+                        self._get_sample_conversation_two_turns()
+                    ),
+                )
 
             result = get_first_nonempty_line(result)
 
@@ -492,7 +500,7 @@ class LLMGenerationActions:
             for result in reversed(results):
                 examples += f"{result.text}\n\n"
 
-        predict_next_step_prompt = PromptTemplate(
+        predict_value_template = PromptTemplate(
             input_variables=[
                 "history",
                 "examples",
@@ -507,22 +515,23 @@ class LLMGenerationActions:
 
         # Create and run the general chain.
         chain = LLMChain(
-            prompt=predict_next_step_prompt, llm=self.llm, verbose=self.verbose
+            prompt=predict_value_template, llm=self.llm, verbose=self.verbose
         )
-        result = await chain.apredict(
-            callbacks=logging_callbacks,
-            history=history,
-            examples=examples,
-            sample_conversation=remove_text_messages_from_history(
-                self.config.sample_conversation
-            ),
-            general_instruction=self._get_general_instruction(),
-            sample_conversation_two_turns=remove_text_messages_from_history(
-                self._get_sample_conversation_two_turns()
-            ),
-            var_name=var_name,
-            instructions=instructions,
-        )
+        with llm_params(self.llm, temperature=0):
+            result = await chain.apredict(
+                callbacks=logging_callbacks,
+                history=history,
+                examples=examples,
+                sample_conversation=remove_text_messages_from_history(
+                    self.config.sample_conversation
+                ),
+                general_instruction=self._get_general_instruction(),
+                sample_conversation_two_turns=remove_text_messages_from_history(
+                    self._get_sample_conversation_two_turns()
+                ),
+                var_name=var_name,
+                instructions=instructions,
+            )
 
         # We only use the first line for now
         # TODO: support multi-line values?

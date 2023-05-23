@@ -20,6 +20,7 @@ from langchain import LLMChain, PromptTemplate
 from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.actions import ActionResult, action
+from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task, get_prompt
 from nemoguardrails.logging.callbacks import logging_callbacks
 from nemoguardrails.rails.llm.config import RailsConfig
@@ -45,9 +46,11 @@ async def check_jailbreak(
         )
 
         jailbreak_check_chain = LLMChain(prompt=prompt, llm=llm)
-        check = await jailbreak_check_chain.apredict(
-            callbacks=logging_callbacks, user_input=user_input
-        )
+
+        with llm_params(llm, temperature=0):
+            check = await jailbreak_check_chain.apredict(
+                callbacks=logging_callbacks, user_input=user_input
+            )
 
         check = check.lower().strip()
         log.info(f"Jailbreak check result is {check}.")
