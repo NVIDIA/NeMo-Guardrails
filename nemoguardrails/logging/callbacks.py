@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import uuid
 from time import time
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from langchain.callbacks import StdOutCallbackHandler
 from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackManager
+from langchain.callbacks.manager import AsyncCallbackManagerForChainRun
 from langchain.schema import AgentAction, AgentFinish, BaseMessage, LLMResult
 
 log = logging.getLogger(__name__)
@@ -209,4 +211,11 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
 handlers = [LoggingCallbackHandler()]
 logging_callbacks = BaseCallbackManager(
     handlers=handlers, inheritable_handlers=handlers
+)
+
+logging_callback_manager_for_chain = AsyncCallbackManagerForChainRun(
+    run_id=uuid.uuid4(),
+    parent_run_id=None,
+    handlers=handlers,
+    inheritable_handlers=handlers,
 )

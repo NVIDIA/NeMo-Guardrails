@@ -182,7 +182,8 @@ The full list of tasks used by the NeMo Guardrails toolkit is the following:
 - `generate_value`: generate the value for a context variable (a.k.a. extract user-provided values);
 - `fact_checking`: check the facts from the bot response against the provided evidence;
 - `jailbreak_check`: check if there is an attempt to break moderation policies;
-- `output_moderation`: check if bot response is harmful, unethical or illegal.
+- `output_moderation`: check if bot response is harmful, unethical or illegal;
+- `check_hallucination`: check if the bot response is a hallucination.
 
 You can check the default prompts in the [prompts](../../nemoguardrails/llm/prompts) folder.
 

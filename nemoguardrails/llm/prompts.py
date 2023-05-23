@@ -37,6 +37,7 @@ class Task(Enum):
     FACT_CHECKING = "fact_checking"
     JAILBREAK_CHECK = "jailbreak_check"
     OUTPUT_MODERATION = "output_moderation"
+    CHECK_HALLUCINATION = "check_hallucination"
 
 
 def _load_prompts() -> List[Prompt]:
