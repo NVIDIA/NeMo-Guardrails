@@ -88,6 +88,10 @@ def server(
         exists=True,
         help="Path to a directory containing multiple configuration sub-folders.",
     ),
+    verbose: bool = typer.Option(
+        default=False,
+        help="If the server should be verbose and output detailed logs including prompts.",
+    ),
 ):
     """Starts a NeMo Guardrails server."""
     if config:
@@ -101,6 +105,9 @@ def server(
             api.app.rails_config_path = local_configs_path
 
     _check_if_llm_provider_is_configured()
+
+    if verbose:
+        logging.getLogger().setLevel(logging.INFO)
 
     uvicorn.run(api.app, port=port, log_level="info", host="0.0.0.0")
 
