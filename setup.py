@@ -80,5 +80,6 @@ setup(
         "uvicorn==0.21.1",
         "httpx==0.23.3",
         "simpleeval==0.9.13",
+        "typing-extensions==4.5.0",
     ],
 )
