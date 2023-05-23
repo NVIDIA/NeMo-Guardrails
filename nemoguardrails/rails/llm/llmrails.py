@@ -18,6 +18,7 @@ import asyncio
 import importlib.util
 import logging
 import os
+import time
 from typing import Any, List, Optional
 
 from langchain.llms.base import BaseLLM
@@ -27,6 +28,7 @@ from nemoguardrails.actions.llm.utils import get_colang_history
 from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
+from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 
@@ -148,6 +150,9 @@ class LLMRails:
         # TODO: Add support to load back history of events, next to history of messages
         #   This is important as without it, the LLM prediction is not as good.
 
+        t0 = time.time()
+        llm_stats.reset()
+
         # First, we turn the messages into a history of events.
         cache_key = get_history_cache_key(messages, include_last=False)
         events = self.events_history_cache.get(cache_key, []).copy()
@@ -177,6 +182,8 @@ class LLMRails:
             history = get_colang_history(events)
             log.info(f"Conversation history so far: \n{history}")
 
+        log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
+        log.info("--- :: Stats: %s" % llm_stats)
         return {"role": "assistant", "content": "\n".join(responses)}
 
     def generate(

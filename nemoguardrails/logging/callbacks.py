@@ -23,6 +23,8 @@ from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackManager
 from langchain.callbacks.manager import AsyncCallbackManagerForChainRun
 from langchain.schema import AgentAction, AgentFinish, BaseMessage, LLMResult
 
+from nemoguardrails.logging.stats import llm_stats
+
 log = logging.getLogger(__name__)
 
 
@@ -42,8 +44,10 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Run when LLM starts running."""
+        log.info("Invocation Params :: %s", kwargs.get("invocation_params", {}))
         log.info("Prompt :: %s", prompts[0])
         self.last_prompt_timestamp = time()
+        llm_stats.inc("total_calls")
 
     async def on_chat_model_start(
         self,
@@ -73,8 +77,10 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
             ]
         )
 
+        log.info("Invocation Params :: %s", kwargs.get("invocation_params", {}))
         log.info("Prompt Messages :: %s", prompt)
         self.last_prompt_timestamp = time()
+        llm_stats.inc("total_calls")
 
     async def on_llm(self, *args, **kwargs) -> Any:
         """NOTE: this needs to be implemented to avoid a warning by LangChain."""
@@ -100,9 +106,24 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
     ) -> None:
         """Run when LLM ends running."""
         log.info("Completion :: %s", response.generations[0][0].text)
-        log.info(
-            "--- :: LLM call took %.2f seconds",
-            time() - self.last_prompt_timestamp,
+
+        # If there are additional completions, we show them as well
+        if len(response.generations[0]) > 1:
+            for i, generation in enumerate(response.generations[0][1:]):
+                log.info("--- :: Completion %d", i + 2)
+                log.info("Completion :: %s", generation.text)
+
+        log.info("Output Stats :: %s", response.llm_output)
+        took = time() - self.last_prompt_timestamp
+        log.info("--- :: LLM call took %.2f seconds", took)
+        llm_stats.inc("total_time", took)
+
+        # Update the token usage stats as well
+        token_usage = response.llm_output.get("token_usage", {})
+        llm_stats.inc("total_tokens", token_usage.get("total_tokens", 0))
+        llm_stats.inc("total_prompt_tokens", token_usage.get("prompt_tokens", 0))
+        llm_stats.inc(
+            "total_completion_tokens", token_usage.get("completion_tokens", 0)
         )
 
     async def on_llm_error(
