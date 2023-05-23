@@ -189,7 +189,12 @@ class LLMGenerationActions:
 
             i += 1
 
-        return "\n".join(lines[0:i])
+        sample_conversation = "\n".join(lines[0:i])
+
+        # Remove any trailing new lines
+        sample_conversation = sample_conversation.strip()
+
+        return sample_conversation
 
     @action(is_system_action=True)
     async def generate_user_intent(self, events: List[dict]):
