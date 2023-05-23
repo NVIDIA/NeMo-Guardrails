@@ -109,6 +109,13 @@ class ActionDispatcher:
         if action_name in self._registered_actions:
             log.info(f"Executing registered action: {action_name}")
             fn = self._registered_actions.get(action_name, None)
+
+            # Actions that are registered as classes are initialized lazy, when
+            # they are first used.
+            if inspect.isclass(fn):
+                fn = fn()
+                self._registered_actions[action_name] = fn
+
             if fn is not None:
                 try:
                     # We support both functions and classes as actions
@@ -157,7 +164,7 @@ class ActionDispatcher:
 
                 if inspect.isclass(obj) and hasattr(obj, "action_meta"):
                     try:
-                        action_objects[obj.action_meta["name"]] = obj()
+                        action_objects[obj.action_meta["name"]] = obj
                         log.info(f"Added {obj.action_meta['name']} to actions")
                     except Exception as e:
                         log.debug(

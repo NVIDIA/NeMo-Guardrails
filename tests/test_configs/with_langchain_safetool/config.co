@@ -1,0 +1,26 @@
+define user ask capabilities
+  "What can you do?"
+  "What can you help me with?"
+  "tell me what you can do"
+  "tell me about you"
+
+define bot inform capabilities
+  "I am an AI assistant that can check the weather."
+
+define flow
+  user ask capabilities
+  bot inform capabilities
+
+define flow
+  user ask weather
+
+  # Extract the location from the user's input as a python string (between double quotes).
+  $location = ...
+
+  execute openweather_query(location=$location)
+  bot provide weather info
+
+define user ask weather
+  "What is the weather like in Bucharest?"
+  "Is it raining in London?"
+  "What's the temperature in Dubai?"
