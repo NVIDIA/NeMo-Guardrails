@@ -56,16 +56,49 @@ def split_markdown_in_topic_chunks(
 
         body = "\n".join(chunk_body_lines).strip()
 
-        # Skip saving if body is empty
-        if body:
-            chunks.append(
-                {
-                    "title": " - ".join(chunk_title_parts),
-                    "body": body,
-                    # We also include the document level meta information
-                    **meta,
-                }
-            )
+        
+        if len(body) > max_chunk_size:
+            # If the content length of the body exceeds max_chunk_size, it needs to be split
+            num_chunks = len(body) // max_chunk_size
+            remainder = len(body) % max_chunk_size
+
+            for i in range(num_chunks):
+                start = i * max_chunk_size
+                end = start + max_chunk_size
+                body_chunk = body[start:end].strip()
+                if body_chunk:  
+                    # Only save non-empty blocks
+                    chunks.append(
+                        {
+                            "title": " - ".join(chunk_title_parts),
+                            "body": body_chunk,
+                            **meta,
+                        }
+                    )
+
+            if remainder > 0:
+                # Deal with the remainder
+                body_chunk = body[-remainder:].strip()
+                if body_chunk:  
+                    # Only save non-empty blocks
+                    chunks.append(
+                        {
+                            "title": " - ".join(chunk_title_parts),
+                            "body": body_chunk,
+                            **meta,
+                        }
+                    )
+        else:
+            # Skip saving if body is empty
+            if body:
+                chunks.append(
+                    {
+                        "title": " - ".join(chunk_title_parts),
+                        "body": body,
+                        # We also include the document level meta information
+                        **meta,
+                    }
+                )
 
         chunk_body_lines = []
         chunk_size = 0
@@ -96,6 +129,7 @@ def split_markdown_in_topic_chunks(
             if chunk_size > max_chunk_size:
                 _record_chunk()
         else:
+
             chunk_body_lines.append(line)
             chunk_size += len(line)
 
