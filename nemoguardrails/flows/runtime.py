@@ -81,6 +81,8 @@ class Runtime:
                     flow["is_extension"] = meta_data["is_extension"]
                 if "interruptable" in meta_data:
                     flow["is_interruptible"] = meta_data["interruptable"]
+                if "subflow" in meta_data:
+                    flow["is_subflow"] = meta_data["subflow"]
 
                 # Finally, remove the meta element
                 elements = elements[1:]
@@ -91,10 +93,11 @@ class Runtime:
             self.flow_configs[flow_id] = FlowConfig(
                 id=flow_id,
                 elements=elements,
-                priority=flow.get("priority", 1.0),
+                priority=flow.get("priority", 2.0 if flow.get("is_extension") else 1.0),
                 is_extension=flow.get("is_extension", False),
                 is_interruptible=flow.get("is_interruptible", True),
                 source_code=flow.get("source_code"),
+                is_subflow=flow.get("is_subflow", False),
             )
 
             # We also compute what types of events can trigger this flow, in addition

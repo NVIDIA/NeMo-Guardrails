@@ -1413,6 +1413,33 @@ class ColangParser:
 
         return name, params
 
+    def _parse_do(self):
+        # Otherwise, it's a normal intent
+        do_value = split_max(self.text, " ", 1)[1].strip()
+
+        flow_name, flow_params = self._split_inline_params(do_value)
+
+        # if we need to save the return values, we store the info
+        if "=" in flow_name:
+            return_vars, flow_name = get_stripped_tokens(split_max(flow_name, "=", 1))
+        else:
+            return_vars = None
+
+        self.current_element = {"flow": f"{flow_name}{flow_params}"}
+
+        # parse additional parameters if it's the case
+        if self.next_line and self.next_line["indentation"] > self.current_indentation:
+            self._extract_params()
+
+        # record the name of the return vars, without the $ sign
+        if return_vars:
+            return_vars = get_stripped_tokens(return_vars.split(","))
+            return_vars = [_var[1:] if _var[0] == "$" else _var for _var in return_vars]
+            self.current_element["_return_vars"] = return_vars
+
+        # Add to current branch
+        self.branches[-1]["elements"].append(self.current_element)
+
     def _parse_goto(self):
         if self.main_token == "goto":
             value = split_max(self.text, " ", 1)[1]
@@ -1693,6 +1720,8 @@ class ColangParser:
                     self._parse_bot()
                 elif self.main_token == "event":
                     self._parse_event()
+                elif self.main_token in ["do"]:
+                    self._parse_do()
                 elif self.main_token in ["goto", "go to"]:
                     self._parse_goto()
                 elif self.main_token in ["meta"]:
