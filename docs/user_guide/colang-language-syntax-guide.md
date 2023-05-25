@@ -104,6 +104,27 @@ define flow hello
 
 The `if/else` statement can be used to evaluate expressions involving context variables and alter the flow accordingly. The `when/else` statement can be used to branch the flow based on next user message/event.
 
+#### Subflows
+
+Subflows are a particular type of flows. While flows are meant to be applied automatically to the current conversation (when there is a match), subflows are meant to be called explicitly by other flows/subflows. A subflow can be invoked using the `do` keyword and the name of the subflow:
+
+```colang
+
+define subflow check user authentication
+  if not $user_auth
+    bot inform authentication required
+    bot ask name
+    ...
+
+define flow greeting
+  """We first authenticate the user, before continuing"""
+  user express greeting
+  do check user authentication
+  bot express greeting
+```
+
+Subflows should be used for reusable pieces of conversational logic, e.g., authentication, form filling.
+
 #### Variables
 
 References to context variables always start with a `$` sign e.g. `$name`. All variables are global and accessible in all flows.
