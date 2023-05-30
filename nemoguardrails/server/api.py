@@ -103,10 +103,13 @@ async def chat_completion(body: RequestBody):
     config_id = body.config_id
     try:
         llm_rails = _get_rails(config_id)
-    except ValueError:
+    except ValueError as ex:
         return {
             "messages": [
-                {"role": "assistant", "content": "Invalid guardrails configuration."}
+                {
+                    "role": "assistant",
+                    "content": f"Could not load the {config_id} guardrails configuration: {str(ex)}",
+                }
             ]
         }
 
