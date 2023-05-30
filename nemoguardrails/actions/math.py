@@ -50,6 +50,10 @@ async def wolfram_alpha_request(
             return_value=False,
             events=[
                 {
+                    "type": "bot_intent",
+                    "intent": "inform wolfram alpha app id not set",
+                },
+                {
                     "type": "bot_said",
                     "content": "Wolfram Alpha app ID is not set. Please set the WOLFRAM_ALPHA_APP_ID environment variable.",
                 },
@@ -68,6 +72,10 @@ async def wolfram_alpha_request(
                 return ActionResult(
                     return_value=False,
                     events=[
+                        {
+                            "type": "bot_intent",
+                            "intent": "inform wolfram alpha not working",
+                        },
                         {
                             "type": "bot_said",
                             "content": "Apologies, but I cannot answer this question at this time. I am having trouble getting the answer from Wolfram Alpha.",
