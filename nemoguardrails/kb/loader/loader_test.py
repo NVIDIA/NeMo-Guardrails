@@ -73,7 +73,7 @@ def test_load(mock_elements):
 
     assert len(documents) == 4
     assert documents[0].content == "a title"
-    assert documents[0].type is type(elements[0])
+    assert issubclass(documents[0].type, type(elements[0]))
     assert documents[0].metadata == metadata.to_dict()
     assert documents[0].uri == {"filename": filename}
     assert documents[0].loader == "DocumentLoader"
@@ -92,9 +92,9 @@ def test_combine_topics(mock_load):
     topics = loader.combine_topics()
 
     assert len(topics) == 1
-    assert topics[0]["title"] == "mock title"
-    assert topics[0]["body"] == "mock body"
-    assert topics[0]["metadata"] == {}
+    assert topics[0].title == "mock title"
+    assert topics[0].body == "mock body"
+    assert topics[0].metadata == {}
 
 
 # Define a mock PDF page with extractText method
@@ -138,6 +138,8 @@ def test_load_from_file(mock_reader):
     documents = list(loader.load())
 
     assert len(documents) == 1
+    assert documents[0].content == "mock page text"
+    assert documents[0].type == Text
     # other assertions omitted for brevity
 
 
@@ -154,18 +156,21 @@ def test_load_from_filename(mock_reader):
     documents = list(loader.load())
 
     assert len(documents) == 1
-
+    assert documents[0].content == "mock page text"
+    assert documents[0].type == Text
+    assert documents[0].uri == {"filename": os.path.abspath("mock.pdf")}
     # Remove the temporary file
     os.remove("mock.pdf")
-    # other assertions omitted for brevity
 
 
 @patch.object(PyPDF2, "PdfFileReader")
 def test_load_from_text(mock_reader):
     mock_reader.return_value = MockPdfReader(num_pages=1)
 
-    loader = PdfLoader(text=b"mock pdf content")
+    loader = PdfLoader(text=b"mock page text")
     documents = list(loader.load())
 
     assert len(documents) == 1
+    assert documents[0].content == "mock page text"
+    assert documents[0].type == Text
     # other assertions omitted for brevity

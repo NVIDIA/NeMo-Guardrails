@@ -25,8 +25,8 @@ from unstructured.partition.html import partition_html
 from unstructured.partition.md import partition_md
 from unstructured.partition.pdf import partition_pdf
 from unstructured.partition.text import partition_text
-from unstructured.partition.xml import partition_xml
 
+# from unstructured.partition.xml import partition_xml
 from .typing import FileType
 
 # from unstructured.partition.docx import partition_docx
@@ -58,7 +58,7 @@ from .typing import FileType
 EXT_TO_FILETYPE = {
     ".txt": FileType.TXT,
     ".text": FileType.TXT,
-    ".xml": FileType.XML,
+    # ".xml": FileType.XML,
     ".htm": FileType.HTML,
     ".html": FileType.HTML,
     ".md": FileType.MD,

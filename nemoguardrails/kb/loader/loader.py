@@ -73,8 +73,6 @@ class BaseDocumentLoader(ABC):
                 f"Received {non_none_sources}"
             )
         self._source = non_none_sources
-        print(self._source)
-        print("****|||||****" * 10)
         self._kwargs = kwargs
 
     @abstractmethod
@@ -155,8 +153,6 @@ class DocumentLoader(BaseDocumentLoader):
         if self._partition_handler is None:
             self._partition_handler = self._get_partition_handler()
 
-        print(self._kwargs)
-        # return self._partition_handler(**self._kwargs)
         return self._partition_handler
 
     def _get_partition_handler(self):
@@ -214,18 +210,18 @@ class DocumentLoader(BaseDocumentLoader):
         }
         topic = Topic(title="", body="")
         for doc in self.load():
-            if doc.type == Title:
+            if issubclass(doc.type, Title):
                 topic.title += doc.content
                 continue
 
-            elif doc.type in (Text, ListItem, FigureCaption, NarrativeText):
+            elif issubclass(doc.type, (Text, ListItem, FigureCaption, NarrativeText)):
                 # bodies.append(doc.content)
                 topic.body += doc.content
                 topic.metadata = doc.metadata
 
             # topic has values other than topic_schema 's default values
             if topic.dict() != topic_schema:
-                topics.append(topic.dict())
+                topics.append(topic)
 
         if topic_size:
             topics = self._combine_topics_by_size(topics, topic_size)
@@ -253,7 +249,7 @@ class DocumentLoader(BaseDocumentLoader):
 
         if topic_size < 1:
             raise ValueError(
-                f"topic_size must be greater than 0 but received {topic_size}"
+                f" `topic_size` must be greater than 0 but received {topic_size}"
             )
 
         new_topics = []
@@ -264,22 +260,22 @@ class DocumentLoader(BaseDocumentLoader):
         for topic in topics:
             if current_topic is None:
                 current_topic = topic
-                current_topic_size = len(topic["body"])
-                current_topic_title_parts.append(topic["title"])
+                current_topic_size = len(topic.body)
+                current_topic_title_parts.append(topic.title)
             else:
                 if current_topic_size < topic_size:
-                    current_topic_size += len(topic["body"])
-                    current_topic["body"] += "\n" + topic["body"]
-                    current_topic_title_parts.append(topic["title"])
+                    current_topic_size += len(topic.body)
+                    current_topic.body += "\n" + topic.body
+                    current_topic_title_parts.append(topic.title)
                 else:
-                    current_topic["title"] = " - ".join(current_topic_title_parts)
+                    current_topic.title = " - ".join(current_topic_title_parts)
                     new_topics.append(current_topic)
                     current_topic = topic
-                    current_topic_size = len(topic["body"])
-                    current_topic_title_parts = [topic["title"]]
+                    current_topic_size = len(topic.body)
+                    current_topic_title_parts = [topic.title]
 
         if current_topic is not None:
-            current_topic["title"] = " - ".join(current_topic_title_parts)
+            current_topic.title = " - ".join(current_topic_title_parts)
             new_topics.append(current_topic)
 
         return new_topics
@@ -329,7 +325,6 @@ class PdfLoader(BaseDocumentLoader):
                 uri=_remove_none_values(self._source),
                 loader=self.__class__.__name__,
             )
-            print(Document)
 
     def combine_topics(self, topic_size: Optional[int] = None) -> List[Topic]:
         """Combine multiple documents into topics.
@@ -354,13 +349,27 @@ class PdfLoader(BaseDocumentLoader):
 class MarkdownLoader(BaseDocumentLoader):
     """Load documents from a Markdown file."""
 
-    def load(self):
+    def load(self) -> Iterable[Document]:
         """Load documents from a Markdown file."""
 
-    def combine_topics(self):
+    def combine_topics(self) -> List[Topic]:
         """Combine multiple documents into topics."""
 
 
 def _remove_none_values(d: dict) -> dict:
     """Return a new dictionary with only the non-None and non-empty string values."""
     return {k: v for k, v in d.items() if v not in (None, "")}
+
+
+# from nemoguardrails.kb.loader import DocumentLoader
+# from nemoguardrails.kb.splitters import Splitter
+
+# loader = DocumentLoader(file_path="/workspace/NeMo-Guardrails/examples/grounding_rail/kb/report.md")
+# topics = loader.combine_topics()
+# sized_topics = loader.combine_topics(topic_size=100)
+
+# splitter = Splitter(name='markdown_lc')
+
+# splitter.split_topics()
+# splitter.split_topics(topics, )
+# splitter(topics=topics)
