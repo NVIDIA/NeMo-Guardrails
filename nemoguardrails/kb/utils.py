@@ -17,6 +17,8 @@ from typing import List
 
 import yaml
 
+import re
+
 
 def split_markdown_in_topic_chunks(
     content: str, max_chunk_size: int = 400
@@ -55,53 +57,47 @@ def split_markdown_in_topic_chunks(
         nonlocal chunk_body_lines, chunk_size
 
         body = "\n".join(chunk_body_lines).strip()
+        lines = body.split("\n")
+        chunks_to_add = []
 
-        
-        if len(body) > max_chunk_size:
-            # If the content length of the body exceeds max_chunk_size, it needs to be split
-            num_chunks = len(body) // max_chunk_size
-            remainder = len(body) % max_chunk_size
+        # Split the body into chunks of sentences
+        current_chunk = ""
+        for line in lines:
+            line = line.strip()
+            if line:
+                # Exclude periods in abbreviations, words beginning with a capital letter, and split sentences after periods or question marks
+                sentences = re.split(r"(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s", line)
+                for sentence in sentences:
+                    if len(current_chunk) + len(sentence) <= max_chunk_size:
+                        current_chunk += sentence + " "
+                    else:
+                        if current_chunk:
+                            chunks_to_add.append(current_chunk.strip())
+                        if len(sentence) <= max_chunk_size:
+                            # To prevent the length of a single sentence from exceeding max_chunk_size, the approach here is to directly discard sentences exceeding this length
+                            current_chunk = sentence + " "
 
-            for i in range(num_chunks):
-                start = i * max_chunk_size
-                end = start + max_chunk_size
-                body_chunk = body[start:end].strip()
-                if body_chunk:  
-                    # Only save non-empty blocks
-                    chunks.append(
-                        {
-                            "title": " - ".join(chunk_title_parts),
-                            "body": body_chunk,
-                            **meta,
-                        }
-                    )
+            elif current_chunk:
+                chunks_to_add.append(current_chunk.strip())
+                current_chunk = ""
 
-            if remainder > 0:
-                # Deal with the remainder
-                body_chunk = body[-remainder:].strip()
-                if body_chunk:  
-                    # Only save non-empty blocks
-                    chunks.append(
-                        {
-                            "title": " - ".join(chunk_title_parts),
-                            "body": body_chunk,
-                            **meta,
-                        }
-                    )
-        else:
-            # Skip saving if body is empty
-            if body:
+        if current_chunk:
+            chunks_to_add.append(current_chunk.strip())
+
+        # Create chunks from the split sentences
+        for chunk in chunks_to_add:
+            if chunk:
                 chunks.append(
                     {
                         "title": " - ".join(chunk_title_parts),
-                        "body": body,
-                        # We also include the document level meta information
+                        "body": chunk,
                         **meta,
                     }
                 )
 
         chunk_body_lines = []
         chunk_size = 0
+
 
     i = 0
     while i < len(lines):
