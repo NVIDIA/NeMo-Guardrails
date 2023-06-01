@@ -181,7 +181,7 @@ class DocumentLoader(BaseDocumentLoader):
                 type=type(element),
                 format=element.metadata.filetype,
                 metadata=element.metadata.to_dict(),
-                source=_remove_none_values(self._source),
+                uri=_remove_none_values(self._source),
                 loader=self.__class__.__name__,
             )
 
