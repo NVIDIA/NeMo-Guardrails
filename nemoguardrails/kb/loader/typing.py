@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any, Dict, Optional, Type, Union
+
 from pydantic import BaseModel
 from unstructured.documents.elements import (
     Address,
     Element,
+    ElementMetadata,
     FigureCaption,
     Image,
     ListItem,
@@ -31,11 +34,12 @@ from unstructured.file_utils.filetype import FileType
 
 class Document(BaseModel):
     content: str
-    type: str
+    type: Union[str, Type[Element]]
     format: str
-    metadata: Dict[str, Any] = {}
-    file_path: str
-    loader: str
+    metadata: Optional[Dict[str, Any]] = None
+    uri: Optional[Dict[Any, Any]] = None
+    loader: Optional[str] = None
+
 
 
 class Topic(BaseModel):

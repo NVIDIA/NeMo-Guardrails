@@ -21,8 +21,6 @@ import os
 from pathlib import Path
 from typing import Callable, Dict, Union
 
-from unstructured.partition.doc import partition_doc
-from unstructured.partition.docx import partition_docx
 from unstructured.partition.html import partition_html
 from unstructured.partition.md import partition_md
 from unstructured.partition.pdf import partition_pdf
@@ -30,6 +28,10 @@ from unstructured.partition.text import partition_text
 from unstructured.partition.xml import partition_xml
 
 from .typing import FileType
+
+# from unstructured.partition.docx import partition_docx
+# from unstructured.partition.doc import partition_doc
+
 
 # TODO(Pouyanpi): To add auto partition?
 # from unstructured.partition.auto import partition
@@ -89,7 +91,8 @@ class PartitionFactory:
         >>> partition_function = PartitionFactory.get(".html")
 
     Attributes:
-        _PARTITION_FUNCTIONS (Dict[FileType, Callable]): Mapping of file types to partition functions.
+        _PARTITION_FUNCTIONS (Dict[FileType, Callable]): Mapping of file
+            types to partition functions.
 
     """
 
@@ -97,8 +100,9 @@ class PartitionFactory:
         FileType.HTML: partition_html,
         FileType.MD: partition_md,
         FileType.PDF: partition_pdf,
-        FileType.DOCX: partition_docx,
-        FileType.DOC: partition_doc,
+        # FileType.DOCX: partition_docx,
+        # FileType.DOC: partition_doc,
+        FileType.TXT: partition_text,
     }
 
     @classmethod
@@ -108,7 +112,7 @@ class PartitionFactory:
         elif os.path.isfile(file_identifier):
             file_type = cls._detect_filetype(file_identifier)
             return cls._get_by_filetype(file_type)
-        elif isinstance(file_identifier, str) and file_identifier in EXT_TO_FILETYPE:
+        elif isinstance(file_identifier, str):
             return cls._get_by_ext(file_identifier)
         else:
             raise ValueError(f"Invalid file identifier: {file_identifier}")
@@ -127,7 +131,8 @@ class PartitionFactory:
             return PartitionFactory._PARTITION_FUNCTIONS[file_type]
         except KeyError:
             raise FileTypeNotFoundError(
-                f"Partition function not found for file type: {file_type}"
+                f"Partition function not found \
+                                          for file type: {file_type}"
             )
 
     @classmethod
@@ -137,7 +142,8 @@ class PartitionFactory:
             return PartitionFactory._get_by_filetype(file_type)
         except KeyError:
             raise FileExtensionNotFoundError(
-                f"Partition function not found for file extension: {ext}"
+                f"Partition function not \
+                                              found for file extension: {ext}"
             )
 
     @staticmethod
@@ -147,7 +153,8 @@ class PartitionFactory:
             return EXT_TO_FILETYPE[extension.lower()]
         except KeyError:
             raise FileTypeNotFoundError(
-                f"File type not found for file identifier: {file_identifier}"
+                f"File type not found \
+                                         for file identifier: {file_identifier}"
             )
 
 
