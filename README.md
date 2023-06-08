@@ -11,6 +11,8 @@
 under-development progress towards the next release. The current release is
 an alpha version, [0.2.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.2.0)**.
 
+> **DISCLAIMER**: The alpha release is undergoing active development and may be subject to changes and improvements, which could potentially cause instability and unexpected behavior. We currently do not recommend deploying this alpha version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback is invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit.
+
 NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems. Guardrails (or "rails" for short) are specific ways of controlling the output of a large language model, such as not talking about politics, responding in a particular way to specific user requests, following a predefined dialog path, using a particular language style, extracting structured data, and more.
 
 This toolkit is currently in its early alpha stages, and we invite the community to contribute towards making the power of trustworthy, safe, and secure LLMs accessible to everyone. The examples provided within the documentation are for educational purposes to get started with NeMo Guardrails, and are not meant for use in production applications.
@@ -18,15 +20,21 @@ This toolkit is currently in its early alpha stages, and we invite the community
 We are committed to improving the toolkit in the near term to make it easier for developers to build production-grade trustworthy, safe, and secure LLM applications.
 
 #### **Key Benefits**
-- **Building Trustworthy, Safe and Secure LLM Conversational Systems:** The core
-value of using NeMo Guardrails is the ability to write rails to guide conversations. Developers
-can choose to define the behavior of their LLM-powered bots on certain topics and keep their creativity unencumbered for others!
-- **Connect models, chains, services, and more via actions:** LLMs don't need to solve all the challenges. NeMo Guardrails provides the ability to connect your codebase or services to your chatbot seamlessly and securely!
 
-#### **Points of interest**
+- **Building Trustworthy, Safe, and Secure LLM Conversational Systems:** The core
+value of using NeMo Guardrails is the ability to write rails to guide conversations. You
+can choose to define the behavior of your LLM-powered application on specific topics and prevent it from engaging in discussions on unwanted topics.
+
+- **Connect models, chains, services, and more via actions:** NeMo Guardrails provides the ability to connect an LLM to other services (a.k.a. tools) seamlessly and securely.
+
+## Learn More
+
 * [Documentation](./docs/README.md)
-* [Understanding the architecture](./docs/architecture/README.md)
 * [Examples](./examples/README.md)
+* [Understanding the architecture](./docs/architecture/README.md)
+* [FAQs](./docs/faqs.md)
+* [Security Guidelines](./docs/security/guidelines.md)
+
 
 ## Installation
 
@@ -47,6 +55,15 @@ config = RailsConfig.from_path("path/to/config")
 app = LLMRails(config)
 
 new_message = app.generate(messages=[{
+    "role": "user",
+    "content": "Hello! What can you do for me?"
+}])
+```
+
+If you're using `LLMRails` from an async code base or from a Jupyter notebook, you should use the `generate_async` function:
+
+```python
+new_message = await app.generate_async(messages=[{
     "role": "user",
     "content": "Hello! What can you do for me?"
 }])
@@ -122,7 +139,6 @@ define bot offer to help
 **Warning:** Colang files can be written to perform complex activities, such as calling python scripts and performing multiple calls to the underlying language model. You should avoid loading Colang files from untrusted sources without careful inspection.
 
 For a brief introduction to the Colang syntax, check out the [Colang Language Syntax Guide](./docs/user_guide/colang-language-syntax-guide.md).
-
 
 
 ## Inviting the community to contribute!
