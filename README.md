@@ -7,22 +7,30 @@
 [![Python 3.7+](https://img.shields.io/badge/python-3.7%2B-green)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-**LATEST RELEASE: You are currently on the main branch which tracks
-under-development progress towards the next release. The current release is
+> **LATEST RELEASE: You are currently on the main branch, which tracks
+under-development progress towards the next release. The current ALPHA release is
 version [0.2.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.2.0)**.
+
+> **DISCLAIMER**: The alpha release is undergoing active development and may be subject to changes and improvements, which could potentially cause instability and unexpected behavior. We currently do not recommend deploying this alpha version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback is invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit.
 
 NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems. Guardrails (or "rails" for short) are specific ways of controlling the output of a large language model, such as not talking about politics, responding in a particular way to specific user requests, following a predefined dialog path, using a particular language style, extracting structured data, and more.
 
 #### **Key Benefits**
-- **Building Trustworthy, Safe and Secure LLM Conversational Systems:** The core
-value of using NeMo Guardrails is the ability to write rails to guide conversations. Developers
-can choose to define the behavior of their LLM-powered bots on certain topics and keep their creativity unencumbered for others!
-- **Connect models, chains, services, and more via actions:** LLMs don't need to solve all the challenges. NeMo Guardrails provides the ability to connect your codebase or services to your chatbot seamlessly and securely!
 
-#### **Points of interest**
+- **Building Trustworthy, Safe, and Secure LLM Conversational Systems:** The core
+value of using NeMo Guardrails is the ability to write rails to guide conversations. You
+can choose to define the behavior of your LLM-powered application on specific topics and prevent it from engaging in discussions on unwanted topics.
+
+- **Connect models, chains, services, and more via actions:** NeMo Guardrails provides the ability to connect an LLM to other services (a.k.a. tools) seamlessly and securely.
+
+## Learn More
+
 * [Documentation](./docs/README.md)
-* [Understanding the architecture](./docs/architecture/README.md)
 * [Examples](./examples/README.md)
+* [Understanding the architecture](./docs/architecture/README.md)
+* [FAQs](./docs/faqs.md)
+* [Security Guidelines](./docs/security/guidelines.md)
+
 
 ## Installation
 
@@ -43,6 +51,15 @@ config = RailsConfig.from_path("path/to/config")
 app = LLMRails(config)
 
 new_message = app.generate(messages=[{
+    "role": "user",
+    "content": "Hello! What can you do for me?"
+}])
+```
+
+If you're using `LLMRails` from an async code base or from a Jupyter notebook, you should use the `generate_async` function:
+
+```python
+new_message = await app.generate_async(messages=[{
     "role": "user",
     "content": "Hello! What can you do for me?"
 }])
@@ -120,10 +137,9 @@ define bot offer to help
 For a brief introduction to the Colang syntax, check out the [Colang Language Syntax Guide](./docs/user_guide/colang-language-syntax-guide.md).
 
 
-
 ## Inviting the community to contribute!
 
-Guardrails is an open-source toolkit! While the example rails residing in the repository are excellent starting points we enthusiastically invite the community to contribute towards making the power of trustworthy, safe, and secure LLMs accessible to everyone. For guidance on setting up a development environment and how to contribute to NeMo Guardrails, see the [contributing guidelines](./CONTRIBUTING.md).
+Guardrails is an open-source toolkit. While the examples provided in the repository are a good starting point, we invite the community to contribute towards making the power of trustworthy, safe, and secure LLMs accessible to everyone. For guidance on setting up a development environment and how to contribute to NeMo Guardrails, see the [contributing guidelines](./CONTRIBUTING.md).
 
 ## License
 
