@@ -14,6 +14,7 @@ prompts:
     content: |-
       """
       {general_instruction}
+      Today is {current_user_datetime}.
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -49,6 +50,7 @@ prompts:
     content: |-
       """
       {general_instruction}
+      Today is {current_user_datetime}.
       """
 
       # This is how a conversation between a user and the bot can go:

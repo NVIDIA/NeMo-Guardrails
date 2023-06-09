@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """A set of actions for generating various types of completions using an LLMs."""
-
+import datetime
 import logging
 import random
 import sys
@@ -107,6 +107,8 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
+        # TODO: here you would change to a different Embeddings index
+        # self.bot_message_index = FaissEmbeddingsIndex()
         self.bot_message_index = BasicEmbeddingsIndex()
         self.bot_message_index.add_items(items)
 
@@ -234,6 +236,7 @@ class LLMGenerationActions:
                     "sample_conversation",
                     "general_instruction",
                     "sample_conversation_two_turns",
+                    "current_user_datetime",
                 ],
                 template=get_prompt(self.config, Task.GENERATE_USER_INTENT).content,
             )
@@ -252,6 +255,7 @@ class LLMGenerationActions:
                     sample_conversation=self.config.sample_conversation,
                     general_instruction=self._get_general_instruction(),
                     sample_conversation_two_turns=self._get_sample_conversation_two_turns(),
+                    current_user_datetime="June 9th, 2023. Week number 23. It's a Friday. Tomorrow is weekend.",
                 )
 
             user_intent = get_first_nonempty_line(result)
@@ -435,6 +439,7 @@ class LLMGenerationActions:
                     "general_instruction",
                     "sample_conversation_two_turns",
                     "relevant_chunks",
+                    "current_user_datetime",
                 ],
                 template=get_prompt(self.config, Task.GENERATE_BOT_MESSAGE).content,
             )
@@ -448,6 +453,7 @@ class LLMGenerationActions:
                 "sample_conversation": self.config.sample_conversation,
                 "general_instruction": self._get_general_instruction(),
                 "sample_conversation_two_turns": self._get_sample_conversation_two_turns(),
+                "current_user_datetime": "June 9th, 2023. Week number 23. It's a Friday. Tomorrow is weekend.",
             }
             bot_message_prompt_string = bot_message_prompt.format(**prompt_inputs)
             # Context variable starting with "_" are considered private (not used in tests or logging)
