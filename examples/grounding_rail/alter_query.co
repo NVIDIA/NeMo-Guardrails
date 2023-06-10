@@ -1,5 +1,0 @@
-define extension flow check time based query
-  priority 10
-
-  event user_said(content="...")
-  execute check_if_time_based_query

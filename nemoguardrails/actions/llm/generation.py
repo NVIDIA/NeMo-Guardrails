@@ -45,8 +45,29 @@ from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task, get_prompt
 from nemoguardrails.logging.callbacks import logging_callbacks
 from nemoguardrails.rails.llm.config import RailsConfig
-
+from datetime import datetime
 log = logging.getLogger(__name__)
+
+def extract_time_precision():
+    months=['January', 'February','March','April','May','June','July','August','September','October','November','December']
+    idx2months=dict([(idx,m) for (idx,m) in zip(range(1,13),months)])
+    weekdays=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+    sixWs=['What','Which']
+    time_related_keywords=months+weekdays+['When', 'What time', "Weekend", "holidays","Summer", "Winter", "Fall","Spring", "What day"]
+    idx2weekdays=dict([(id,wd) for (id, wd) in zip(range(1,8),weekdays)])
+    weekdays2idx= dict([(wd,id) for (wd,id) in zip(range(1,8),weekdays)])
+    dt=datetime.now()
+    weekday=dt.strftime('%A')
+    dayinmonth=dt.strftime('%d')
+    time_track=[]
+    replace_words=[]
+    time_shift=0
+    yr=str(dt.year)
+    m=idx2months[dt.month]
+    wday=dt.strftime('%A')
+    day=dt.strftime('%d')
+    additional_inserts="{} {}.{}.It's a {}".format(m,day,yr,wday)
+    return additional_inserts
 
 
 class LLMGenerationActions:
@@ -70,6 +91,7 @@ class LLMGenerationActions:
         # If we have documents, we'll also initialize a knowledge base.
         self.kb = None
         self._init_kb()
+        self.date_time_string=extract_time_precision()
 
     def _init_user_message_index(self):
         """Initializes the index of user messages."""
@@ -255,7 +277,7 @@ class LLMGenerationActions:
                     sample_conversation=self.config.sample_conversation,
                     general_instruction=self._get_general_instruction(),
                     sample_conversation_two_turns=self._get_sample_conversation_two_turns(),
-                    current_user_datetime="June 9th, 2023. Week number 23. It's a Friday. Tomorrow is weekend.",
+                    current_user_datetime=self.date_time_string,
                 )
 
             user_intent = get_first_nonempty_line(result)
@@ -453,7 +475,7 @@ class LLMGenerationActions:
                 "sample_conversation": self.config.sample_conversation,
                 "general_instruction": self._get_general_instruction(),
                 "sample_conversation_two_turns": self._get_sample_conversation_two_turns(),
-                "current_user_datetime": "June 9th, 2023. Week number 23. It's a Friday. Tomorrow is weekend.",
+                "current_user_datetime": self.date_time_string,
             }
             bot_message_prompt_string = bot_message_prompt.format(**prompt_inputs)
             # Context variable starting with "_" are considered private (not used in tests or logging)
