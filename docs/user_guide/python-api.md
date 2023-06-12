@@ -105,6 +105,16 @@ For convenience, this toolkit also includes a selection of LangChain tools, wrap
 - `wolfram_alpha_query`: A wrapper around the [Wolfram Alpha API](https://python.langchain.com/en/latest/ecosystem/wolfram_alpha.html). It can be used to answer math and science questions.
 - `zapier_nla_query`: Wrapper around the [Zapier NLA API](https://python.langchain.com/en/latest/modules/agents/tools/examples/zapier.html). It provides access to over 5k applications and 20k actions to automate your workflows.
 
+### Chains as Actions
+
+You can register a Langchain chain as an action:
+
+```python
+app.register_action(some_chain, name="some_chain")
+```
+
+When a chain is invoked as an action, the parameters of the action correspond to the input keys of the chain. For the return value, if the output of the chain has a single key, the value will be returned. If the chain has multiple output keys, the dictionary of output keys and their values is returned. See [demo_chain_with_guardrails](../../examples/demo_chain_with_guardrails.py) and [demo_chain_as_action](../../examples/demo_chain_as_action.py) as examples.
+
 ### Custom Actions
 
 You can register any python function as a custom action, using the `action` decorator or with `LLMRails(RailsConfig).register_action(action: callable, name: Optional[str])`.
