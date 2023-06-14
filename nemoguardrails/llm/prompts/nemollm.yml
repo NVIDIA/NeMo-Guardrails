@@ -1,0 +1,61 @@
+# Prompts for NeMo LLM models. This is very raw and works decently.
+prompts:
+  - task: generate_user_intent
+    models:
+      - nemollm/marigold-badger
+    content: |-
+      """
+      {general_instruction}
+      Your task is to generate a short summary called canonical form for the last user utterance.
+      """
+
+      # This is how a conversation between a user and the bot can go:
+      {sample_conversation}
+
+      # This how the user talks, use these examples to generate the canonical form:
+      {examples}
+
+      # This is the current conversation between the user and the bot:
+      {sample_conversation_two_turns}
+      {history}#generate canonical form
+
+  - task: generate_next_steps
+    models:
+      - nemollm/marigold-badger
+    content: |-
+      """
+      {general_instruction}
+      """
+
+      # This is how a conversation between a user and the bot can go:
+      {sample_conversation}
+
+      # This how the bot thinks, use these examples to generate the bot canonical form:
+      {examples}
+
+      # This is the current conversation between the user and the bot:
+      {sample_conversation_two_turns}
+      {history}#generate bot canonical form
+
+  - task: generate_bot_message
+    models:
+      - nemollm/marigold-badger
+    content: |-
+      """
+      {general_instruction}
+      """
+
+      # This is how a conversation between a user and the bot can go:
+      {sample_conversation}
+
+      # This is some additional context:
+      ```markdown
+      {relevant_chunks}
+      ```
+
+      # This how the bot talks:
+      {examples}
+
+      # This is the current conversation between the user and the bot:
+      {sample_conversation_two_turns}
+      {history}#generate relevant response based on canonical form
