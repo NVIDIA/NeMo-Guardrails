@@ -40,13 +40,13 @@ def get_colang_history(
             history += f'user "{event["content"]}"\n'
         elif event["type"] == "user_intent":
             if include_texts:
-                history += f'  {event["intent"]}\n'
+                history += f'#generate canonical form\n  {event["intent"]}\n'
             else:
-                history += f'user {event["intent"]}\n'
+                history += f'#generate canonical form\nuser {event["intent"]}\n'
         elif event["type"] == "bot_intent":
-            history += f'bot {event["intent"]}\n'
+            history += f'#generate bot canonical form\nbot {event["intent"]}\n'
         elif event["type"] == "bot_said" and include_texts:
-            history += f'  "{event["content"]}"\n'
+            history += f'#generate relevant response based on canonical form\n  "{event["content"]}"\n'
         # We skip system actions from this log
         elif event["type"] == "start_action" and not event.get("is_system_action"):
             if (
@@ -141,6 +141,15 @@ def get_last_user_intent_event(events: List[dict]):
     """Returns the last user intent from the events."""
     for event in reversed(events):
         if event["type"] == "user_intent":
+            return event
+
+    return None
+
+
+def get_last_bot_utterance_event(events: List[dict]):
+    """Returns the last bot utterance from the events."""
+    for event in reversed(events):
+        if event["type"] == "bot_said":
             return event
 
     return None
