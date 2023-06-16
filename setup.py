@@ -77,7 +77,7 @@ setup(
         "annoy==1.17.1",
         "sentence-transformers==2.2.2",
         "fastapi==0.96.0",
-        "starlette==0.26.1",
+        "starlette==0.27.0",
         "uvicorn==0.22.0",
         "httpx==0.23.3",
         "simpleeval==0.9.13",
