@@ -78,7 +78,7 @@ setup(
         "sentence-transformers==2.2.2",
         "fastapi==0.95.0",
         "starlette==0.26.1",
-        "uvicorn==0.21.1",
+        "uvicorn==0.22.0",
         "httpx==0.23.3",
         "simpleeval==0.9.13",
         "typing-extensions==4.5.0",
