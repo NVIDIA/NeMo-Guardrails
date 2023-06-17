@@ -1,0 +1,15 @@
+define user ask about report
+  "What is the unemployment rate in March 2023?"
+  "What is the unemployment rate for teenagers for March 2023?"
+  "Who is the media contact person for this report?"
+
+define flow answer report question
+  user ask about report
+  bot provide report answer
+  $accurate = execute check_facts
+  if not $accurate
+    bot remove last message
+    bot inform answer unknown
+
+define bot remove last message
+  "(remove last message)"

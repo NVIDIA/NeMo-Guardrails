@@ -23,13 +23,6 @@ class HFMosaicLLM(LLM):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-
-
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-          'mosaicml/mpt-7b-instruct',
-          trust_remote_code=True
-        )
-
         name = 'mosaicml/mpt-7b-instruct'
 
         config = transformers.AutoConfig.from_pretrained(name, trust_remote_code=True)
