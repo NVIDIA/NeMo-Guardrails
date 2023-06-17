@@ -1,0 +1,10 @@
+define user ask about date time
+  "What date are we in today?"
+  "What time is it now?"
+  "What month are we in?"
+  "Is tomorrow weekend?"
+
+define extension flow check time based query
+  user ask about date time
+  execute check_if_time_based_query
+  bot inform about date time

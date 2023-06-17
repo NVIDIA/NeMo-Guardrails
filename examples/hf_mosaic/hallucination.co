@@ -1,0 +1,9 @@
+define flow check hallucination
+    bot ...
+    $result = execute check_hallucination
+    if $result
+        bot inform answer prone to hallucination
+
+define bot inform answer prone to hallucination
+    "The previous answer is prone to hallucination and may not be accurate. Please double check the answer using additional sources."
+    "The above response may have been hallucinated, and should be independently verified."
