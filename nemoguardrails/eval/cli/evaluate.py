@@ -18,7 +18,7 @@ from typing import List
 
 import typer
 
-from nemoguardrails.eval.evaluate_topical import run_evaluate
+from nemoguardrails.eval.evaluate_topical import TopicalRailsEvaluation
 from nemoguardrails.logging.verbose import set_verbose
 
 app = typer.Typer()
@@ -31,7 +31,8 @@ def topical(
     config: List[str] = typer.Option(
         default=["eval"],
         exists=True,
-        help="Path to a directory containing configuration files of the Guardrails appplication for evaluation. Can also point to a single configuration file.",
+        help="Path to a directory containing configuration files of the Guardrails application for evaluation. "
+        "Can also point to a single configuration file.",
     ),
     verbose: bool = typer.Option(
         default=False,
@@ -47,8 +48,10 @@ def topical(
 
     if len(config) > 1:
         typer.secho(f"Multiple configurations are not supported.", fg=typer.colors.RED)
-        typer.echo("Please provide a single folder.")
+        typer.echo("Please provide a single config path (folder or config file).")
         raise typer.Exit(1)
 
-    typer.echo("Starting the evaluation...")
-    run_evaluate(config_path=config[0], verbose=verbose)
+    typer.echo(f"Starting the evaluation for app: {config[0]}...")
+
+    topical_eval = TopicalRailsEvaluation(config_path=config[0], verbose=verbose)
+    topical_eval.evaluate_topical_rails()
