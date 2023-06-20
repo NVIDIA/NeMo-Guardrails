@@ -16,41 +16,37 @@
 import logging
 from typing import Optional
 
-from langchain import LLMChain, PromptTemplate
 from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.actions import ActionResult, action
+from nemoguardrails.actions.llm.utils import llm_call
 from nemoguardrails.llm.params import llm_params
-from nemoguardrails.llm.prompts import Task, get_prompt
-from nemoguardrails.logging.callbacks import logging_callbacks
-from nemoguardrails.rails.llm.config import RailsConfig
+from nemoguardrails.llm.taskmanager import LLMTaskManager
+from nemoguardrails.llm.types import Task
 
 log = logging.getLogger(__name__)
 
 
 @action(is_system_action=True)
 async def check_jailbreak(
+    llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
-    config: Optional[RailsConfig] = None,
 ):
     """Checks if the user response is malicious and should be masked."""
 
     user_input = context.get("last_user_message")
 
     if user_input:
-        jailbreak_check_template = get_prompt(config, Task.JAILBREAK_CHECK).content
-
-        prompt = PromptTemplate(
-            template=jailbreak_check_template, input_variables=["user_input"]
+        prompt = llm_task_manager.render_task_prompt(
+            task=Task.JAILBREAK_CHECK,
+            context={
+                "user_input": user_input,
+            },
         )
 
-        jailbreak_check_chain = LLMChain(prompt=prompt, llm=llm)
-
         with llm_params(llm, temperature=0):
-            check = await jailbreak_check_chain.apredict(
-                callbacks=logging_callbacks, user_input=user_input
-            )
+            check = await llm_call(llm, prompt)
 
         check = check.lower().strip()
         log.info(f"Jailbreak check result is {check}.")

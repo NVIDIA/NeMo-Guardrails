@@ -14,7 +14,43 @@
 # limitations under the License.
 
 import re
-from typing import List
+from typing import List, Union
+
+from langchain.base_language import BaseLanguageModel
+from langchain.prompts.base import StringPromptValue
+from langchain.prompts.chat import ChatPromptValue
+from langchain.schema import AIMessage, HumanMessage, SystemMessage
+
+from nemoguardrails.logging.callbacks import logging_callbacks
+
+
+async def llm_call(llm: BaseLanguageModel, prompt: Union[str, List[dict]]) -> str:
+    """Calls the LLM with a prompt and returns the generated text."""
+
+    if isinstance(prompt, str):
+        result = await llm.agenerate_prompt(
+            [StringPromptValue(text=prompt)], callbacks=logging_callbacks
+        )
+
+        # TODO: error handling
+        return result.generations[0][0].text
+    else:
+        # We first need to translate the array of messages into LangChain message format
+        messages = []
+        for _msg in prompt:
+            if _msg["type"] == "user":
+                messages.append(HumanMessage(content=_msg["content"]))
+            elif _msg["type"] in ["bot", "assistant"]:
+                messages.append(AIMessage(content=_msg["content"]))
+            elif _msg["type"] == "system":
+                messages.append(SystemMessage(content=_msg["content"]))
+            else:
+                raise ValueError(f"Unknown message type {_msg['type']}")
+        result = await llm.agenerate_prompt(
+            [ChatPromptValue(messages=messages)], callbacks=logging_callbacks
+        )
+
+        return result.generations[0][0].text
 
 
 def get_colang_history(
@@ -35,6 +71,10 @@ def get_colang_history(
     """
 
     history = ""
+
+    if not events:
+        return history
+
     for idx, event in enumerate(events):
         if event["type"] == "user_said" and include_texts:
             history += f'user "{event["content"]}"\n'

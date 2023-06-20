@@ -20,13 +20,15 @@ from langchain import LLMChain, PromptTemplate
 from langchain.llms import OpenAI
 from langchain.llms.base import BaseLLM
 
-from nemoguardrails.actions.llm.utils import get_multiline_response, strip_quotes
-from nemoguardrails.llm.params import llm_params
-from nemoguardrails.llm.prompts import Task, get_prompt
-from nemoguardrails.logging.callbacks import (
-    logging_callback_manager_for_chain,
-    logging_callbacks,
+from nemoguardrails.actions.llm.utils import (
+    get_multiline_response,
+    llm_call,
+    strip_quotes,
 )
+from nemoguardrails.llm.params import llm_params
+from nemoguardrails.llm.taskmanager import LLMTaskManager
+from nemoguardrails.llm.types import Task
+from nemoguardrails.logging.callbacks import logging_callback_manager_for_chain
 from nemoguardrails.rails.llm.config import RailsConfig
 
 log = logging.getLogger(__name__)
@@ -35,10 +37,10 @@ HALLUCINATION_NUM_EXTRA_RESPONSES = 2
 
 
 async def check_hallucination(
+    llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
     use_llm_checking: bool = True,
-    config: Optional[RailsConfig] = None,
 ):
     """Checks if the last bot response is a hallucination by checking multiple completions for self-consistency.
 
@@ -98,23 +100,16 @@ async def check_hallucination(
 
         if use_llm_checking:
             # Only support LLM-based agreement check in current version
-            hallucination_check_template = get_prompt(
-                config, Task.CHECK_HALLUCINATION
-            ).content
-
-            prompt = PromptTemplate(
-                template=hallucination_check_template,
-                input_variables=["statement", "paragraph"],
+            prompt = llm_task_manager.render_task_prompt(
+                task=Task.CHECK_HALLUCINATION,
+                context={
+                    "statement": bot_response,
+                    "paragraph": ". ".join(extra_responses),
+                },
             )
 
-            hallucination_check_chain = LLMChain(prompt=prompt, llm=llm, verbose=True)
-
             with llm_params(llm, temperature=0):
-                agreement = await hallucination_check_chain.apredict(
-                    callbacks=logging_callbacks,
-                    statement=bot_response,
-                    paragraph=". ".join(extra_responses),
-                )
+                agreement = await llm_call(llm, prompt)
 
             agreement = agreement.lower().strip()
             log.info(f"Agreement result for looking for hallucination is {agreement}.")

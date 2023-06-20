@@ -22,28 +22,26 @@ from ast import literal_eval
 from functools import lru_cache
 from typing import List, Optional
 
-from langchain import LLMChain, PromptTemplate
 from langchain.llms import BaseLLM
 
 from nemoguardrails.actions.actions import ActionResult, action
 from nemoguardrails.actions.llm.utils import (
     flow_to_colang,
-    get_colang_history,
     get_first_nonempty_line,
     get_last_bot_intent_event,
     get_last_user_intent_event,
     get_last_user_utterance_event,
     get_multiline_response,
     get_retrieved_relevant_chunks,
-    remove_text_messages_from_history,
+    llm_call,
     strip_quotes,
 )
 from nemoguardrails.kb.basic import BasicEmbeddingsIndex
 from nemoguardrails.kb.index import IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.params import llm_params
-from nemoguardrails.llm.prompts import Task, get_prompt
-from nemoguardrails.logging.callbacks import logging_callbacks
+from nemoguardrails.llm.taskmanager import LLMTaskManager
+from nemoguardrails.llm.types import Task
 from nemoguardrails.rails.llm.config import RailsConfig
 
 log = logging.getLogger(__name__)
@@ -52,7 +50,13 @@ log = logging.getLogger(__name__)
 class LLMGenerationActions:
     """A container objects for multiple related actions."""
 
-    def __init__(self, config: RailsConfig, llm: BaseLLM, verbose: bool = False):
+    def __init__(
+        self,
+        config: RailsConfig,
+        llm: BaseLLM,
+        llm_task_manager: LLMTaskManager,
+        verbose: bool = False,
+    ):
         self.config = config
         self.llm = llm
         self.verbose = verbose
@@ -70,6 +74,8 @@ class LLMGenerationActions:
         # If we have documents, we'll also initialize a knowledge base.
         self.kb = None
         self._init_kb()
+
+        self.llm_task_manager = llm_task_manager
 
     def _init_user_message_index(self):
         """Initializes the index of user messages."""
@@ -212,8 +218,6 @@ class LLMGenerationActions:
             #  is for the latter.
 
             log.info("Phase 1: Generating user intent")
-            # Compute the conversation history
-            history = get_colang_history(events)
 
             # We search for the most relevant similar user utterance
             examples = ""
@@ -228,33 +232,20 @@ class LLMGenerationActions:
                     examples += f"user \"{result.text}\"\n  {result.meta['intent']}\n\n"
                     candidate_intents.add(result.meta["intent"])
 
-            # We have user messages, so we need to identify the canonical form.
-            canonical_form_prompt = PromptTemplate(
-                input_variables=[
-                    "history",
-                    "examples",
-                    "sample_conversation",
-                    "general_instruction",
-                    "sample_conversation_two_turns",
-                ],
-                template=get_prompt(self.config, Task.GENERATE_USER_INTENT).content,
-            )
-
-            # Create and run the general chain.
-            chain = LLMChain(
-                prompt=canonical_form_prompt, llm=self.llm, verbose=self.verbose
+            prompt = self.llm_task_manager.render_task_prompt(
+                task=Task.GENERATE_USER_INTENT,
+                events=events,
+                context={"examples": examples},
             )
 
             # We make this call with temperature 0 to have it as deterministic as possible.
             with llm_params(self.llm, temperature=0.0):
-                result = await chain.apredict(
-                    callbacks=logging_callbacks,
-                    history=history,
-                    examples=examples,
-                    sample_conversation=self.config.sample_conversation,
-                    general_instruction=self._get_general_instruction(),
-                    sample_conversation_two_turns=self._get_sample_conversation_two_turns(),
-                )
+                result = await llm_call(self.llm, prompt)
+
+            # Parse the output using the associated parser
+            result = self.llm_task_manager.parse_task_output(
+                Task.GENERATE_USER_INTENT, output=result
+            )
 
             user_intent = get_first_nonempty_line(result)
             if user_intent is None:
@@ -274,37 +265,12 @@ class LLMGenerationActions:
                     events=[{"type": "user_intent", "intent": user_intent}]
                 )
         else:
-            # This is the pass-through behavior.
-            # First, we compute the general instructions.
-            instruction_items = []
-            if self.config.instructions:
-                for instruction in self.config.instructions:
-                    instruction_items.append(instruction.content)
-            general_instructions = "\n".join(instruction_items)
-
-            # Next, we compute the history from all the messages
-            history_items = []
-            for event in events:
-                if event["type"] == "user_said":
-                    history_items.append("User: " + event["content"])
-                elif event["type"] == "bot_said":
-                    history_items.append("Assistant: " + event["content"])
-            history = "\n".join(history_items)
-
-            general_prompt = PromptTemplate(
-                input_variables=["general_instructions", "history"],
-                template=get_prompt(self.config, Task.GENERAL).content,
+            prompt = self.llm_task_manager.render_task_prompt(
+                task=Task.GENERAL, events=events
             )
 
-            # Create and run the general chain.
-            chain = LLMChain(prompt=general_prompt, llm=self.llm, verbose=self.verbose)
-
-            result = await chain.apredict(
-                callbacks=logging_callbacks,
-                general_instructions=general_instructions,
-                history=history,
-                stop=["User: "],
-            )
+            # We make this call with temperature 0 to have it as deterministic as possible.
+            result = await llm_call(self.llm, prompt)
 
             return ActionResult(
                 events=[{"type": "bot_said", "content": result.strip()}]
@@ -325,11 +291,7 @@ class LLMGenerationActions:
         if event["type"] == "user_intent":
             user_intent = event["intent"]
 
-            # We use the LLM to predict the next step
-            # Compute the conversation history
-            history = get_colang_history(events, include_texts=False)
-
-            # We search for the most relevant similar user utterance
+            # We search for the most relevant similar flows
             examples = ""
             if self.flows_index:
                 results = self.flows_index.search(text=user_intent, max_results=5)
@@ -338,36 +300,20 @@ class LLMGenerationActions:
                 for result in reversed(results):
                     examples += f"{result.text}\n\n"
 
-            predict_next_step_prompt = PromptTemplate(
-                input_variables=[
-                    "history",
-                    "examples",
-                    "sample_conversation",
-                    "general_instruction",
-                    "sample_conversation_two_turns",
-                ],
-                template=get_prompt(self.config, Task.GENERATE_NEXT_STEPS).content,
-            )
-
-            # Create and run the general chain.
-            chain = LLMChain(
-                prompt=predict_next_step_prompt, llm=self.llm, verbose=self.verbose
+            prompt = self.llm_task_manager.render_task_prompt(
+                task=Task.GENERATE_NEXT_STEPS,
+                events=events,
+                context={"examples": examples},
             )
 
             # We use temperature 0 for next step prediction as well
             with llm_params(self.llm, temperature=0.0):
-                result = await chain.apredict(
-                    callbacks=logging_callbacks,
-                    history=history,
-                    examples=examples,
-                    sample_conversation=remove_text_messages_from_history(
-                        self.config.sample_conversation
-                    ),
-                    general_instruction=self._get_general_instruction(),
-                    sample_conversation_two_turns=remove_text_messages_from_history(
-                        self._get_sample_conversation_two_turns()
-                    ),
-                )
+                result = await llm_call(self.llm, prompt)
+
+            # Parse the output using the associated parser
+            result = self.llm_task_manager.parse_task_output(
+                Task.GENERATE_NEXT_STEPS, output=result
+            )
 
             result = get_first_nonempty_line(result)
 
@@ -418,7 +364,6 @@ class LLMGenerationActions:
             bot_utterance = context[bot_intent[1:]]
 
         else:
-            history = get_colang_history(events, remove_retrieval_events=True)
             # We search for the most relevant similar bot utterance
             examples = ""
             if self.bot_message_index:
@@ -433,43 +378,28 @@ class LLMGenerationActions:
             # We compute the relevant chunks to be used as context
             relevant_chunks = get_retrieved_relevant_chunks(events)
 
-            # Otherwise, we generate a message with the LLM
-            bot_message_prompt = PromptTemplate(
-                input_variables=[
-                    "history",
-                    "examples",
-                    "sample_conversation",
-                    "general_instruction",
-                    "sample_conversation_two_turns",
-                    "relevant_chunks",
-                ],
-                template=get_prompt(self.config, Task.GENERATE_BOT_MESSAGE).content,
+            prompt = self.llm_task_manager.render_task_prompt(
+                task=Task.GENERATE_BOT_MESSAGE,
+                events=events,
+                context={"examples": examples, "relevant_chunks": relevant_chunks},
             )
 
-            # Save the current bot message prompt in the context as a string.
-            # The last bot message prompt is needed for the hallucination rail.
-            prompt_inputs = {
-                "history": history,
-                "examples": examples,
-                "relevant_chunks": relevant_chunks,
-                "sample_conversation": self.config.sample_conversation,
-                "general_instruction": self._get_general_instruction(),
-                "sample_conversation_two_turns": self._get_sample_conversation_two_turns(),
-            }
-            bot_message_prompt_string = bot_message_prompt.format(**prompt_inputs)
-            # Context variable starting with "_" are considered private (not used in tests or logging)
-            context_updates["_last_bot_prompt"] = bot_message_prompt_string
+            result = await llm_call(self.llm, prompt)
 
-            chain = LLMChain(
-                prompt=bot_message_prompt, llm=self.llm, verbose=self.verbose
+            # Parse the output using the associated parser
+            result = self.llm_task_manager.parse_task_output(
+                Task.GENERATE_BOT_MESSAGE, output=result
             )
+
             # TODO: catch openai.error.InvalidRequestError from exceeding max token length
-            result = await chain.apredict(callbacks=logging_callbacks, **prompt_inputs)
 
             result = get_multiline_response(result)
             result = strip_quotes(result)
 
             bot_utterance = result
+
+            # Context variable starting with "_" are considered private (not used in tests or logging)
+            context_updates["_last_bot_prompt"] = prompt
 
             log.info(f"Generated bot message: {bot_utterance}")
 
@@ -501,8 +431,6 @@ class LLMGenerationActions:
         if not var_name:
             var_name = last_event["action_result_key"]
 
-        history = get_colang_history(events, remove_retrieval_events=True)
-
         # We search for the most relevant flows.
         examples = ""
         if self.flows_index:
@@ -512,38 +440,23 @@ class LLMGenerationActions:
             for result in reversed(results):
                 examples += f"{result.text}\n\n"
 
-        predict_value_template = PromptTemplate(
-            input_variables=[
-                "history",
-                "examples",
-                "sample_conversation",
-                "general_instruction",
-                "sample_conversation_two_turns",
-                "var_name",
-                "instructions",
-            ],
-            template=get_prompt(self.config, Task.GENERATE_VALUE).content,
+        prompt = self.llm_task_manager.render_task_prompt(
+            task=Task.GENERATE_VALUE,
+            events=events,
+            context={
+                "examples": examples,
+                "instructions": instructions,
+                "var_name": var_name,
+            },
         )
 
-        # Create and run the general chain.
-        chain = LLMChain(
-            prompt=predict_value_template, llm=self.llm, verbose=self.verbose
-        )
         with llm_params(self.llm, temperature=0):
-            result = await chain.apredict(
-                callbacks=logging_callbacks,
-                history=history,
-                examples=examples,
-                sample_conversation=remove_text_messages_from_history(
-                    self.config.sample_conversation
-                ),
-                general_instruction=self._get_general_instruction(),
-                sample_conversation_two_turns=remove_text_messages_from_history(
-                    self._get_sample_conversation_two_turns()
-                ),
-                var_name=var_name,
-                instructions=instructions,
-            )
+            result = await llm_call(self.llm, prompt)
+
+        # Parse the output using the associated parser
+        result = self.llm_task_manager.parse_task_output(
+            Task.GENERATE_VALUE, output=result
+        )
 
         # We only use the first line for now
         # TODO: support multi-line values?
