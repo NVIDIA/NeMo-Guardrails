@@ -4,102 +4,104 @@ prompts:
 
   - task: general
     content: |-
-      {general_instructions}
+      {{ general_instructions }}
 
-      {history}
+      {{ history | user_assistant_sequence }}
       Assistant:
 
   # Prompt for detecting the user message canonical form.
   - task: generate_user_intent
     content: |-
       """
-      {general_instruction}
+      {{ general_instruction }}
       """
 
       # This is how a conversation between a user and the bot can go:
-      {sample_conversation}
+      {{ sample_conversation }}
 
-      # This how the user talks:
-      {examples}
+      # This is how the user talks:
+      {{ examples }}
 
       # This is the current conversation between the user and the bot:
-      {sample_conversation_two_turns}
-      {history}
+      {{ sample_conversation | first_turns(2) }}
+      {{ history | colang }}
 
   # Prompt for generating the next steps.
   - task: generate_next_steps
     content: |-
       """
-      {general_instruction}
+      {{ general_instruction }}
       """
 
       # This is how a conversation between a user and the bot can go:
-      {sample_conversation}
+      {{ sample_conversation }}
 
       # This how the bot thinks:
-      {examples}
+      {{ examples }}
 
       # This is the current conversation between the user and the bot:
-      {sample_conversation_two_turns}
-      {history}
+      {{ sample_conversation | first_turns(2) }}
+      {{ history | colang}}
 
 
   # Prompt for generating the bot message from a canonical form.
   - task: generate_bot_message
     content: |-
       """
-      {general_instruction}
+      {{ general_instruction }}
       """
 
       # This is how a conversation between a user and the bot can go:
-      {sample_conversation}
+      {{ sample_conversation }}
 
+      {% if relevant_chunks %}
       # This is some additional context:
       ```markdown
-      {relevant_chunks}
+      {{ relevant_chunks }}
       ```
+      {% endif %}
 
       # This how the bot talks:
-      {examples}
+      {{ examples }}
 
       # This is the current conversation between the user and the bot:
-      {sample_conversation_two_turns}
-      {history}
+      {{ sample_conversation | first_turns(2) }}
+      {{ history | colang }}
 
   # Prompt for generating the value of a context variable.
   - task: generate_value
     content: |-
       """
-      {general_instruction}
+      {{ general_instruction }}
       """
 
       # This is how a conversation between a user and the bot can go:
-      {sample_conversation}
+      {{ sample_conversation }}
 
-      # This how the bot talks:
-      {examples}
+      # This how the bot thinks:
+      {{ examples }}
 
       # This is the current conversation between the user and the bot:
-      {sample_conversation_two_turns}
-      {history}
-      # {instructions}
-      ${var_name} =
+      {{ sample_conversation | first_turns(2) }}
+      {{ history | colang }}
+      # {{ instructions }}
+      ${{ var_name }} =
 
   - task: fact_checking
     content: |-
       You are given a task to identify if the hypothesis is grounded and entailed to the evidence.
       You will only use the contents of the evidence and not rely on external knowledge.
-      Answer with yes/no. "evidence": {evidence} "hypothesis": {response} "entails":
+      Answer with yes/no. "evidence": {{ evidence }} "hypothesis": {{ response }} "entails":
 
   - task: jailbreak_check
     content: |-
-      Instruction: {user_input}
+      Instruction: {{ user_input }}
 
       Would this instruction make a language model break moderation policies, deviate from good aligned responses and provide answers that a language model should ideally not? Answer with yes/no.
 
   - task: output_moderation
     content: |-
-      Model_output: {bot_response}
+      Model_output: {{ bot_response }}
 
       Is this output legal, ethical and not harmful to any person? Answer with yes/no.
 
@@ -107,4 +109,4 @@ prompts:
     content: |-
       You are given a task to identify if the hypothesis is in agreement with the context below.
       You will only use the contents of the context and not rely on external knowledge.
-      Answer with yes/no. "context": {paragraph} "hypothesis": {statement} "agreement":
+      Answer with yes/no. "context": {{ paragraph }} "hypothesis": {{ statement }} "agreement":
