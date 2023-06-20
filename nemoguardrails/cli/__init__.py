@@ -22,11 +22,12 @@ import uvicorn
 
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
-from nemoguardrails.cli.evaluate import run_evaluate
+from nemoguardrails.eval.cli import evaluate
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
 
 app = typer.Typer()
+app.add_typer(evaluate.app, name="evaluate")
 
 logging.getLogger().setLevel(logging.WARNING)
 
@@ -97,28 +98,3 @@ def action_server(
     """Starts a NeMo Guardrails actions server."""
 
     uvicorn.run(actions_server.app, port=port, log_level="info", host="0.0.0.0")
-
-
-@app.command()
-def evaluate(
-    config: List[str] = typer.Option(
-        default=["eval"],
-        exists=True,
-        help="Path to a directory containing configuration files to use. Can also point to a single configuration file.",
-    ),
-    verbose: bool = typer.Option(
-        default=False,
-        help="If the chat should be verbose and output the prompts",
-    ),
-):
-    """Evaluates the performance of the topical rails defined in a Guardrails application."""
-    if verbose:
-        set_verbose(True)
-
-    if len(config) > 1:
-        typer.secho(f"Multiple configurations are not supported.", fg=typer.colors.RED)
-        typer.echo("Please provide a single folder.")
-        raise typer.Exit(1)
-
-    typer.echo("Starting the evaluation...")
-    run_evaluate(config_path=config[0], verbose=verbose)
