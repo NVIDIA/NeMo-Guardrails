@@ -16,10 +16,10 @@
 """Module for the configuration of rails."""
 import os
 import random
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError, root_validator
 from pydantic.fields import Field
 
 from nemoguardrails.language.coyml_parser import parse_flow_elements
@@ -60,20 +60,47 @@ class Document(BaseModel):
     content: str
 
 
-class Prompt(BaseModel):
+class MessageTemplate(BaseModel):
+    """Template for a message structure."""
+
+    type: str = Field(
+        description="The type of message, e.g., 'assistant', 'user', 'system'."
+    )
+    content: str = Field(description="The content of the message.")
+
+
+class TaskPrompt(BaseModel):
     """Configuration for prompts that will be used for a specific task."""
 
-    task: str
-    content: str
-    inputs: List[str] = Field(
-        default_factory=list,
-        description="The list of inputs variables used in the prompt.",
+    task: str = Field(description="The id of the task associated with this prompt.")
+    content: Optional[str] = Field(
+        default=None, description="The content of the prompt, if it's a string."
+    )
+    messages: Optional[List[Union[MessageTemplate, str]]] = Field(
+        default=None,
+        description="The list of messages included in the prompt. Used for chat models.",
     )
     models: Optional[List[str]] = Field(
         default=None,
         description="If specified, the prompt will be used only for the given LLM engines/models. "
         "The format is a list of strings with the format: <engine> or <engine>/<model>.",
     )
+    output_parser: Optional[str] = Field(
+        default=None,
+        description="The name of the output parser to use for this prompt.",
+    )
+
+    @root_validator(pre=True)
+    def check_fields(cls, values):
+        if not values.get("content") and not values.get("messages"):
+            raise ValidationError("One of `content` or `messages` must be provided.")
+
+        if values.get("content") and values.get("messages"):
+            raise ValidationError(
+                "Only one of `content` or `messages` must be provided."
+            )
+
+        return values
 
 
 # Load the default config values from the file
@@ -167,7 +194,7 @@ class RailsConfig(BaseModel):
         description="The sample conversation that should be used inside the prompts.",
     )
 
-    prompts: Optional[List[Prompt]] = Field(
+    prompts: Optional[List[TaskPrompt]] = Field(
         default=None,
         description="The prompts that should be used for the various LLM tasks.",
     )
