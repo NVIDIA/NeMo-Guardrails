@@ -9,7 +9,7 @@
 
 **LATEST RELEASE: You are currently on the main branch which tracks
 under-development progress towards the next release. The current release is
-version [0.1.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.1.0)**.
+version [0.2.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.2.0)**.
 
 NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems. Guardrails (or "rails" for short) are specific ways of controlling the output of a large language model, such as not talking about politics, responding in a particular way to specific user requests, following a predefined dialog path, using a particular language style, extracting structured data, and more.
 
