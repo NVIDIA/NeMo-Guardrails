@@ -22,17 +22,12 @@ import time
 from typing import Any, List, Optional
 
 from langchain.llms.base import BaseLLM
-from nvlangchain.llm import NeMo
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
 from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.language.parser import parse_colang_file
-from nemoguardrails.llm.providers import (
-    get_llm_provider,
-    get_llm_provider_names,
-    register_llm_provider,
-)
+from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
@@ -104,8 +99,6 @@ class LLMRails:
         # TODO: Currently we assume the first model is the main one. Add proper support
         #  to search for the main model config.
         main_llm_config = self.config.models[0]
-
-        register_llm_provider("nemollm", NeMo)
 
         if main_llm_config.engine not in get_llm_provider_names():
             raise Exception(f"Unknown LLM engine: {main_llm_config.engine}")
