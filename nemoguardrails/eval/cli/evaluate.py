@@ -29,14 +29,32 @@ logging.getLogger().setLevel(logging.WARNING)
 @app.command()
 def topical(
     config: List[str] = typer.Option(
-        default=["eval"],
+        default=[""],
         exists=True,
         help="Path to a directory containing configuration files of the Guardrails application for evaluation. "
         "Can also point to a single configuration file.",
     ),
     verbose: bool = typer.Option(
         default=False,
-        help="If the chat should be verbose and output the prompts",
+        help="If the chat should be verbose and output the prompts.",
+    ),
+    test_percentage: float = typer.Option(
+        default=0.3,
+        help="Percentage of the samples for an intent to be used as test set.",
+    ),
+    max_tests_intent: int = typer.Option(
+        default=3,
+        help="Maximum number of test samples per intent to be used when testing. "
+        "If value is 0, no limit is used.",
+    ),
+    max_samples_intent: int = typer.Option(
+        default=0,
+        help="Maximum number of samples per intent indexed in vector database. "
+        "If value is 0, all samples are used.",
+    ),
+    results_frequency: int = typer.Option(
+        default=10,
+        help="Print evaluation intermediate results using this step.",
     ),
 ):
     """Evaluates the performance of the topical rails defined in a Guardrails application.
@@ -51,7 +69,18 @@ def topical(
         typer.echo("Please provide a single config path (folder or config file).")
         raise typer.Exit(1)
 
+    if config[0] == "":
+        typer.echo("Please provide a value for the config path.")
+        raise typer.Exit(1)
+
     typer.echo(f"Starting the evaluation for app: {config[0]}...")
 
-    topical_eval = TopicalRailsEvaluation(config_path=config[0], verbose=verbose)
+    topical_eval = TopicalRailsEvaluation(
+        config_path=config[0],
+        verbose=verbose,
+        test_set_percentage=test_percentage,
+        max_samples_per_intent=max_samples_intent,
+        max_tests_intent=max_tests_intent,
+        print_test_results_frequency=results_frequency,
+    )
     topical_eval.evaluate_topical_rails()
