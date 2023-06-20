@@ -24,6 +24,7 @@ from langchain.callbacks.manager import AsyncCallbackManagerForChainRun
 from langchain.schema import AgentAction, AgentFinish, BaseMessage, LLMResult
 
 from nemoguardrails.logging.stats import llm_stats
+from nemoguardrails.logging.verbose import Styles
 
 log = logging.getLogger(__name__)
 
@@ -60,19 +61,19 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
     ) -> Any:
         """Run when a chat model starts running."""
 
-        prompt = "\n---\n".join(
+        prompt = "\n" + "\n".join(
             [
-                "<|im_start|>"
+                Styles.CYAN
                 + (
-                    "user"
+                    "User"
                     if msg.type == "human"
-                    else "assistant"
+                    else "Bot"
                     if msg.type == "ai"
-                    else "system"
+                    else "System"
                 )
+                + Styles.PROMPT
                 + "\n"
                 + msg.content
-                + "<|im_end|>"
                 for msg in messages[0]
             ]
         )
