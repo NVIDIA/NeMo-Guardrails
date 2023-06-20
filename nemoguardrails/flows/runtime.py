@@ -31,6 +31,7 @@ from nemoguardrails.actions.math import wolfram_alpha_request
 from nemoguardrails.actions.output_moderation import output_moderation
 from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.flows.flows import FlowConfig, compute_context, compute_next_steps
+from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.rails.llm.config import RailsConfig
 
 log = logging.getLogger(__name__)
@@ -62,6 +63,9 @@ class Runtime:
         self.registered_action_params = {}
 
         self._init_flow_configs()
+
+        # Initialize the prompt renderer as well.
+        self.llm_task_manager = LLMTaskManager(config)
 
     def _init_flow_configs(self):
         """Initializes the flow configs based on the config."""
@@ -284,6 +288,9 @@ class Runtime:
 
                 if "config" in parameters:
                     kwargs["config"] = self.config
+
+                if "llm_task_manager" in parameters:
+                    kwargs["llm_task_manager"] = self.llm_task_manager
 
                 # Add any additional registered parameters
                 for k, v in self.registered_action_params.items():

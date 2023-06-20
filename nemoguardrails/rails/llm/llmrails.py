@@ -80,7 +80,12 @@ class LLMRails:
         self.runtime.register_action_param("llm", self.llm)
 
         # Next, we initialize the LLM Generate actions and register them.
-        actions = LLMGenerationActions(config=config, llm=self.llm, verbose=verbose)
+        actions = LLMGenerationActions(
+            config=config,
+            llm=self.llm,
+            llm_task_manager=self.runtime.llm_task_manager,
+            verbose=verbose,
+        )
         self.runtime.register_actions(actions)
         # We also register the kb as a parameter that can be passed to actions.
         self.runtime.register_action_param("kb", actions.kb)

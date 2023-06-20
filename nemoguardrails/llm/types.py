@@ -13,21 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-from nemoguardrails import RailsConfig
-from nemoguardrails.llm.prompts import get_prompt
-from nemoguardrails.llm.types import Task
-
-CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
+from enum import Enum
 
 
-def test_custom_llm_registration():
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "with_prompt_override"))
+class Task(Enum):
+    """The various tasks that can be performed by the LLM."""
 
-    prompt = get_prompt(config, Task.GENERATE_USER_INTENT)
+    GENERAL = "general"
+    GENERATE_USER_INTENT = "generate_user_intent"
+    GENERATE_NEXT_STEPS = "generate_next_steps"
+    GENERATE_BOT_MESSAGE = "generate_bot_message"
+    GENERATE_VALUE = "generate_value"
 
-    assert (
-        prompt.content
-        == "<<This is a placeholder for a custom prompt for generating the user intent>>"
-    )
+    FACT_CHECKING = "fact_checking"
+    JAILBREAK_CHECK = "jailbreak_check"
+    OUTPUT_MODERATION = "output_moderation"
+    CHECK_HALLUCINATION = "check_hallucination"

@@ -15,32 +15,17 @@
 
 """Prompts for the various steps in the interaction."""
 import os
-from enum import Enum
 from typing import List
 
 import yaml
 
-from nemoguardrails.rails.llm.config import Prompt, RailsConfig
+from nemoguardrails.llm.types import Task
+from nemoguardrails.rails.llm.config import RailsConfig, TaskPrompt
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-class Task(Enum):
-    """The various tasks that can be performed by the LLM."""
-
-    GENERAL = "general"
-    GENERATE_USER_INTENT = "generate_user_intent"
-    GENERATE_NEXT_STEPS = "generate_next_steps"
-    GENERATE_BOT_MESSAGE = "generate_bot_message"
-    GENERATE_VALUE = "generate_value"
-
-    FACT_CHECKING = "fact_checking"
-    JAILBREAK_CHECK = "jailbreak_check"
-    OUTPUT_MODERATION = "output_moderation"
-    CHECK_HALLUCINATION = "check_hallucination"
-
-
-def _load_prompts() -> List[Prompt]:
+def _load_prompts() -> List[TaskPrompt]:
     """Load the predefined prompts from the `prompts` directory."""
     prompts = []
 
@@ -52,13 +37,13 @@ def _load_prompts() -> List[Prompt]:
                 ) as prompts_file:
                     prompts.extend(yaml.safe_load(prompts_file.read())["prompts"])
 
-    return [Prompt(**prompt) for prompt in prompts]
+    return [TaskPrompt(**prompt) for prompt in prompts]
 
 
 _prompts = _load_prompts()
 
 
-def _get_prompt(task_name: str, model: str, prompts: List) -> Prompt:
+def _get_prompt(task_name: str, model: str, prompts: List) -> TaskPrompt:
     """Return the prompt for the given task.
 
     We intentionally update the matching model at equal score, to take the last one,
@@ -99,8 +84,8 @@ def _get_prompt(task_name: str, model: str, prompts: List) -> Prompt:
     raise ValueError(f"Could not find prompt for task {task_name} and model {model}")
 
 
-def get_prompt(config: RailsConfig, task: Task) -> Prompt:
-    """Return the prompt for the given step."""
+def get_prompt(config: RailsConfig, task: Task) -> TaskPrompt:
+    """Return the prompt for the given task."""
     # Currently, we use the main model for all tasks
     # TODO: add support to use different models for different tasks
     task_model = "unknown"

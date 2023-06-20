@@ -13,21 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 
-from nemoguardrails import RailsConfig
-from nemoguardrails.llm.prompts import get_prompt
-from nemoguardrails.llm.types import Task
+def user_intent_parser(s: str):
+    """Parses the user intent."""
+    s = s.strip()
+    if s.startswith("User intent: "):
+        s = s.split("\n")[0]
+        return s[13:].strip()
 
-CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
+    return s
 
 
-def test_custom_llm_registration():
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "with_prompt_override"))
+def bot_intent_parser(s: str):
+    """Parses the bot intent."""
+    s = s.strip()
+    if s.startswith("Bot intent: "):
+        s = s.split("\n")[0]
+        return s[13:].strip()
 
-    prompt = get_prompt(config, Task.GENERATE_USER_INTENT)
+    return s
 
-    assert (
-        prompt.content
-        == "<<This is a placeholder for a custom prompt for generating the user intent>>"
-    )
+
+def bot_message_parser(s: str):
+    """Parses the bot messages."""
+    s = s.strip()
+    if s.startswith("Bot message: "):
+        s = s.split("\n")[0]
+        return s[14:].strip()
+
+    return s

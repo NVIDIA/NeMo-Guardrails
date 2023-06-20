@@ -13,21 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-from nemoguardrails import RailsConfig
-from nemoguardrails.llm.prompts import get_prompt
-from nemoguardrails.llm.types import Task
-
-CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
+from nemoguardrails.llm.output_parsers import user_intent_parser
 
 
-def test_custom_llm_registration():
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "with_prompt_override"))
-
-    prompt = get_prompt(config, Task.GENERATE_USER_INTENT)
-
-    assert (
-        prompt.content
-        == "<<This is a placeholder for a custom prompt for generating the user intent>>"
-    )
+def test_user_intent():
+    assert user_intent_parser("User intent: express greeting") == "express greeting"
