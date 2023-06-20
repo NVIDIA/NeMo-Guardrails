@@ -19,6 +19,9 @@ from typing import List
 import typer
 
 from nemoguardrails.eval.evaluate_topical import TopicalRailsEvaluation
+from nemoguardrails.eval.evaluate_moderation import ModerationRailsEvaluation
+from nemoguardrails.eval.evaluate_hallucination import HallucinationRailsEvaluation
+from nemoguardrails.eval.evaluate_factcheck import FactCheckEvaluation
 from nemoguardrails.logging.verbose import set_verbose
 
 app = typer.Typer()
@@ -84,3 +87,118 @@ def topical(
         print_test_results_frequency=results_frequency,
     )
     topical_eval.evaluate_topical_rails()
+
+
+@app.command()
+def moderation(
+    dataset_path: str = typer.Option(
+        "nemoguardrails/eval/data/moderation/harmful.txt",
+        help="Path to dataset containing prompts",
+    ),
+    llm: str = typer.Option("openai", help="LLM provider ex. OpenAI"),
+    model_name: str = typer.Option(
+        "text-davinci-003", help="LLM model ex. text-davinci-003"
+    ),
+    num_samples: int = typer.Option(50, help="Number of samples to evaluate"),
+    check_jailbreak: bool = typer.Option(True, help="Evaluate jailbreak rail"),
+    check_output_moderation: bool = typer.Option(
+        True, help="Evaluate output moderation rail"
+    ),
+    output_dir: str = typer.Option(
+        "eval_outputs/moderation", help="Output directory for predictions"
+    ),
+    write_outputs: bool = typer.Option(True, help="Write outputs to file"),
+    split: str = typer.Option("harmful", help="Whether prompts are harmful or helpful"),
+):
+    """
+    Evaluates the performance of the moderation rails defined in a Guardrails application.
+    Computes accuracy for jailbreak detection and output moderation.
+    """
+    moderation_check = ModerationRailsEvaluation(
+        dataset_path,
+        llm,
+        model_name,
+        num_samples,
+        check_jailbreak,
+        check_output_moderation,
+        output_dir,
+        write_outputs,
+        split,
+    )
+    typer.echo(
+        f"Starting the moderation evaluation for data: {dataset_path} using LLM {llm}-{model_name}..."
+    )
+    moderation_check.run()
+
+
+@app.command()
+def hallucination(
+    dataset_path: str = typer.Option(
+        "nemoguardrails/eval/data/hallucination/sample.txt", help="Dataset path"
+    ),
+    llm: str = typer.Option("openai", help="LLM provider"),
+    model_name: str = typer.Option("text-davinci-003", help="LLM model name"),
+    num_samples: int = typer.Option(50, help="Number of samples to evaluate"),
+    output_dir: str = typer.Option(
+        "eval_outputs/hallucination", help="Output directory"
+    ),
+    write_outputs: bool = typer.Option(True, help="Write outputs to file"),
+):
+    """
+    Evaluates the performance of the hallucination rails defined in a Guardrails application.
+    Computes accuracy for hallucination detection.
+    """
+    hallucination_check = HallucinationRailsEvaluation(
+        dataset_path,
+        llm,
+        model_name,
+        num_samples,
+        output_dir,
+        write_outputs,
+    )
+    typer.echo(
+        f"Starting the hallucination evaluation for data: {dataset_path} using LLM {llm}-{model_name}..."
+    )
+    hallucination_check.run()
+
+
+@app.command()
+def fact_checking(
+    dataset_path: str = typer.Option(
+        "nemoguardrails/eval/data/factchecking/sample.json",
+        help="Path to the folder containing the dataset",
+    ),
+    llm: str = typer.Option("openai", help="LLM provider to be used for fact checking"),
+    model_name: str = typer.Option(
+        "text-davinci-003", help="Model name ex. text-davinci-003"
+    ),
+    num_samples: int = typer.Option(50, help="Number of samples to be evaluated"),
+    create_negatives: bool = typer.Argument(
+        True, help="create synthetic negative samples"
+    ),
+    output_dir: str = typer.Option(
+        "eval_outputs/factchecking",
+        help="Path to the folder where the outputs will be written",
+    ),
+    write_outputs: bool = typer.Option(
+        True, help="Write outputs to the output directory"
+    ),
+):
+    """
+    Evaluates the performance of the fact checking rails defined in a Guardrails application.
+    Computes accuracy for fact checking.
+    Negatives can be created synthetically by an LLM that acts as an adversary and modifies the answer to make it incorrect.
+    """
+    fact_check = FactCheckEvaluation(
+        dataset_path,
+        llm,
+        model_name,
+        num_samples,
+        create_negatives,
+        output_dir,
+        write_outputs,
+    )
+    typer.echo(
+        f"Starting the fact checking evaluation for data: {dataset_path} using LLM {llm}-{model_name}..."
+    )
+    fact_check.run()
