@@ -1,15 +1,29 @@
-import os
+# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
+import os
+
 import tqdm
 import typer
-
-from nemoguardrails.llm.params import llm_params
-from nemoguardrails.rails.llm.config import Prompt, RailsConfig
-from nemoguardrails.llm.prompts import Task, get_prompt
-from nemoguardrails.rails.llm.config import Model
-from nemoguardrails.eval.utils import initialize_llm, load_dataset
-
 from langchain import LLMChain, PromptTemplate
+
+from nemoguardrails.eval.utils import initialize_llm, load_dataset
+from nemoguardrails.llm.params import llm_params
+from nemoguardrails.llm.prompts import Task, get_prompt
+from nemoguardrails.rails.llm.config import Model, RailsConfig
 
 
 class FactCheckEvaluation:
@@ -53,24 +67,21 @@ class FactCheckEvaluation:
 
     def create_negative_samples(self, dataset):
         """
-        Create synthetic negative samples for fact checking. The negative samples are created by an LLM that acts 
+        Create synthetic negative samples for fact checking. The negative samples are created by an LLM that acts
         as an adversary and modifies the answer to make it incorrect.
         """
 
-        
-        create_negatives_template = """You will play the role of an adversary to confuse people with answers 
-        that seem correct, but are wrong. Given evidence and a question, your task is to respond with an 
-        answer that remains as close to the original answer, but is wrong. make the response incorrect such 
-        that it will not be grounded in the evidence passage. change details in the answer to make the answer 
+        create_negatives_template = """You will play the role of an adversary to confuse people with answers
+        that seem correct, but are wrong. Given evidence and a question, your task is to respond with an
+        answer that remains as close to the original answer, but is wrong. make the response incorrect such
+        that it will not be grounded in the evidence passage. change details in the answer to make the answer
         wrong but yet believable.\nevidence: {evidence}\nanswer: {answer}\nincorrect answer:"""
 
         create_negatives_prompt = PromptTemplate(
             template=create_negatives_template,
             input_variables=["evidence", "answer"],
         )
-        create_negatives_chain = LLMChain(
-            prompt=create_negatives_prompt, llm=self.llm
-        )
+        create_negatives_chain = LLMChain(prompt=create_negatives_prompt, llm=self.llm)
 
         print("Creating negative samples...")
         for data in tqdm.tqdm(dataset):
@@ -135,7 +146,7 @@ class FactCheckEvaluation:
         """
         Run the fact checking evaluation and print the results.
         """
-        
+
         if self.create_negatives:
             self.dataset = self.create_negative_samples(self.dataset)
 
