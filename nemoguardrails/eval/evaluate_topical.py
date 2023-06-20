@@ -25,6 +25,16 @@ from nemoguardrails.actions.llm.utils import (
 )
 
 
+def sync_wrapper(async_func):
+    """Wrapper for the evaluate_topical_rails method which is async."""
+
+    def wrapper(*args, **kwargs):
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(async_func(*args, **kwargs))
+
+    return wrapper
+
+
 class TopicalRailsEvaluation:
     """Helper class for running the topical rails evaluation for a Guardrails app.
     It contains all the configuration parameters required to run the evaluation."""
@@ -91,14 +101,6 @@ class TopicalRailsEvaluation:
         self.max_samples_per_intent = max_samples_per_intent
         self.print_test_results_frequency = print_test_results_frequency
         self._initialize_rails_app()
-
-    @staticmethod
-    def sync_wrapper(async_func):
-        def wrapper(*args, **kwargs):
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(async_func(*args, **kwargs))
-
-        return wrapper
 
     @sync_wrapper
     async def evaluate_topical_rails(self):
