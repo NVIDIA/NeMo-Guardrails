@@ -38,10 +38,15 @@ class LLMParams:
         # Here we can access and modify the global language model parameters.
         self.original_params = {}
         for param, value in self.altered_params.items():
-            try:
+            if hasattr(self.llm, param):
                 self.original_params[param] = getattr(self.llm, param)
                 setattr(self.llm, param, value)
-            except AttributeError:
+            elif hasattr(self.llm, "model_kwargs") and param in getattr(
+                self.llm, "model_kwargs", {}
+            ):
+                self.original_params[param] = self.llm.model_kwargs[param]
+                self.llm.model_kwargs[param] = value
+            else:
                 log.warning(
                     "Parameter %s does not exist for %s",
                     param,
@@ -51,14 +56,12 @@ class LLMParams:
     def __exit__(self, type, value, traceback):
         # Restore original parameters when exiting the context
         for param, value in self.original_params.items():
-            try:
+            if hasattr(self.llm, param):
                 setattr(self.llm, param, value)
-            except AttributeError:
-                log.warning(
-                    "Parameter %s does not exist for %s",
-                    param,
-                    self.llm.__class__.__name__,
-                )
+            elif hasattr(self.llm, "model_kwargs") and param in getattr(
+                self.llm, "model_kwargs", {}
+            ):
+                self.llm.model_kwargs[param] = value
 
 
 # The list of registered param managers. This will allow us to override the param manager
