@@ -1,17 +1,10 @@
-# Prompts for OpenAI ChatGPT. This is very raw and works decently.
+# Prompts for OpenAI ChatGPT.
 prompts:
   - task: generate_user_intent
     models:
       - openai/gpt-3.5-turbo
       - openai/gpt-4
     messages:
-      - type: system
-        content: |-
-          Colang is a language for modeling the conversation between a user and a bot.
-          The syntax is close to python.
-          The typical pattern includes the user utterance, the user intent, the bot intent and the bot utterance.
-          Your task is to continue the conversation in the same style.
-
       - type: system
         content: "{{ general_instruction }}"
 
@@ -39,13 +32,6 @@ prompts:
       - openai/gpt-4
     messages:
       - type: system
-        content: |-
-          Colang is a language for modeling the conversation between a user and a bot.
-          The syntax is close to python.
-          The typical pattern includes the user utterance, the user intent, the bot intent and the bot utterance.
-          Your task is to continue the conversation in the same style.
-
-      - type: system
         content: "{{ general_instruction }}"
 
       - type: system
@@ -71,13 +57,6 @@ prompts:
       - openai/gpt-3.5-turbo
       - openai/gpt-4
     messages:
-      - type: system
-        content: |-
-          Colang is a language for modeling the conversation between a user and a bot.
-          The syntax is close to python.
-          The typical pattern includes the user utterance, the user intent, the bot intent and the bot utterance.
-          Your task is to continue the conversation in the same style.
-
       - type: system
         content: "{{ general_instruction }}"
 
@@ -113,13 +92,6 @@ prompts:
       - openai/gpt-3.5-turbo
       - openai/gpt-4
     messages:
-      - type: system
-        content: |-
-          Colang is a language for modeling the conversation between a user and a bot.
-          The syntax is close to python.
-          The typical pattern includes the user utterance, the user intent, the bot intent and the bot utterance.
-          Your task is to continue the conversation in the same style.
-
       - type: system
         content: "{{ general_instruction }}"
 
