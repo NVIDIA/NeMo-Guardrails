@@ -221,21 +221,25 @@ class LLMGenerationActions:
 
             # We search for the most relevant similar user utterance
             examples = ""
+            potential_user_intents = []
+
             if self.user_message_index:
                 results = self.user_message_index.search(
                     text=event["content"], max_results=5
                 )
 
                 # We add these in reverse order so the most relevant is towards the end.
-                candidate_intents = set()
                 for result in reversed(results):
                     examples += f"user \"{result.text}\"\n  {result.meta['intent']}\n\n"
-                    candidate_intents.add(result.meta["intent"])
+                    potential_user_intents.append(result.meta["intent"])
 
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERATE_USER_INTENT,
                 events=events,
-                context={"examples": examples},
+                context={
+                    "examples": examples,
+                    "potential_user_intents": ", ".join(potential_user_intents),
+                },
             )
 
             # We make this call with temperature 0 to have it as deterministic as possible.
