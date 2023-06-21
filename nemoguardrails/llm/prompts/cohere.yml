@@ -1,4 +1,4 @@
-# Prompts for Cohere's Command models. This is very raw and works decently.
+# Prompts for Cohere's Command models. This works reasonably well but there is room for improvement.
 prompts:
   - task: generate_user_intent
     models:

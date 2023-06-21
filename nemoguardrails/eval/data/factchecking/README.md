@@ -1,10 +1,10 @@
 ## Fact Checking Rail
 
-To run the fact checking rail, you can use the following command
+To run the fact checking rail, you can use the following command:
 
 ```nemoguardrails evaluate fact-checking```
 
-Here is a list of arguments that you can use to configure the fact checking rail
+Here is a list of arguments that you can use to configure the fact checking rail:
 
 - `dataset-path`: Path to the dataset.
 - `llm`: The LLM provider to use. Default is openai.
@@ -16,7 +16,7 @@ Here is a list of arguments that you can use to configure the fact checking rail
 
 ## Data Format
 
-We require the input data to be in a json file with the following format
+We require the input data to be in a json file with the following format:
 
 ```
 {
@@ -27,9 +27,9 @@ We require the input data to be in a json file with the following format
 ```
 ## Generating Synthetic Negative Examples
 
-Usually, most datasets contail only positive entailment pairs i.e. the answers are always grounded in the evidence passage. To reliably evaluate the fact checking rail, we need negative examples as well i.e. examples where the answer is not grounded in the evidence passage. Randomly sampling answers for other questions to be used as negatives leads to very easily identifiable negatives.
+Usually, most datasets contain only positive entailment pairs, i.e., the answers are always grounded in the evidence passage. To reliably evaluate the fact checking rail, we need negative examples as well, i.e., examples where the answer is _not_ grounded in the evidence passage. Randomly sampling answers for other questions to be used as negatives leads to very easily identifiable negatives.
 
-To mine hard negatives, we use OpenAI text-davinci-003 to convert the positive entailment pairs to negative ones i.e. we give the model the evidence and the answer and ask it to subtly modify the answer to make it not grounded in the evidence. We then use the modified answer as a negative example.
+To mine hard negatives, we use OpenAI text-davinci-003 to convert the positive entailment pairs to negative ones. We give the model the evidence and the answer, and ask it to subtly modify the answer to make it not grounded in the evidence. We then use the modified answer as a negative example.
 
 Example:
 
@@ -39,7 +39,7 @@ Example:
 "answer": "Today, the patient's blood pressure was uncharacteristically elevated at 150/70."
 ```
 
-The model modifies the answer to
+The model modifies the answer to:
 
 ```
 "incorrect answer": "Today, the patient's blood pressure was uncharacteristically elevated at 160/80."
@@ -54,15 +54,15 @@ In case you already have negative samples in your dataset, you can set the `crea
 
 ## Using the MSMARCO Dataset
 
-The [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset contains a large number of question-answer pairs along with the evidence passage. We can use this dataset to evaluate the fact checking rail. To download and convert the dataset to the required format, the `datasets` library has to be installed using
+The [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset contains a large number of question-answer pairs along with the evidence passage. We can use this dataset to evaluate the fact checking rail. To download and convert the dataset to the required format, the `datasets` library has to be installed using:
 
 ```pip install datasets```
 
-Once the library is installed, you can run the following command to download and convert the dataset
+Once the library is installed, you can run the following command to download and convert the dataset:
 
 ```python process_ms_marco.py```
 
-This will save the dataset to `msmarco.json`. An example from the dataset is shown below
+This will save the dataset to `msmarco.json`. An example from the dataset is shown below:
 
 ```
 [

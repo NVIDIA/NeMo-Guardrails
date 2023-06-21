@@ -96,7 +96,7 @@ def main(
         ),
         rating: float = typer.Option(
             4.0,
-            help="Rating to filter the Red Tean Attempts dataset by. Values range from 0.0 to 4.0 with higher numbers indicating prompts that got more inappropriate responses from the model. Default is 4.0",
+            help="Rating by which to filter the Red Team Attempts dataset. Values range from 0.0 to 4.0 with higher numbers indicating prompts that got more inappropriate responses from the model. Default is 4.0",
         ),
         split: str = typer.Option("harmful", help="Whether prompts are harmful or helpful"),
 ):
