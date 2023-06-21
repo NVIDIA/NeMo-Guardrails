@@ -243,7 +243,7 @@ class LLMGenerationActions:
             )
 
             # We make this call with temperature 0 to have it as deterministic as possible.
-            with llm_params(self.llm, temperature=0.0):
+            with llm_params(self.llm, temperature=self.config.lowest_temperature):
                 result = await llm_call(self.llm, prompt)
 
             # Parse the output using the associated parser
@@ -311,7 +311,7 @@ class LLMGenerationActions:
             )
 
             # We use temperature 0 for next step prediction as well
-            with llm_params(self.llm, temperature=0.0):
+            with llm_params(self.llm, temperature=self.config.lowest_temperature):
                 result = await llm_call(self.llm, prompt)
 
             # Parse the output using the associated parser
@@ -454,7 +454,7 @@ class LLMGenerationActions:
             },
         )
 
-        with llm_params(self.llm, temperature=0):
+        with llm_params(self.llm, temperature=self.config.lowest_temperature):
             result = await llm_call(self.llm, prompt)
 
         # Parse the output using the associated parser

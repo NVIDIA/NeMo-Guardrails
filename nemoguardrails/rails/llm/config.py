@@ -148,6 +148,9 @@ def _join_config(dest_config: dict, additional_config: dict):
     if additional_config.get("sample_conversation"):
         dest_config["sample_conversation"] = additional_config["sample_conversation"]
 
+    if additional_config.get("lowest_temperature"):
+        dest_config["lowest_temperature"] = additional_config["lowest_temperature"]
+
 
 class RailsConfig(BaseModel):
     """Configuration object for the models and the rails.
@@ -201,6 +204,14 @@ class RailsConfig(BaseModel):
 
     config_path: Optional[str] = Field(
         default=None, description="The path from which the configuration was loaded."
+    )
+
+    # Some tasks need to be as deterministic as possible. The lowest possible temperature
+    # will be used for those tasks. Models like dolly don't allow for a temperature of 0.0,
+    # for example, in which case a custom one can be set.
+    lowest_temperature: Optional[float] = Field(
+        default=0.0,
+        description="The lowest temperature that should be used for the LLM.",
     )
 
     @staticmethod
