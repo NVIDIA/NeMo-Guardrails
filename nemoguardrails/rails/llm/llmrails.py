@@ -126,7 +126,8 @@ class LLMRails:
             ]:
                 kwargs["model_name"] = main_llm_config.model
             else:
-                kwargs["model"] = main_llm_config.model
+                if hasattr(provider_cls, "model"):
+                    kwargs["model"] = main_llm_config.model
 
         self.llm = provider_cls(**kwargs)
 
