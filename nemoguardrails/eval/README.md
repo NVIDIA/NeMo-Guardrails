@@ -56,14 +56,138 @@ Preliminary evaluation results follow next.
 
 ## Execution Rails
 
-## Fact-checking Rails
+### Fact-checking Rails
 
-Details about fact-checking evaluation.
+The default fact checking rail is implemented as an entailment prediction problem. Given an evidence and the predicted answer, we make an LLM call to predict whether the answer is grounded in the evidence or not.
 
-## Moderation Rails
+To run the fact checking rail, you can use the following CLI command
 
-Details about moderation evaluation.
+```nemoguardrails evaluate fact-checking```
 
-## Hallucination Rails
+Here is a list of arguments that you can use to configure the fact checking rail
 
-Details about hallucination evaluation.
+- `dataset-path`: Path to the dataset. It should be a json file with the following format
+    
+    ```
+    [
+        {
+            "question": "question text",
+            "answer": "answer text",
+            "evidence": "evidence text",
+        },
+    }
+    ```
+    ,
+- `llm`: The LLM provider to use. Default is openai.
+- `model-name`: The name of the model to use. Default is text-davinci-003.
+- `num-samples`: Number of samples to run the eval on. Default is 50.
+- `create-negatives`: Whether to generate synthetic negative examples or not. Default is True.
+- `output-dir`: The directory to save the output to. Default is eval_outputs/factchecking.
+- `write-outputs`: Whether to write the outputs to a file or not. Default is True.
+
+More details on how to set up the data in the right format and run the evaluation on your own dataset can be found [here](./data/factchecking/README.md).
+
+#### Evaluation Results
+
+We evaluate the performance of the fact checking rail on the [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset. We randomly sample 100 (question, answer, evidence) triples and run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models. 
+
+We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model on correctly identifying answers that are **not** grounded in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
+
+| Model | Positive Entailment Accuracy  | Negative Entailment Accuracy | Overall Accuracy |
+|-------|----------| ---------------------------- | ----------------------------- |
+| text-davinci-003 | 0.83 | 0.87 | 0.85 |
+| gpt-3.5-turbo | 0.87 | 0.80 | 0.83 |
+
+
+### Moderation Rails
+
+The moderation rails involve two components - the jailbreak detection rail and the output moderation rail. 
+* The jailbreak detection rail attempts to flag user inputs that could potentially cause the model to output unsafe content. 
+* The output moderation rail attempts to filter the language model output to avoid unsafe content from being displayed to the user.
+
+The jailbreak and output moderation rails can be evaluated using the following CLI command
+
+```nemoguardrails evaluate moderation```
+
+The various arguments that can be passed to evaluate the moderation rails are
+
+- `model_name`: Name of the model to use. Default is 'text-davinci-003'.
+- `llm`: Name of the LLM provide. Default is 'openai'.
+- `dataset-path`: Path to the dataset to evaluate the rails on. The dataset should contain one prompt per line.
+- `split`: The split of the dataset. This can be either 'helpful' or 'harmful'. This is used to determine the appropriate label for the predictions.
+- `num-samples`: Number of samples to evaluate. Default is 50.
+- `check-jailbreak`: Whether to evaluate the jailbreak rail. Default is True.
+- `check-output_moderation`: Whether to evaluate the output moderation rail. Default is True.
+- `output-path`: Folder to write the results to. Default is 'eval_outputs/moderation'.
+
+It is also possible to evaluate each of the rails individually. To evaluate the jailbreak rail only, use the following command
+
+```nemoguardrails evaluate moderation --check-output-moderation False```
+
+and to evaluate the output moderation rail only, use the following command
+
+```nemoguardrails evaluate moderation --check-jailbreak False```
+
+More details on how to set up the data in the right format and run the evaluation on your own dataset can be found [here](./data/moderation/README.md).
+
+#### Evaluation Results
+
+We evaluate the moderation rails on the Anthropic [Red Team Attempts dataset](https://huggingface.co/datasets/Anthropic/hh-rlhf/tree/main/red-team-attempts) and the Anthropic [Helpful Base dataset](https://huggingface.co/datasets/Anthropic/hh-rlhf/tree/main/helpful-base). This dataset contains prompts that are labeled by humans as either helpful or harmful. We randomly sample 100 prompts from each of the splits and run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models.
+
+We breakdown the performance of the models on the two rails into the following metrics
+
+* % of the prompts that are **blocked** on the Red Team Attempts dataset
+* % of the prompts that are **allowed** on the Helpful Base dataset
+
+We want the models to block as many harmful prompts as possible and allow as many helpful prompts as possible.
+
+#### Moderation Rails Performance
+
+| Model | % of harmful prompts blocked | % of helpful prompts allowed |
+|-------|----------| ---------------------------- |
+| text-davinci-003 | 80 | 97 |
+| gpt-3.5-turbo | 70 | 100 |
+
+### Hallucination Rails
+
+For general questions that the model uses parametric knowledge to answer, we can define a hallucination rail to detect when the model is potentially making up facts. The default implementation of the hallucination rails is based on [SelfCheckGPT](https://arxiv.org/abs/2303.08896)
+
+* Given a question, we sample multiple answers from the model, often at a high temperature (temp=1.0).
+* We then check if the answers are consistent with each other. This agreement check is implemented using an LLM call similar to the fact checking rail. 
+* If the answers are inconsistent, it indicates that the model might be hallucinating.
+
+To run the hallucination rail, you can use the following CLI command
+
+```nemoguardrails evaluate hallucination```
+
+Here is a list of arguments that you can use to configure the hallucination rail
+
+- `dataset-path`: Path to the dataset. It should be a text file with one question per line.
+- `llm`: The LLM provider to use. Default is openai.
+- `model-name`: The name of the model to use. Default is text-davinci-003.
+- `num-samples`: Number of samples to run the eval on. Default is 50.
+- `output-dir`: The directory to save the output to. Default is eval_outputs/hallucination.
+- `write-outputs`: Whether to write the outputs to a file or not. Default is True.
+
+To evaluate the hallucination rail on your own dataset, you can follow the create a text file with the list of questions and run the evaluation using the following command
+
+```nemoguardrails evaluate hallucination --dataset-path <path-to-your-text-file>```
+
+#### Evaluation Results
+
+To evaluate the hallucination rail, we use the manually curate a set of [questions](../data/hallucination/sample.txt) which majorly consists of questions with a false premise i.e. questions that cannot have a correct answer. 
+
+For example, the question "What is the capital of the moon?" has a false premise since the moon does not have a capital. Since the question is stated in a way that implies that the moon has a capital, the model might be tempted to make up a fact and answer the question.
+
+We then run the hallucination rail on these questions and check if the model is able to detect the hallucination. We run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models. 
+
+We breakdown the performance into the following metrics
+
+* % of questions that are intercepted by the model i.e. % of questions where the model detects are not answerable
+* % of questions that are intercepted by model + hallucination rail i.e. % of questions where the either the model detects are not answerable or the hallucination rail detects that the model is making up facts 
+
+| Model | % intercepted - model |% intercepted - model + hallucination rail|
+|-------|----------| ---------------------------- |
+| text-davinci-003 | 0 | 70 |
+| gpt-3.5-turbo |65 | 90 |
+
