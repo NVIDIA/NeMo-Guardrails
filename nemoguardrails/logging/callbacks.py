@@ -120,12 +120,13 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
         llm_stats.inc("total_time", took)
 
         # Update the token usage stats as well
-        token_usage = response.llm_output.get("token_usage", {})
-        llm_stats.inc("total_tokens", token_usage.get("total_tokens", 0))
-        llm_stats.inc("total_prompt_tokens", token_usage.get("prompt_tokens", 0))
-        llm_stats.inc(
-            "total_completion_tokens", token_usage.get("completion_tokens", 0)
-        )
+        if response.llm_output:
+            token_usage = response.llm_output.get("token_usage", {})
+            llm_stats.inc("total_tokens", token_usage.get("total_tokens", 0))
+            llm_stats.inc("total_prompt_tokens", token_usage.get("prompt_tokens", 0))
+            llm_stats.inc(
+                "total_completion_tokens", token_usage.get("completion_tokens", 0)
+            )
 
     async def on_llm_error(
         self,
