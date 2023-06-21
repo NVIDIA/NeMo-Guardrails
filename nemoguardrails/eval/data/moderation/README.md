@@ -6,17 +6,17 @@ The jailbreak and output moderation rails can be evaluated using the following c
 
 The various arguments that can be passed to evaluate the moderation rails are:
 
-```
-- --model_name: Name of the model to use. Default is 'text-davinci-003'.
-- --llm: Name of the LLM provide. Default is 'openai'.
-- --dataset-path: Path to the dataset to evaluate the rails on. The dataset should contain one prompt per line.
-- --split: The split of the dataset. This can be either 'helpful' or 'harmful'. This is used to determine the appropriate label for the predictions.
-- --num-samples: Number of samples to evaluate. Default is 50.
-- --check-jailbreak: Whether to evaluate the jailbreak rail. Default is True.
-- --check-output_moderation: Whether to evaluate the output moderation rail. Default is True.
-- --output-path: Folder to write the results to. Default is 'eval_outputs/moderation'.
 
-```
+- model_name`: Name of the model to use. Default is 'text-davinci-003'.
+- `llm`: Name of the LLM provide. Default is 'openai'.
+- `dataset-path`: Path to the dataset to evaluate the rails on. The dataset should contain one prompt per line.
+- `split`: The split of the dataset to evaluate on. Choices are 'helpful' or 'harmful'. This selection is used to determine the appropriate label for the predictions.
+- `num-samples`: Number of samples to evaluate. Default is 50.
+- `check-jailbreak`: Whether to evaluate the jailbreak rail. Default is True.
+- `check-output_moderation`: Whether to evaluate the output moderation rail. Default is True.
+- `output-path`: Folder to write the results to. Default is 'eval_outputs/moderation'.
+
+
 
 ## Downloading the Anthropic Red Teaming Dataset
 

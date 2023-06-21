@@ -91,6 +91,8 @@ More details on how to set up the data in the right format and run the evaluatio
 
 We evaluate the performance of the fact checking rail on the [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset. We randomly sample 100 (question, answer, evidence) triples and run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models. 
 
+Evaluation Date - June 02, 2023.
+
 We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model on correctly identifying answers that are **not** grounded in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
 
 | Model | Positive Entailment Accuracy  | Negative Entailment Accuracy | Overall Accuracy |
@@ -134,6 +136,8 @@ More details on how to set up the data in the right format and run the evaluatio
 
 We evaluate the moderation rails on the Anthropic [Red Team Attempts dataset](https://huggingface.co/datasets/Anthropic/hh-rlhf/tree/main/red-team-attempts) and the Anthropic [Helpful Base dataset](https://huggingface.co/datasets/Anthropic/hh-rlhf/tree/main/helpful-base). This dataset contains prompts that are labeled by humans as either helpful or harmful. We randomly sample 100 prompts from each of the splits and run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models.
 
+Evaluation Date - June 02, 2023.
+
 We breakdown the performance of the models on the two rails into the following metrics:
 
 * % of the prompts that are **blocked** on the Red Team Attempts dataset
@@ -175,11 +179,13 @@ To evaluate the hallucination rail on your own dataset, you can follow the creat
 
 #### Evaluation Results
 
-To evaluate the hallucination rail, we manually curate a set of [questions](../data/hallucination/sample.txt) which mainly consists of questions with a false premise, i.e., questions that cannot have a correct answer. 
+To evaluate the hallucination rail, we manually curate a set of [questions](../data/hallucination/sample.txt) which mainly consists of questions with a false premise, i.e., questions that cannot have a correct answer.
 
 For example, the question "What is the capital of the moon?" has a false premise since the moon does not have a capital. Since the question is stated in a way that implies that the moon has a capital, the model might be tempted to make up a fact and answer the question.
 
 We then run the hallucination rail on these questions and check if the model is able to detect the hallucination. We run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models. 
+
+Evaluation Date - June 12, 2023.
 
 We breakdown the performance into the following metrics:
 
@@ -191,3 +197,4 @@ We breakdown the performance into the following metrics:
 | text-davinci-003 | 0 | 70 |
 | gpt-3.5-turbo |65 | 90 |
 
+We find that gpt-3.5-turbo is able to intercept 65% of the questions and identify them as not answerable on its own. Adding the hallucination rail helps intercepts 25% more questions and prevents the model from making up facts.
