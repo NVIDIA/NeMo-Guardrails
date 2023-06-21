@@ -42,3 +42,17 @@ def bot_message_parser(s: str):
         return s[14:].strip()
 
     return s
+
+
+def verbose_v1_parser(s: str):
+    """Parses completions generated using the `verbose_v1` formatter."""
+    lines = s.split("\n")
+
+    prefixes = ["User message: ", "Bot message: ", "User intent: ", "Bot intent: "]
+
+    for i, line in enumerate(lines):
+        for prefix in prefixes:
+            if line.startswith(prefix):
+                lines[i] = line[len(prefix) :].strip()
+
+    return "\n".join(lines)

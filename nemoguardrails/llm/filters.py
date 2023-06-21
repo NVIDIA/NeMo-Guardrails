@@ -65,6 +65,28 @@ def to_messages(colang_history: str) -> List[dict]:
     return messages
 
 
+def verbose_v1(colang_history: str) -> str:
+    """Filter that given a history in colang format, returns a verbose version of the history."""
+    lines = colang_history.split("\n")
+    for i, line in enumerate(lines):
+        if line.startswith('user "'):
+            lines[i] = 'User message: "' + line[6:]
+        elif (
+            line.startswith("  ")
+            and i > 0
+            and lines[i - 1].startswith("User message: ")
+        ):
+            lines[i] = "User intent: " + line.strip()
+        elif line.startswith("user "):
+            lines[i] = "User intent: " + line[5:].strip()
+        elif line.startswith("bot "):
+            lines[i] = "Bot intent: " + line[4:]
+        elif line.startswith('  "'):
+            lines[i] = "Bot message: " + line[2:]
+
+    return "\n".join(lines)
+
+
 def user_assistant_sequence(events: List[dict]) -> str:
     """Filter that turns an array of events into a sequence of user/assistant messages.
 

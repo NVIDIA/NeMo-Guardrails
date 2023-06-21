@@ -25,11 +25,13 @@ from nemoguardrails.llm.filters import (
     remove_text_messages,
     to_messages,
     user_assistant_sequence,
+    verbose_v1,
 )
 from nemoguardrails.llm.output_parsers import (
     bot_intent_parser,
     bot_message_parser,
     user_intent_parser,
+    verbose_v1_parser,
 )
 from nemoguardrails.llm.prompts import get_prompt
 from nemoguardrails.llm.types import Task
@@ -52,11 +54,13 @@ class LLMTaskManager:
         self.env.filters["first_turns"] = first_turns
         self.env.filters["user_assistant_sequence"] = user_assistant_sequence
         self.env.filters["to_messages"] = to_messages
+        self.env.filters["verbose_v1"] = verbose_v1
 
         self.output_parsers = {
             "user_intent": user_intent_parser,
             "bot_intent": bot_intent_parser,
             "bot_message": bot_message_parser,
+            "verbose_v1": verbose_v1_parser,
         }
 
     def _get_general_instruction(self):
