@@ -74,6 +74,11 @@ def _get_prompt(task_name: str, model: str, prompts: List) -> TaskPrompt:
                     _score = 0.5
                     break
 
+                # If we match just the model, the score is 0.8.
+                elif model.endswith("/" + _model):
+                    _score = 0.8
+                    break
+
         if _score >= matching_score:
             matching_score = _score
             matching_prompt = prompt
