@@ -1,0 +1,32 @@
+define user request appointment
+  "I want to schedule an appointment"
+  "I need an appointment"
+  "Can you help me schedule an appointment?"
+
+
+define user provide name
+  "My name is John"
+  "The name is Michael"
+
+define flow
+  user request appointment
+  bot confirm ability to help
+
+  bot ask user name
+  user provide name
+
+  bot acknowledge the name
+  bot ask appointment date
+  user provide date
+
+  bot acknowledge the date
+  bot confirm appointment
+
+define bot ask appointment date
+  "When do you want to schedule your appointment?"
+
+
+define user provide date
+  "tomorrow"
+  "Tuesday"
+  "Next Friday"

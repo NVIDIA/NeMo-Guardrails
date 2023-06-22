@@ -1,0 +1,9 @@
+# Using OpenAI
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003
+#    model: gpt-3.5-turbo
+
+# We enable the multi-step generation
+enable_multi_step_generation: True
