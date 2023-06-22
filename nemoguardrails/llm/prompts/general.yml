@@ -34,14 +34,14 @@ prompts:
       """
 
       # This is how a conversation between a user and the bot can go:
-      {{ sample_conversation }}
+      {{ sample_conversation | remove_text_messages }}
 
       # This how the bot thinks:
-      {{ examples }}
+      {{ examples | remove_text_messages}}
 
       # This is the current conversation between the user and the bot:
-      {{ sample_conversation | first_turns(2) }}
-      {{ history | colang}}
+      {{ sample_conversation | first_turns(2) | remove_text_messages}}
+      {{ history | colang | remove_text_messages}}
 
 
   # Prompt for generating the bot message from a canonical form.

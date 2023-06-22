@@ -39,14 +39,14 @@ prompts:
       """
 
       # This is how a conversation between a user and the bot can go:
-      {{ sample_conversation | verbose_v1 }}
+      {{ sample_conversation | remove_text_messages | verbose_v1 }}
 
       # This how the bot thinks:
-      {{ examples | verbose_v1 }}
+      {{ examples | remove_text_messages | verbose_v1 }}
 
       # This is the current conversation between the user and the bot:
-      {{ sample_conversation | first_turns(2) | verbose_v1 }}
-      {{ history | colang | verbose_v1 }}
+      {{ sample_conversation | first_turns(2) | remove_text_messages | verbose_v1 }}
+      {{ history | colang | remove_text_messages | verbose_v1 }}
 
     output_parser: "verbose_v1"
 
