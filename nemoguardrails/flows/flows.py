@@ -158,7 +158,23 @@ def _is_match(element: dict, event: dict) -> bool:
             element["content"] == "..." or element["content"] == event["content"]
         )
 
-    return False
+    else:
+        # In this case, we try to match the event by type explicitly, and all the properties.
+        if event["type"] != element_type:
+            return False
+
+        # We need to match all properties used in the element. We also use the "..." wildcard
+        # to mach anything.
+        for key, value in element.items():
+            # Skip potentially private keys.
+            if key.startswith("_"):
+                continue
+            if value == "...":
+                continue
+            if event.get(key) != value:
+                return False
+
+        return True
 
 
 def _record_next_step(
