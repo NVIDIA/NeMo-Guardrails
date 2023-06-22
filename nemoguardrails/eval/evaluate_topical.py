@@ -14,8 +14,12 @@
 # limitations under the License.
 
 import asyncio
+import random
 import textwrap
 from typing import Optional
+
+import numpy as np
+from sentence_transformers import SentenceTransformer
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.actions.llm.utils import (
@@ -33,6 +37,13 @@ def sync_wrapper(async_func):
         return loop.run_until_complete(async_func(*args, **kwargs))
 
     return wrapper
+
+
+def cosine_similarity(v1, v2):
+    """Compute the dot product between two embeddings using numpy functions."""
+    np_v1 = np.array(v1)
+    np_v2 = np.array(v2)
+    return np.dot(np_v1, np_v2) / (np.linalg.norm(np_v1) * np.linalg.norm(np_v2))
 
 
 class TopicalRailsEvaluation:
@@ -53,6 +64,44 @@ class TopicalRailsEvaluation:
         # rails_app.register_action(...)
 
         self.rails_app = LLMRails(rails_config, verbose=self.verbose)
+
+    def _initialize_embeddings_model(self):
+        """Instantiate a sentence transformer if we use a similarity check for canonical forms."""
+        if self.similarity_threshold > 0:
+            self._model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    def _initialize_random_seed(self):
+        """Initialize random seed"""
+        if self.random_seed:
+            random.seed(self.random_seed)
+
+    def _compute_intent_embeddings(self, intents):
+        """Compute intent embeddings if we have a sentence transformer model."""
+        if not self._model:
+            return
+        self._intent_embeddings = {}
+        embeddings = self._model.encode(intents)
+        for i, intent in enumerate(intents):
+            self._intent_embeddings[intent] = embeddings[i]
+
+    def _get_most_similar_intent(self, generated_intent):
+        """Retrieves the most similar intent using sentence transformers embeddings.
+        If the most similar intent is below the similarity threshold,
+        the generated intent is not changed."""
+        if not self._model or self.similarity_threshold <= 0:
+            return generated_intent
+
+        generated_intent_embeddings = self._model.encode(generated_intent)
+
+        max_similarity = 0
+        max_intent = None
+        for intent, embedding in self._intent_embeddings.items():
+            similarity = cosine_similarity(embedding, generated_intent_embeddings)
+            if similarity > max_similarity and similarity > self.similarity_threshold:
+                max_similarity = similarity
+                max_intent = intent
+
+        return max_intent or generated_intent
 
     @staticmethod
     def _print_evaluation_results(
@@ -80,6 +129,8 @@ class TopicalRailsEvaluation:
         max_tests_per_intent: Optional[int] = 3,
         max_samples_per_intent: Optional[int] = 0,
         print_test_results_frequency: Optional[int] = 10,
+        similarity_threshold: Optional[float] = 0.0,
+        random_seed: Optional[int] = None,
     ):
         """A topical rails evaluation has the following parameters:
 
@@ -93,6 +144,9 @@ class TopicalRailsEvaluation:
         vector database. If the value is 0, all samples not in test set are used.
         - print_test_results_frequency: If we want to print intermediate results about the
         current evaluation, this is the step.
+        - similarity_threshold: If larger than 0, for intents that do not have an exact match
+        pick the most similar intent above this threshold.
+        - random_seed: Random seed used by the evaluation.
         """
         self.config_path = config_path
         self.verbose = verbose
@@ -100,7 +154,12 @@ class TopicalRailsEvaluation:
         self.max_tests_per_intent = max_tests_per_intent
         self.max_samples_per_intent = max_samples_per_intent
         self.print_test_results_frequency = print_test_results_frequency
+        self.similarity_threshold = similarity_threshold
+        self.random_seed = random_seed
+
+        self._initialize_random_seed()
         self._initialize_rails_app()
+        self._initialize_embeddings_model()
 
     @sync_wrapper
     async def evaluate_topical_rails(self):
@@ -126,11 +185,16 @@ class TopicalRailsEvaluation:
             set(self.test_set.keys()).intersection(intents_with_flows.keys())
         )
 
+        # Compute the embeddings for each intent if needed
+        self._compute_intent_embeddings(list(self.test_set.keys()))
+
         # Limit the number of test samples per intent, if we want to have a balanced test set
         total_test_samples = 0
-        for intent, samples in self.test_set.items():
+        for intent in self.test_set.keys():
+            samples = self.test_set[intent]
             if 0 < self.max_tests_per_intent < len(samples):
                 samples = samples[: self.max_tests_per_intent]
+                self.test_set[intent] = samples
             total_test_samples += len(samples)
 
         print(
@@ -159,37 +223,62 @@ class TopicalRailsEvaluation:
 
                 generated_user_intent = get_last_user_intent_event(new_events)["intent"]
                 if generated_user_intent != intent:
-                    num_user_intent_errors += 1
-                    print(
-                        f"Error!: Generated intent: {generated_user_intent} <> "
-                        f"Expected intent: {intent}"
-                    )
+                    wrong_intent = True
+                    # Employ semantic similarity if needed
+                    if self.similarity_threshold > 0:
+                        sim_user_intent = self._get_most_similar_intent(
+                            generated_user_intent
+                        )
+                        if sim_user_intent == intent:
+                            wrong_intent = False
 
-                generated_bot_intent = get_last_bot_intent_event(new_events)["intent"]
-                if generated_bot_intent not in intents_with_flows[intent]:
-                    num_bot_intent_errors += 1
-                    print(
-                        f"Error!: Generated bot intent: {generated_bot_intent} <> "
-                        f"Expected bot intent: {intents_with_flows[intent]}"
-                    )
+                    if wrong_intent:
+                        num_user_intent_errors += 1
+                        if self.similarity_threshold > 0:
+                            print(
+                                f"Error!: Generated intent: {generated_user_intent} ; "
+                                f"Most similar intent: {sim_user_intent} <> "
+                                f"Expected intent: {intent}"
+                            )
+                        else:
+                            print(
+                                f"Error!: Generated intent: {generated_user_intent} <> "
+                                f"Expected intent: {intent}"
+                            )
 
-                generated_bot_utterance = get_last_bot_utterance_event(new_events)[
-                    "content"
-                ]
-                found_utterance = False
-                found_bot_message = False
-                for bot_intent in intents_with_flows[intent]:
-                    bot_messages = self.rails_app.config.bot_messages
-                    if bot_intent in bot_messages:
-                        found_bot_message = True
-                        if generated_bot_utterance in bot_messages[bot_intent]:
-                            found_utterance = True
-                if found_bot_message and not found_utterance:
-                    num_bot_utterance_errors += 1
-                    print(
-                        f"Error!: Generated bot message: {generated_bot_utterance} <> "
-                        f"Expected bot message: {bot_messages[bot_intent]}"
-                    )
+                # If the intent is correct, the generated bot intent and bot message
+                # are also correct. For user intent similarity check,
+                # the bot intent (next step) and bot message may appear different in
+                # the verbose logs as they are generated using the generated user intent,
+                # before applying similarity checking.
+                if wrong_intent:
+                    generated_bot_intent = get_last_bot_intent_event(new_events)[
+                        "intent"
+                    ]
+                    if generated_bot_intent not in intents_with_flows[intent]:
+                        num_bot_intent_errors += 1
+                        print(
+                            f"Error!: Generated bot intent: {generated_bot_intent} <> "
+                            f"Expected bot intent: {intents_with_flows[intent]}"
+                        )
+
+                    generated_bot_utterance = get_last_bot_utterance_event(new_events)[
+                        "content"
+                    ]
+                    found_utterance = False
+                    found_bot_message = False
+                    for bot_intent in intents_with_flows[intent]:
+                        bot_messages = self.rails_app.config.bot_messages
+                        if bot_intent in bot_messages:
+                            found_bot_message = True
+                            if generated_bot_utterance in bot_messages[bot_intent]:
+                                found_utterance = True
+                    if found_bot_message and not found_utterance:
+                        num_bot_utterance_errors += 1
+                        print(
+                            f"Error!: Generated bot message: {generated_bot_utterance} <> "
+                            f"Expected bot message: {bot_messages[bot_intent]}"
+                        )
 
                 processed_samples += 1
                 if (

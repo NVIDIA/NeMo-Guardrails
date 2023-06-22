@@ -18,10 +18,10 @@ from typing import List
 
 import typer
 
-from nemoguardrails.eval.evaluate_topical import TopicalRailsEvaluation
-from nemoguardrails.eval.evaluate_moderation import ModerationRailsEvaluation
-from nemoguardrails.eval.evaluate_hallucination import HallucinationRailsEvaluation
 from nemoguardrails.eval.evaluate_factcheck import FactCheckEvaluation
+from nemoguardrails.eval.evaluate_hallucination import HallucinationRailsEvaluation
+from nemoguardrails.eval.evaluate_moderation import ModerationRailsEvaluation
+from nemoguardrails.eval.evaluate_topical import TopicalRailsEvaluation
 from nemoguardrails.logging.verbose import set_verbose
 
 app = typer.Typer()
@@ -59,6 +59,13 @@ def topical(
         default=10,
         help="Print evaluation intermediate results using this step.",
     ),
+    sim_threshold: float = typer.Option(
+        default=0.0,
+        help="Minimum similarity score to select the intent when exact match fails.",
+    ),
+    random_seed: int = typer.Option(
+        default=None, help="Random seed used by the evaluation."
+    ),
 ):
     """Evaluates the performance of the topical rails defined in a Guardrails application.
     Computes accuracy for canonical form detection, next step generation, and next bot message generation.
@@ -83,8 +90,10 @@ def topical(
         verbose=verbose,
         test_set_percentage=test_percentage,
         max_samples_per_intent=max_samples_intent,
-        max_tests_intent=max_tests_intent,
+        max_tests_per_intent=max_tests_intent,
         print_test_results_frequency=results_frequency,
+        similarity_threshold=sim_threshold,
+        random_seed=random_seed,
     )
     topical_eval.evaluate_topical_rails()
 

@@ -84,6 +84,6 @@ setup(
         "typing-extensions==4.5.0",
     ],
     extras_require={
-        "eval": ["tqdm~=4.65"],
+        "eval": ["tqdm~=4.65", "numpy~=1.24"],
     },
 )
