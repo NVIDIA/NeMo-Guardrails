@@ -20,8 +20,6 @@ from typing import Optional
 from urllib import parse
 from colorama import Fore
 
-import aiohttp
-
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 import wikipedia
