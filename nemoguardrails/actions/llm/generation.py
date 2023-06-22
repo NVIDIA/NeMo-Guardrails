@@ -18,6 +18,7 @@
 import logging
 import random
 import sys
+import uuid
 from ast import literal_eval
 from functools import lru_cache
 from typing import List, Optional
@@ -39,6 +40,7 @@ from nemoguardrails.actions.llm.utils import (
 from nemoguardrails.kb.basic import BasicEmbeddingsIndex
 from nemoguardrails.kb.index import IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase
+from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
@@ -319,25 +321,62 @@ class LLMGenerationActions:
                 Task.GENERATE_NEXT_STEPS, output=result
             )
 
-            result = get_first_nonempty_line(result)
+            # If we don't have multi-step generation enabled, we only look at the first line.
+            if not self.config.enable_multi_step_generation:
+                result = get_first_nonempty_line(result)
 
-            if result and result.startswith("bot "):
-                next_step = {"bot": result[4:]}
+                if result and result.startswith("bot "):
+                    next_step = {"bot": result[4:]}
+                else:
+                    next_step = {"bot": "general response"}
+
+                # If we have to execute an action, we return the event to start it
+                if next_step.get("execute"):
+                    return ActionResult(
+                        events=[
+                            {
+                                "type": "start_action",
+                                "action_name": next_step["execute"],
+                            }
+                        ]
+                    )
+                else:
+                    bot_intent = next_step.get("bot")
+
+                    return ActionResult(
+                        events=[{"type": "bot_intent", "intent": bot_intent}]
+                    )
             else:
-                next_step = {"bot": "general response"}
+                # Otherwise, we parse the output as a single flow.
+                # If we have a parsing error, we try to reduce size of the flow, potentially
+                # up to a single step.
+                lines = result.split("\n")
+                while True:
+                    try:
+                        parse_colang_file("dynamic.co", content="\n".join(lines))
+                        break
+                    except Exception as e:
+                        # If we could not parse the flow on the last line, we return a general response
+                        if len(lines) == 1:
+                            log.info("Exception while parsing single line: %s", e)
+                            return ActionResult(
+                                events=[
+                                    {"type": "bot_intent", "intent": "general response"}
+                                ]
+                            )
 
-            # If we have to execute an action, we return the event to start it
-            if next_step.get("execute"):
+                        log.info("Could not parse %s lines, reducing size", len(lines))
+                        lines = lines[:-1]
+
                 return ActionResult(
                     events=[
-                        {"type": "start_action", "action_name": next_step["execute"]}
+                        {
+                            "type": "start_flow",
+                            # We generate a random UUID as the flow_id
+                            "flow_id": str(uuid.uuid4()),
+                            "flow_body": "\n".join(lines),
+                        }
                     ]
-                )
-            else:
-                bot_intent = next_step.get("bot")
-
-                return ActionResult(
-                    events=[{"type": "bot_intent", "intent": bot_intent}]
                 )
 
         return ActionResult(return_value=None)

@@ -145,11 +145,15 @@ def _join_config(dest_config: dict, additional_config: dict):
         "actions_server_url", None
     ) or additional_config.get("actions_server_url", None)
 
-    if additional_config.get("sample_conversation"):
-        dest_config["sample_conversation"] = additional_config["sample_conversation"]
+    additional_fields = [
+        "sample_conversation",
+        "lowest_temperature",
+        "enable_multi_step_generation",
+    ]
 
-    if additional_config.get("lowest_temperature"):
-        dest_config["lowest_temperature"] = additional_config["lowest_temperature"]
+    for field in additional_fields:
+        if additional_config.get(field):
+            dest_config[field] = additional_config[field]
 
 
 class RailsConfig(BaseModel):
@@ -212,6 +216,12 @@ class RailsConfig(BaseModel):
     lowest_temperature: Optional[float] = Field(
         default=0.0,
         description="The lowest temperature that should be used for the LLM.",
+    )
+
+    # This should only be enabled for highly capable LLMs i.e. ~text-davinci-003.
+    enable_multi_step_generation: Optional[bool] = Field(
+        default=False,
+        description="Whether to enable multi-step generation for the LLM.",
     )
 
     @staticmethod

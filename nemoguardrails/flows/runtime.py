@@ -16,6 +16,7 @@
 import inspect
 import logging
 import uuid
+from textwrap import indent
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
@@ -31,6 +32,7 @@ from nemoguardrails.actions.math import wolfram_alpha_request
 from nemoguardrails.actions.output_moderation import output_moderation
 from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.flows.flows import FlowConfig, compute_context, compute_next_steps
+from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.rails.llm.config import RailsConfig
 
@@ -157,6 +159,11 @@ class Runtime:
             # If we need to execute an action, we start doing that.
             if last_event["type"] == "start_action":
                 next_events = await self._process_start_action(events)
+
+            # If we need to start a flow, we parse the content and register it.
+            elif last_event["type"] == "start_flow":
+                next_events = await self._process_start_flow(events)
+
             else:
                 # We need to slide all the flows based on the current event,
                 # to compute the next steps.
@@ -394,3 +401,35 @@ class Runtime:
         except Exception as e:
             log.info(f"Failed to get response from {action_name} due to exception {e}")
         return result, status
+
+    async def _process_start_flow(self, events: List[dict]) -> List[dict]:
+        """Starts a flow."""
+
+        event = events[-1]
+
+        flow_id = event["flow_id"]
+
+        # Up to this point, the body will be the sequence of instructions.
+        # We need to alter it to be an actual flow definition, i.e., add `define flow xxx`
+        # and intent the body.
+        body = event["flow_body"]
+        body = "define flow " + flow_id + ":\n" + indent(body, "  ")
+
+        # We parse the flow
+        parsed_data = parse_colang_file("dynamic.co", content=body)
+
+        assert len(parsed_data["flows"]) == 1
+        flow = parsed_data["flows"][0]
+
+        # To make sure that the flow will start now, we add a start_flow element at
+        # the beginning as well.
+        flow["elements"].insert(0, {"_type": "start_flow", "flow_id": flow_id})
+
+        # We add the flow to the list of flows.
+        self._load_flow_config(flow)
+
+        # And we compute the next steps. The new flow should match the current event,
+        # and start.
+        next_steps = await self.compute_next_steps(events)
+
+        return next_steps
