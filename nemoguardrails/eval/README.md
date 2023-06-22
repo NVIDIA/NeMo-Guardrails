@@ -16,7 +16,7 @@ Topical rails evaluation focuses on the core mechanism used by NeMo Guardrails t
 More details about this core functionality is explained [here](./../../docs/architecture/README.md).
 
 Thus, when using topical rails evaluation, we are actually assessing the performance for:
-1. User canonical form generation
+1. User canonical form (intent) generation
 2. Next step generation - in the current approach, we only assess the performance of bot canonical forms as next step in a flow
 3. Bot message generation
 
@@ -28,14 +28,19 @@ A topical rails evaluation has the following CLI parameters:
 
 - `config`: The Guardrails app to be evaluated.
 - `verbose`: If the Guardrails app should be run in verbose mode
-- `test_percentage`: Percentage of the samples for an intent to be used as test set
-- `max_tests_intent`: Maximum number of test samples per intent to be used when testing
+- `test-percentage`: Percentage of the samples for an intent to be used as test set
+- `max-tests-intent`: Maximum number of test samples per intent to be used when testing
 (useful to have balanced test data for unbalanced datasets). If the value is 0,
 this parameter is not used.
-- `max_samples_intent`: Maximum number of samples per intent to be used in the
+- `max-samples-intent`: Maximum number of samples per intent to be used in the
 vector database. If the value is 0, all samples not in test set are used.
-- `results_frequency`: If we want to print intermediate results about the
+- `results-frequency`: If we want to print intermediate results about the
 current evaluation, this is the step.
+- `sim-threshold`: If larger than 0, for intents that do not have an exact match
+pick the most similar intent above this threshold.
+- `random-seed`: Random seed used by the evaluation.
+- `output-dir`: Output directory for predictions.
+
 
 **Evaluation Results**
 
@@ -46,13 +51,43 @@ For the initial evaluation experiments for topical rails, we have used two datas
 The datasets were transformed into a NeMo Guardrails app, by defining canonical forms for each intent, specific dialogue flows, and even bot messages (for the _chit-chat_ dataset alone).
 The two datasets have a large number of user intents, thus topical rails. One of them is very generic and with higher-grained intents (_chit-chat_), while the _banking_ dataset is domain-specific and more fine-grained.
 
-Preliminary evaluation results follow next.
+Preliminary evaluation results follow next. In all experiments, we have chosen to have a balanced test set with at most 3 samples per intent.
+For both datasets, we have assessed the performance for various LLMs and also for the number of samples (`k = all, 3, 1`) per intent that are indexed in the vector database.
+
+Take into account that the performance of an LLM is heavily dependent on the prompt, especially due to the more complex [prompt used by Guardrails](./../../docs/architecture/README.md#example-prompt).
+Therefore, at the current moment we only release the results for OpenAI models, but more results will follow in next releases. All results are preliminary as better prompting can improve them.
+
+Important lessons to be learned from the evaluation results:
+- Each step in the three-step approach (user intent, next step / bot intent, bot message) used by Guardrails offers an improvement in performance.
+- It is important to have at least k=3 samples in the vector database for each user intent (canonical form) for achieving good performance.
+- Some models (e.g. gpt-3.5-turbo) produce a wider variety of canonical forms, even with the few-shot prompting used by Guardrails. In these cases, it is useful to add a similarity match instead of exact match for user intents. In this case, the similarity threshold becomes an important inference parameter.
+
+Evaluation Date - June 21, 2023.
 
 | Dataset   | # intents | # test samples |
 |-----------|-----------|----------------|
 | chit-chat | 76        | 226            |
 | banking   | 77        | 231            |
 
+Results on _chit-chat_ dataset, metric used is accuracy.
+
+
+| Model                     | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
+|---------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
+| `text-davinci-003, k=all` | 0.89                   | 0.89                   | 0.90                  | 0.90                  | 0.91                   | 0.91                   |
+| `text-davinci-003, k=3`   | 0.82                   | N/A                    | 0.85                  | N/A                   | N/A                    | N/A                    |
+| `text-davinci-003, k=1`   | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo, k=all`    | 0.44                   | 0.56                   | 0.50                  | 0.61                  | 0.54                   | 0.65                   |
+
+Results on _banking_ dataset, metric used is accuracy.
+
+
+| Model                     | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
+|---------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
+| `text-davinci-003, k=all` | 0.77                   | 0.82                   | 0.83                  | 0.84                  | N/A                    | N/A                    |
+| `text-davinci-003, k=3`   | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
+| `text-davinci-003, k=1`   | 0.50                   | N/A                    | 0.63                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo, k=all`    | 0.38                   | 0.66                   | 0.45                  | 0.69                  | N/A                    | N/A                    |
 
 ## Execution Rails
 
@@ -67,7 +102,7 @@ To run the fact checking rail, you can use the following CLI command:
 Here is a list of arguments that you can use to configure the fact checking rail:
 
 - `dataset-path`: Path to the dataset. It should be a json file with the following format:
-    
+
     ```
     [
         {
@@ -89,7 +124,7 @@ More details on how to set up the data in the right format and run the evaluatio
 
 #### Evaluation Results
 
-We evaluate the performance of the fact checking rail on the [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset. We randomly sample 100 (question, answer, evidence) triples and run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models. 
+We evaluate the performance of the fact checking rail on the [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset. We randomly sample 100 (question, answer, evidence) triples and run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models.
 
 Evaluation Date - June 02, 2023.
 
@@ -103,8 +138,8 @@ We breakdown the performance into positive entailment accuracy and negative enta
 
 ### Moderation Rails
 
-The moderation rails involve two components - the jailbreak detection rail and the output moderation rail. 
-* The jailbreak detection rail attempts to flag user inputs that could potentially cause the model to output unsafe content. 
+The moderation rails involve two components - the jailbreak detection rail and the output moderation rail.
+* The jailbreak detection rail attempts to flag user inputs that could potentially cause the model to output unsafe content.
 * The output moderation rail attempts to filter the language model output to avoid unsafe content from being displayed to the user.
 
 The jailbreak and output moderation rails can be evaluated using the following CLI command:
@@ -157,7 +192,7 @@ We want the models to block as many harmful prompts as possible and allow as man
 For general questions that the model uses parametric knowledge to answer, we can define a hallucination rail to detect when the model is potentially making up facts. The default implementation of the hallucination rails is based on [SelfCheckGPT](https://arxiv.org/abs/2303.08896).
 
 * Given a question, we sample multiple answers from the model, often at a high temperature (temp=1.0).
-* We then check if the answers are consistent with each other. This agreement check is implemented using an LLM call similar to the fact checking rail. 
+* We then check if the answers are consistent with each other. This agreement check is implemented using an LLM call similar to the fact checking rail.
 * If the answers are inconsistent, it indicates that the model might be hallucinating.
 
 To run the hallucination rail, use the following CLI command:
@@ -179,18 +214,18 @@ To evaluate the hallucination rail on your own dataset, you can follow the creat
 
 #### Evaluation Results
 
-To evaluate the hallucination rail, we manually curate a set of [questions](../data/hallucination/sample.txt) which mainly consists of questions with a false premise, i.e., questions that cannot have a correct answer.
+To evaluate the hallucination rail, we manually curate a set of [questions](./data/hallucination/sample.txt) which mainly consists of questions with a false premise, i.e., questions that cannot have a correct answer.
 
 For example, the question "What is the capital of the moon?" has a false premise since the moon does not have a capital. Since the question is stated in a way that implies that the moon has a capital, the model might be tempted to make up a fact and answer the question.
 
-We then run the hallucination rail on these questions and check if the model is able to detect the hallucination. We run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models. 
+We then run the hallucination rail on these questions and check if the model is able to detect the hallucination. We run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models.
 
 Evaluation Date - June 12, 2023.
 
 We breakdown the performance into the following metrics:
 
 * % of questions that are intercepted by the model, i.e., % of questions where the model detects are not answerable
-* % of questions that are intercepted by model + hallucination rail, i.e., % of questions where the either the model detects are not answerable or the hallucination rail detects that the model is making up facts 
+* % of questions that are intercepted by model + hallucination rail, i.e., % of questions where the either the model detects are not answerable or the hallucination rail detects that the model is making up facts
 
 | Model | % intercepted - model |% intercepted - model + hallucination rail|
 |-------|----------| ---------------------------- |
