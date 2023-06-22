@@ -66,6 +66,9 @@ def topical(
     random_seed: int = typer.Option(
         default=None, help="Random seed used by the evaluation."
     ),
+    output_dir: str = typer.Option(
+        default=None, help="Output directory for predictions."
+    ),
 ):
     """Evaluates the performance of the topical rails defined in a Guardrails application.
     Computes accuracy for canonical form detection, next step generation, and next bot message generation.
@@ -94,6 +97,7 @@ def topical(
         print_test_results_frequency=results_frequency,
         similarity_threshold=sim_threshold,
         random_seed=random_seed,
+        output_dir=output_dir,
     )
     topical_eval.evaluate_topical_rails()
 

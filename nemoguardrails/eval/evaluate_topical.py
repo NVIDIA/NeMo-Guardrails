@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import asyncio
+import json
+import os
 import random
 import textwrap
 from typing import Optional
@@ -103,6 +105,12 @@ class TopicalRailsEvaluation:
 
         return max_intent or generated_intent
 
+    def _get_main_llm_model(self):
+        for model in self.rails_app.config.models:
+            if model.type == "main":
+                return model.model if model.model else model.type
+        return "unknown_main_llm"
+
     @staticmethod
     def _print_evaluation_results(
         processed_samples,
@@ -131,6 +139,7 @@ class TopicalRailsEvaluation:
         print_test_results_frequency: Optional[int] = 10,
         similarity_threshold: Optional[float] = 0.0,
         random_seed: Optional[int] = None,
+        output_dir: Optional[str] = None,
     ):
         """A topical rails evaluation has the following parameters:
 
@@ -147,6 +156,7 @@ class TopicalRailsEvaluation:
         - similarity_threshold: If larger than 0, for intents that do not have an exact match
         pick the most similar intent above this threshold.
         - random_seed: Random seed used by the evaluation.
+        - output_dir: Output directory for predictions.
         """
         self.config_path = config_path
         self.verbose = verbose
@@ -156,6 +166,7 @@ class TopicalRailsEvaluation:
         self.print_test_results_frequency = print_test_results_frequency
         self.similarity_threshold = similarity_threshold
         self.random_seed = random_seed
+        self.output_dir = output_dir
 
         self._initialize_random_seed()
         self._initialize_rails_app()
@@ -213,15 +224,22 @@ class TopicalRailsEvaluation:
         num_user_intent_errors = 0
         num_bot_intent_errors = 0
         num_bot_utterance_errors = 0
+        topical_predictions = []
 
         for intent, samples in self.test_set.items():
             for sample in samples:
+                prediction = {
+                    "user_said": sample,
+                    "user_intent": intent,
+                }
                 history_events = [{"type": "user_said", "content": sample}]
                 new_events = await self.rails_app.runtime.generate_events(
                     history_events
                 )
 
                 generated_user_intent = get_last_user_intent_event(new_events)["intent"]
+                prediction["generated_user_intent"] = generated_user_intent
+                wrong_intent = False
                 if generated_user_intent != intent:
                     wrong_intent = True
                     # Employ semantic similarity if needed
@@ -229,6 +247,7 @@ class TopicalRailsEvaluation:
                         sim_user_intent = self._get_most_similar_intent(
                             generated_user_intent
                         )
+                        prediction["sim_user_intent"] = sim_user_intent
                         if sim_user_intent == intent:
                             wrong_intent = False
 
@@ -255,6 +274,8 @@ class TopicalRailsEvaluation:
                     generated_bot_intent = get_last_bot_intent_event(new_events)[
                         "intent"
                     ]
+                    prediction["generated_bot_intent"] = generated_bot_intent
+                    prediction["bot_intents"] = intents_with_flows[intent]
                     if generated_bot_intent not in intents_with_flows[intent]:
                         num_bot_intent_errors += 1
                         print(
@@ -265,6 +286,7 @@ class TopicalRailsEvaluation:
                     generated_bot_utterance = get_last_bot_utterance_event(new_events)[
                         "content"
                     ]
+                    prediction["generated_bot_said"] = generated_bot_utterance
                     found_utterance = False
                     found_bot_message = False
                     for bot_intent in intents_with_flows[intent]:
@@ -274,12 +296,14 @@ class TopicalRailsEvaluation:
                             if generated_bot_utterance in bot_messages[bot_intent]:
                                 found_utterance = True
                     if found_bot_message and not found_utterance:
+                        prediction["bot_said"] = bot_messages[bot_intent]
                         num_bot_utterance_errors += 1
                         print(
                             f"Error!: Generated bot message: {generated_bot_utterance} <> "
                             f"Expected bot message: {bot_messages[bot_intent]}"
                         )
 
+                topical_predictions.append(prediction)
                 processed_samples += 1
                 if (
                     self.print_test_results_frequency
@@ -300,3 +324,25 @@ class TopicalRailsEvaluation:
             num_bot_intent_errors,
             num_bot_utterance_errors,
         )
+
+        if self.output_dir:
+            # Extract filename from config path (use last 2 directory names if possible)
+            filename = "default"
+            words = self.config_path.split(os.path.sep)
+            if len(words) > 2:
+                filename = "_".join(words[-2:])
+            elif len(words) == 1:
+                filename = words[0]
+
+            model_name = self._get_main_llm_model()
+            filename += (
+                f"_{model_name}_shots{self.max_samples_per_intent}"
+                f"_sim{self.similarity_threshold}"
+                f"_topical_results.json"
+            )
+
+            output_path = f"{self.output_dir}/{filename}"
+            with open(output_path, "w") as f:
+                json.dump(topical_predictions, f, indent=4)
+
+                print(f"Predictions written to file {output_path}")
