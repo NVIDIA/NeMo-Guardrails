@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2023-06-30
+
+### Added
+
+- Support for defining subflows.
+- Support for using formatters to change how variables are included in a prompt template.
+- Output parsers for prompt templates.
+- The `verbose_v1` formatter and output parser to be used for smaller models that don't understand Colang very well in a few-shot manner.
+- Support for including context variables in prompt templates.
+- Support for chat models i.e. prompting with a sequence of messages.
+- Experimental support for allowing the LLM to generate multi-step flows.
+- Example of using Llama Index from a guardrails configuration (#40).
+- Example for using HuggingFace Endpoint LLMs with a guardrails configuration.
+- Support to alter LLM parameters passed as `model_kwargs` in LangChain.
+- CLI tool for running evaluations on the different steps (e.g., canonical form generation, next steps, bot message) and on existing rails implementation (e.g., moderation, jailbreak, fact-checking, and hallucination).
+- Initial evaluation results for `text-davinci-003` and `gpt-3.5-turbo`.
+- The `lowest_temperature` can be set through the guardrails config (to be used for deterministic tasks).
+
+### Changed
+
+- The core templates now use Jinja2 as the rendering engines.
+- Improved the internal prompting architecture, now using an LLM Task Manager.
+
+### Fixed
+
+- Fixed bug related to invoking a chain with multiple output keys.
+- Fixed bug related to tracking the output stats.
+
 ## [0.2.0] - 2023-05-31
 
 ### Added
