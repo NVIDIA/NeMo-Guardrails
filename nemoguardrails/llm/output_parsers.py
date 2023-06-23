@@ -14,34 +14,27 @@
 # limitations under the License.
 
 
-def user_intent_parser(s: str):
-    """Parses the user intent."""
-    s = s.strip()
-    if s.startswith("User intent: "):
-        s = s.split("\n")[0]
-        return s[13:].strip()
+def _strip_prefix(s: str, prefix: str):
+    """Helper function to strip a prefix from a string."""
+    if s.startswith(prefix):
+        return s[len(prefix) :].strip()
 
     return s
+
+
+def user_intent_parser(s: str):
+    """Parses the user intent."""
+    return _strip_prefix(s.strip(), "User intent: ")
 
 
 def bot_intent_parser(s: str):
     """Parses the bot intent."""
-    s = s.strip()
-    if s.startswith("Bot intent: "):
-        s = s.split("\n")[0]
-        return s[13:].strip()
-
-    return s
+    return _strip_prefix(s.strip(), "Bot intent: ")
 
 
 def bot_message_parser(s: str):
     """Parses the bot messages."""
-    s = s.strip()
-    if s.startswith("Bot message: "):
-        s = s.split("\n")[0]
-        return s[14:].strip()
-
-    return s
+    return _strip_prefix(s.strip(), "Bot message: ")
 
 
 def verbose_v1_parser(s: str):
@@ -52,7 +45,6 @@ def verbose_v1_parser(s: str):
 
     for i, line in enumerate(lines):
         for prefix in prefixes:
-            if line.startswith(prefix):
-                lines[i] = line[len(prefix) :].strip()
+            lines[i] = _strip_prefix(line, prefix)
 
     return "\n".join(lines)
