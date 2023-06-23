@@ -3,3 +3,5 @@
 The examples in this folder showcase how various LLM providers should be configured.
 
 The guardrails configurations are very simple and only meant to show that the LLM is configured properly. These configurations **ARE NOT** meant to be used for production deployments.
+
+The team encourages and welcomes contributions from the community. LLM-specific configurations like the ones shown here are a great way to get involved. If you see opportunities to improve the way NeMo Guardrails works with common LLMs, please consider submitting a PR.
