@@ -223,8 +223,10 @@ class LLMGenerationActions:
                 )
 
                 # We add these in reverse order so the most relevant is towards the end.
+                candidate_intents = set()
                 for result in reversed(results):
                     examples += f"user \"{result.text}\"\n  {result.meta['intent']}\n\n"
+                    candidate_intents.add(result.meta["intent"])
 
             # We have user messages, so we need to identify the canonical form.
             canonical_form_prompt = PromptTemplate(
@@ -255,6 +257,11 @@ class LLMGenerationActions:
                 )
 
             user_intent = get_first_nonempty_line(result)
+            if user_intent is None:
+                user_intent = "unknown message"
+
+            if user_intent and user_intent.startswith("user "):
+                user_intent = user_intent[5:]
 
             log.info("Canonical form for user intent: " + user_intent)
 

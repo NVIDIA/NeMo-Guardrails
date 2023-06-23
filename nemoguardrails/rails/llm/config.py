@@ -15,6 +15,7 @@
 
 """Module for the configuration of rails."""
 import os
+import random
 from typing import Any, Dict, List, Optional
 
 import yaml
@@ -176,10 +177,24 @@ class RailsConfig(BaseModel):
     )
 
     @staticmethod
-    def from_path(config_path: str):
+    def from_path(
+        config_path: str,
+        test_set_percentage: Optional[float] = 0.0,
+        test_set: Optional[Dict[str, List]] = {},
+        max_samples_per_intent: Optional[int] = 0,
+    ):
         """Loads a configuration from a given path.
 
         Supports loading a from a single file, or from a directory.
+
+        Also used for testing Guardrails apps, in which case the test_set is
+        randomly created from the intent samples in the config files.
+        In this situation test_set_percentage should be larger than 0.
+
+        If we want to limit the number of samples for an intent, set the
+        max_samples_per_intent to a positive number. It is useful for testing apps, but
+        also for limiting the number of samples for an intent in some scenarios.
+        The chosen samples are selected randomly for each intent.
         """
         # If the config path is a file, we load the YAML content.
         # Otherwise, if it's a folder, we iterate through all files.
@@ -216,6 +231,29 @@ class RailsConfig(BaseModel):
                     elif file.endswith(".co"):
                         with open(full_path) as f:
                             _raw_config = parse_colang_file(file, content=f.read())
+
+                    # Extract test set if needed before adding the _raw_config to the app config in raw_config
+                    if "user_messages" in _raw_config and test_set_percentage > 0:
+                        for intent, samples in _raw_config["user_messages"].items():
+                            # We need at least 2 samples to create a test split
+                            if len(samples) > 1:
+                                random.shuffle(samples)
+                                num_test_elements = int(
+                                    len(samples) * test_set_percentage
+                                )
+                                test_set[intent] = samples[:num_test_elements]
+                                _raw_config["user_messages"][intent] = samples[
+                                    num_test_elements:
+                                ]
+                                # Limit the number of samples per intent if specified
+                                if (
+                                    0
+                                    < max_samples_per_intent
+                                    < len(_raw_config["user_messages"][intent])
+                                ):
+                                    _raw_config["user_messages"][intent] = _raw_config[
+                                        "user_messages"
+                                    ][intent][:max_samples_per_intent]
 
                     _join_config(raw_config, _raw_config)
         else:

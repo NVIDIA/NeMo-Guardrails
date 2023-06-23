@@ -83,4 +83,7 @@ setup(
         "simpleeval==0.9.13",
         "typing-extensions==4.5.0",
     ],
+    extras_require={
+        "eval": ["tqdm~=4.65", "numpy~=1.24"],
+    },
 )
