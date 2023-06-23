@@ -73,9 +73,9 @@ def test_openai_gpt_3_5_turbo_prompts(task):
 
     llm_task_manager = LLMTaskManager(config)
 
-    generate_user_intent_prompt = llm_task_manager.render_task_prompt(
+    task_prompt = llm_task_manager.render_task_prompt(
         task=task,
         context={"examples": 'user "Hello there!"\n  express greeting'},
     )
 
-    assert isinstance(generate_user_intent_prompt, list)
+    assert isinstance(task_prompt, list)
