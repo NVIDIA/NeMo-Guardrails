@@ -214,7 +214,7 @@ user "thanks"
 bot express appreciation and offer additional help
   "You're welcome. If you have any more questions or if there's anything else I can help you with, please don't hesitate to ask."
 
-# This how the user talks:
+# This is how the user talks:
 
 user "What was the movement on nonfarm payroll?"
   ask about headline numbers

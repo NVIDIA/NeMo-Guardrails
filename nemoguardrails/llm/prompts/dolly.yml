@@ -41,7 +41,7 @@ prompts:
       # This is how a conversation between a user and the bot can go:
       {{ sample_conversation | remove_text_messages | verbose_v1 }}
 
-      # This how the bot thinks:
+      # This is how the bot thinks:
       {{ examples | remove_text_messages | verbose_v1 }}
 
       # This is the current conversation between the user and the bot:
@@ -69,7 +69,7 @@ prompts:
       ```
       {% endif %}
 
-      # This how the bot talks:
+      # This is how the bot talks:
       {{ examples | verbose_v1 }}
 
       # This is the current conversation between the user and the bot:
@@ -90,7 +90,7 @@ prompts:
       # This is how a conversation between a user and the bot can go:
       {{ sample_conversation | verbose_v1 }}
 
-      # This how the bot thinks:
+      # This is how the bot thinks:
       {{ examples | verbose_v1 }}
 
       # This is the current conversation between the user and the bot:

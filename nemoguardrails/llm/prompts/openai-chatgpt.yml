@@ -14,7 +14,7 @@ prompts:
       - "{{ sample_conversation | to_messages }}"
 
       - type: system
-        content: "This how the user talks:"
+        content: "This is how the user talks:"
 
       - "{{ examples | to_messages}}"
 
@@ -40,7 +40,7 @@ prompts:
       - "{{ sample_conversation | to_messages }}"
 
       - type: system
-        content: "This how the bot thinks:"
+        content: "This is how the bot thinks:"
 
       - "{{ examples | to_messages}}"
 
@@ -75,7 +75,7 @@ prompts:
           {% endif %}"
 
       - type: system
-        content: "This how the bot talks:"
+        content: "This is how the bot talks:"
 
       - "{{ examples | to_messages}}"
 
@@ -101,7 +101,7 @@ prompts:
       - "{{ sample_conversation | to_messages }}"
 
       - type: system
-        content: "This how the bot thinks:"
+        content: "This is how the bot thinks:"
 
       - "{{ examples | to_messages}}"
 
