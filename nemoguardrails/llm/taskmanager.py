@@ -196,3 +196,12 @@ class LLMTaskManager:
             return output_parser(output)
         else:
             return output
+
+    def register_filter(self, filter_fn: callable, name: Optional[str] = None):
+        """Register a custom filter for the rails configuration."""
+        name = name or filter_fn.__name__
+        self.env.filters[name] = filter_fn
+
+    def register_output_parser(self, output_parser: callable, name: str):
+        """Register a custom output parser for the rails configuration."""
+        self.output_parsers[name] = output_parser

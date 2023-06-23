@@ -217,3 +217,11 @@ class LLMRails:
     def register_action_param(self, name: str, value: Any):
         """Registers a custom action parameter."""
         self.runtime.register_action_param(name, value)
+
+    def register_filter(self, filter_fn: callable, name: Optional[str] = None):
+        """Register a custom filter for the rails configuration."""
+        self.runtime.llm_task_manager.register_filter(filter_fn, name)
+
+    def register_output_parser(self, output_parser: callable, name: str):
+        """Register a custom output parser for the rails configuration."""
+        self.runtime.llm_task_manager.register_output_parser(output_parser, name)
