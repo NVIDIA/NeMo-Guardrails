@@ -25,6 +25,7 @@ from nemoguardrails.eval.utils import initialize_llm, load_dataset
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task, get_prompt
 from nemoguardrails.rails.llm.config import Model, RailsConfig
+from nemoguardrails.llm.taskmanager import LLMTaskManager
 
 
 class HallucinationRailsEvaluation:
@@ -55,6 +56,7 @@ class HallucinationRailsEvaluation:
         self.llm_provider = llm
         self.model_config = Model(type="main", engine=llm, model=model_name)
         self.rails_config = RailsConfig(models=[self.model_config])
+        self.LLMTaskManager = LLMTaskManager(self.rails_config)
         self.llm = initialize_llm(self.model_config)
 
         self.num_samples = num_samples
@@ -84,16 +86,7 @@ class HallucinationRailsEvaluation:
         If inconsistency is detected, flag the prompt as hallucination.
         """
 
-        hallucination_check_template = get_prompt(
-            self.rails_config, Task.CHECK_HALLUCINATION
-        ).content
-        hallucination_check_prompt = PromptTemplate(
-            template=hallucination_check_template,
-            input_variables=["paragraph", "statement"],
-        )
-        hallucination_check_chain = LLMChain(
-            prompt=hallucination_check_prompt, llm=self.llm
-        )
+        
 
         hallucination_check_predictions = []
         num_flagged = 0
@@ -111,9 +104,11 @@ class HallucinationRailsEvaluation:
                 continue
 
             paragraph = ". ".join(extra_responses)
-            hallucination = hallucination_check_chain.predict(
-                paragraph=paragraph, statement=bot_response
+            hallucination_check_prompt = self.LLMTaskManager.render_task_prompt(
+                Task.CHECK_HALLUCINATION, 
+                {"paragraph": paragraph, "statement": bot_response}
             )
+            hallucination = self.llm(hallucination_check_prompt)
             hallucination = hallucination.lower().strip()
 
             prediction = {

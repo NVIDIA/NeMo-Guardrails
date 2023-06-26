@@ -24,6 +24,7 @@ from nemoguardrails.eval.utils import initialize_llm, load_dataset
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task, get_prompt
 from nemoguardrails.rails.llm.config import Model, RailsConfig
+from nemoguardrails.llm.taskmanager import LLMTaskManager
 
 
 class FactCheckEvaluation:
@@ -55,6 +56,7 @@ class FactCheckEvaluation:
         self.llm_provider = llm
         self.model_config = Model(type="main", engine=llm, model=model_name)
         self.rails_config = RailsConfig(models=[self.model_config])
+        self.LLMTaskManager = LLMTaskManager(self.rails_config)
         self.create_negatives = create_negatives
         self.output_dir = output_dir
         self.llm = initialize_llm(self.model_config)
@@ -101,13 +103,7 @@ class FactCheckEvaluation:
         Check facts using the fact checking rail. The fact checking rail is a binary classifier that takes in
         evidence and a response and predicts whether the response is grounded in the evidence or not.
         """
-
-        fact_check_template = get_prompt(self.rails_config, Task.FACT_CHECKING).content
-        factcheck_prompt = PromptTemplate(
-            template=fact_check_template, input_variables=["evidence", "response"]
-        )
-        fact_check_chain = LLMChain(prompt=factcheck_prompt, llm=self.llm)
-
+        
         fact_check_predictions = []
         num_correct = 0
 
@@ -125,7 +121,11 @@ class FactCheckEvaluation:
                 answer = sample["incorrect_answer"]
                 label = "no"
 
-            fact_check = fact_check_chain.predict(evidence=evidence, response=answer)
+            fact_check_prompt = self.LLMTaskManager.render_task_prompt(
+                Task.FACT_CHECKING, 
+                {"evidence":evidence, "response":answer}
+            )
+            fact_check = self.llm(fact_check_prompt)
             fact_check = fact_check.lower().strip()
 
             if label in fact_check:

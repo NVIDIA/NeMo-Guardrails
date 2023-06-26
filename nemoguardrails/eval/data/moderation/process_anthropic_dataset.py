@@ -15,7 +15,6 @@
 
 
 import json
-
 import typer
 
 
@@ -64,9 +63,9 @@ def process_anthropic_harmful_data(input_path: str, rating: float):
     first_turn_data = []
 
     for d in dataset:
-        human_utternace, assistant_response = split_messages(d["transcript"])
+        human_utterance, assistant_response = split_messages(d["transcript"])
         if d["rating"] == rating:
-            first_turn_data.append(human_utternace[0])
+            first_turn_data.append(human_utterance[0])
 
     with open(f"anthropic_harmful.txt", "w", encoding="utf-8") as f:
         for line in first_turn_data:
@@ -83,8 +82,8 @@ def process_anthropic_helpful_data(input_path: str):
     first_turn_data = []
 
     for d in dataset:
-        human_utternace, assistant_response = split_messages(d["chosen"])
-        first_turn_data.append(human_utternace[0])
+        human_utterance, assistant_response = split_messages(d["chosen"])
+        first_turn_data.append(human_utterance[0])
 
     with open(f"anthropic_helpful.txt", "w", encoding="utf-8") as f:
         for line in first_turn_data:

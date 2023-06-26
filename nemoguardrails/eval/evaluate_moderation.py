@@ -23,6 +23,8 @@ from langchain import LLMChain, PromptTemplate
 from nemoguardrails.eval.utils import initialize_llm, load_dataset
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task, get_prompt
+from nemoguardrails.llm.taskmanager import LLMTaskManager
+
 from nemoguardrails.rails.llm.config import Model, RailsConfig
 
 
@@ -60,6 +62,7 @@ class ModerationRailsEvaluation:
         self.model_config = Model(type="main", engine=llm, model=model_name)
         self.rails_config = RailsConfig(models=[self.model_config])
         self.llm = initialize_llm(self.model_config)
+        self.LLMTaskManager = LLMTaskManager(self.rails_config)
 
         self.check_jailbreak = check_jailbreak
         self.check_output_moderation = check_output_moderation
@@ -73,37 +76,6 @@ class ModerationRailsEvaluation:
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-    def init_jailbreak_chain(self):
-        """
-        Initializes the jailbreak chain using the prompt from the rails config.
-        """
-
-        jailbreak_check_template = get_prompt(
-            self.rails_config, Task.JAILBREAK_CHECK
-        ).content
-        jailbreak_check_prompt = PromptTemplate(
-            template=jailbreak_check_template,
-            input_variables=["user_input"],
-        )
-        self.jailbreak_check_chain = LLMChain(
-            prompt=jailbreak_check_prompt, llm=self.llm
-        )
-
-    def init_output_moderation_chain(self):
-        """
-        Initializes the output moderation chain using the prompt from the rails config.
-        """
-        output_moderation_template = get_prompt(
-            self.rails_config, Task.OUTPUT_MODERATION
-        ).content
-        output_moderation_prompt = PromptTemplate(
-            template=output_moderation_template,
-            input_variables=["bot_response"],
-        )
-        self.output_moderation_chain = LLMChain(
-            prompt=output_moderation_prompt, llm=self.llm
-        )
-
     def get_jailbreak_results(self, prompt, results):
         """
         Gets the jailbreak results for a given prompt.
@@ -112,7 +84,11 @@ class ModerationRailsEvaluation:
         Prediction: "yes" if the prompt is flagged as jailbreak, "no" if acceptable.
         """
 
-        jailbreak = self.jailbreak_check_chain.predict(user_input=prompt)
+        jailbreak_check_prompt = self.LLMTaskManager.render_task_prompt(
+            Task.JAILBREAK_CHECK, 
+            {"user_input": prompt}
+        )
+        jailbreak = self.llm(jailbreak_check_prompt)
         jailbreak = jailbreak.lower().strip()
 
         if "yes" in jailbreak:
@@ -134,9 +110,11 @@ class ModerationRailsEvaluation:
         with llm_params(self.llm, temperature=0.1, max_tokens=100):
             bot_response = self.llm(prompt)
 
-        output_moderation = self.output_moderation_chain.predict(
-            bot_response=bot_response
+        output_moderation_check_prompt = self.LLMTaskManager.render_task_prompt(
+            Task.OUTPUT_MODERATION, 
+            {"bot_response": bot_response}
         )
+        output_moderation = self.llm(output_moderation_check_prompt)
         output_moderation = output_moderation.lower().strip()
 
         if "no" in output_moderation:
@@ -167,12 +145,6 @@ class ModerationRailsEvaluation:
         else:
             jailbreak_results["label"] = "no"
             output_moderation_results["label"] = "yes"
-
-        if self.check_jailbreak:
-            self.init_jailbreak_chain()
-
-        if self.check_output_moderation:
-            self.init_output_moderation_chain()
 
         moderation_check_predictions = []
 
