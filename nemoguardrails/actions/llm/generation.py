@@ -256,7 +256,7 @@ class LLMGenerationActions:
 
             user_intent = get_first_nonempty_line(result)
 
-            log.info("Canonical form for user intent: " + user_intent)
+            log.info("Canonical form for user intent: " + (user_intent if user_intent else "None"))
 
             if user_intent is None:
                 return ActionResult(
