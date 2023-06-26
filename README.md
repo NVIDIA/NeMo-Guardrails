@@ -1,4 +1,4 @@
-# NeMo Guardrails Toolkit
+# NeMo Guardrails
 
 [![Tests](https://img.shields.io/badge/Tests-passing-green)](#)
 [![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://github.com/NVIDIA/NeMo-Guardrails/blob/main/LICENSE.md)
