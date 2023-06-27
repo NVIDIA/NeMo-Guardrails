@@ -45,11 +45,12 @@ pick the most similar intent above this threshold.
 **Evaluation Results**
 
 For the initial evaluation experiments for topical rails, we have used two datasets used for conversational NLU:
-- [_chit-chat_](https://github.com/RasaHQ/rasa-demo/blob/main/data/nlu/chitchat.yml) dataset
+- [_chit-chat_](https://github.com/rahul051296/small-talk-rasa-stack) dataset
 - [_banking_](https://github.com/PolyAI-LDN/task-specific-datasets/tree/master/banking_data) dataset
 
 The datasets were transformed into a NeMo Guardrails app, by defining canonical forms for each intent, specific dialogue flows, and even bot messages (for the _chit-chat_ dataset alone).
 The two datasets have a large number of user intents, thus topical rails. One of them is very generic and with higher-grained intents (_chit-chat_), while the _banking_ dataset is domain-specific and more fine-grained.
+More details about running the topical rails evaluation experiments and the evaluation datasets is available [here](./data/topical/README.md).
 
 Preliminary evaluation results follow next. In all experiments, we have chosen to have a balanced test set with at most 3 samples per intent.
 For both datasets, we have assessed the performance for various LLMs and also for the number of samples (`k = all, 3, 1`) per intent that are indexed in the vector database.
