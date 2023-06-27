@@ -142,7 +142,7 @@ class HallucinationRailsEvaluation:
             with open(output_path, "w") as f:
                 json.dump(hallucination_check_predictions, f, indent=4)
             print(
-                f"Predictions written to file {output_path}_hallucination_predictions.json"
+                f"Predictions written to file {output_path}.json"
             )
 
 

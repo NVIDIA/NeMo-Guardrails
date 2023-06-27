@@ -206,7 +206,7 @@ class ModerationRailsEvaluation:
 
         if self.check_output_moderation:
             print(
-                f"% of samples flagged as output moderation rail: {output_moderation_flagged/len(self.dataset) * 100}"
+                f"% of samples flagged by the output moderation: {output_moderation_flagged/len(self.dataset) * 100}"
             )
             print(
                 f"% of samples correctly flagged by output moderation rail: {output_moderation_correct/len(self.dataset) * 100}"
