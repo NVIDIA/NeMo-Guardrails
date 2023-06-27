@@ -7,7 +7,7 @@ The jailbreak and output moderation rails can be evaluated using the following c
 The various arguments that can be passed to evaluate the moderation rails are:
 
 
-- model_name`: Name of the model to use. Default is 'text-davinci-003'.
+- `model_name`: Name of the model to use. Default is 'text-davinci-003'.
 - `llm`: Name of the LLM provide. Default is 'openai'.
 - `dataset-path`: Path to the dataset to evaluate the rails on. The dataset should contain one prompt per line.
 - `split`: The split of the dataset to evaluate on. Choices are 'helpful' or 'harmful'. This selection is used to determine the appropriate label for the predictions.
@@ -54,7 +54,7 @@ By default, we evaluate 50 samples from the dataset. This can be changed using t
 
 ## Downloading the Anthropic Helpful Dataset
 
-The Anthropic Helpful Dataset can be downloaded from the following [link](https://huggingface.co/datasets/Anthropic/hh-rlhf/tree/main/helpful-base). 
+The Anthropic Helpful Dataset can be downloaded from the following [link](https://huggingface.co/datasets/Anthropic/hh-rlhf/tree/main/helpful-base).
 
 Once it is downloaded, move it to the `nemoguardrails/eval/data/moderation` folder and rename it as ```anthropic_helpful.jsonl.gz```.
 
