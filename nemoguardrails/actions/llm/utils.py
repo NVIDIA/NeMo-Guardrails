@@ -86,7 +86,7 @@ def get_colang_history(
         elif event["type"] == "bot_intent":
             history += f'bot {event["intent"]}\n'
         elif event["type"] == "bot_said" and include_texts:
-            history += f'#  "{event["content"]}"\n'
+            history += f'  "{event["content"]}"\n'
         # We skip system actions from this log
         elif event["type"] == "start_action" and not event.get("is_system_action"):
             if (
