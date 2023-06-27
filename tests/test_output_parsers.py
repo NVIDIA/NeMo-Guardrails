@@ -17,4 +17,4 @@ from nemoguardrails.llm.output_parsers import user_intent_parser
 
 
 def test_user_intent():
-    assert user_intent_parser("User intent: express greeting") == "express greeting"
+    assert user_intent_parser("User intent: express greeting") == "  express greeting"

@@ -14,37 +14,55 @@
 # limitations under the License.
 
 
-def _strip_prefix(s: str, prefix: str):
-    """Helper function to strip a prefix from a string."""
+def _replace_prefix(s: str, prefix: str, repl: str):
+    """Helper function to replace a prefix from a string."""
     if s.startswith(prefix):
-        return s[len(prefix) :].strip()
+        return repl + s[len(prefix) :].strip()
 
     return s
 
 
 def user_intent_parser(s: str):
     """Parses the user intent."""
-    return _strip_prefix(s.strip(), "User intent: ")
+    return _replace_prefix(s.strip(), "User intent: ", "  ")
 
 
 def bot_intent_parser(s: str):
     """Parses the bot intent."""
-    return _strip_prefix(s.strip(), "Bot intent: ")
+    return _replace_prefix(s.strip(), "Bot intent: ", "bot ")
 
 
 def bot_message_parser(s: str):
     """Parses the bot messages."""
-    return _strip_prefix(s.strip(), "Bot message: ")
+    return _replace_prefix(s.strip(), "Bot message: ", "  ")
 
 
 def verbose_v1_parser(s: str):
-    """Parses completions generated using the `verbose_v1` formatter."""
+    """Parses completions generated using the `verbose_v1` formatter.
+
+    This will convert text from the following format:
+      User message: "Hello"
+      User intent: express greeting
+      Bot intent: express greeting
+      Bot message: "Hi"
+
+    To:
+      user "Hello"
+        express greeting
+      bot express greeting
+        "Hi"
+    """
     lines = s.split("\n")
 
-    prefixes = ["User message: ", "Bot message: ", "User intent: ", "Bot intent: "]
+    prefixes = [
+        ("User message: ", "user "),
+        ("Bot message: ", "  "),
+        ("User intent: ", "  "),
+        ("Bot intent: ", "bot "),
+    ]
 
     for i, line in enumerate(lines):
-        for prefix in prefixes:
-            lines[i] = _strip_prefix(line, prefix)
+        for prefix, repl in prefixes:
+            lines[i] = _replace_prefix(line, prefix, repl)
 
     return "\n".join(lines)
