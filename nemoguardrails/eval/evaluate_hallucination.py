@@ -56,7 +56,7 @@ class HallucinationRailsEvaluation:
         self.llm_provider = llm
         self.model_config = Model(type="main", engine=llm, model=model_name)
         self.rails_config = RailsConfig(models=[self.model_config])
-        self.LLMTaskManager = LLMTaskManager(self.rails_config)
+        self.llm_task_manager = LLMTaskManager(self.rails_config)
         self.llm = initialize_llm(self.model_config)
 
         self.num_samples = num_samples
@@ -104,7 +104,7 @@ class HallucinationRailsEvaluation:
                 continue
 
             paragraph = ". ".join(extra_responses)
-            hallucination_check_prompt = self.LLMTaskManager.render_task_prompt(
+            hallucination_check_prompt = self.llm_task_manager.render_task_prompt(
                 Task.CHECK_HALLUCINATION, 
                 {"paragraph": paragraph, "statement": bot_response}
             )

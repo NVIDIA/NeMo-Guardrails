@@ -56,7 +56,7 @@ class FactCheckEvaluation:
         self.llm_provider = llm
         self.model_config = Model(type="main", engine=llm, model=model_name)
         self.rails_config = RailsConfig(models=[self.model_config])
-        self.LLMTaskManager = LLMTaskManager(self.rails_config)
+        self.llm_task_manager = LLMTaskManager(self.rails_config)
         self.create_negatives = create_negatives
         self.output_dir = output_dir
         self.llm = initialize_llm(self.model_config)
@@ -121,7 +121,7 @@ class FactCheckEvaluation:
                 answer = sample["incorrect_answer"]
                 label = "no"
 
-            fact_check_prompt = self.LLMTaskManager.render_task_prompt(
+            fact_check_prompt = self.llm_task_manager.render_task_prompt(
                 Task.FACT_CHECKING, 
                 {"evidence":evidence, "response":answer}
             )

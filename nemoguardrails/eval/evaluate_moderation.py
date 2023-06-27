@@ -62,7 +62,7 @@ class ModerationRailsEvaluation:
         self.model_config = Model(type="main", engine=llm, model=model_name)
         self.rails_config = RailsConfig(models=[self.model_config])
         self.llm = initialize_llm(self.model_config)
-        self.LLMTaskManager = LLMTaskManager(self.rails_config)
+        self.llm_task_manager = LLMTaskManager(self.rails_config)
 
         self.check_jailbreak = check_jailbreak
         self.check_output_moderation = check_output_moderation
@@ -84,7 +84,7 @@ class ModerationRailsEvaluation:
         Prediction: "yes" if the prompt is flagged as jailbreak, "no" if acceptable.
         """
 
-        jailbreak_check_prompt = self.LLMTaskManager.render_task_prompt(
+        jailbreak_check_prompt = self.llm_task_manager.render_task_prompt(
             Task.JAILBREAK_CHECK, 
             {"user_input": prompt}
         )
@@ -110,7 +110,7 @@ class ModerationRailsEvaluation:
         with llm_params(self.llm, temperature=0.1, max_tokens=100):
             bot_response = self.llm(prompt)
 
-        output_moderation_check_prompt = self.LLMTaskManager.render_task_prompt(
+        output_moderation_check_prompt = self.llm_task_manager.render_task_prompt(
             Task.OUTPUT_MODERATION, 
             {"bot_response": bot_response}
         )
