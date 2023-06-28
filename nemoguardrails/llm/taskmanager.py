@@ -15,7 +15,7 @@
 
 import logging
 from ast import literal_eval
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from jinja2 import Environment, meta
 
@@ -63,6 +63,10 @@ class LLMTaskManager:
             "verbose_v1": verbose_v1_parser,
         }
 
+        # The prompt context will hold additional variables that ce also be included
+        # in the prompt.
+        self.prompt_context = {}
+
     def _get_general_instruction(self):
         """Helper to extract the general instruction."""
         text = ""
@@ -108,6 +112,20 @@ class LLMTaskManager:
             for variable in variables:
                 if variable in context:
                     render_context[variable] = context[variable]
+
+        # Last but not least, if we have variables from the prompt context, we add them
+        # to the render context.
+        if self.prompt_context:
+            for variable in variables:
+                if variable in self.prompt_context:
+                    value = self.prompt_context[variable]
+
+                    # If it's a callable, we compute the value, otherwise we just use it
+                    # as is.
+                    if callable(value):
+                        value = value()
+
+                    render_context[variable] = value
 
         return template.render(render_context)
 
@@ -205,3 +223,11 @@ class LLMTaskManager:
     def register_output_parser(self, output_parser: callable, name: str):
         """Register a custom output parser for the rails configuration."""
         self.output_parsers[name] = output_parser
+
+    def register_prompt_context(self, name: str, value_or_fn: Any):
+        """Register a value to be included in the prompt context.
+
+        :name: The name of the variable or function that will be used.
+        :value_or_fn: The value or function that will be used to generate the value.
+        """
+        self.prompt_context[name] = value_or_fn
