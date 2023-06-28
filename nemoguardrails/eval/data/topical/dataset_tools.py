@@ -139,8 +139,10 @@ class Banking77Connector(DatasetConnector):
             for intent_canonical_entry in data:
                 if len(intent_canonical_entry) != 2:
                     print(
-                        "Problem: no canonical form found or too many canonical forms!"
+                        f"Problem: no canonical form found or too many canonical forms "
+                        f"for entry {intent_canonical_entry}!"
                     )
+                    continue
                 intent = intent_canonical_entry[0]
                 canonical_form = intent_canonical_entry[1]
                 intent_canonical_forms[intent] = canonical_form
@@ -186,8 +188,6 @@ class Banking77Connector(DatasetConnector):
                         )
                     )
 
-        return None
-
 
 class ChitChatConnector(DatasetConnector):
     CHITCHAT_FOLDER = "./chitchat/original_dataset/"
@@ -208,8 +208,10 @@ class ChitChatConnector(DatasetConnector):
             for intent_canonical_entry in data:
                 if len(intent_canonical_entry) != 2:
                     print(
-                        "Problem: no canonical form found or too many canonical forms!"
+                        f"Problem: no canonical form found or too many canonical forms "
+                        f"for entry {intent_canonical_entry}!"
                     )
+                    continue
                 intent = intent_canonical_entry[0]
                 canonical_form = intent_canonical_entry[1]
                 intent_canonical_forms[intent] = canonical_form
@@ -261,5 +263,3 @@ class ChitChatConnector(DatasetConnector):
                                     intent=intent, text=text, dataset_split=dataset_type
                                 )
                             )
-
-        return None

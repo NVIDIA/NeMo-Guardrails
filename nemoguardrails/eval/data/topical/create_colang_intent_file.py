@@ -62,21 +62,6 @@ def main(
             output_file_name="./chitchat/user.co",
             num_samples_per_intent=max_samples_intent,
         )
-
-        with open("./chitchat/user.co") as file1:
-            lines1 = file1.readlines()
-            intents1 = []
-            for line in lines1:
-                if line.startswith("define user"):
-                    intents1.append(line)
-
-        with open("./../../../../evals/config/chitchat/user.co") as file2:
-            lines2 = file2.readlines()
-            for line in lines2:
-                if line.startswith("define user"):
-                    if line not in intents1:
-                        print("Not found: " + line)
-
         print("Created user.co file for banking dataset.")
     else:
         print(f"Unknown dataset {dataset_name}, cannot create user.co file!")

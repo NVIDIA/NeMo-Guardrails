@@ -28,7 +28,7 @@ For additional information about topical rails evaluation and results on the two
 ### Chit-chat dataset
 
 We are using a slightly modified version of the chit-chat dataset available [here](https://github.com/rahul051296/small-talk-rasa-stack).
-For this dataset, we have configured a [Guardrail app](./chitchat) that already has the:
+For this dataset, we have configured a [Guardrail app](./chitchat) that already has:
 - Config file: `config.yml`
 - A set of defined flows: `flows.co`
 - A set of predefined bot messages for the topical rails: `bot.co`
@@ -51,7 +51,7 @@ To run the topical evaluation on this dataset run:
 ### Banking dataset
 
 We are starting from the banking dataset available [here](https://github.com/PolyAI-LDN/task-specific-datasets/tree/master/banking_data).
-For this dataset, we have configured a [Guardrail app](./banking) that already has the:
+For this dataset, we have configured a [Guardrail app](./banking) that already has:
 - Config file: `config.yml`
 - A set of defined flows: `flows.co`
 - A file mapping the user intents in the original dataset to user canonical forms used by Guardrails: `categories_canonical_forms.json`
@@ -73,5 +73,7 @@ To run the topical evaluation on this dataset run:
 
 If you want to assess the performance of topical rails with a new NLU dataset, you can use the `./nemoguardrails/eval/data/topical/dataset_tools.py` functionality.
 For each dataset, you need to define a new class that extends the `DatasetConnector` class and implements the two following two functions:
-- `read_dataset`
-- `_read_canonical_forms`
+- `read_dataset`: Reads the dataset from the specified path, instantiating at least intent names, intent canonical forms, and intent samples.
+The path received as parameter should contain the original dataset files, in the specific format they were distributed.
+- `_read_canonical_forms`: Reads the intent - canonical form mappings from a file.
+This can be a `json` or any other format and should be created by the evaluation user as the mapping is not part of the original dataset.
