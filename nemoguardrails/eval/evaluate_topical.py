@@ -69,6 +69,7 @@ class TopicalRailsEvaluation:
 
     def _initialize_embeddings_model(self):
         """Instantiate a sentence transformer if we use a similarity check for canonical forms."""
+        self._model = None
         if self.similarity_threshold > 0:
             self._model = SentenceTransformer("all-MiniLM-L6-v2")
 
