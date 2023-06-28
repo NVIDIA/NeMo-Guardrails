@@ -61,8 +61,8 @@ def verbose_v1_parser(s: str):
         ("Bot intent: ", "bot "),
     ]
 
-    for i, line in enumerate(lines):
+    for i in range(len(lines)):
         for prefix, repl in prefixes:
-            lines[i] = _replace_prefix(line, prefix, repl)
+            lines[i] = _replace_prefix(lines[i], prefix, repl)
 
     return "\n".join(lines)
