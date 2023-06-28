@@ -1,0 +1,14 @@
+models:
+  - type: main
+    engine: "huggingface_endpoint"
+    model: "databricks/dolly-v2-3b"
+    parameters:
+      endpoint_url: https://xxx.aws.endpoints.huggingface.cloud
+      task: "text2text-generation"
+      model_kwargs:
+        temperature: 0.5
+        max_length: 64
+
+# This temperature will be used for the tasks that require deterministic behavior.
+# dolly-v2-3b requires a strictly positive one.
+lowest_temperature: 0.1

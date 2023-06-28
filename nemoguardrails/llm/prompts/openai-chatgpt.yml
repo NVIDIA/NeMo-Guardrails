@@ -1,129 +1,119 @@
-# Prompts for OpenAI ChatGPT. This is very raw and works decently.
+# Prompts for OpenAI ChatGPT.
 prompts:
   - task: generate_user_intent
     models:
       - openai/gpt-3.5-turbo
       - openai/gpt-4
-    content: |-
-      Colang is a language for modeling the conversation between a user and a bot.
-      The syntax is close to python.
-      The typical pattern includes the user utterance, the user intent, the bot intent and the bot utterance.
-      Below is a Colang snippet.
-      Your task is to continue the snippet in the same style.
-      Tell me the next line, which represents the user's intent, and nothing else.
+    messages:
+      - type: system
+        content: "{{ general_instruction }}"
 
-      ```colang
-      """
-      {general_instruction}
-      """
+      - type: system
+        content: "This is how a conversation between a user and the bot can go:"
 
-      # This is how a conversation between a user and the bot can go:
+      - "{{ sample_conversation | to_messages }}"
 
-      {sample_conversation}
+      - type: system
+        content: "This is how the user talks:"
 
-      # This how the user talks:
+      - "{{ examples | to_messages}}"
 
-      {examples}
+      - type: system
+        content: "This is the current conversation between the user and the bot:"
 
-      # This is the current conversation between the user and the bot:
+      - "{{ sample_conversation | first_turns(2) | to_messages }}"
+      - "{{ history | colang | to_messages }}"
 
-      {sample_conversation_two_turns}
-      {history}```
+    output_parser: "user_intent"
 
   - task: generate_next_steps
     models:
       - openai/gpt-3.5-turbo
       - openai/gpt-4
-    content: |-
-      Colang is a language for modeling the conversation between a user and a bot.
-      The syntax is close to python.
-      The typical pattern includes the user utterance, the user intent, the bot intent and the bot utterance.
-      Below is a Colang snippet.
-      Your task is to continue the snippet in the same style.
-      Tell me the next line, which represents the bot's intent, and nothing else.
+    messages:
+      - type: system
+        content: "{{ general_instruction }}"
 
-      ```colang
-      """
-      {general_instruction}
-      """
+      - type: system
+        content: "This is how a conversation between a user and the bot can go:"
 
-      # This is how a conversation between a user and the bot can go:
+      - "{{ sample_conversation | to_messages }}"
 
-      {sample_conversation}
+      - type: system
+        content: "This is how the bot thinks:"
 
-      # This how the bot thinks:
+      - "{{ examples | to_messages}}"
 
-      {examples}
+      - type: system
+        content: "This is the current conversation between the user and the bot:"
 
-      # This is the current conversation between the user and the bot:
+      - "{{ sample_conversation | first_turns(2) | to_messages }}"
+      - "{{ history | colang | to_messages }}"
 
-      {sample_conversation_two_turns}
-      {history}```
+    output_parser: "bot_intent"
 
   - task: generate_bot_message
     models:
       - openai/gpt-3.5-turbo
       - openai/gpt-4
-    content: |-
-      Colang is a language for modeling the conversation between a user and a bot.
-      The syntax is close to python.
-      The typical pattern includes the user utterance, the user intent, the bot intent and the bot utterance.
-      Below is a Colang snippet.
-      Your task is to continue the snippet in the same style.
-      Tell me the next line, which represents the bot's utterance, and nothing else.
+    messages:
+      - type: system
+        content: "{{ general_instruction }}"
 
-      ```colang
-      """
-      {general_instruction}
-      """
+      - type: system
+        content: "This is how a conversation between a user and the bot can go:"
 
-      # This is how a conversation between a user and the bot can go:
+      - "{{ sample_conversation | to_messages }}"
 
-      {sample_conversation}
+      - type: system
+        content: |-
+          {% if relevant_chunks %}
+          # This is some additional context:
+          ```markdown
+          {{ relevant_chunks }}
+          ```
+          {% endif %}"
 
-      # This is some additional context:
+      - type: system
+        content: "This is how the bot talks:"
 
-      ```markdown
-      {relevant_chunks}
-      ```
+      - "{{ examples | to_messages}}"
 
-      # This how the bot talks:
+      - type: system
+        content: "This is the current conversation between the user and the bot:"
 
-      {examples}
+      - "{{ sample_conversation | first_turns(2) | to_messages }}"
+      - "{{ history | colang | to_messages }}"
 
-      # This is the current conversation between the user and the bot:
-
-      {sample_conversation_two_turns}
-      {history}```
+    output_parser: "bot_message"
 
   - task: generate_value
     models:
       - openai/gpt-3.5-turbo
       - openai/gpt-4
-    content: |-
-      Colang is a language for modeling the conversation between a user and a bot.
-      The syntax is close to python.
-      The typical pattern includes the user utterance, the user intent, the bot intent and the bot utterance.
-      Below is a Colang snippet.
-      Your task is to continue the snippet in the same style.
-      Tell me the next line, which represents the value of variable on the last line, and nothing else.
+    messages:
+      - type: system
+        content: "{{ general_instruction }}"
 
-      ```colang
-      """
-      {general_instruction}
-      """
+      - type: system
+        content: "This is how a conversation between a user and the bot can go:"
 
-      # This is how a conversation between a user and the bot can go:
+      - "{{ sample_conversation | to_messages }}"
 
-      {sample_conversation}
+      - type: system
+        content: "This is how the bot thinks:"
 
-      # This how the bot talks:
+      - "{{ examples | to_messages}}"
 
-      {examples}
+      - type: system
+        content: "This is the current conversation between the user and the bot:"
 
-      # This is the current conversation between the user and the bot:
+      - "{{ sample_conversation | first_turns(2) | to_messages }}"
+      - "{{ history | colang | to_messages }}"
 
-      {sample_conversation_two_turns}
-      {history}
-      # {instructions}
-      ${var_name} =```
+      - type: system
+        content: |-
+          {{ instructions }}
+
+      - type: assistant
+        content: "${{ var_name }} ="

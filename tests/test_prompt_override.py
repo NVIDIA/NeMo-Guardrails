@@ -16,7 +16,8 @@
 import os
 
 from nemoguardrails import RailsConfig
-from nemoguardrails.llm.prompts import Task, get_prompt
+from nemoguardrails.llm.prompts import get_prompt
+from nemoguardrails.llm.types import Task
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
 

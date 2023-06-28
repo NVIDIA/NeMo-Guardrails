@@ -16,44 +16,41 @@
 import logging
 from typing import Optional
 
-from langchain import LLMChain, PromptTemplate
 from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions import action
+from nemoguardrails.actions.llm.utils import llm_call
 from nemoguardrails.llm.params import llm_params
-from nemoguardrails.llm.prompts import Task, get_prompt
-from nemoguardrails.logging.callbacks import logging_callbacks
-from nemoguardrails.rails.llm.config import RailsConfig
+from nemoguardrails.llm.taskmanager import LLMTaskManager
+from nemoguardrails.llm.types import Task
 
 log = logging.getLogger(__name__)
 
 
 @action(is_system_action=True)
 async def output_moderation(
+    llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
-    config: Optional[RailsConfig] = None,
 ):
     """Checks if the bot response is appropriate and passes moderation."""
 
     bot_response = context.get("last_bot_message")
     if bot_response:
-        output_moderation_template = get_prompt(config, Task.OUTPUT_MODERATION).content
-
-        prompt = PromptTemplate(
-            template=output_moderation_template, input_variables=["bot_response"]
+        prompt = llm_task_manager.render_task_prompt(
+            task=Task.OUTPUT_MODERATION,
+            context={
+                "bot_response": bot_response,
+            },
         )
 
-        output_moderation_chain = LLMChain(prompt=prompt, llm=llm)
-
         with llm_params(llm, temperature=0):
-            check = await output_moderation_chain.apredict(
-                callbacks=logging_callbacks, bot_response=bot_response
-            )
+            check = await llm_call(llm, prompt)
 
         check = check.lower().strip()
         log.info(f"Output moderation check result is {check}.")
 
         if "no" in check:
             return False
+
     return True

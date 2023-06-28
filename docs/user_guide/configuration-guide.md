@@ -187,6 +187,16 @@ The full list of tasks used by the NeMo Guardrails toolkit is the following:
 
 You can check the default prompts in the [prompts](../../nemoguardrails/llm/prompts) folder.
 
+### Multi-step Generation
+
+With a large language model (LLM) that is fine-tuned for instruction following, particularly those exceeding 100 billion parameters, it's possible to enable the generation of complex, multi-step flows.
+
+**EXPERIMENTAL**: this feature is experimental and should only be used for testing and evaluation purposes.
+
+```yaml
+enable_multi_step_generation: True
+```
+
 ## Guardrails Definitions
 
 The dialog flows and guardrails are defined using Colang. You can include as many `.co` files as you want, including subdirectories. For getting started, please refer to the [Hello World](../getting_started/hello-world.md) example. More concrete examples of guardrails configuration can be found in the [Examples](../../examples) folder.

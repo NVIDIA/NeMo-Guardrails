@@ -42,6 +42,9 @@ class FlowConfig:
     # Weather this flow can be interrupted or not
     is_interruptible: bool = True
 
+    # Weather this flow is a subflow
+    is_subflow: bool = False
+
     # The events that can trigger this flow to advance.
     trigger_event_types = ["user_intent", "bot_intent", "run_action", "action_finished"]
 
@@ -93,6 +96,8 @@ class State:
 
     # The next step of the flow-driven system
     next_step: Optional[dict] = None
+    next_step_by_flow_uid: Optional[str] = None
+    next_step_priority: float = 0.0
 
     # The updates to the context that should be applied before the next step
     context_updates: dict = field(default_factory=dict)
@@ -153,7 +158,99 @@ def _is_match(element: dict, event: dict) -> bool:
             element["content"] == "..." or element["content"] == event["content"]
         )
 
-    return False
+    else:
+        # In this case, we try to match the event by type explicitly, and all the properties.
+        if event["type"] != element_type:
+            return False
+
+        # We need to match all properties used in the element. We also use the "..." wildcard
+        # to mach anything.
+        for key, value in element.items():
+            # Skip potentially private keys.
+            if key.startswith("_"):
+                continue
+            if value == "...":
+                continue
+            if event.get(key) != value:
+                return False
+
+        return True
+
+
+def _record_next_step(
+    new_state: State,
+    flow_state: FlowState,
+    flow_config: FlowConfig,
+    priority_modifier: float = 1.0,
+):
+    """Helper to record the next step."""
+    if (
+        new_state.next_step is None
+        or new_state.next_step_priority < flow_config.priority
+    ) and _is_actionable(flow_config.elements[flow_state.head]):
+        new_state.next_step = flow_config.elements[flow_state.head]
+        new_state.next_step_by_flow_uid = flow_state.uid
+        new_state.next_step_priority = flow_config.priority * priority_modifier
+
+
+def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState]:
+    """Helper to call a subflow.
+
+    The head for `flow_state` is expected to be on a "flow" element.
+    """
+    flow_config = new_state.flow_configs[flow_state.flow_id]
+    subflow_state = FlowState(
+        flow_id=flow_config.elements[flow_state.head]["flow_name"],
+        status=FlowStatus.ACTIVE,
+        head=0,
+        uid=str(uuid.uuid4()),
+    )
+
+    # Move the head by 1, so that when it will resume, it will be on the next element.
+    flow_state.head += 1
+
+    # We slide the subflow.
+    _slide_with_subflows(new_state, subflow_state)
+
+    # If the subflow finished immediately, we just return with the head advanced
+    if subflow_state.head < 0:
+        return None
+
+    # We mark the current flow as interrupted.
+    flow_state.status = FlowStatus.INTERRUPTED
+
+    # Record the id of the flow that interrupted the current flow.
+    flow_state.interrupted_by = subflow_state.uid
+
+    # Add any new subflow to the new state
+    new_state.flow_states.append(subflow_state)
+
+    # Check if we have a next step from the subflow
+    subflow_config = new_state.flow_configs[subflow_state.flow_id]
+    _record_next_step(new_state, subflow_state, subflow_config)
+
+    return subflow_state
+
+
+def _slide_with_subflows(state: State, flow_state: FlowState) -> Optional[int]:
+    """Slides the provided flow and also calls subflows, if applicable."""
+    flow_config = state.flow_configs[flow_state.flow_id]
+
+    should_continue = True
+    while should_continue:
+        should_continue = False
+        flow_state.head = slide(state, flow_config, flow_state.head)
+
+        # We check if we reached a point where we need to call a subflow
+        if flow_state.head >= 0:
+            if flow_config.elements[flow_state.head]["_type"] == "flow":
+                # We create a new flow state for the subflow
+                subflow_state = _call_subflow(state, flow_state)
+                if subflow_state is None:
+                    should_continue = True
+            else:
+                # And if we don't have a next step yet, we set it to the next element
+                _record_next_step(state, flow_state, flow_config)
 
 
 def compute_next_state(state: State, event: dict) -> State:
@@ -186,10 +283,7 @@ def compute_next_state(state: State, event: dict) -> State:
     )
 
     # The UID of the flow that will determine the next step
-    next_step_by_flow_uid = None
-
-    # The priority of the current next step.
-    next_step_priority = 0
+    new_state.next_step_by_flow_uid = None
 
     # This is to handle an edge case in the simplified implementation
     extension_flow_completed = False
@@ -205,27 +299,22 @@ def compute_next_state(state: State, event: dict) -> State:
         ):
             continue
 
-        # If it's not a completed flow, we have a valid head element
-        flow_head_element = flow_config.elements[flow_state.head]
-
         # If the flow was interrupted, we just copy it to the new state
         if flow_state.status == FlowStatus.INTERRUPTED:
             new_state.flow_states.append(flow_state)
             continue
 
+        # If it's not a completed flow, we have a valid head element
+        flow_head_element = flow_config.elements[flow_state.head]
+
         # If the flow is not triggered by the current even type, we copy it as is
         if event["type"] not in flow_config.trigger_event_types:
             new_state.flow_states.append(flow_state)
 
-            # If we don't have a next step up to this point, and the current flow is on
-            # an actionable item, we set it as the next step.
-            if new_state.next_step is None and _is_actionable(flow_head_element):
-                new_state.next_step = flow_head_element
-                next_step_by_flow_uid = flow_state.uid
-
-                # Decrease a bit the priority to allow a flow that decides on the current
-                # event to take precedence.
-                next_step_priority = 0.9 * flow_config.priority
+            # If we don't have a next step, up to this point, and the current flow is on
+            # an actionable item, we set it as the next step. We adjust the priority
+            # with 0.9 so that flows that decide on the current event have a higher priority.
+            _record_next_step(new_state, flow_state, flow_config, priority_modifier=0.9)
             continue
 
         # If we're at a branching point, we look at all individual heads.
@@ -244,27 +333,11 @@ def compute_next_state(state: State, event: dict) -> State:
         if matching_head:
             # The flow can advance
             flow_state.head = matching_head
+            _slide_with_subflows(new_state, flow_state)
 
-            # We slide the flow until the next actionable element
-            flow_state.head = slide(new_state, flow_config, flow_state.head)
-
-            new_state.flow_states.append(flow_state)
-
-            # If we did not reach the end of the flow, we add it to the new state
-            # (by convention, when we reach the end of the flow, the head is set to -1 * last head)
-            if flow_state.head >= 0:
-                # And if we don't have a next step yet, we set it to the next element
-                if (
-                    new_state.next_step is None
-                    or next_step_priority < flow_config.priority
-                ) and _is_actionable(flow_config.elements[flow_state.head]):
-                    new_state.next_step = flow_config.elements[flow_state.head]
-                    next_step_by_flow_uid = flow_state.uid
-                    next_step_priority = flow_config.priority
-            else:
+            if flow_state.head < 0:
                 # If a flow finished, we mark it as completed
                 flow_state.status = FlowStatus.COMPLETED
-                new_state.flow_states.append(flow_state)
 
                 if flow_config.is_extension:
                     extension_flow_completed = True
@@ -275,13 +348,18 @@ def compute_next_state(state: State, event: dict) -> State:
             or not flow_config.is_interruptible
         ):
             flow_state.status = FlowStatus.ABORTED
-            new_state.flow_states.append(flow_state)
         else:
             flow_state.status = FlowStatus.INTERRUPTED
-            new_state.flow_states.append(flow_state)
+
+        # We copy the flow to the new state
+        new_state.flow_states.append(flow_state)
 
     # Next, we try to start new flows
     for flow_config in state.flow_configs.values():
+        # We don't allow subflow to start on their own
+        if flow_config.is_subflow:
+            continue
+
         # If a flow with the same id is started, we skip
         if flow_config.id in [fs.flow_id for fs in new_state.flow_states]:
             continue
@@ -297,17 +375,7 @@ def compute_next_state(state: State, event: dict) -> State:
             )
             new_state.flow_states.append(flow_state)
 
-            # We also need to slide
-            flow_state.head = slide(new_state, flow_config, flow_state.head)
-
-            # And if we don't have a next step yet, we set it to the next element
-            flow_head_element = flow_config.elements[flow_state.head]
-            if (
-                new_state.next_step is None or next_step_priority < flow_config.priority
-            ) and _is_actionable(flow_head_element):
-                new_state.next_step = flow_head_element
-                next_step_by_flow_uid = flow_uid
-                next_step_priority = flow_config.priority
+            _slide_with_subflows(new_state, flow_state)
 
     # If there's any extension flow that has completed, we re-activate all aborted flows
     if extension_flow_completed:
@@ -317,13 +385,7 @@ def compute_next_state(state: State, event: dict) -> State:
 
                 # And potentially use them for the next decision
                 flow_config = state.flow_configs[flow_state.flow_id]
-                if (
-                    new_state.next_step is None
-                    or next_step_priority < flow_config.priority
-                ) and _is_actionable(flow_config.elements[flow_state.head]):
-                    new_state.next_step = flow_config.elements[flow_state.head]
-                    next_step_by_flow_uid = flow_state.uid
-                    next_step_priority = flow_config.priority
+                _record_next_step(new_state, flow_state, flow_config)
 
     # If there are any flows that have been interrupted in this iteration, we consider
     # them to be interrupted by the flow that determined the next step.
@@ -332,14 +394,14 @@ def compute_next_state(state: State, event: dict) -> State:
             flow_state.status == FlowStatus.INTERRUPTED
             and flow_state.interrupted_by is None
         ):
-            flow_state.interrupted_by = next_step_by_flow_uid
+            flow_state.interrupted_by = new_state.next_step_by_flow_uid
 
     # We compute the decision flow config and state
     decision_flow_config = None
     decision_flow_state = None
 
     for flow_state in new_state.flow_states:
-        if flow_state.uid == next_step_by_flow_uid:
+        if flow_state.uid == new_state.next_step_by_flow_uid:
             decision_flow_config = state.flow_configs[flow_state.flow_id]
             decision_flow_state = flow_state
 
@@ -356,7 +418,7 @@ def compute_next_state(state: State, event: dict) -> State:
                 and state.flow_configs[flow_state.flow_id].is_interruptible
             ):
                 flow_state.status = FlowStatus.INTERRUPTED
-                flow_state.interrupted_by = next_step_by_flow_uid
+                flow_state.interrupted_by = new_state.next_step_by_flow_uid
 
     # If there are flows that were waiting on completed flows, we reactivate them
     for flow_state in new_state.flow_states:
@@ -377,15 +439,10 @@ def compute_next_state(state: State, event: dict) -> State:
                 flow_state.status = FlowStatus.ACTIVE
                 flow_state.interrupted_by = None
 
-                flow_config = state.flow_configs[flow_state.flow_id]
-                # Also, they can be used for decision as well.
+                _slide_with_subflows(new_state, flow_state)
 
-                if (
-                    new_state.next_step is None
-                    or next_step_priority < flow_config.priority
-                ) and _is_actionable(flow_config.elements[flow_state.head]):
-                    new_state.next_step = flow_config.elements[flow_state.head]
-                    next_step_priority = flow_config.priority
+                if flow_state.head < 0:
+                    flow_state.status = FlowStatus.COMPLETED
 
     return new_state
 

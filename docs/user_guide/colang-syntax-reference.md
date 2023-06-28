@@ -9,6 +9,7 @@ This document provides a reference for the keywords and statements supported by 
 - `continue`: continue to the next iteration of a `while` loop; outside of a loop is similar to `pass` in python;
 - `create`: create a new event;
 - `define`: used in defining user/bot messages and flows;
+- `do`: used to call a subflow;
 - `else`: for `if` and `when` blocks;
 - `execute`: for executing actions;
 - `event`: for matching an event;
@@ -21,6 +22,7 @@ This document provides a reference for the keywords and statements supported by 
 - `priority`: set the priority of a flow
 - `return`: end the current flow;
 - `set`: set the content of a context variable;
+- `subflow`: used in defining a subflow (`define subflow`)
 - `user`: used both when defining a user message (`define user ...`) and when using in a flow (`user ...`)
 - `while`: typical `while` loop, similar to python;
 - `when`: branching based on the stream of events.
@@ -36,6 +38,7 @@ A simple statement is comprised within a single logical line.
 - `continue`: goes again to the beginning of the current loop; if no loop, it has no effect.
 - `return`: ends the current flow.
 - `execute`: executes an action.
+- `do`: calls a subflow.
 - `event`: an event has occurred.
 - `goto`: go to a specific label.
 - `include`: include another rails configuration.
@@ -50,7 +53,7 @@ Compound statements contain (groups of) other statements;
 
 - `define action`: define an action and its parameters (for documentation purposes).
 - `define bot`: define a bot message.
-- `define flow`: define a flow.
+- `define flow` / `define subflow`: define a flow/subflow.
   - `parallel`: a parallel flow can have multiple parallel instances at the same time;
   - `test`: a test flow is only used for testing
   - `sample`: a sample flow is meant for documentation only

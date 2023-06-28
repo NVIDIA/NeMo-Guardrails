@@ -19,19 +19,21 @@ The current alpha release is undergoing active development and may be subject to
 
 ### How robust are the examples provided in the repo?
 
-The example configurations are meant to be educational. Their purpose is to showcase the core behavior of the toolkit. To achieve a high degree of robustness, the guardrails configurations need to be expanded further.
+The example configurations are meant to be educational. Their purpose is to showcase the core behavior of the toolkit. To achieve a high degree of robustness, the guardrails configurations should be extended through careful application design along with iterative testing and refinement.
 
 [Back to top](#table-of-contents)
 
 ### What type of information can I add to the knowledge base?
 
-The knowledge base is designed for question answering on non-sensitive information (e.g., not including PII, PHI). The knowledge base's content is chunked, and any part of it can end up in the prompt(s) sent to the LLM.
+The knowledge base is designed for question answering on non-sensitive information (e.g., not including PII, PHI). The knowledge base's content is chunked, and any part of it can end up in the prompt(s) sent to the LLM. In any responsible security architecture, sensitive information should not be included in any source that would be exposed to the LLM.
 
 [Back to top](#table-of-contents)
 
 ### What LLMs are supported by NeMo Guardrails?
 
 Technically, you can connect a guardrails configuration to any LLM provider that is supported by LangChain (e.g., `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `cohere`, `huggingface_endpoint`, `huggingface_hub`, `openai`, `self_hosted`, `self_hosted_hugging_face` - check out the LangChain official documentation for the full list) or to any [custom LLM](user_guide/configuration-guide.md#custom-llm-models). Depending on the capabilities of the LLM, some will work better than others. We are performing evaluations, and we will share more details soon.
+
+Changes to some configuration elements can help improve compatibility with a given LLM provider or custom LLM, including the general instructions or prompt templates. This is essentially prompt engineering, and it is an imperfect process. As the capabilities of various LLMs evolve in the future, we expect this process to get easier.
 
 [Back to top](#table-of-contents)
 

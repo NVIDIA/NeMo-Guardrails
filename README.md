@@ -7,13 +7,17 @@
 [![Python 3.7+](https://img.shields.io/badge/python-3.7%2B-green)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-> **LATEST RELEASE: You are currently on the main branch, which tracks
-under-development progress towards the next release. The current ALPHA release is
-version [0.2.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.2.0)**.
+**LATEST RELEASE: You are currently on the main branch which tracks
+under-development progress towards the next release. The current release is
+an alpha version, [0.2.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.2.0)**.
 
 > **DISCLAIMER**: The alpha release is undergoing active development and may be subject to changes and improvements, which could potentially cause instability and unexpected behavior. We currently do not recommend deploying this alpha version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback is invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit.
 
 NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems. Guardrails (or "rails" for short) are specific ways of controlling the output of a large language model, such as not talking about politics, responding in a particular way to specific user requests, following a predefined dialog path, using a particular language style, extracting structured data, and more.
+
+This toolkit is currently in its early alpha stages, and we invite the community to contribute towards making the power of trustworthy, safe, and secure LLMs accessible to everyone. The examples provided within the documentation are for educational purposes to get started with NeMo Guardrails, and are not meant for use in production applications.
+
+We are committed to improving the toolkit in the near term to make it easier for developers to build production-grade trustworthy, safe, and secure LLM applications.
 
 #### **Key Benefits**
 
@@ -139,7 +143,7 @@ For a brief introduction to the Colang syntax, check out the [Colang Language Sy
 
 ## Inviting the community to contribute!
 
-Guardrails is an open-source toolkit. While the examples provided in the repository are a good starting point, we invite the community to contribute towards making the power of trustworthy, safe, and secure LLMs accessible to everyone. For guidance on setting up a development environment and how to contribute to NeMo Guardrails, see the [contributing guidelines](./CONTRIBUTING.md).
+The example rails residing in the repository are excellent starting points. We enthusiastically invite the community to contribute towards making the power of trustworthy, safe, and secure LLMs accessible to everyone. For guidance on setting up a development environment and how to contribute to NeMo Guardrails, see the [contributing guidelines](./CONTRIBUTING.md).
 
 ## License
 

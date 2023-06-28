@@ -16,6 +16,7 @@
 import inspect
 import logging
 import uuid
+from textwrap import indent
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
@@ -31,6 +32,8 @@ from nemoguardrails.actions.math import wolfram_alpha_request
 from nemoguardrails.actions.output_moderation import output_moderation
 from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.flows.flows import FlowConfig, compute_context, compute_next_steps
+from nemoguardrails.language.parser import parse_colang_file
+from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.rails.llm.config import RailsConfig
 
 log = logging.getLogger(__name__)
@@ -63,45 +66,52 @@ class Runtime:
 
         self._init_flow_configs()
 
+        # Initialize the prompt renderer as well.
+        self.llm_task_manager = LLMTaskManager(config)
+
+    def _load_flow_config(self, flow: dict):
+        """Loads a flow into the list of flow configurations."""
+        elements = flow["elements"]
+
+        # If we have an element with meta information, we move the relevant properties
+        # to top level.
+        if elements and elements[0].get("_type") == "meta":
+            meta_data = elements[0]["meta"]
+
+            if "priority" in meta_data:
+                flow["priority"] = meta_data["priority"]
+            if "is_extension" in meta_data:
+                flow["is_extension"] = meta_data["is_extension"]
+            if "interruptable" in meta_data:
+                flow["is_interruptible"] = meta_data["interruptable"]
+
+            # Finally, remove the meta element
+            elements = elements[1:]
+
+        # If we don't have an id, we generate a random UID.
+        flow_id = flow.get("id") or str(uuid.uuid4())
+
+        self.flow_configs[flow_id] = FlowConfig(
+            id=flow_id,
+            elements=elements,
+            priority=flow.get("priority", 1.0),
+            is_extension=flow.get("is_extension", False),
+            is_interruptible=flow.get("is_interruptible", True),
+            source_code=flow.get("source_code"),
+        )
+
+        # We also compute what types of events can trigger this flow, in addition
+        # to the default ones.
+        for element in elements:
+            if element.get("user_said"):
+                self.flow_configs[flow_id].trigger_event_types.append("user_said")
+
     def _init_flow_configs(self):
         """Initializes the flow configs based on the config."""
         self.flow_configs = {}
 
         for flow in self.config.flows:
-            elements = flow["elements"]
-
-            # If we have an element with meta information, we move the relevant properties
-            # to top level.
-            if elements and elements[0].get("_type") == "meta":
-                meta_data = elements[0]["meta"]
-
-                if "priority" in meta_data:
-                    flow["priority"] = meta_data["priority"]
-                if "is_extension" in meta_data:
-                    flow["is_extension"] = meta_data["is_extension"]
-                if "interruptable" in meta_data:
-                    flow["is_interruptible"] = meta_data["interruptable"]
-
-                # Finally, remove the meta element
-                elements = elements[1:]
-
-            # If we don't have an id, we generate a random UID.
-            flow_id = flow.get("id") or str(uuid.uuid4())
-
-            self.flow_configs[flow_id] = FlowConfig(
-                id=flow_id,
-                elements=elements,
-                priority=flow.get("priority", 1.0),
-                is_extension=flow.get("is_extension", False),
-                is_interruptible=flow.get("is_interruptible", True),
-                source_code=flow.get("source_code"),
-            )
-
-            # We also compute what types of events can trigger this flow, in addition
-            # to the default ones.
-            for element in elements:
-                if element.get("user_said"):
-                    self.flow_configs[flow_id].trigger_event_types.append("user_said")
+            self._load_flow_config(flow)
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Registers an action with the given name.
@@ -149,6 +159,11 @@ class Runtime:
             # If we need to execute an action, we start doing that.
             if last_event["type"] == "start_action":
                 next_events = await self._process_start_action(events)
+
+            # If we need to start a flow, we parse the content and register it.
+            elif last_event["type"] == "start_flow":
+                next_events = await self._process_start_flow(events)
+
             else:
                 # We need to slide all the flows based on the current event,
                 # to compute the next steps.
@@ -282,6 +297,9 @@ class Runtime:
                 if "config" in parameters:
                     kwargs["config"] = self.config
 
+                if "llm_task_manager" in parameters:
+                    kwargs["llm_task_manager"] = self.llm_task_manager
+
                 # Add any additional registered parameters
                 for k, v in self.registered_action_params.items():
                     if k in parameters:
@@ -383,3 +401,35 @@ class Runtime:
         except Exception as e:
             log.info(f"Failed to get response from {action_name} due to exception {e}")
         return result, status
+
+    async def _process_start_flow(self, events: List[dict]) -> List[dict]:
+        """Starts a flow."""
+
+        event = events[-1]
+
+        flow_id = event["flow_id"]
+
+        # Up to this point, the body will be the sequence of instructions.
+        # We need to alter it to be an actual flow definition, i.e., add `define flow xxx`
+        # and intent the body.
+        body = event["flow_body"]
+        body = "define flow " + flow_id + ":\n" + indent(body, "  ")
+
+        # We parse the flow
+        parsed_data = parse_colang_file("dynamic.co", content=body)
+
+        assert len(parsed_data["flows"]) == 1
+        flow = parsed_data["flows"][0]
+
+        # To make sure that the flow will start now, we add a start_flow element at
+        # the beginning as well.
+        flow["elements"].insert(0, {"_type": "start_flow", "flow_id": flow_id})
+
+        # We add the flow to the list of flows.
+        self._load_flow_config(flow)
+
+        # And we compute the next steps. The new flow should match the current event,
+        # and start.
+        next_steps = await self.compute_next_steps(events)
+
+        return next_steps

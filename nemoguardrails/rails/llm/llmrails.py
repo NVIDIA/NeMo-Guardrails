@@ -80,7 +80,12 @@ class LLMRails:
         self.runtime.register_action_param("llm", self.llm)
 
         # Next, we initialize the LLM Generate actions and register them.
-        actions = LLMGenerationActions(config=config, llm=self.llm, verbose=verbose)
+        actions = LLMGenerationActions(
+            config=config,
+            llm=self.llm,
+            llm_task_manager=self.runtime.llm_task_manager,
+            verbose=verbose,
+        )
         self.runtime.register_actions(actions)
         # We also register the kb as a parameter that can be passed to actions.
         self.runtime.register_action_param("kb", actions.kb)
@@ -121,7 +126,8 @@ class LLMRails:
             ]:
                 kwargs["model_name"] = main_llm_config.model
             else:
-                kwargs["model"] = main_llm_config.model
+                if hasattr(provider_cls, "model"):
+                    kwargs["model"] = main_llm_config.model
 
         self.llm = provider_cls(**kwargs)
 
@@ -211,3 +217,11 @@ class LLMRails:
     def register_action_param(self, name: str, value: Any):
         """Registers a custom action parameter."""
         self.runtime.register_action_param(name, value)
+
+    def register_filter(self, filter_fn: callable, name: Optional[str] = None):
+        """Register a custom filter for the rails configuration."""
+        self.runtime.llm_task_manager.register_filter(filter_fn, name)
+
+    def register_output_parser(self, output_parser: callable, name: str):
+        """Register a custom output parser for the rails configuration."""
+        self.runtime.llm_task_manager.register_output_parser(output_parser, name)

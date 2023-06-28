@@ -24,6 +24,7 @@ from langchain.callbacks.manager import AsyncCallbackManagerForChainRun
 from langchain.schema import AgentAction, AgentFinish, BaseMessage, LLMResult
 
 from nemoguardrails.logging.stats import llm_stats
+from nemoguardrails.logging.verbose import Styles
 
 log = logging.getLogger(__name__)
 
@@ -60,19 +61,19 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
     ) -> Any:
         """Run when a chat model starts running."""
 
-        prompt = "\n---\n".join(
+        prompt = "\n" + "\n".join(
             [
-                "<|im_start|>"
+                Styles.CYAN
                 + (
-                    "user"
+                    "User"
                     if msg.type == "human"
-                    else "assistant"
+                    else "Bot"
                     if msg.type == "ai"
-                    else "system"
+                    else "System"
                 )
+                + Styles.PROMPT
                 + "\n"
                 + msg.content
-                + "<|im_end|>"
                 for msg in messages[0]
             ]
         )
@@ -119,12 +120,13 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
         llm_stats.inc("total_time", took)
 
         # Update the token usage stats as well
-        token_usage = response.llm_output.get("token_usage", {})
-        llm_stats.inc("total_tokens", token_usage.get("total_tokens", 0))
-        llm_stats.inc("total_prompt_tokens", token_usage.get("prompt_tokens", 0))
-        llm_stats.inc(
-            "total_completion_tokens", token_usage.get("completion_tokens", 0)
-        )
+        if response.llm_output:
+            token_usage = response.llm_output.get("token_usage", {})
+            llm_stats.inc("total_tokens", token_usage.get("total_tokens", 0))
+            llm_stats.inc("total_prompt_tokens", token_usage.get("prompt_tokens", 0))
+            llm_stats.inc(
+                "total_completion_tokens", token_usage.get("completion_tokens", 0)
+            )
 
     async def on_llm_error(
         self,

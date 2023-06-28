@@ -1,0 +1,27 @@
+define user ask capabilities
+  "What can you do?"
+  "What can you help me with?"
+  "tell me what you can do"
+  "tell me about you"
+
+define bot inform capabilities
+  "I am an AI assistant that can help with making an appointment."
+
+define bot confirm ability to help
+  "I can certainly help you with that."
+
+define flow
+  user ask capabilities
+  bot inform capabilities
+
+define user express greeting
+  "Hi"
+  "Hello!"
+  "Hey there!"
+
+define bot express greeting
+  "Hey there!"
+
+define flow
+  user express greeting
+  bot express greeting

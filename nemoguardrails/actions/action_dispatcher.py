@@ -23,6 +23,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain.chains.base import Chain
 
+from nemoguardrails.logging.callbacks import logging_callbacks
+
 log = logging.getLogger(__name__)
 
 
@@ -123,7 +125,21 @@ class ActionDispatcher:
                         result = await fn(**params)
                     elif isinstance(fn, Chain):
                         try:
-                            result = await fn.arun(**params)
+                            chain = fn
+
+                            # For chains with only one output key, we use the `arun` function
+                            # to return directly the result.
+                            if len(chain.output_keys) == 1:
+                                result = await chain.arun(
+                                    **params, callbacks=logging_callbacks
+                                )
+                            else:
+                                # Otherwise, we return the dict with the output keys.
+                                result = await chain.acall(
+                                    inputs=params,
+                                    return_only_outputs=True,
+                                    callbacks=logging_callbacks,
+                                )
                         except NotImplementedError:
                             # Not ideal, but for now we fall back to sync execution
                             # if the async is not available

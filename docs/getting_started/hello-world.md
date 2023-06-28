@@ -2,7 +2,7 @@
 
 NeMo Guardrails is a toolkit that helps you easily add programmable rails to your LLM-based conversational systems. In this example, you will learn the basics of using NeMo Guardrails and how to add guardrails to your system.
 
-Before we get started, there are a few key concepts that you need to understand. In the following
+Before we get started, there are a few key concepts that you need to understand.
 
 - **Guardrails** (or simply **Rails**): Programmable ways of controlling the output of an LLM.
 
@@ -37,9 +37,9 @@ Before we get started, there are a few key concepts that you need to understand.
       bot answer about rails
     ```
 
-    In the above example, we define two dialog flows with the canonical forms we defined above: `express greeting` and `ask about rails`. These flows would be activated when the user greets the bot or asks about rails.
+    The above example defines two dialog flows with the canonical defined above: `express greeting` and `ask about rails`. These flows would be activated when the user greets the bot or asks about rails.
 
-    Do we need to specify an exhaustive list of dialog flows? No, we do not need to specify all possible dialog flows. If we would like deterministic behavior from the bot in a situation, we need to specify the dialog flow. When encountering novel situations that do not fall into any of the defined flows, the generalization capabilities of the LLM help generate new flows to make the bot respond appropriately.
+    Do you need to specify an exhaustive list of dialog flows? No, you do not need to specify all possible dialog flows. If you would like deterministic behavior from the bot in a situation, you need to specify the dialog flow. When encountering novel situations that do not fall into any of the defined flows, the generalization capabilities of the LLM help generate new flows to make the bot respond appropriately.
 
 With the above concepts in mind, let's get started!
 
@@ -76,7 +76,7 @@ This guardrails configuration uses the OpenAI `text-davinci-003` as the main mod
 
 ### Step 3: Define the canonical forms
 
-Next, you must define the canonical forms for the user and bot messages. Under the same `hello_world` folder, create a new file called `hello_world.co` with the following content::
+Next, you must define the canonical forms for the user and bot messages. Under the same `hello_world` folder, create a new file called `hello_world.co` with the following content:
 
 ```
 define user express greeting
@@ -93,7 +93,7 @@ define bot ask how are you
   "How are you feeling today?"
 ```
 
-Each canonical form can have multiple examples attached to it. In the case of canonical forms for user messages, this helps the LLM generalize and respond appropriately to similar inputs. In the case of canonical forms for bot messages, the bot will use a random one each time.
+Each canonical form can have multiple examples attached to it. In the case of canonical forms for user messages, this helps the LLM generalize and respond appropriately to similar inputs. In the case of canonical forms for bot messages, the bot will use a random literal message from the given examples.
 
 ### Step 4: Define the dialog flows
 
@@ -116,7 +116,7 @@ else when user express feeling bad
   bot express empathy
 ```
 
-Note that for the flow above, we do not need to define the canonical forms `user express feeling good` and 'bot express empathy`. This is because the LLM can generate appropriate bot responses given the user input and the specified canonical form for the bot response, i.e., given 'bot express empathy', the LLM can generate a response that looks like "I'm sorry to hear that".
+Note that for the flow above, we do not need to define the canonical forms `user express feeling good` and `bot express empathy`. This is because the LLM can generate appropriate bot responses given the user input and the specified canonical form for the bot response, i.e., given `bot express empathy`, the LLM can generate a response that looks like "I'm sorry to hear that".
 
 The overall flow now looks like this:
 

@@ -33,9 +33,9 @@ The user guide covers the core details of the Guardrails toolkit and how to conf
 
 * [Colang Language Guide](./user_guide/colang-language-syntax-guide.md): Learn about Colang, the language at the heart of NeMo Guardrails.
 * [Colang Syntax Reference Guide](./user_guide/colang-syntax-reference.md): General keyword ledger.
-* [Guardrails Configuration Guide](./user_guide/configuration-guide.md): Learn how to do general configurations such as adding a system prompt!
+* [Guardrails Configuration Guide](./user_guide/configuration-guide.md): Learn how to do general configurations such as adding a system prompt.
 * [Python API](./user_guide/python-api.md): Explore the Python API for Guardrails!
-* [Integration with LangChain](./user_guide/integration-with-langchain.md): Integrate Guardrails in your existing LangChain-powered app or bring your preferred Chains to Guardrails!
+* [Integration with LangChain](./user_guide/integration-with-langchain.md): Integrate Guardrails in your existing LangChain-powered app or bring your preferred Chains to Guardrails.
 * [Server Guide](./user_guide/server-guide.md): General explanation for the Guardrails Servers.
 * [Interface Guide](./user_guide/server-guide.md): Learn the different ways in which to interact with the bot.
 
@@ -47,6 +47,6 @@ The following guides explain in more details various specific topics:
 
 This guide sheds more light on the infrastructure details and the execution flow for a query when the runtime is used:
 
-* [The Guardrails Process](./architecture/README.md#the-guardrails-process): Learn how the Guardrails runtime works under the hood!
+* [The Guardrails Process](./architecture/README.md#the-guardrails-process): Learn how the Guardrails runtime works under the hood.
 
-* [Server Architecture](./architecture/README.md#server-architecture): Understand the architecture of the Guardrails server!
+* [Server Architecture](./architecture/README.md#server-architecture): Understand the architecture of the Guardrails server.
