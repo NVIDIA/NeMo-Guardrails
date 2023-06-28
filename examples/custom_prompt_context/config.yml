@@ -1,0 +1,33 @@
+models:
+  - type: main
+    engine: "openai"
+    model: "text-davinci-003"
+
+# We override only the prompt for the `generate_bot_message` task, as an example.
+prompts:
+  # NOTE: the prompt below is the default one (see nemoguardrails/llm/prompts/general.yml)
+  # but with the addition of {{ current_date }} under the general instructions.
+  # This will include the current date time when the bot needs to generate a message.
+  - task: generate_bot_message
+    content: |-
+      """
+      {{ general_instruction }}
+      {{ current_date }}
+      """
+
+      # This is how a conversation between a user and the bot can go:
+      {{ sample_conversation }}
+
+      {% if relevant_chunks %}
+      # This is some additional context:
+      ```markdown
+      {{ relevant_chunks }}
+      ```
+      {% endif %}
+
+      # This is how the bot talks:
+      {{ examples }}
+
+      # This is the current conversation between the user and the bot:
+      {{ sample_conversation | first_turns(2) }}
+      {{ history | colang }}

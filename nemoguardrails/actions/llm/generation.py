@@ -14,13 +14,11 @@
 # limitations under the License.
 
 """A set of actions for generating various types of completions using an LLMs."""
-import datetime
 import logging
 import random
 import sys
 import uuid
 from ast import literal_eval
-from datetime import datetime
 from functools import lru_cache
 from typing import List, Optional
 
@@ -50,63 +48,6 @@ from nemoguardrails.rails.llm.config import RailsConfig
 log = logging.getLogger(__name__)
 
 
-def extract_time_precision():
-    months = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-    ]
-    idx2months = dict([(idx, m) for (idx, m) in zip(range(1, 13), months)])
-    weekdays = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-    ]
-    sixWs = ["What", "Which"]
-    time_related_keywords = (
-        months
-        + weekdays
-        + [
-            "When",
-            "What time",
-            "Weekend",
-            "holidays",
-            "Summer",
-            "Winter",
-            "Fall",
-            "Spring",
-            "What day",
-        ]
-    )
-    idx2weekdays = dict([(id, wd) for (id, wd) in zip(range(1, 8), weekdays)])
-    weekdays2idx = dict([(wd, id) for (wd, id) in zip(range(1, 8), weekdays)])
-    dt = datetime.now()
-    weekday = dt.strftime("%A")
-    dayinmonth = dt.strftime("%d")
-    time_track = []
-    replace_words = []
-    time_shift = 0
-    yr = str(dt.year)
-    m = idx2months[dt.month]
-    wday = dt.strftime("%A")
-    day = dt.strftime("%d")
-    additional_inserts = "{} {}.{}.It's a {}".format(m, day, yr, wday)
-    return additional_inserts
-
-
 class LLMGenerationActions:
     """A container objects for multiple related actions."""
 
@@ -134,7 +75,6 @@ class LLMGenerationActions:
         # If we have documents, we'll also initialize a knowledge base.
         self.kb = None
         self._init_kb()
-        self.date_time_string = extract_time_precision()
 
         self.llm_task_manager = llm_task_manager
 
