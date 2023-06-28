@@ -25,5 +25,5 @@ define bot inform completed form filling
 define flow
   user ask to fill a form
   $is_finished = execute form_filling(file_name='my_form.txt')
-  if $is_finished 
+  if $is_finished
     bot inform completed form filling

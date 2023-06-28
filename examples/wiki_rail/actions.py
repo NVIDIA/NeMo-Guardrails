@@ -13,33 +13,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import os
-import json
 from typing import Optional
 from urllib import parse
+
+import wikipedia
 from colorama import Fore
 
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
-import wikipedia
+
 log = logging.getLogger(__name__)
 
+
 def find_keyword(query):
-    if 'keyword' in query:
-        index=query.find('keyword')+9
-        temp=query[index:]
-        if temp.endswith('.'):
-            temp=temp[:-1]
+    if "keyword" in query:
+        index = query.find("keyword") + 9
+        temp = query[index:]
+        if temp.endswith("."):
+            temp = temp[:-1]
         else:
-            temp=temp
+            temp = temp
     return temp
 
-def wiki_search_api(query, how_many=800):   
+
+def wiki_search_api(query, how_many=800):
     ny = wikipedia.page(query)
     print(ny.url)
-    result=ny.content
+    result = ny.content
     return result[:how_many]
+
 
 @action(name="query wiki search")
 async def query_wiki_search(
@@ -53,11 +58,11 @@ async def query_wiki_search(
     # If we don't have an explicit query, we take the last user message
     if query is None and context is not None:
         query = context.get("last_user_message")
-        keyword=find_keyword(query)
+        keyword = find_keyword(query)
 
     if query is None:
         raise Exception("No query was provided to wiki Search.")
-    
+
     if keyword is None:
         return ActionResult(
             return_value=False,
@@ -70,12 +75,15 @@ async def query_wiki_search(
             ],
         )
 
-    print("####################query=",query)
-    print("----"*10)
+    print("####################query=", query)
+    print("----" * 10)
     log.info(f"wiki Query: executing request for: {query}")
 
     result = wiki_search_api(keyword)
-    print(Fore.LIGHTWHITE_EX + "============================ wiki result =============================================")
-    print(Fore.CYAN+result)
+    print(
+        Fore.LIGHTWHITE_EX
+        + "============================ wiki result ============================================="
+    )
+    print(Fore.CYAN + result)
     log.info(f"wiki Search completed!")
     return result
