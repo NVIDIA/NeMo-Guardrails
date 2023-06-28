@@ -114,8 +114,6 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        # TODO: here you would change to a different Embeddings index
-        # self.bot_message_index = FaissEmbeddingsIndex()
         self.bot_message_index = BasicEmbeddingsIndex()
         self.bot_message_index.add_items(items)
 
