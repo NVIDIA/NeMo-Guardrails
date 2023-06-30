@@ -197,6 +197,14 @@ With a large language model (LLM) that is fine-tuned for instruction following, 
 enable_multi_step_generation: True
 ```
 
+### Lowest Temperature
+
+This temperature will be used for the tasks that require deterministic behavior (e.g., `dolly-v2-3b` requires a strictly positive one).
+
+```yaml
+lowest_temperature: 0.1
+```
+
 ## Guardrails Definitions
 
 The dialog flows and guardrails are defined using Colang. You can include as many `.co` files as you want, including subdirectories. For getting started, please refer to the [Hello World](../getting_started/hello-world.md) example. More concrete examples of guardrails configuration can be found in the [Examples](../../examples) folder.
