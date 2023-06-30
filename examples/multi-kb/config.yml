@@ -1,8 +1,6 @@
 models:
   - type: main
-    engine: openai
-    model: text-davinci-003
-
+    engine: hf_pipeline_mosaic
 
 prompts:
   - task: generate_bot_message
@@ -27,4 +25,4 @@ prompts:
       # This is the current conversation between the user and the bot:
       {{ sample_conversation | first_turns(2) }}
       {{ history | colang }}
-      # If there are any sources, please include them in the message.
+      # cite sources when responding to the user query
