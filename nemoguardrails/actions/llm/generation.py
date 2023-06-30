@@ -62,6 +62,14 @@ class LLMGenerationActions:
         self.llm = llm
         self.verbose = verbose
 
+        # If we have a customized embedding model, we'll use it.
+        self.embedding_model = "all-MiniLM-L6-v2"
+        for model in self.config.models:
+            if "embedding" in model.type:
+                self.embedding_model = model.model
+                assert model.engine == "SentenceTransformer"
+                break
+
         # If we have user messages, we build an index with them
         self.user_message_index = None
         self._init_user_message_index()
@@ -77,14 +85,6 @@ class LLMGenerationActions:
         self._init_kb()
 
         self.llm_task_manager = llm_task_manager
-
-        # If we have a customized embedding model, we'll use it.
-        self.embedding_model = "all-MiniLM-L6-v2"
-        for model in self.config.models:
-            if "embedding" in model.type:
-                self.embedding_model = model.model
-                assert model.engine == "SentenceTransformer"
-                break
 
     def _init_user_message_index(self):
         """Initializes the index of user messages."""
