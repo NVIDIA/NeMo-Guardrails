@@ -1,0 +1,30 @@
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003
+
+
+prompts:
+  - task: generate_bot_message
+    content: |-
+      """
+      {{ general_instruction }}
+      """
+
+      # This is how a conversation between a user and the bot can go:
+      {{ sample_conversation }}
+
+      {% if relevant_chunks %}
+      # This is some additional context:
+      ```markdown
+      {{ relevant_chunks }}
+      ```
+      {% endif %}
+
+      # This is how the bot talks:
+      {{ examples }}
+
+      # This is the current conversation between the user and the bot:
+      {{ sample_conversation | first_turns(2) }}
+      {{ history | colang }}
+      # If there are any sources, please include them in the message.
