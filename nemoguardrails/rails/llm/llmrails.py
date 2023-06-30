@@ -225,3 +225,11 @@ class LLMRails:
     def register_output_parser(self, output_parser: callable, name: str):
         """Register a custom output parser for the rails configuration."""
         self.runtime.llm_task_manager.register_output_parser(output_parser, name)
+
+    def register_prompt_context(self, name: str, value_or_fn: Any):
+        """Register a value to be included in the prompt context.
+
+        :name: The name of the variable or function that will be used.
+        :value_or_fn: The value or function that will be used to generate the value.
+        """
+        self.runtime.llm_task_manager.register_prompt_context(name, value_or_fn)

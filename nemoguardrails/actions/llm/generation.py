@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """A set of actions for generating various types of completions using an LLMs."""
-
 import logging
 import random
 import sys
