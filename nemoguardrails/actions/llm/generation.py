@@ -269,7 +269,10 @@ class LLMGenerationActions:
             if user_intent and user_intent.startswith("user "):
                 user_intent = user_intent[5:]
 
-            log.info("Canonical form for user intent: %s", user_intent)
+            log.info(
+                "Canonical form for user intent: "
+                + (user_intent if user_intent else "None")
+            )
 
             if user_intent is None:
                 return ActionResult(
