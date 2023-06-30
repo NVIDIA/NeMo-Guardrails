@@ -51,8 +51,11 @@ setup(
         "nemoguardrails": [
             "**/*.yml",
             "**/*.co",
+            "**/*.txt",
+            "**/*.json",
             "../examples/**/*",
             "../chat-ui/**/*",
+            "eval/data/**/*",
         ],
     },
     install_requires=[
