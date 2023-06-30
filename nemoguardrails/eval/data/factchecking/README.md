@@ -67,10 +67,10 @@ This will save the dataset to `msmarco.json`. An example from the dataset is sho
 ```
 [
     {
-        "question": "what is a corporation?", 
-        "answer": "A corporation is a company or group of people authorized to act as a single entity and recognized as such in law.", 
+        "question": "what is a corporation?",
+        "answer": "A corporation is a company or group of people authorized to act as a single entity and recognized as such in law.",
         "evidence": "McDonald's Corporation is one of the most recognizable corporations in the world. A corporation is a company or group of people authorized to act as a single entity (legally a person) and recognized as such in law. Early incorporated entities were established by charter (i.e. by an ad hoc act granted by a monarch or passed by a parliament or legislature)."
-    
+
     }
 ]
 ```

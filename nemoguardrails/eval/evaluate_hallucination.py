@@ -19,13 +19,12 @@ from logging import log
 
 import tqdm
 import typer
-from langchain import LLMChain, PromptTemplate
 
 from nemoguardrails.eval.utils import initialize_llm, load_dataset
 from nemoguardrails.llm.params import llm_params
-from nemoguardrails.llm.prompts import Task, get_prompt
-from nemoguardrails.rails.llm.config import Model, RailsConfig
+from nemoguardrails.llm.prompts import Task
 from nemoguardrails.llm.taskmanager import LLMTaskManager
+from nemoguardrails.rails.llm.config import Model, RailsConfig
 
 
 class HallucinationRailsEvaluation:
@@ -86,8 +85,6 @@ class HallucinationRailsEvaluation:
         If inconsistency is detected, flag the prompt as hallucination.
         """
 
-        
-
         hallucination_check_predictions = []
         num_flagged = 0
 
@@ -105,8 +102,8 @@ class HallucinationRailsEvaluation:
 
             paragraph = ". ".join(extra_responses)
             hallucination_check_prompt = self.llm_task_manager.render_task_prompt(
-                Task.CHECK_HALLUCINATION, 
-                {"paragraph": paragraph, "statement": bot_response}
+                Task.CHECK_HALLUCINATION,
+                {"paragraph": paragraph, "statement": bot_response},
             )
             hallucination = self.llm(hallucination_check_prompt)
             hallucination = hallucination.lower().strip()
@@ -141,9 +138,7 @@ class HallucinationRailsEvaluation:
             output_path = f"{self.output_dir}/{dataset_name}_{self.model_config.engine}_{self.model_config.model}_hallucination_predictions.json"
             with open(output_path, "w") as f:
                 json.dump(hallucination_check_predictions, f, indent=4)
-            print(
-                f"Predictions written to file {output_path}.json"
-            )
+            print(f"Predictions written to file {output_path}.json")
 
 
 def main(

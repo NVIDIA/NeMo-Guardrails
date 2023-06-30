@@ -15,16 +15,13 @@
 
 import json
 import os
-from logging import log
 
 import tqdm
-from langchain import LLMChain, PromptTemplate
 
 from nemoguardrails.eval.utils import initialize_llm, load_dataset
 from nemoguardrails.llm.params import llm_params
-from nemoguardrails.llm.prompts import Task, get_prompt
+from nemoguardrails.llm.prompts import Task
 from nemoguardrails.llm.taskmanager import LLMTaskManager
-
 from nemoguardrails.rails.llm.config import Model, RailsConfig
 
 
@@ -85,8 +82,7 @@ class ModerationRailsEvaluation:
         """
 
         jailbreak_check_prompt = self.llm_task_manager.render_task_prompt(
-            Task.JAILBREAK_CHECK, 
-            {"user_input": prompt}
+            Task.JAILBREAK_CHECK, {"user_input": prompt}
         )
         jailbreak = self.llm(jailbreak_check_prompt)
         jailbreak = jailbreak.lower().strip()
@@ -111,8 +107,7 @@ class ModerationRailsEvaluation:
             bot_response = self.llm(prompt)
 
         output_moderation_check_prompt = self.llm_task_manager.render_task_prompt(
-            Task.OUTPUT_MODERATION, 
-            {"bot_response": bot_response}
+            Task.OUTPUT_MODERATION, {"bot_response": bot_response}
         )
         output_moderation = self.llm(output_moderation_check_prompt)
         output_moderation = output_moderation.lower().strip()
