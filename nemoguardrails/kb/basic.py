@@ -28,10 +28,11 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     It uses Annoy to perform the search.
     """
 
-    def __init__(self, index=None):
+    def __init__(self, embedding_model=None, index=None):
         self._model = None
         self._items = []
         self._embeddings = []
+        self.embedding_model = embedding_model
 
         # When the index is provided, it means it's from the cache.
         self._index = index
@@ -42,7 +43,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
 
     def _init_model(self):
         """Initialize the model used for computing the embeddings."""
-        self._model = SentenceTransformer("all-MiniLM-L6-v2")
+        self._model = SentenceTransformer(self.embedding_model)
 
     def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Compute embeddings for a list of texts."""

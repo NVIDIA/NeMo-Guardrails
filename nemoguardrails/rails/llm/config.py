@@ -210,11 +210,11 @@ class RailsConfig(BaseModel):
                                 )
 
                     elif file.endswith(".yml") or file.endswith(".yaml"):
-                        with open(full_path) as f:
+                        with open(full_path, 'r', encoding='utf-8') as f:
                             _raw_config = yaml.safe_load(f.read())
 
                     elif file.endswith(".co"):
-                        with open(full_path) as f:
+                        with open(full_path, 'r', encoding='utf-8') as f:
                             _raw_config = parse_colang_file(file, content=f.read())
 
                     _join_config(raw_config, _raw_config)

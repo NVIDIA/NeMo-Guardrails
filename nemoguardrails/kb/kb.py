@@ -33,10 +33,11 @@ CACHE_FOLDER = os.path.join(os.getcwd(), ".cache")
 class KnowledgeBase:
     """Basic implementation of a knowledge base."""
 
-    def __init__(self, documents: List[str]):
+    def __init__(self, documents: List[str], embedding_model: str):
         self.documents = documents
         self.chunks = []
         self.index = None
+        self.embedding_model = embedding_model
 
     def init(self):
         """Initialize the knowledge base.
@@ -79,10 +80,10 @@ class KnowledgeBase:
             ann_index = AnnoyIndex(embedding_size, "angular")
             ann_index.load(cache_file)
 
-            self.index = BasicEmbeddingsIndex(index=ann_index)
+            self.index = BasicEmbeddingsIndex(embedding_model=self.embedding_model, index=ann_index)
             self.index.add_items(index_items)
         else:
-            self.index = BasicEmbeddingsIndex()
+            self.index = BasicEmbeddingsIndex(self.embedding_model)
             self.index.add_items(index_items)
             self.index.build()
 
