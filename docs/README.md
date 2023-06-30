@@ -5,8 +5,9 @@ The documentation is divided into the following sections:
 1. [Getting Started](#getting-started)
 2. [Examples](#examples)
 3. [User Guide](#user-guide)
-4. [Architecture Guide](#architecture-guide)
-5. [Security Guidelines](./security/guidelines.md)
+4. [Evaluation Tools](#evaluation-tools)
+5. [Architecture Guide](#architecture-guide)
+6. [Security Guidelines](./security/guidelines.md)
 
 ## Getting Started
 
@@ -42,6 +43,16 @@ The user guide covers the core details of the Guardrails toolkit and how to conf
 The following guides explain in more details various specific topics:
 
 * [Extract User Provided Values](./user_guide/advanced/extract-user-provided-values.md): Learn how to extract user-provided values like a name, a date or a query.
+
+## Evaluation Tools
+
+We provide a set of CLI evaluation tools and experimental results for topical and execution rails.
+There are also detailed guides on how to reproduce results and create datasets for the evaluation of each type of rail.
+
+* [Evaluation Tools and Results](./../nemoguardrails/eval/README.md): General explanation for the CLI evaluation tools and experimental results.
+* [Topical Rail Evaluation - Dataset Tools](./../nemoguardrails/eval/data/topical/README.md): Dataset tools and details to run experiments for topical rails.
+* [Fact-checking Rail Evaluation - Dataset Tools](./../nemoguardrails/eval/data/factchecking/README.md): Dataset tools and details to run experiments for fact-checking execution rail.
+* [Moderation Rail Evaluation - Dataset Tools](./../nemoguardrails/eval/data/moderation/README.md): Dataset tools and details to run experiments for moderation execution rail.
 
 ## Architecture Guide
 
