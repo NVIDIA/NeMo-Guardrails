@@ -10,4 +10,4 @@ A common use case is to let the LLM know the current date and time so that it ca
 
 Check out the `config.py` and `config.yml` files for a proof-of-concept.
 
-You can test this configuration with `nemoguradrails chat --config=examples/custom_prompt_context`.
+You can test this configuration with `nemoguardrails chat --config=examples/custom_prompt_context`.
