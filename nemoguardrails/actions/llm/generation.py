@@ -78,6 +78,14 @@ class LLMGenerationActions:
 
         self.llm_task_manager = llm_task_manager
 
+        # If we have a customized embedding model, we'll use it.
+        self.embedding_model = "all-MiniLM-L6-v2"
+        for model in self.config.models:
+            if "embedding" in model.type:
+                self.embedding_model = model.model
+                assert model.engine == "SentenceTransformer"
+                break
+
     def _init_user_message_index(self):
         """Initializes the index of user messages."""
 
@@ -93,7 +101,7 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.user_message_index = BasicEmbeddingsIndex()
+        self.user_message_index = BasicEmbeddingsIndex(self.embedding_model)
         self.user_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -114,7 +122,7 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.bot_message_index = BasicEmbeddingsIndex()
+        self.bot_message_index = BasicEmbeddingsIndex(self.embedding_model)
         self.bot_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -148,7 +156,7 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.flows_index = BasicEmbeddingsIndex()
+        self.flows_index = BasicEmbeddingsIndex(self.embedding_model)
         self.flows_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -161,7 +169,9 @@ class LLMGenerationActions:
             return
 
         documents = [doc.content for doc in self.config.docs]
-        self.kb = KnowledgeBase(documents=documents)
+        self.kb = KnowledgeBase(
+            documents=documents, embedding_model=self.embedding_model
+        )
         self.kb.init()
         self.kb.build()
 
