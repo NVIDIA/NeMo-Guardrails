@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed bug related to invoking a chain with multiple output keys.
 - Fixed bug related to tracking the output stats.
+- #51: Bug fix - avoid str concat with None when logging user_intent.
+- #54: Fix UTF-8 encoding issue and add embedding model configuration.
 
 ## [0.2.0] - 2023-05-31
 

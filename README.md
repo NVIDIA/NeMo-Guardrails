@@ -9,7 +9,7 @@
 
 **LATEST RELEASE: You are currently on the main branch which tracks
 under-development progress towards the next release. The current release is
-an alpha version, [0.2.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.2.0)**.
+an alpha version, [0.3.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.3.0)**.
 
 > **DISCLAIMER**: The alpha release is undergoing active development and may be subject to changes and improvements, which could potentially cause instability and unexpected behavior. We currently do not recommend deploying this alpha version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback is invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit.
 

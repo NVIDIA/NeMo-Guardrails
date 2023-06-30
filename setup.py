@@ -20,7 +20,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="nemoguardrails",
-    version="0.2.0",
+    version="0.3.0",
     packages=find_packages(),
     author="NVIDIA",
     author_email="nemoguardrails@nvidia.com",
@@ -31,18 +31,7 @@ setup(
     Guardrails (or "rails" for short) are specific ways of controlling the output of an LLM,
     e.g., not talking about politics, responding in a particular way to specific user
     requests, following a predefined dialog path, using a particular language style,
-    extracting structured data, etc.
-
-    Key Benefits:
-
-    - Building Trustworthy, Safe and Secure LLM Conversational Systems: The core value of
-    using NeMo Guardrails is the ability to write fuzzy rails to steer select conversations.
-    Developers can choose to define the behavior of their LLM-powered bots on certain
-    topics and keep their creativity un-encumbered for others!
-
-    - Connect models, chains, services, and more via actions: LLMs don't need to solve
-    all the challenges. NeMo Guardrails provides the ability to connect your codebase or
-    services to your chatbot seamlessly and securely!""",
+    extracting structured data, etc.""",
     long_description_content_type="text/markdown",
     url="https://github.com/NVIDIA/NeMo-Guardrails",
     classifiers=[
