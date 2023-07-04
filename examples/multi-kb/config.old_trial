@@ -39,67 +39,19 @@ from langchain import HuggingFacePipeline
 from langchain.base_language import BaseLanguageModel
 from transformers import AutoTokenizer, pipeline
 from pathlib import Path
-### load custom embedding and use it in Faiss 
-from langchain.vectorstores import Chroma
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import RetrievalQA
-import textwrap
-from InstructorEmbedding import INSTRUCTOR
-from langchain.embeddings import HuggingFaceInstructEmbeddings
-from langchain.embeddings import HuggingFaceInstructEmbeddings
-import torch
-import torch
-import transformers
-from langchain import HuggingFacePipeline
-from transformers import (
-    AutoConfig,
-    AutoModel,
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    GenerationConfig,
-    LlamaForCausalLM,
-    LlamaTokenizer,
-    pipeline,
-)
 
 
-def load_model(model_name, device, num_gpus, load_8bit=False, debug=False):
-    if device == "cpu":
-        kwargs = {}
-    elif device == "cuda":
-        kwargs = {"torch_dtype": torch.float16}
-        if num_gpus == "auto":
-            kwargs["device_map"] = "auto"
-        else:
-            num_gpus = int(num_gpus)
-            if num_gpus != 1:
-                kwargs.update(
-                    {
-                        "device_map": "auto",
-                        "max_memory": {i: "13GiB" for i in range(num_gpus)},
-                    }
-                )
-    elif device == "mps":
-        kwargs = {"torch_dtype": torch.float16}
-        # Avoid bugs in mps backend by not using in-place operations.
-        print("mps not supported")
-    else:
-        raise ValueError(f"Invalid device: {device}")
+def _make_chromadb(data_path,embeddings):
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name, low_cpu_mem_usage=True, **kwargs
-    )
+    # load the document and split it into chunks
+    loader = TextLoader(data_path)
+    documents = loader.load()
 
-    if device == "cuda" and num_gpus == 1:
-        model.to(device)
-
-    if debug:
-        print(model)
-
-    return model, tokenizer
-
-
+    # split it into chunks
+    text_splitter = CharacterTextSplitter(chunk_size=100, chunk_overlap=0)
+    docs = text_splitter.split_documents(documents)
+    db = Chroma.from_documents(docs, embeddings ,persist_directory="/workspace/Experiment/SE")
+    return db
 
 def _make_faiss_gpu(data_path,embeddings):
     # Here we load in the data in the format that Notion exports it in.
@@ -131,25 +83,6 @@ def _make_faiss_gpu(data_path,embeddings):
         pickle.dump(store, f)
     return store
 
-def wrap_text_preserve_newlines(text, width=110):
-    # Split the input text into lines based on newline characters
-    lines = text.split('\n')
-
-    # Wrap each line individually
-    wrapped_lines = [textwrap.fill(line, width=width) for line in lines]
-
-    # Join the wrapped lines back together using newline characters
-    wrapped_text = '\n'.join(wrapped_lines)
-
-    return wrapped_text
-
-def process_llm_response(llm_response):
-    print(wrap_text_preserve_newlines(llm_response['result']))
-    print('\n\nSources:')
-    for source in llm_response["source_documents"]:
-        print(source.metadata['source'])
-
-
 def _get_qa_chain_with_sources():
     # extract embeddings
     model_name = "sentence-transformers/all-mpnet-base-v2"
@@ -180,30 +113,24 @@ async def retrieve_relevant_chunks(
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     user_message = context.get("last_user_message")
     #hf_llm=retriver_llm()
-    vectordb = _get_qa_chain_with_sources()
-    retriever = vectordb.as_retriever(search_type='similarity', search_kwargs={"k": 3})
-
-    qa_chain = RetrievalQA.from_chain_type(llm=hf_llm, 
-                                  chain_type="stuff", 
-                                  retriever=retriever, 
-                                  return_source_documents=True)     
+    chain = load_qa_with_sources_chain(hf_llm, chain_type="stuff", verbose=True)
+    docs = vectordb.similarity_search(user_message)
+    result=chain({"input_documents": docs, "question": user_message}, return_only_outputs=False)
+    """qa = RetrievalQAWithSourcesChain(
+            combine_documents_chain=chain, 
+            retriever=vectordb.as_retriever(),
+            reduce_k_below_max_tokens=True,
+      )"""
     # TODO: query one or multiple KBs
+    #result = await qa_chain_with_sources.acall(inputs={"question": user_message})
+    #result =await qa.acall({"question": user_message}, return_only_outputs=True)
 
     # TODO: make call to an additional KB (one that understands table data?)
-    result = qa_chain(user_message)
-    #print("llm response after retrieve from KB, the answer is :\n")
-    #print(result['result'])
-    #print("---"*10)
-    #print("source paragraph >> ")
-    result['source_documents'][0].page_content
-    #print(result.keys())
-    source_ref=str(result['source_documents'][0].metadata['source'])
+
     context_updates = {
         "relevant_chunks": f"""
             Question: {user_message}
-            Answer: {result['result']},
-			Citing : {result['source_documents'][0].page_content},
-            Source : {source_ref}
+            Answer: {result['output_text']}
     """ }
 
     return ActionResult(
@@ -214,27 +141,34 @@ async def retrieve_relevant_chunks(
 def init(llm_rails: LLMRails):
     llm_rails.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
-def get_bloke_13b_llm():   
+def get_mosaic_7b_llm():
+    name = "mosaicml/mpt-7b-instruct"
+    config = transformers.AutoConfig.from_pretrained(name, trust_remote_code=True)
+    config.init_device = "cuda:0"  # For fast initialization directly on GPU!
+    config.max_seq_len = 4096
+    #tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b")
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        name,
+        config=config,
+        torch_dtype=torch.bfloat16,  # Load model weights in bfloat16
+        trust_remote_code=True,
+    )
+    tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b")
 
-    model_name = "/workspace/ckpt/bloke/"  # loading model ckpt from disk
-    device = "cuda"
-    num_gpus = 2  # making sure GPU-GPU are NVlinked, GPUs-GPUS with NVSwitch
-    model, tokenizer = load_model(model_name, device, num_gpus, debug=False)
 
-	# repo_id="TheBloke/Wizard-Vicuna-13B-Uncensored-HF"
-	# pipe = pipeline("text-generation", model=repo_id, device_map={"":"cuda:0"}, max_new_tokens=256, temperature=0.1, do_sample=True,use_cache=True)
     pipe = pipeline(
-		"text-generation",
-		model=model,
-		tokenizer=tokenizer,
-		max_new_tokens=256,
-		temperature=0.1,
-		do_sample=True,
-	)
-    local_llm = HuggingFacePipeline(pipeline=pipe)
-    return local_llm
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        device="cuda:0",
+        max_new_tokens=100,
+        do_sample=True,
+        use_cache=True,
+    )
 
+    hf_llm = HuggingFacePipeline(pipeline=pipe)
+    return hf_llm
 
-hf_llm=get_bloke_13b_llm()
-HFPipelineBloke = get_llm_instance_wrapper(llm_instance=get_bloke_13b_llm(), llm_type="hf_pipeline_bloke")
-register_llm_provider("hf_pipeline_bloke", HFPipelineBloke)
+hf_llm=get_mosaic_7b_llm()
+HFPipelineMosaic = get_llm_instance_wrapper(llm_instance=get_mosaic_7b_llm(), llm_type="hf_pipeline_mosaic")
+register_llm_provider("hf_pipeline_mosaic", HFPipelineMosaic)

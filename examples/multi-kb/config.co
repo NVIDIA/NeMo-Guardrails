@@ -19,9 +19,14 @@ define flow
 define bot inform capabilities
   "I am an AI assistant and I'm here to help."
 
+define user ask about knowledge base
+  "When is the film Titanic being made?"
+  "who is the director of the film?"
+  "what other movies have him made?"
+
 define flow
-  user ask for IT problem help
-  bot respond to ask for help
+  user ask about knowledge base
+  bot respond to knowledge base
 
 define flow
   user ask for help with problem

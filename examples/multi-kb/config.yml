@@ -1,6 +1,6 @@
 models:
   - type: main
-    engine: hf_pipeline_mosaic
+    engine: hf_pipeline_bloke
 
 prompts:
   - task: generate_bot_message
