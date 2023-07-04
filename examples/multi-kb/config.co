@@ -23,6 +23,7 @@ define user ask about knowledge base
   "When is the film Titanic being made?"
   "who is the director of the film?"
   "what other movies have him made?"
+  "how many people in first class survivied based on the csv file?"
 
 define flow
   user ask about knowledge base

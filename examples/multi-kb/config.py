@@ -37,19 +37,18 @@ import pickle
 import transformers
 from langchain import HuggingFacePipeline
 from langchain.base_language import BaseLanguageModel
-from transformers import AutoTokenizer, pipeline
+from transformers import AutoTokenizer, pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from pathlib import Path
 ### load custom embedding and use it in Faiss 
 from langchain.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
 import textwrap
-from InstructorEmbedding import INSTRUCTOR
 from langchain.embeddings import HuggingFaceInstructEmbeddings
 from langchain.embeddings import HuggingFaceInstructEmbeddings
-import torch
 import torch
 import transformers
+import pandas as pd
 from langchain import HuggingFacePipeline
 from transformers import (
     AutoConfig,
@@ -180,6 +179,20 @@ async def retrieve_relevant_chunks(
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     user_message = context.get("last_user_message")
     #hf_llm=retriver_llm()
+    
+    if ("csv" or "table" or "tabular") in user_message:  
+        csv_flag=True    
+        tb_tokenizer = AutoTokenizer.from_pretrained("neulab/omnitab-large")
+        tb_model = AutoModelForSeq2SeqLM.from_pretrained("neulab/omnitab-large")
+        data = {
+        "count": [136,87,119,80,97,372],
+        "class" : ["first class survivied", "middle class survivied","lower class survivied", "first class deceased" ,"middle class deceased", "lower class deceased"]
+        }
+        table = pd.DataFrame.from_dict(data)
+        tb_encoding = tb_tokenizer(table=table, query=user_message, return_tensors="pt")
+        tb_outputs = tb_model.generate(**tb_encoding)
+        tb_answer=tb_tokenizer.batch_decode(tb_outputs, skip_special_tokens=True)
+
     vectordb = _get_qa_chain_with_sources()
     retriever = vectordb.as_retriever(search_type='similarity', search_kwargs={"k": 3})
 
@@ -198,13 +211,23 @@ async def retrieve_relevant_chunks(
     result['source_documents'][0].page_content
     #print(result.keys())
     source_ref=str(result['source_documents'][0].metadata['source'])
-    context_updates = {
-        "relevant_chunks": f"""
-            Question: {user_message}
-            Answer: {result['result']},
-			Citing : {result['source_documents'][0].page_content},
-            Source : {source_ref}
-    """ }
+    if csv_flag:
+        context_updates = {
+            "relevant_chunks": f"""
+                Question: {user_message}                
+                Answer: {tb_answer},
+			    Citing : {data},
+                Source : {'titanic.csv'}
+        """ }
+    else:
+
+        context_updates = {
+            "relevant_chunks": f"""
+                Question: {user_message}
+                Answer: {result['result']},
+			    Citing : {result['source_documents'][0].page_content},
+                Source : {source_ref}
+        """ }
 
     return ActionResult(
         return_value=context_updates["relevant_chunks"],
