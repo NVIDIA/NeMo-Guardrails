@@ -1,6 +1,6 @@
 # Experimental rail on integrating a custom_llm load from disk and custom knowledge base (kb) support
 
-This is an experimental rail which demostrate the following integration
+This is an experimental rail which demonstrates the following integration:
 
 - **load a custom_llm from disk and with multiGPUs support**
  The custom_llm model we downloaded from (huggingface model TheBloke/Wizard-13B)[https://huggingface.co/TheBloke/Wizard-Vicuna-13B-Uncensored-HF/tree/main]
