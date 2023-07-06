@@ -13,56 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from typing import Optional
-from langchain.chains import RetrievalQAWithSourcesChain
-from langchain.vectorstores import Chroma
 from nemoguardrails import LLMRails
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.document_loaders import TextLoader
-from functools import lru_cache
 import faiss
 from langchain import HuggingFacePipeline
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
 from nemoguardrails.llm.providers import register_llm_provider
 import torch
 from langchain import HuggingFacePipeline
-from langchain.base_language import BaseLanguageModel
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
-from langchain.chains.qa_with_sources import load_qa_with_sources_chain
 import pickle
-import transformers
 from langchain import HuggingFacePipeline
-from langchain.base_language import BaseLanguageModel
 from transformers import AutoTokenizer, pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 from pathlib import Path
-### load custom embedding and use it in Faiss 
-from langchain.vectorstores import Chroma
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
 import textwrap
-from langchain.embeddings import HuggingFaceInstructEmbeddings
-from langchain.embeddings import HuggingFaceInstructEmbeddings
-import torch
 import transformers
 import pandas as pd
 from langchain import HuggingFacePipeline
 from transformers import (
-    AutoConfig,
-    AutoModel,
     AutoModelForCausalLM,
     AutoTokenizer,
-    GenerationConfig,
-    LlamaForCausalLM,
-    LlamaTokenizer,
     pipeline,
 )
 
-
-def load_model(model_name, device, num_gpus, load_8bit=False, debug=False):
+def load_model(model_name, device, num_gpus, debug=False):
     if device == "cpu":
         kwargs = {}
     elif device == "cuda":
@@ -100,9 +79,9 @@ def load_model(model_name, device, num_gpus, load_8bit=False, debug=False):
 
 
 
-def _make_faiss_gpu(data_path,embeddings):
-    # Here we load in the data in the format that Notion exports it in.
-    ps = list(Path("/workspace/ckpt/data/").glob('**/*.txt'))
+def _make_faiss_gpu(data_path, out_path, embeddings):
+    # Here we process the txt files under the data_path folder.
+    ps = list(Path(data_path).glob('**/*.txt'))
     print(ps)
     data = []
     sources = []
@@ -124,9 +103,9 @@ def _make_faiss_gpu(data_path,embeddings):
 
     # Here we create a vector store from the documents and save it to disk.
     store = FAISS.from_texts(docs, embeddings, metadatas=metadatas)
-    faiss.write_index(store.index, "/workspace/Experiment/docs.index")
+    faiss.write_index(store.index, out_path+"docs.index")
     store.index = None
-    with open("/workspace/Experiment/faiss_store.pkl", "wb") as f:
+    with open(out_path+"faiss_store.pkl", "wb") as f:
         pickle.dump(store, f)
     return store
 
@@ -150,22 +129,23 @@ def process_llm_response(llm_response):
 
 
 def _get_qa_chain_with_sources():
-    # extract embeddings
+    # use other embeddings from huggingface
     model_name = "sentence-transformers/all-mpnet-base-v2"
     model_kwargs = {"device": "cuda"}
 
     hf_embedding = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
     using_vectorstore='faiss'
     if using_vectorstore=='faiss':
-        vectorestore_path =  "/workspace/Experiment/"
+        vectorestore_path =  "<path_to_already_processd_and_saved_to_disk_vectorstore>"
         if vectorestore_path is not None:
             index = faiss.read_index(vectorestore_path+'docs.index')
             with open(vectorestore_path+"faiss_store.pkl", "rb") as f:
                 vectordb = pickle.load(f)
             vectordb.index = index
         else:
-            data_path=input("pleaes input the absolute path to the folder of many xxx.txt files for processing into vectorstore : ")
-            vectordb = _make_faiss_gpu(data_path,hf_embedding)
+            data_path="<path to the folder contain xxx.txt files for processing into vectorstores>"
+            out_path="<path to the folder where you would like to save the processed vectorstores>"
+            vectordb = _make_faiss_gpu(data_path,out_path, hf_embedding)
     return vectordb
 
 
@@ -178,12 +158,13 @@ async def retrieve_relevant_chunks(
 ):
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     user_message = context.get("last_user_message")
-    #hf_llm=retriver_llm()
-    
+    # identifying if user would like to query csv data ( i.e tabular data ) instead as an alternative kb
     if ("csv" or "table" or "tabular") in user_message:  
         csv_flag=True    
         tb_tokenizer = AutoTokenizer.from_pretrained("neulab/omnitab-large")
         tb_model = AutoModelForSeq2SeqLM.from_pretrained("neulab/omnitab-large")
+        # TODO : find a workflow supporting custom tabular data flatten preprocessing
+        # toy example to demonstrate flattened tabular data as KB integration
         data = {
         "count": [136,87,119,80,97,372],
         "class" : ["first class survivied", "middle class survivied","lower class survivied", "first class deceased" ,"middle class deceased", "lower class deceased"]
@@ -192,7 +173,9 @@ async def retrieve_relevant_chunks(
         tb_encoding = tb_tokenizer(table=table, query=user_message, return_tensors="pt")
         tb_outputs = tb_model.generate(**tb_encoding)
         tb_answer=tb_tokenizer.batch_decode(tb_outputs, skip_special_tokens=True)
-
+    else:
+        csv_flag=False
+    # using faiss vector database , pip install faiss-gpu if you have gpu, otherwise please use faiss-cpu 
     vectordb = _get_qa_chain_with_sources()
     retriever = vectordb.as_retriever(search_type='similarity', search_kwargs={"k": 3})
 
@@ -200,17 +183,11 @@ async def retrieve_relevant_chunks(
                                   chain_type="stuff", 
                                   retriever=retriever, 
                                   return_source_documents=True)     
-    # TODO: query one or multiple KBs
 
-    # TODO: make call to an additional KB (one that understands table data?)
     result = qa_chain(user_message)
-    #print("llm response after retrieve from KB, the answer is :\n")
-    #print(result['result'])
-    #print("---"*10)
-    #print("source paragraph >> ")
     result['source_documents'][0].page_content
-    #print(result.keys())
     source_ref=str(result['source_documents'][0].metadata['source'])
+    # identifying is the user wants to query tabular data instead
     if csv_flag:
         context_updates = {
             "relevant_chunks": f"""
@@ -238,10 +215,10 @@ def init(llm_rails: LLMRails):
     llm_rails.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
 def get_bloke_13b_llm():   
-
-    model_name = "/workspace/ckpt/bloke/"  # loading model ckpt from disk
+    # loading custom llm  from disk with multiGPUs support
+    model_name = "< path_to_the_saved_custom_llm_checkpoints >"  # loading model ckpt from disk
     device = "cuda"
-    num_gpus = 2  # making sure GPU-GPU are NVlinked, GPUs-GPUS with NVSwitch
+    num_gpus = 2  # number of GPUs you have , do nvidia-smi to check 
     model, tokenizer = load_model(model_name, device, num_gpus, debug=False)
 
 	# repo_id="TheBloke/Wizard-Vicuna-13B-Uncensored-HF"
