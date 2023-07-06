@@ -158,23 +158,7 @@ async def retrieve_relevant_chunks(
 ):
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     user_message = context.get("last_user_message")
-    # identifying if user would like to query csv data ( i.e tabular data ) instead as an alternative kb
-    if ("csv" or "table" or "tabular") in user_message:  
-        csv_flag=True    
-        tb_tokenizer = AutoTokenizer.from_pretrained("neulab/omnitab-large")
-        tb_model = AutoModelForSeq2SeqLM.from_pretrained("neulab/omnitab-large")
-        # TODO : find a workflow supporting custom tabular data flatten preprocessing
-        # toy example to demonstrate flattened tabular data as KB integration
-        data = {
-        "count": [136,87,119,80,97,372],
-        "class" : ["first class survivied", "middle class survivied","lower class survivied", "first class deceased" ,"middle class deceased", "lower class deceased"]
-        }
-        table = pd.DataFrame.from_dict(data)
-        tb_encoding = tb_tokenizer(table=table, query=user_message, return_tensors="pt")
-        tb_outputs = tb_model.generate(**tb_encoding)
-        tb_answer=tb_tokenizer.batch_decode(tb_outputs, skip_special_tokens=True)
-    else:
-        csv_flag=False
+            
     # using faiss vector database , pip install faiss-gpu if you have gpu, otherwise please use faiss-cpu 
     vectordb = _get_qa_chain_with_sources()
     retriever = vectordb.as_retriever(search_type='similarity', search_kwargs={"k": 3})
@@ -187,24 +171,15 @@ async def retrieve_relevant_chunks(
     result = qa_chain(user_message)
     result['source_documents'][0].page_content
     source_ref=str(result['source_documents'][0].metadata['source'])
-    # identifying is the user wants to query tabular data instead
-    if csv_flag:
-        context_updates = {
-            "relevant_chunks": f"""
-                Question: {user_message}                
-                Answer: {tb_answer},
-			    Citing : {data},
-                Source : {'titanic.csv'}
-        """ }
-    else:
+    
 
-        context_updates = {
-            "relevant_chunks": f"""
-                Question: {user_message}
-                Answer: {result['result']},
-			    Citing : {result['source_documents'][0].page_content},
-                Source : {source_ref}
-        """ }
+    context_updates = {
+        "relevant_chunks": f"""
+            Question: {user_message}
+            Answer: {result['result']},
+            Citing : {result['source_documents'][0].page_content},
+            Source : {source_ref}
+    """ }
 
     return ActionResult(
         return_value=context_updates["relevant_chunks"],
