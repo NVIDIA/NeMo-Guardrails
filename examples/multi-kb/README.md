@@ -7,7 +7,8 @@ This is an experimental rail which demostrate the following integration
 
 - **a custom retrieve_relevant_chunks function which supports custom vector databases plugin**
  We demonstrate how to plug in another vectorstore ( in this case , faiss vectorstore )
- the ingestion of the raw data, no longer needs to be in markdown format, we 
+ the ingestion of the raw data, no longer needs to be in markdown format, we scrapped (wikipedia titanic film page)[https://en.wikipedia.org/wiki/Titanic_(1997_film)] and dump the text into a .txt file and we will use it as knowledge base.
+
 - **add citing and source referral in context update**
  adding context update and enable the possibility for the custom_llm to include into the response
  note: the inclusion of the citing and souce reference did not always included in the bot response via the custom_llm plug in, 
