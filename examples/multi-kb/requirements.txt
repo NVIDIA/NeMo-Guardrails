@@ -1,0 +1,4 @@
+accelerate
+pandas
+faiss-gpu
+einops
