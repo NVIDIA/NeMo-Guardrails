@@ -66,7 +66,7 @@ setup(
         "typer==0.7.0",
         "PyYAML~=6.0",
         "setuptools~=65.5.1",
-        "annoy==1.17.1",
+        "annoy==1.17.3",
         "sentence-transformers==2.2.2",
         "fastapi==0.96.0",
         "starlette==0.27.0",
