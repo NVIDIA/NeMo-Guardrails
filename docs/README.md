@@ -8,6 +8,7 @@ The documentation is divided into the following sections:
 4. [Evaluation Tools](#evaluation-tools)
 5. [Architecture Guide](#architecture-guide)
 6. [Security Guidelines](./security/guidelines.md)
+7. [API Reference](./api/README.md)
 
 ## Getting Started
 
