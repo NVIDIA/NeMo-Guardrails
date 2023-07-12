@@ -43,9 +43,11 @@ The [`LLMRails.generate`](../api/nemoguardrails.rails.llm.llmrails.md#method-llm
 properties:
   role:
     type: "string"
-    enum: ["user", "assistant"]
+    enum: ["user", "assistant", "context"]
   content:
-    type: "string"
+    oneOf:
+      - type: "string"
+      - type: "object"
 ```
 
 An example of conversation history is the following:
@@ -62,6 +64,29 @@ An example of conversation history is the following:
   "content": "I want to know if my insurance covers certain expenses."
 }]
 ```
+
+An example which also sets the initial context is the following:
+
+```json
+[{
+  "role": "context",
+  "content": {
+    "user_name": "John",
+    "access_level": "admin"
+  }
+},
+{
+  "role": "user",
+  "content": "Hello!"
+}, {
+  "role": "assistant",
+  "content": "Hello! How can I help you?"
+}, {
+  "role": "user",
+  "content": "I want to know if my insurance covers certain expenses."
+}]
+```
+
 
 ## Actions
 
