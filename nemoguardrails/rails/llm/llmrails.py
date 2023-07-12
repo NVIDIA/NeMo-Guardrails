@@ -139,19 +139,64 @@ class LLMRails:
 
         self.llm = provider_cls(**kwargs)
 
+    def _get_events_for_messages(self, messages: List[dict]):
+        """Return the list of events corresponding to the provided messages.
+
+        Tries to find a prefix of messages for which we have already a list of events
+        in the cache. For the rest, they are converted as is.
+
+        The reason this cache exists is that we want to benefit from events generated in
+        previous turns, which can't be computed again because it would be expensive (e.g.,
+        involving multiple LLM calls).
+
+        When an explicit state object will be added, this mechanism can be removed.
+
+        Args:
+            messages: The list of messages.
+
+        Returns:
+            A list of events.
+        """
+        events = []
+
+        # We try to find the longest prefix of messages for which we have a cache
+        # of events.
+        p = len(messages) - 1
+        while p > 0:
+            cache_key = get_history_cache_key(messages[0:p])
+            if cache_key in self.events_history_cache:
+                events = self.events_history_cache[cache_key].copy()
+                break
+            else:
+                p -= 1
+
+        # For the rest of the messages, we transform them directly into events.
+        # TODO: Move this to separate function once more type of messages are supported.
+        for msg in messages[p:]:
+            if msg["role"] == "user":
+                events.append({"type": "user_said", "content": msg["content"]})
+            elif msg["role"] == "context":
+                events.append({"type": "context_update", "data": msg["content"]})
+
+        return events
+
     async def generate_async(
         self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None
     ):
         """Generates a completion or a next message.
 
         The format for messages is currently the following:
-        [
-            {"role": "user", "content": "Hello! How are you?"},
-            {"role": "assistant", "content": "I am fine, thank you!"},
-        ]
-        System messages are not yet supported.
 
-        """
+        ```python
+            [
+                {"role": "context", "content": {"user_name": "John"}},
+                {"role": "user", "content": "Hello! How are you?"},
+                {"role": "assistant", "content": "I am fine, thank you!"},
+                ...
+            ]
+        ```
+
+        System messages are not yet supported."""
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
             new_message = await self.generate_async(
@@ -167,17 +212,15 @@ class LLMRails:
         t0 = time.time()
         llm_stats.reset()
 
-        # First, we turn the messages into a history of events.
-        cache_key = get_history_cache_key(messages, include_last=False)
-        events = self.events_history_cache.get(cache_key, []).copy()
+        # The array of events corresponding to the provided sequence of messages.
+        events = self._get_events_for_messages(messages)
 
-        events.append({"type": "user_said", "content": messages[-1]["content"]})
-
+        # Compute the new events.
         new_events = await self.runtime.generate_events(events)
 
         # Save the new events in the history and update the cache
         events.extend(new_events)
-        cache_key = get_history_cache_key(messages, include_last=True)
+        cache_key = get_history_cache_key(messages)
         self.events_history_cache[cache_key] = events
 
         # Extract and join all the messages from bot_said events as the response.
