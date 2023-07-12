@@ -1,11 +1,12 @@
 # Python API
 
-The primary way for using guardrails in your project is
-* By creating a `RailsConfig` object.
-* Then using it to create an `LLMRails` instance. The `LLMRails` class is the core class that enforces the configured guardrails.
-* Once a bot is created, a response can be obtained with `generate(...)` or `generate_async(...)` functions
+The primary way for using guardrails in your project is:
 
-**Basic usage:**
+1. Create a [`RailsConfig`](../api/nemoguardrails.rails.llm.config.md#kbdclasskbd-railsconfig) object.
+2. Create an [`LLMRails`](../api/nemoguardrails.rails.llm.llmrails.md#kbdclasskbd-llmrails) instance. The `LLMRails` class is the core class that enforces the configured guardrails.
+3. Generate LLM responses using the [`LLMRails.generate(...)`](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsgenerate) or [`LLMRails.generate_async(...)`](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsgenerate_async) methods.
+
+## Basic usage
 
 ```python
 from nemoguardrails import LLMRails, RailsConfig
@@ -19,15 +20,10 @@ new_message = app.generate(messages=[{
 }])
 ```
 
-#### RailsConfig
+## RailsConfig
 
-Functions | Inputs | Description | Returns
- --- | --- | --- | ---
-`RailsConfig.from_path(...)`| `config_path: str` | load a guardrails configuration from the specified path | `RailsConfig` instance
-`RailsConfig.from_content(...)`|`colang_content: str` <br/> `yaml_content: str`|load a guardrails configuration  directly from the provided colang and YAML content; this approach is particularly convenient for quick testing | `RailsConfig` instance
-`RailsConfig.parse_object(...)`| `obj: dict` | load a guardrails configuration from the provided dictionary.| `RailsConfig` instance
+The [RailsConfig](../api/nemoguardrails.rails.llm.config.md#kbdclasskbd-railsconfig) class contains the key bits of information for configuring guardrails:
 
-The key bits of information included in a `RailsConfig`(via the configuration files) object are:
 - `models`: The list of models used by the rails configuration.
 - `user_messages`: The list of user messages that should be used for the rails.
 - `bot_messages`: The list of bot messages that should be used for the rails.
@@ -37,14 +33,11 @@ The key bits of information included in a `RailsConfig`(via the configuration fi
 - `sample_conversation`: The sample conversation to be used inside the prompts.
 - `actions_server_url`: The actions server to be used. If specified, the actions will be executed through the actions server.
 
-#### Message Generation
-Functions | Inputs | Description | Returns
- --- | --- | --- | ---
-`LLMRails(RailsConfig).generate_async(...)`|`prompt: str` <br/> `messages: List[dict]`| async version of `generate` | bot response (dict) ```{"role": "assistant", "content": "\n".join(responses)}```
-`LLMRails(RailsConfig).generate(...)`| `prompt: str` <br/> `messages: List[dict]`| generate the completion for the provided prompt or the next message, given a history of messages | bot response using synchronous version of `generate_async`
+## Message Generation
 
+To use a guardrails configuration, you can call the [LLMRails.generate](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsgenerate) or [LLMRails.generate_async](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsgenerate_async) methods.
 
-The `generate` method takes as input either a `prompt` or a `messages` array. When a prompt is provided, the guardrails apply as in a single-turn conversation. The structure of a message is the following:
+The [LLMRails.generate](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsgenerate) method takes as input either a `prompt` or a `messages` array. When a prompt is provided, the guardrails apply as in a single-turn conversation. The structure of a message is the following:
 
 ```yaml
 properties:
@@ -71,6 +64,7 @@ An example of conversation history is the following:
 ```
 
 ## Actions
+
 Actions are a key component of the Guardrails toolkit. Actions enable the execution of python code inside guardrails.
 
 ### Default Actions
@@ -107,7 +101,7 @@ For convenience, this toolkit also includes a selection of LangChain tools, wrap
 
 ### Chains as Actions
 
-You can register a Langchain chain as an action:
+You can register a Langchain chain as an action using the [LLMRails.register_action](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsregister_action) method:
 
 ```python
 app.register_action(some_chain, name="some_chain")
@@ -160,8 +154,8 @@ These parameters are only meant to be used in advanced use cases.
 
 The following are the parameters that can be used in the actions:
 
- Parameters | Description | Type | Example
---- | --- | --- | ---
-`events` | The history of events so far; the last one is the one triggering the action itself. | List[dict] |  ```[     {'type': 'user_said', ...},     {'type': 'start_action', 'action_name': 'generate_user_intent', ...},      {'type': 'action_finished', 'action_name': 'generate_user_intent', ...} ]```
-`context` | The context data available to the action. | dict | ```{ 'last_user_message': ...,  'last_bot_message': ..., 'retrieved_relevant_chunks': ... }```
-`llm` | Access to the LLM instance (BaseLLM from LangChain). | BaseLLM | ```OpenAI(model="text-davinci-003",...)```
+| Parameters | Description                                                                         | Type       | Example                                                                                                                                                                                          |
+|------------|-------------------------------------------------------------------------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `events`   | The history of events so far; the last one is the one triggering the action itself. | List[dict] | ```[     {'type': 'user_said', ...},     {'type': 'start_action', 'action_name': 'generate_user_intent', ...},      {'type': 'action_finished', 'action_name': 'generate_user_intent', ...} ]``` |
+| `context`  | The context data available to the action.                                           | dict       | ```{ 'last_user_message': ...,  'last_bot_message': ..., 'retrieved_relevant_chunks': ... }```                                                                                                   |
+| `llm`      | Access to the LLM instance (BaseLLM from LangChain).                                | BaseLLM    | ```OpenAI(model="text-davinci-003",...)```                                                                                                                                                       |
