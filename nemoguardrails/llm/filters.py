@@ -136,3 +136,20 @@ def first_turns(colang_history: str, n: int) -> str:
         i += 1
 
     return "\n".join(lines[0:i])
+
+
+def last_turns(colang_history: str, n: int) -> str:
+    """Returns the last n turns from a given colang history."""
+    lines = colang_history.split("\n")
+    lines.reverse()
+    turn_count = 0
+    i = 0
+    while i < len(lines):
+        if lines[i].startswith('user "'):
+            turn_count += 1
+        if turn_count == n + 1:
+            break
+        i += 1
+
+    # First line is empty, remove it.
+    return "\n".join(lines[0:i]).lstrip()
