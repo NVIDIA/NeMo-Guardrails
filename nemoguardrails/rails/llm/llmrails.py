@@ -41,6 +41,13 @@ class LLMRails:
     def __init__(
         self, config: RailsConfig, llm: Optional[BaseLLM] = None, verbose: bool = False
     ):
+        """Initializes the LLMRails instance.
+
+        Args:
+            config: A rails configuration.
+            llm: An optional LLM engine to use.
+            verbose: Whether the logging should be verbose or not.
+        """
         self.config = config
         self.llm = llm
         self.verbose = verbose
