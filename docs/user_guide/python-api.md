@@ -2,9 +2,9 @@
 
 The primary way for using guardrails in your project is:
 
-1. Create a [`RailsConfig`](../api/nemoguardrails.rails.llm.config.md#kbdclasskbd-railsconfig) object.
-2. Create an [`LLMRails`](../api/nemoguardrails.rails.llm.llmrails.md#kbdclasskbd-llmrails) instance. The `LLMRails` class is the core class that enforces the configured guardrails.
-3. Generate LLM responses using the [`LLMRails.generate(...)`](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsgenerate) or [`LLMRails.generate_async(...)`](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsgenerate_async) methods.
+1. Create a [`RailsConfig`](../api/nemoguardrails.rails.llm.config.md#class-railsconfig) object.
+2. Create an [`LLMRails`](../api/nemoguardrails.rails.llm.llmrails.md#class-llmrails) instance. The `LLMRails` class is the core class that enforces the configured guardrails.
+3. Generate LLM responses using the [`LLMRails.generate(...)`](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate) or [`LLMRails.generate_async(...)`](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async) methods.
 
 ## Basic usage
 
@@ -22,7 +22,7 @@ new_message = app.generate(messages=[{
 
 ## RailsConfig
 
-The [RailsConfig](../api/nemoguardrails.rails.llm.config.md#kbdclasskbd-railsconfig) class contains the key bits of information for configuring guardrails:
+The [RailsConfig](../api/nemoguardrails.rails.llm.config.md#class-railsconfig) class contains the key bits of information for configuring guardrails:
 
 - `models`: The list of models used by the rails configuration.
 - `user_messages`: The list of user messages that should be used for the rails.
@@ -35,9 +35,9 @@ The [RailsConfig](../api/nemoguardrails.rails.llm.config.md#kbdclasskbd-railscon
 
 ## Message Generation
 
-To use a guardrails configuration, you can call the [LLMRails.generate](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsgenerate) or [LLMRails.generate_async](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsgenerate_async) methods.
+To use a guardrails configuration, you can call the [LLMRails.generate](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate) or [LLMRails.generate_async](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async) methods.
 
-The [LLMRails.generate](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsgenerate) method takes as input either a `prompt` or a `messages` array. When a prompt is provided, the guardrails apply as in a single-turn conversation. The structure of a message is the following:
+The [LLMRails.generate](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate) method takes as input either a `prompt` or a `messages` array. When a prompt is provided, the guardrails apply as in a single-turn conversation. The structure of a message is the following:
 
 ```yaml
 properties:
@@ -101,7 +101,7 @@ For convenience, this toolkit also includes a selection of LangChain tools, wrap
 
 ### Chains as Actions
 
-You can register a Langchain chain as an action using the [LLMRails.register_action](../api/nemoguardrails.rails.llm.llmrails.md#kbdmethodkbd-llmrailsregister_action) method:
+You can register a Langchain chain as an action using the [LLMRails.register_action](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsregister_action) method:
 
 ```python
 app.register_action(some_chain, name="some_chain")
