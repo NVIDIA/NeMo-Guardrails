@@ -14,11 +14,14 @@
 # limitations under the License.
 
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 from langchain import LLMChain, PromptTemplate
+from langchain.base_language import BaseLanguageModel
+from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
 from langchain.llms.base import BaseLLM
+from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 
 from nemoguardrails.actions.llm.utils import (
     get_multiline_response,
@@ -39,7 +42,7 @@ HALLUCINATION_NUM_EXTRA_RESPONSES = 2
 async def check_hallucination(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
-    llm: Optional[BaseLLM] = None,
+    llm: Optional[Union[BaseLLM, BaseLanguageModel]] = None,
     use_llm_checking: bool = True,
 ):
     """Checks if the last bot response is a hallucination by checking multiple completions for self-consistency.
@@ -53,24 +56,46 @@ async def check_hallucination(
     if bot_response and last_bot_prompt_string:
         num_responses = HALLUCINATION_NUM_EXTRA_RESPONSES
         # Use beam search for the LLM call, to get several completions with only one call.
-        # At the current moment, only OpenAI LLM engines are supported for computing the additional completions.
-        if type(llm) != OpenAI:
+        # At the current moment, only OpenAI LLM and OpenAI chat model engines, and their customized sub engines are supported for computing the additional completions.
+        if not isinstance(llm, (OpenAI, ChatOpenAI)):
             log.warning(
-                f"Hallucination rail can only be used with OpenAI LLM engines."
+                f"Hallucination rail can only be used with OpenAI LLM and chat model engines, and their customized sub engines"
                 f"Current LLM engine is {type(llm).__name__}."
+            )
+            return False
+
+        # Customized sub engine can only be either OpenAI LLM or OpenAI chat model
+        if isinstance(llm, OpenAI) and isinstance(llm, ChatOpenAI):
+            log.warning(
+                f"LLM engine must be either OpenAI LLM or chat model."
+                f"Current LLM engine is a merge of two types."
             )
             return False
 
         # Use the "generate" call from langchain to get all completions in the same response.
         last_bot_prompt = PromptTemplate(template="{text}", input_variables=["text"])
+
+        # Create message prompt for chat model
+        if isinstance(llm, ChatOpenAI):
+            human_message_prompt = HumanMessagePromptTemplate(prompt=last_bot_prompt)
+            last_bot_prompt = ChatPromptTemplate.from_messages([human_message_prompt])
+
         chain = LLMChain(prompt=last_bot_prompt, llm=llm)
 
         # Generate multiple responses with temperature 1.
-        with llm_params(llm, temperature=1, n=num_responses, best_of=num_responses):
-            extra_llm_response = await chain.agenerate(
-                [{"text": last_bot_prompt_string}],
-                run_manager=logging_callback_manager_for_chain,
-            )
+        if isinstance(llm, OpenAI):
+            with llm_params(llm, temperature=1, n=num_responses, best_of=num_responses):
+                extra_llm_response = await chain.agenerate(
+                    [{"text": last_bot_prompt_string}],
+                    run_manager=logging_callback_manager_for_chain,
+                )
+        else:
+            # Chat model has no `best_of` argument
+            with llm_params(llm, temperature=1, n=num_responses):
+                extra_llm_response = await chain.agenerate(
+                    [{"text": last_bot_prompt_string}],
+                    run_manager=logging_callback_manager_for_chain,
+                )
 
         extra_llm_completions = []
         if len(extra_llm_response.generations) > 0:
