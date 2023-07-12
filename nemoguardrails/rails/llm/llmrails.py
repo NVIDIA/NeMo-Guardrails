@@ -133,7 +133,8 @@ class LLMRails:
             ]:
                 kwargs["model_name"] = main_llm_config.model
             else:
-                if hasattr(provider_cls, "model"):
+                # The `__fields__` attribute is computed dynamically by pydantic.
+                if "model" in provider_cls.__fields__:
                     kwargs["model"] = main_llm_config.model
 
         self.llm = provider_cls(**kwargs)
