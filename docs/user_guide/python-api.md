@@ -3,7 +3,7 @@
 The primary way for using guardrails in your project is:
 
 1. Create a [`RailsConfig`](../api/nemoguardrails.rails.llm.config.md#class-railsconfig) object.
-2. Create an [`LLMRails`](../api/nemoguardrails.rails.llm.llmrails.md#class-llmrails) instance. The `LLMRails` class is the core class that enforces the configured guardrails.
+2. Create an [`LLMRails`](../api/nemoguardrails.rails.llm.llmrails.md#class-llmrails) instance which provides an interface to the LLM that automatically applies the configured guardrails.
 3. Generate LLM responses using the [`LLMRails.generate(...)`](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate) or [`LLMRails.generate_async(...)`](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async) methods.
 
 ## Basic usage
@@ -22,7 +22,7 @@ new_message = app.generate(messages=[{
 
 ## RailsConfig
 
-The [RailsConfig](../api/nemoguardrails.rails.llm.config.md#class-railsconfig) class contains the key bits of information for configuring guardrails:
+The [`RailsConfig`](../api/nemoguardrails.rails.llm.config.md#class-railsconfig) class contains the key bits of information for configuring guardrails:
 
 - `models`: The list of models used by the rails configuration.
 - `user_messages`: The list of user messages that should be used for the rails.
@@ -35,9 +35,9 @@ The [RailsConfig](../api/nemoguardrails.rails.llm.config.md#class-railsconfig) c
 
 ## Message Generation
 
-To use a guardrails configuration, you can call the [LLMRails.generate](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate) or [LLMRails.generate_async](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async) methods.
+To use a guardrails configuration, you can call the [`LLMRails.generate`](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate) or [`LLMRails.generate_async`](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async) methods.
 
-The [LLMRails.generate](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate) method takes as input either a `prompt` or a `messages` array. When a prompt is provided, the guardrails apply as in a single-turn conversation. The structure of a message is the following:
+The [`LLMRails.generate`](../api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate) method takes as input either a `prompt` or a `messages` array. When a prompt is provided, the guardrails apply as in a single-turn conversation. The structure of a message is the following:
 
 ```yaml
 properties:
