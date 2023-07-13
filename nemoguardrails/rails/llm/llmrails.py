@@ -179,6 +179,8 @@ class LLMRails:
                 events.append({"type": "bot_said", "content": msg["content"]})
             elif msg["role"] == "context":
                 events.append({"type": "context_update", "data": msg["content"]})
+            elif msg["role"] == "event":
+                events.append(msg["event"])
 
         return events
 
@@ -194,6 +196,7 @@ class LLMRails:
                 {"role": "context", "content": {"user_name": "John"}},
                 {"role": "user", "content": "Hello! How are you?"},
                 {"role": "assistant", "content": "I am fine, thank you!"},
+                {"role": "event", "event": {"type": "user_silent"}},
                 ...
             ]
         ```
@@ -272,6 +275,58 @@ class LLMRails:
             )
 
         return asyncio.run(self.generate_async(prompt=prompt, messages=messages))
+
+    async def generate_events_async(self, events: List[dict]) -> List[dict]:
+        """Generate the next events based on the provided history.
+
+        The format for events is the following:
+
+        ```python
+            [
+                {"type": "...", ...},
+                ...
+            ]
+        ```
+
+        Args:
+            events: The history of events to be used to generate the next events.
+
+        Returns:
+            The newly generate event(s).
+
+        """
+        t0 = time.time()
+        llm_stats.reset()
+
+        # Compute the new events.
+        new_events = await self.runtime.generate_events(events)
+
+        # If logging is enabled, we log the conversation
+        # TODO: add support for logging flag
+        if self.verbose:
+            history = get_colang_history(events)
+            log.info(f"Conversation history so far: \n{history}")
+
+        log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
+        log.info("--- :: Stats: %s" % llm_stats)
+
+        return new_events
+
+    def generate_events(self, events: List[dict]) -> List[dict]:
+        """Synchronous version of `LLMRails.generate_events_async`."""
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            raise RuntimeError(
+                "You are using the sync `generate_events` inside async code. "
+                "You should replace with `await generate_events_async(...)."
+            )
+
+        return asyncio.run(self.generate_events_async(events=events))
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""

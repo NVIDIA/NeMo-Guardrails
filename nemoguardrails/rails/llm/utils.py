@@ -37,6 +37,8 @@ def get_history_cache_key(messages: List[dict]) -> str:
             key_items.append(msg["content"])
         elif msg["role"] == "context":
             key_items.append(json.dumps(msg["content"]))
+        elif msg["role"] == "event":
+            key_items.append(json.dumps(msg["event"]))
 
     history_cache_key = ":".join(key_items)
 
