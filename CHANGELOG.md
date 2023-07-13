@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Changed the naming of the internal events to align to the upcoming UMIM spec (Unified Multimodal Interaction Management).
 comments.)
+- Add support for [using variables inside bot message definitions](./docs/user_guide/colang-language-syntax-guide.md#bot-messages-with-variables).
 
 ### Fixed
 

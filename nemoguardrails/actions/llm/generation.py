@@ -23,6 +23,7 @@ from ast import literal_eval
 from functools import lru_cache
 from typing import List, Optional
 
+from jinja2 import Environment, meta
 from langchain.llms import BaseLLM
 
 from nemoguardrails.actions.actions import ActionResult, action
@@ -87,6 +88,9 @@ class LLMGenerationActions:
         self._init_kb()
 
         self.llm_task_manager = llm_task_manager
+
+        # We also initialize the environment for rendering bot messages
+        self.env = Environment()
 
     def _init_user_message_index(self):
         """Initializes the index of user messages."""
@@ -409,6 +413,41 @@ class LLMGenerationActions:
 
         return ActionResult(return_value=None)
 
+    def _render_string(
+        self,
+        template_str: str,
+        context: Optional[dict] = None,
+    ) -> str:
+        """Render a string using the provided context information.
+
+        Args:
+            template_str: The string template to render.
+            context: The context for rendering.
+
+        Returns:
+            The rendered string.
+        """
+        # First, if we have any direct usage of variables in the string,
+        # we replace with correct Jinja syntax.
+        for param in re.findall(r"\$([^ \"'!?\-,;</]*(?:\w|]))", template_str):
+            template_str = template_str.replace(f"${param}", "{{" + param + "}}")
+
+        template = self.env.from_string(template_str)
+
+        # First, we extract all the variables from the template.
+        variables = meta.find_undeclared_variables(self.env.parse(template_str))
+
+        # This is the context that will be passed to the template when rendering.
+        render_context = {}
+
+        # Copy the context variables to the render context.
+        if context:
+            for variable in variables:
+                if variable in context:
+                    render_context[variable] = context[variable]
+
+        return template.render(render_context)
+
     @action(is_system_action=True)
     async def generate_bot_message(
         self, events: List[dict], context: dict, llm: Optional[BaseLLM] = None
@@ -434,6 +473,9 @@ class LLMGenerationActions:
                 bot_utterance = random.choice(self.config.bot_messages[bot_intent])
 
             log.info("Found existing bot message: " + bot_utterance)
+
+            # We also need to render
+            bot_utterance = self._render_string(bot_utterance, context)
 
         # Check if the output is supposed to be the content of a context variable
         elif bot_intent[0] == "$" and bot_intent[1:] in context:

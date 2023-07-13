@@ -16,21 +16,20 @@
 from nemoguardrails import RailsConfig
 from tests.utils import TestChat
 
-config = RailsConfig.from_content(
-    """
-    define user express greeting
-        "hello"
-
-    define flow
-        user ask time
-        $now = "12pm"
-        bot $now
-    """
-)
-
 
 def test_1():
-    """Test that branching with `when` works correctly."""
+    config = RailsConfig.from_content(
+        """
+        define user express greeting
+            "hello"
+
+        define flow
+            user ask time
+            $now = "12pm"
+            bot $now
+        """
+    )
+
     chat = TestChat(
         config,
         llm_completions=[
@@ -40,3 +39,35 @@ def test_1():
 
     chat >> "What is the time?!"
     chat << "12pm"
+
+
+def test_2():
+    config = RailsConfig.from_content(
+        """
+        define user express greeting
+            "hello"
+
+        define bot express greeting
+            "Hello, {{ name }}!"
+
+        define bot express greeting again
+            "Hello, $name!"
+
+
+        define flow
+            user express greeting
+            $name = "John"
+            bot express greeting
+            bot express greeting again
+        """
+    )
+
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "  express greeting",
+        ],
+    )
+
+    chat >> "Hi!"
+    chat << "Hello, John!\nHello, John!"
