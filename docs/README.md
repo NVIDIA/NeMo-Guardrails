@@ -44,6 +44,8 @@ The user guide covers the core details of the Guardrails toolkit and how to conf
 The following guides explain in more details various specific topics:
 
 * [Extract User Provided Values](./user_guide/advanced/extract-user-provided-values.md): Learn how to extract user-provided values like a name, a date or a query.
+* [Prompt Customization](./user_guide/advanced/prompt-customization.md): Learn how to customize the prompts for a new (or existing) type of LLM.
+* [Bot Message Instructions](./user_guide/advanced/bot-message-instructions.md): Learn how to further tweak the bot messages with specific instructions at runtime.
 
 ## Evaluation Tools
 

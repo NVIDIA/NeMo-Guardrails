@@ -75,6 +75,14 @@ def get_colang_history(
     if not events:
         return history
 
+    # We compute the index of the last bot message. We need it so that we include
+    # the bot message instruction only for the last one.
+    last_bot_intent_idx = len(events) - 1
+    while last_bot_intent_idx >= 0:
+        if events[last_bot_intent_idx]["type"] == "bot_intent":
+            break
+        last_bot_intent_idx -= 1
+
     for idx, event in enumerate(events):
         if event["type"] == "UtteranceUserActionFinished" and include_texts:
             history += f'user "{event["final_transcript"]}"\n'
@@ -84,6 +92,10 @@ def get_colang_history(
             else:
                 history += f'user {event["intent"]}\n'
         elif event["type"] == "BotIntent":
+            # If we have instructions, we add them before the bot message.
+            # But we only do that for the last bot message.
+            if "instructions" in event and idx == last_bot_intent_idx:
+                history += f"# {event['instructions']}\n"
             history += f'bot {event["intent"]}\n'
         elif event["type"] == "StartUtteranceBotAction" and include_texts:
             history += f'  "{event["script"]}"\n'

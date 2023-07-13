@@ -6,15 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-
 ### Added
 
 - [Event-based API](./docs/user_guide/advanced/event-based-api.md) for guardrails.
 - Support for message with type "event" in [`LLMRails.generate_async`](./docs/api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async).
+- Support for [bot message instructions](docs/user_guide/advanced/bot-message-instructions.md).
 
 ### Changed
 
 - Changed the naming of the internal events to align to the upcoming UMIM spec (Unified Multimodal Interaction Management).
+comments.)
 
 ### Fixed
 

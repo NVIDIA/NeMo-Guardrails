@@ -105,6 +105,9 @@ class State:
     next_step_by_flow_uid: Optional[str] = None
     next_step_priority: float = 0.0
 
+    # The comment is extract from the source code
+    next_step_comment: Optional[str] = None
+
     # The updates to the context that should be applied before the next step
     context_updates: dict = field(default_factory=dict)
 
@@ -198,6 +201,13 @@ def _record_next_step(
         new_state.next_step = flow_config.elements[flow_state.head]
         new_state.next_step_by_flow_uid = flow_state.uid
         new_state.next_step_priority = flow_config.priority * priority_modifier
+
+        # Extract the comment, if any.
+        new_state.next_step_comment = (
+            flow_config.elements[flow_state.head]
+            .get("_source_mapping", {})
+            .get("comment")
+        )
 
 
 def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState]:
@@ -518,7 +528,12 @@ def compute_next_steps(
 
     # If we have a next step, we make sure to convert it to proper event structure.
     if state.next_step:
-        next_steps.append(_step_to_event(state.next_step))
+        next_step_event = _step_to_event(state.next_step)
+        if next_step_event["type"] == "bot_intent" and state.next_step_comment:
+            # For bot intents, we use the comment as instructions
+            next_step_event["instructions"] = state.next_step_comment
+
+        next_steps.append(next_step_event)
 
     # Finally, we check if there was an explicit "stop" request
     if actual_history:
