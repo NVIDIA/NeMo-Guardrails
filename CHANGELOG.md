@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [#58](https://github.com/NVIDIA/NeMo-Guardrails/issues/58): Fix install on Mac OS 13.
 - [#55](https://github.com/NVIDIA/NeMo-Guardrails/issues/55): Fix bug in example causing config.py to crash on computers with no CUDA-enabled GPUs.
 - Fixed the model name initialization for LLMs that use the `model` kwarg.
+- Fixed the Cohere prompt templates.
 
 
 ## [0.3.0] - 2023-06-30

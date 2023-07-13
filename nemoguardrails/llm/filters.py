@@ -151,30 +151,3 @@ def last_turns(colang_history: str, n: int) -> str:
         i -= 1
 
     return "\n".join(lines[i:])
-
-
-#
-# def last_turns(colang_history: str, n: int) -> str:
-#     """Returns the last n turns from a given colang history."""
-#     lines = colang_history.split("\n")
-#     # Remove empty lines
-#     lines = [line for line in lines if len(line.strip()) > 0]
-#     lines.reverse()
-#
-#     turn_count = 0
-#     diads = []
-#     last_diad_id = -1
-#     i = 0
-#     while i < len(lines):
-#         if lines[i].startswith('user "'):
-#             turn_count += 1
-#             diad_turns = lines[last_diad_id + 1 : i + 1]
-#             diad_turns.reverse()
-#             diads.append("\n".join(diad_turns))
-#             last_diad_id = i
-#         if turn_count == n:
-#             break
-#         i += 1
-#
-#     diads.reverse()
-#     return "\n".join(diads)
