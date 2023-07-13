@@ -19,7 +19,7 @@ import importlib.util
 import logging
 import os
 import time
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from langchain.llms.base import BaseLLM
 
@@ -182,10 +182,10 @@ class LLMRails:
 
     async def generate_async(
         self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None
-    ):
-        """Generates a completion or a next message.
+    ) -> Union[str, dict]:
+        """Generate a completion or a next message.
 
-        The format for messages is currently the following:
+        The format for messages is the following:
 
         ```python
             [
@@ -195,6 +195,13 @@ class LLMRails:
                 ...
             ]
         ```
+
+        Args:
+            prompt: The prompt to be used for completion.
+            messages: The history of messages to be used to generate the next message.
+
+        Returns:
+            The completion (when a prompt is provided) or the next message.
 
         System messages are not yet supported."""
         if prompt is not None:
