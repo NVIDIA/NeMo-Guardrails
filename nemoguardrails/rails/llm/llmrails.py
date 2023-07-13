@@ -227,11 +227,6 @@ class LLMRails:
         # Compute the new events.
         new_events = await self.runtime.generate_events(events)
 
-        # Save the new events in the history and update the cache
-        events.extend(new_events)
-        cache_key = get_history_cache_key(messages)
-        self.events_history_cache[cache_key] = events
-
         # Extract and join all the messages from bot_said events as the response.
         responses = []
         for event in new_events:
@@ -242,6 +237,13 @@ class LLMRails:
                 else:
                     responses.append(event["content"])
 
+        new_message = {"role": "assistant", "content": "\n".join(responses)}
+
+        # Save the new events in the history and update the cache
+        events.extend(new_events)
+        cache_key = get_history_cache_key(messages + [new_message])
+        self.events_history_cache[cache_key] = events
+
         # If logging is enabled, we log the conversation
         # TODO: add support for logging flag
         if self.verbose:
@@ -250,7 +252,8 @@ class LLMRails:
 
         log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
         log.info("--- :: Stats: %s" % llm_stats)
-        return {"role": "assistant", "content": "\n".join(responses)}
+
+        return new_message
 
     def generate(
         self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None
