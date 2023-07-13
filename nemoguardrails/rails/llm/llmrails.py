@@ -167,14 +167,16 @@ class LLMRails:
             if cache_key in self.events_history_cache:
                 events = self.events_history_cache[cache_key].copy()
                 break
-            else:
-                p -= 1
+
+            p -= 1
 
         # For the rest of the messages, we transform them directly into events.
-        # TODO: Move this to separate function once more type of messages are supported.
+        # TODO: Move this to separate function once more types of messages are supported.
         for msg in messages[p:]:
             if msg["role"] == "user":
                 events.append({"type": "user_said", "content": msg["content"]})
+            elif msg["role"] == "assistant":
+                events.append({"type": "bot_said", "content": msg["content"]})
             elif msg["role"] == "context":
                 events.append({"type": "context_update", "data": msg["content"]})
 

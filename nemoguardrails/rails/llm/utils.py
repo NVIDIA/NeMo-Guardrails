@@ -33,6 +33,8 @@ def get_history_cache_key(messages: List[dict]) -> str:
     for msg in messages:
         if msg["role"] == "user":
             key_items.append(msg["content"])
+        elif msg["role"] == "assistant":
+            key_items.append(msg["content"])
         elif msg["role"] == "context":
             key_items.append(json.dumps(msg["content"]))
 

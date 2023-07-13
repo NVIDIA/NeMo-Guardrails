@@ -29,7 +29,7 @@ def test_basic():
                 {"role": "user", "content": "How are you?"},
             ],
         )
-        == "hi:How are you?"
+        == "hi:Hello!:How are you?"
     )
 
 
@@ -53,5 +53,5 @@ def test_with_context():
                 {"role": "user", "content": "How are you?"},
             ],
         )
-        == '{"user_name": "John"}:hi:How are you?'
+        == '{"user_name": "John"}:hi:Hello!:How are you?'
     )
