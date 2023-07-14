@@ -24,7 +24,9 @@ from langchain.schema import AIMessage, HumanMessage, SystemMessage
 from nemoguardrails.logging.callbacks import logging_callbacks
 
 
-async def llm_call(llm: BaseLanguageModel, prompt: Union[str, List[dict]]) -> str:
+async def llm_call(
+    llm: BaseLanguageModel, prompt: Union[str, List[dict]]
+) -> Union[str, List[str]]:
     """Calls the LLM with a prompt and returns the generated text."""
 
     if isinstance(prompt, str):
@@ -33,7 +35,6 @@ async def llm_call(llm: BaseLanguageModel, prompt: Union[str, List[dict]]) -> st
         )
 
         # TODO: error handling
-        return result.generations[0][0].text
     else:
         # We first need to translate the array of messages into LangChain message format
         messages = []
@@ -50,7 +51,17 @@ async def llm_call(llm: BaseLanguageModel, prompt: Union[str, List[dict]]) -> st
             [ChatPromptValue(messages=messages)], callbacks=logging_callbacks
         )
 
-        return result.generations[0][0].text
+        # Return string if there is only one completion,
+        # otherwise, return all completions in a list
+        if len(result.generations[0]) > 1:
+            all_completions = []
+            i = 0
+            while i < len(result.generations[0]):
+                all_completions.append(result.generations[0][i].text)
+                i += 1
+            return all_completions
+        else:
+            return result.generations[0][0].text
 
 
 def get_colang_history(

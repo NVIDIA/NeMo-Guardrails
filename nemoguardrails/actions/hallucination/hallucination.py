@@ -42,7 +42,7 @@ HALLUCINATION_NUM_EXTRA_RESPONSES = 2
 async def check_hallucination(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
-    llm: Optional[Union[BaseLLM, BaseLanguageModel]] = None,
+    llm: Optional[BaseLanguageModel] = None,
     use_llm_checking: bool = True,
 ):
     """Checks if the last bot response is a hallucination by checking multiple completions for self-consistency.
@@ -64,47 +64,14 @@ async def check_hallucination(
             )
             return False
 
-        # Customized sub engine can only be either OpenAI LLM or OpenAI chat model
-        if isinstance(llm, OpenAI) and isinstance(llm, ChatOpenAI):
-            log.warning(
-                f"LLM engine must be either OpenAI LLM or chat model."
-                f"Current LLM engine is a merge of two types."
-            )
-            return False
-
-        # Use the "generate" call from langchain to get all completions in the same response.
-        last_bot_prompt = PromptTemplate(template="{text}", input_variables=["text"])
-
-        # Create message prompt for chat model
-        if isinstance(llm, ChatOpenAI):
-            human_message_prompt = HumanMessagePromptTemplate(prompt=last_bot_prompt)
-            last_bot_prompt = ChatPromptTemplate.from_messages([human_message_prompt])
-
-        chain = LLMChain(prompt=last_bot_prompt, llm=llm)
-
-        # Generate multiple responses with temperature 1.
-        if isinstance(llm, OpenAI):
-            with llm_params(llm, temperature=1, n=num_responses, best_of=num_responses):
-                extra_llm_response = await chain.agenerate(
-                    [{"text": last_bot_prompt_string}],
-                    run_manager=logging_callback_manager_for_chain,
-                )
-        else:
-            # Chat model has no `best_of` argument
-            with llm_params(llm, temperature=1, n=num_responses):
-                extra_llm_response = await chain.agenerate(
-                    [{"text": last_bot_prompt_string}],
-                    run_manager=logging_callback_manager_for_chain,
-                )
-
-        extra_llm_completions = []
-        if len(extra_llm_response.generations) > 0:
-            extra_llm_completions = extra_llm_response.generations[0]
+        # Generate all completions with given LLM parameters
+        with llm_params(llm, temperature=1, n=num_responses):
+            extra_llm_completions = await llm_call(llm, last_bot_prompt_string)
 
         extra_responses = []
         i = 0
         while i < num_responses and i < len(extra_llm_completions):
-            result = extra_llm_completions[i].text
+            result = extra_llm_completions[i]
             # We need the same post-processing of responses as in "generate_bot_message"
             result = get_multiline_response(result)
             result = strip_quotes(result)
