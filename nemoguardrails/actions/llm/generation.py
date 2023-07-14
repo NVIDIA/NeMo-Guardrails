@@ -16,6 +16,7 @@
 """A set of actions for generating various types of completions using an LLMs."""
 import logging
 import random
+import re
 import sys
 import uuid
 from ast import literal_eval
@@ -527,7 +528,10 @@ class LLMGenerationActions:
 
             # We add these in reverse order so the most relevant is towards the end.
             for result in reversed(results):
-                examples += f"{result.text}\n\n"
+                # If the flow includes "= ...", we ignore it as we don't want the LLM
+                # to learn to predict "...".
+                if not re.findall(r"=\s+\.\.\.", result.text):
+                    examples += f"{result.text}\n\n"
 
         prompt = self.llm_task_manager.render_task_prompt(
             task=Task.GENERATE_VALUE,
@@ -550,6 +554,11 @@ class LLMGenerationActions:
         # We only use the first line for now
         # TODO: support multi-line values?
         value = result.strip().split("\n")[0]
+
+        # Because of conventions from other languages, sometimes the LLM might add
+        # a ";" at the end of the line. We remove that
+        if value.endswith(";"):
+            value = value[:-1]
 
         log.info(f"Generated value for ${var_name}: {value}")
 

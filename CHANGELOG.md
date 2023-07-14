@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the model name initialization for LLMs that use the `model` kwarg.
 - Fixed the Cohere prompt templates.
 - [#55](https://github.com/NVIDIA/NeMo-Guardrails/issues/83): Fix bug related to LangChain callbacks initialization.
+- Fixed generation of "..." on value generation.
 
 
 ## [0.3.0] - 2023-06-30
