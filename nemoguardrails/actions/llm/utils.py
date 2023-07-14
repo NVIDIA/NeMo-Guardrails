@@ -51,17 +51,17 @@ async def llm_call(
             [ChatPromptValue(messages=messages)], callbacks=logging_callbacks
         )
 
-        # Return string if there is only one completion,
-        # otherwise, return all completions in a list
-        if len(result.generations[0]) > 1:
-            all_completions = []
-            i = 0
-            while i < len(result.generations[0]):
-                all_completions.append(result.generations[0][i].text)
-                i += 1
-            return all_completions
-        else:
-            return result.generations[0][0].text
+    # Return string if there is only one completion,
+    # otherwise, return all completions in a list
+    if len(result.generations[0]) > 1:
+        all_completions = []
+        i = 0
+        while i < len(result.generations[0]):
+            all_completions.append(result.generations[0][i].text)
+            i += 1
+        return all_completions
+    else:
+        return result.generations[0][0].text
 
 
 def get_colang_history(

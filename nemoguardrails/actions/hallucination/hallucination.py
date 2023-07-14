@@ -14,14 +14,11 @@
 # limitations under the License.
 
 import logging
-from typing import Optional, Union
+from typing import Optional
 
-from langchain import LLMChain, PromptTemplate
 from langchain.base_language import BaseLanguageModel
 from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
-from langchain.llms.base import BaseLLM
-from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 
 from nemoguardrails.actions.llm.utils import (
     get_multiline_response,
@@ -31,8 +28,6 @@ from nemoguardrails.actions.llm.utils import (
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
-from nemoguardrails.logging.callbacks import logging_callback_manager_for_chain
-from nemoguardrails.rails.llm.config import RailsConfig
 
 log = logging.getLogger(__name__)
 
