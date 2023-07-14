@@ -16,9 +16,9 @@
 import logging
 from typing import Optional
 
-from langchain import LLMChain, PromptTemplate
+from langchain.base_language import BaseLanguageModel
+from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
-from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.utils import (
     get_multiline_response,
@@ -28,8 +28,6 @@ from nemoguardrails.actions.llm.utils import (
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
-from nemoguardrails.logging.callbacks import logging_callback_manager_for_chain
-from nemoguardrails.rails.llm.config import RailsConfig
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +37,7 @@ HALLUCINATION_NUM_EXTRA_RESPONSES = 2
 async def check_hallucination(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
-    llm: Optional[BaseLLM] = None,
+    llm: Optional[BaseLanguageModel] = None,
     use_llm_checking: bool = True,
 ):
     """Checks if the last bot response is a hallucination by checking multiple completions for self-consistency.
@@ -53,33 +51,22 @@ async def check_hallucination(
     if bot_response and last_bot_prompt_string:
         num_responses = HALLUCINATION_NUM_EXTRA_RESPONSES
         # Use beam search for the LLM call, to get several completions with only one call.
-        # At the current moment, only OpenAI LLM engines are supported for computing the additional completions.
-        if type(llm) != OpenAI:
+        # At the current moment, only OpenAI LLM and OpenAI chat model engines, and their customized sub engines are supported for computing the additional completions.
+        if not isinstance(llm, (OpenAI, ChatOpenAI)):
             log.warning(
-                f"Hallucination rail can only be used with OpenAI LLM engines."
+                f"Hallucination rail can only be used with OpenAI LLM and chat model engines, and their customized sub engines"
                 f"Current LLM engine is {type(llm).__name__}."
             )
             return False
 
-        # Use the "generate" call from langchain to get all completions in the same response.
-        last_bot_prompt = PromptTemplate(template="{text}", input_variables=["text"])
-        chain = LLMChain(prompt=last_bot_prompt, llm=llm)
-
-        # Generate multiple responses with temperature 1.
-        with llm_params(llm, temperature=1, n=num_responses, best_of=num_responses):
-            extra_llm_response = await chain.agenerate(
-                [{"text": last_bot_prompt_string}],
-                run_manager=logging_callback_manager_for_chain,
-            )
-
-        extra_llm_completions = []
-        if len(extra_llm_response.generations) > 0:
-            extra_llm_completions = extra_llm_response.generations[0]
+        # Generate all completions with given LLM parameters
+        with llm_params(llm, temperature=1, n=num_responses):
+            extra_llm_completions = await llm_call(llm, last_bot_prompt_string)
 
         extra_responses = []
         i = 0
         while i < num_responses and i < len(extra_llm_completions):
-            result = extra_llm_completions[i].text
+            result = extra_llm_completions[i]
             # We need the same post-processing of responses as in "generate_bot_message"
             result = get_multiline_response(result)
             result = strip_quotes(result)
