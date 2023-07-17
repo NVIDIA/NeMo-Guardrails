@@ -84,8 +84,6 @@ class LLMRails:
 
         # Next, we initialize the LLM engine.
         self._init_llm()
-        self.runtime.register_action_param("llm", self.llm)
-
         # Next, we initialize the LLM Generate actions and register them.
         actions = LLMGenerationActions(
             config=config,
@@ -110,34 +108,39 @@ class LLMRails:
 
         # TODO: Currently we assume the first model is the main one. Add proper support
         #  to search for the main model config.
-        main_llm_config = self.config.models[0]
+            
+        for llm_config in self.config.models:     
+            if llm_config.engine not in get_llm_provider_names():
+                raise Exception(f"Unknown LLM engine: {llm_config.engine}")
+            
+            provider_cls = get_llm_provider(llm_config)
+            # We need to compute the kwargs for initializing the LLM
+            kwargs = llm_config.parameters
 
-        if main_llm_config.engine not in get_llm_provider_names():
-            raise Exception(f"Unknown LLM engine: {main_llm_config.engine}")
-
-        provider_cls = get_llm_provider(main_llm_config)
-
-        # We need to compute the kwargs for initializing the LLM
-        kwargs = main_llm_config.parameters
-
-        # We also need to pass the model, if specified
-        if main_llm_config.model:
-            # Some LLM providers use `model_name` instead of model. For backward compatibility
-            # we keep this hard-coded mapping.
-            if main_llm_config.engine in [
-                "azure",
-                "openai",
-                "gooseai",
-                "nlpcloud",
-                "petals",
-            ]:
-                kwargs["model_name"] = main_llm_config.model
+            # We also need to pass the model, if specified
+            if llm_config.model:
+                # Some LLM providers use `model_name` instead of model. For backward compatibility
+                # we keep this hard-coded mapping.
+                if llm_config.engine in [
+                    "azure",
+                    "openai",
+                    "gooseai",
+                    "nlpcloud",
+                    "petals",
+                ]:
+                    kwargs["model_name"] = llm_config.model
+                else:
+                    # The `__fields__` attribute is computed dynamically by pydantic.
+                    if "model" in provider_cls.__fields__:
+                        kwargs["model"] = llm_config.model
+            
+            if llm_config.type == "main":
+                self.llm = provider_cls(**kwargs)
+                self.runtime.register_action_param("llm", self.llm)
             else:
-                # The `__fields__` attribute is computed dynamically by pydantic.
-                if "model" in provider_cls.__fields__:
-                    kwargs["model"] = main_llm_config.model
-
-        self.llm = provider_cls(**kwargs)
+                model_name = f"{llm_config.type}_llm"
+                setattr(self, model_name, provider_cls(**kwargs))
+                self.runtime.register_action_param(model_name, getattr(self, model_name))
 
     def _get_events_for_messages(self, messages: List[dict]):
         """Return the list of events corresponding to the provided messages.
