@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import json
 import logging
 import os.path
 from typing import List
@@ -124,6 +124,7 @@ async def chat_completion(body: RequestBody):
     return {"messages": [bot_message]}
 
 
+# By default, there are no challenges
 challenges = []
 
 
@@ -144,6 +145,16 @@ def get_challenges():
     """Returns the list of available challenges for red teaming."""
 
     return challenges
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Register any additional challenges, if available at startup."""
+    challenges_files = os.path.join(app.rails_config_path, "challenges.json")
+
+    if os.path.exists:
+        with open(challenges_files) as f:
+            register_challenges(json.load(f))
 
 
 # Finally, we register the static frontend UI serving
