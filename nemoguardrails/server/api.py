@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
+import importlib.util
 import json
 import logging
 import os.path
@@ -25,6 +27,10 @@ from nemoguardrails import LLMRails, RailsConfig
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
+
+# The list of registered loggers. Can be used to send logs to various
+# backends and storage engines.
+registered_loggers = []
 
 api_description = """Guardrails Sever API."""
 
@@ -99,6 +105,10 @@ async def chat_completion(body: RequestBody):
     TODO: add support for explicit state object.
     """
     log.info("Got request for config %s", body.config_id)
+    for logger in registered_loggers:
+        asyncio.get_event_loop().create_task(
+            logger({"endpoint": "/v1/chat/completions", "body": body.json()})
+        )
 
     config_id = body.config_id
     try:
@@ -155,6 +165,19 @@ async def startup_event():
     if os.path.exists:
         with open(challenges_files) as f:
             register_challenges(json.load(f))
+
+    # Finally, check if we have a config.py for the server configuration
+    filepath = os.path.join(app.rails_config_path, "config.py")
+    if os.path.exists(filepath):
+        filename = os.path.basename(filepath)
+        spec = importlib.util.spec_from_file_location(filename, filepath)
+        config_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(config_module)
+
+
+def register_logger(logger: callable):
+    """Register an additional logger"""
+    registered_loggers.append(logger)
 
 
 # Finally, we register the static frontend UI serving
