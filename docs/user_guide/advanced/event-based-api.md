@@ -238,7 +238,7 @@ You can also use custom events:
 }
 ```
 
-**Note**: You need to make sure that the guardrails logic can handle the custom event.
+**Note**: You need to make sure that the guardrails logic can handle the custom event.  You do this by updating your flows to deal with the new events where needed. Otherwise, the custom event will just be ignored.
 
 ## Typical Usage
 
