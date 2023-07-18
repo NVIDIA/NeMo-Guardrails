@@ -82,8 +82,8 @@ class LLMRails:
         # First, we initialize the runtime.
         self.runtime = Runtime(config=config, verbose=verbose)
 
-        # Next, we initialize the LLM engine.
-        self._init_llm()
+        # Next, we initialize the LLM engines (main engine and action engines if specified).
+        self._init_llms()
         # Next, we initialize the LLM Generate actions and register them.
         actions = LLMGenerationActions(
             config=config,
@@ -99,8 +99,16 @@ class LLMRails:
         if config_module is not None and hasattr(config_module, "init"):
             config_module.init(self)
 
-    def _init_llm(self):
-        """Initializes the right LLM engine based on the configuration."""
+    def _init_llms(self):
+        """
+        Initializes the right LLM engines based on the configuration.
+        There can be multiple LLM engines and types that can be specified in the config.
+        The main LLM engine is the one that will be used for all the core guardrails generations.
+        Other LLM engines can be specified for use in specific actions.
+
+        The reason we provide an option for decoupling the main LLM engine from the action LLM
+        is to allow for flexibility in using specialized LLM engines for specific actions.
+        """
 
         # If we already have a pre-configured one, we do nothing.
         if self.llm is not None:
@@ -134,7 +142,7 @@ class LLMRails:
                     if "model" in provider_cls.__fields__:
                         kwargs["model"] = llm_config.model
             
-            if llm_config.type == "main":
+            if llm_config.type == "main" or len(self.config.models) == 1:
                 self.llm = provider_cls(**kwargs)
                 self.runtime.register_action_param("llm", self.llm)
             else:
