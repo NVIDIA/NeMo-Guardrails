@@ -124,6 +124,28 @@ async def chat_completion(body: RequestBody):
     return {"messages": [bot_message]}
 
 
+challenges = []
+
+
+def register_challenges(additional_challenges: List[dict]):
+    """Register additional challenges
+
+    Args:
+        additional_challenges: The new challenges to be registered.
+    """
+    challenges.extend(additional_challenges)
+
+
+@app.get(
+    "/v1/challenges",
+    summary="Get list of available challenges.",
+)
+def get_challenges():
+    """Returns the list of available challenges for red teaming."""
+
+    return challenges
+
+
 # Finally, we register the static frontend UI serving
 
 FRONTEND_DIR = os.path.join(
