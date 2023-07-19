@@ -45,7 +45,7 @@ async def check_jailbreak(
             },
         )
 
-        with llm_params(llm, temperature=0):
+        with llm_params(llm, temperature=0.0):
             check = await llm_call(llm, prompt)
 
         check = check.lower().strip()
