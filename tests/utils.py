@@ -16,7 +16,7 @@
 from typing import Any, List, Mapping, Optional
 
 from langchain.llms.base import LLM
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from nemoguardrails import LLMRails, RailsConfig
 
@@ -24,7 +24,7 @@ from nemoguardrails import LLMRails, RailsConfig
 class FakeLLM(LLM, BaseModel):
     """Fake LLM wrapper for testing purposes."""
 
-    responses: List
+    responses: List = Field(default_factory=list)
     i: int = 0
 
     @property
@@ -115,3 +115,10 @@ def clean_events(events: List[dict]):
     for e in events[:]:
         if e["type"] == "context_update" and len(e["data"]) == 0:
             events.remove(e)
+
+
+def clean_providers():
+    """Removes all providers from the registry."""
+    from nemoguardrails.llm.providers import _providers
+
+    _providers.clear()

@@ -108,9 +108,20 @@ class LLMRails:
         if self.llm is not None:
             return
 
-        # TODO: Currently we assume the first model is the main one. Add proper support
-        #  to search for the main model config.
-        main_llm_config = self.config.models[0]
+        if len(self.config.models) > 1:
+            # linear search for model with type "main"
+            for model in self.config.models:
+                if model.type == "main":
+                    main_llm_config = model
+                    break
+            if main_llm_config is None:
+                raise Exception(
+                    "Multiple LLM models specified. Please specify a main model."
+                )
+        elif len(self.config.models) == 0:
+            raise Exception("No LLM model specified.")
+        else:
+            main_llm_config = self.config.models[0]
 
         if main_llm_config.engine not in get_llm_provider_names():
             raise Exception(f"Unknown LLM engine: {main_llm_config.engine}")
