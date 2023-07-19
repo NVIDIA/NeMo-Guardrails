@@ -13,13 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
+import contextvars
 import importlib.util
 import json
 import logging
 import os.path
 from typing import List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel, Field
 from starlette.staticfiles import StaticFiles
 
@@ -33,6 +34,9 @@ log = logging.getLogger(__name__)
 registered_loggers = []
 
 api_description = """Guardrails Sever API."""
+
+# The headers for each request
+api_request_headers = contextvars.ContextVar("headers")
 
 
 app = FastAPI(
@@ -99,7 +103,7 @@ def _get_rails(config_id: str) -> LLMRails:
     "/v1/chat/completions",
     response_model=ResponseBody,
 )
-async def chat_completion(body: RequestBody):
+async def chat_completion(body: RequestBody, request: Request):
     """Chat completion for the provided conversation.
 
     TODO: add support for explicit state object.
@@ -109,6 +113,9 @@ async def chat_completion(body: RequestBody):
         asyncio.get_event_loop().create_task(
             logger({"endpoint": "/v1/chat/completions", "body": body.json()})
         )
+
+    # Save the request headers in a context variable.
+    api_request_headers.set(request.headers)
 
     config_id = body.config_id
     try:
@@ -162,7 +169,7 @@ async def startup_event():
     """Register any additional challenges, if available at startup."""
     challenges_files = os.path.join(app.rails_config_path, "challenges.json")
 
-    if os.path.exists:
+    if os.path.exists(challenges_files):
         with open(challenges_files) as f:
             register_challenges(json.load(f))
 
