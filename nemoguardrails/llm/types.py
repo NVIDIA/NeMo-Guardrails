@@ -28,4 +28,5 @@ class Task(Enum):
     FACT_CHECKING = "fact_checking"
     JAILBREAK_CHECK = "jailbreak_check"
     OUTPUT_MODERATION = "output_moderation"
+    OUTPUT_MODERATION_V2 = "output_moderation_v2"
     CHECK_HALLUCINATION = "check_hallucination"

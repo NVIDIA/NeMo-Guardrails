@@ -28,18 +28,18 @@ log = logging.getLogger(__name__)
 
 
 @action(is_system_action=True)
-async def output_moderation(
+async def output_moderation_v2(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
     """Checks if the bot response is appropriate and passes moderation."""
-    
+
     bot_response = context.get("last_bot_message")
     user_input = context.get("last_user_message")
     if bot_response:
         prompt = llm_task_manager.render_task_prompt(
-            task=Task.OUTPUT_MODERATION,
+            task=Task.OUTPUT_MODERATION_V2,
             context={
                 "user_input": user_input, 
                 "bot_response": bot_response,
