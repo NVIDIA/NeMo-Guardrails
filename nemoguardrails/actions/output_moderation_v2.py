@@ -34,23 +34,25 @@ async def output_moderation(
     llm: Optional[BaseLLM] = None,
 ):
     """Checks if the bot response is appropriate and passes moderation."""
-
+    
     bot_response = context.get("last_bot_message")
+    user_input = context.get("last_user_message")
     if bot_response:
         prompt = llm_task_manager.render_task_prompt(
             task=Task.OUTPUT_MODERATION,
             context={
+                "user_input": user_input, 
                 "bot_response": bot_response,
             },
         )
 
-        with llm_params(llm, temperature=0):
+        with llm_params(llm, temperature=0.0):
             check = await llm_call(llm, prompt)
 
         check = check.lower().strip()
         log.info(f"Output moderation check result is {check}.")
 
-        if "no" in check:
+        if "yes" in check:
             return False
 
     return True
