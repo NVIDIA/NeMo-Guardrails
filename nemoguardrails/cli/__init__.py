@@ -71,6 +71,10 @@ def server(
         default=False,
         help="If the server should be verbose and output detailed logs including prompts.",
     ),
+    disable_chat_ui: bool = typer.Option(
+        default=False,
+        help="Weather the ChatUI should be disabled",
+    ),
 ):
     """Starts a NeMo Guardrails server."""
     if config:
@@ -85,6 +89,9 @@ def server(
 
     if verbose:
         logging.getLogger().setLevel(logging.INFO)
+
+    if disable_chat_ui:
+        api.app.disable_chat_ui = True
 
     uvicorn.run(api.app, port=port, log_level="info", host="0.0.0.0")
 

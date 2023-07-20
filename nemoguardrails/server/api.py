@@ -50,6 +50,9 @@ app = FastAPI(
 # By default, we use the rails in the examples folder
 app.rails_config_path = os.path.join(os.path.dirname(__file__), "..", "..", "examples")
 
+# Weather the chat UI is enabled or not.
+app.disable_chat_ui = False
+
 
 class RequestBody(BaseModel):
     config_id: str = Field(description="The id of the configuration to be used.")
@@ -181,23 +184,28 @@ async def startup_event():
         config_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(config_module)
 
+    # Finally, we register the static frontend UI serving
+
+    if not app.disable_chat_ui:
+        FRONTEND_DIR = os.path.join(
+            os.path.dirname(__file__), "..", "..", "chat-ui", "frontend"
+        )
+
+        app.mount(
+            "/",
+            StaticFiles(
+                directory=FRONTEND_DIR,
+                html=True,
+            ),
+            name="chat",
+        )
+    else:
+
+        @app.get("/")
+        async def root_handler():
+            return {"status": "ok"}
+
 
 def register_logger(logger: callable):
     """Register an additional logger"""
     registered_loggers.append(logger)
-
-
-# Finally, we register the static frontend UI serving
-
-FRONTEND_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "..", "chat-ui", "frontend"
-)
-
-app.mount(
-    "/",
-    StaticFiles(
-        directory=FRONTEND_DIR,
-        html=True,
-    ),
-    name="chat",
-)
