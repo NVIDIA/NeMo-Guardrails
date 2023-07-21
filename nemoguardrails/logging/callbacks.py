@@ -241,6 +241,4 @@ logging_callback_manager_for_chain = AsyncCallbackManagerForChainRun(
     parent_run_id=None,
     handlers=handlers,
     inheritable_handlers=handlers,
-    tags=[],
-    inheritable_tags=[],
 )
