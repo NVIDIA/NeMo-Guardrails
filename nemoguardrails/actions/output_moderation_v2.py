@@ -41,7 +41,7 @@ async def output_moderation_v2(
         prompt = llm_task_manager.render_task_prompt(
             task=Task.OUTPUT_MODERATION_V2,
             context={
-                "user_input": user_input, 
+                "user_input": user_input,
                 "bot_response": bot_response,
             },
         )

@@ -116,11 +116,11 @@ class LLMRails:
 
         # TODO: Currently we assume the first model is the main one. Add proper support
         #  to search for the main model config.
-            
-        for llm_config in self.config.models:     
+
+        for llm_config in self.config.models:
             if llm_config.engine not in get_llm_provider_names():
                 raise Exception(f"Unknown LLM engine: {llm_config.engine}")
-            
+
             provider_cls = get_llm_provider(llm_config)
             # We need to compute the kwargs for initializing the LLM
             kwargs = llm_config.parameters
@@ -141,14 +141,16 @@ class LLMRails:
                     # The `__fields__` attribute is computed dynamically by pydantic.
                     if "model" in provider_cls.__fields__:
                         kwargs["model"] = llm_config.model
-            
+
             if llm_config.type == "main" or len(self.config.models) == 1:
                 self.llm = provider_cls(**kwargs)
                 self.runtime.register_action_param("llm", self.llm)
             else:
                 model_name = f"{llm_config.type}_llm"
                 setattr(self, model_name, provider_cls(**kwargs))
-                self.runtime.register_action_param(model_name, getattr(self, model_name))
+                self.runtime.register_action_param(
+                    model_name, getattr(self, model_name)
+                )
 
     def _get_events_for_messages(self, messages: List[dict]):
         """Return the list of events corresponding to the provided messages.

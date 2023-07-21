@@ -304,10 +304,13 @@ class Runtime:
                 for k, v in self.registered_action_params.items():
                     if k in parameters:
                         kwargs[k] = v
-                
-                if "llm" in kwargs and f"{action_name}_llm" in self.registered_action_params:
+
+                if (
+                    "llm" in kwargs
+                    and f"{action_name}_llm" in self.registered_action_params
+                ):
                     kwargs["llm"] = self.registered_action_params[f"{action_name}_llm"]
-                
+
                 log.info("Executing action :: %s", action_name)
                 result, status = await self.action_dispatcher.execute_action(
                     action_name, kwargs
