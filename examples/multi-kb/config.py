@@ -40,6 +40,8 @@ from transformers import (
     AutoTokenizer,
     pipeline,
 )
+import pandas as pd
+from gpt4pandas import GPT4Pandas
 
 def load_model(model_name, device, num_gpus, debug=False):
     if device == "cpu":
@@ -77,7 +79,53 @@ def load_model(model_name, device, num_gpus, debug=False):
 
     return model, tokenizer
 
+def tabularQnA_gpt4pandas(usr_query):
+    # loading titanic csv file
+    cut_idx=usr_query.find('based on')
+    usr_query=usr_query[:cut_idx]+'?'
+    model_path='/workspace/ckpt/gpt4all/ggml-vicuna-13b-4bit-rev1.bin'#<'path to the model file'>
+    titanic_csv_path='/workspace/Experiment/titanic.csv' # <path to titanic.csv is downloaded>
+    df = pd.read_csv(titanic_csv_path,sep=',')
 
+    # working on the data    
+    Embarked_d={'C' : "Cherbourg", 'Q': "Queenstown", 'S' : "Southampton"}
+    class_d={1:'first class',2:'second class',3:'third class'}
+    df['Class']=df['Pclass'].apply(lambda x : class_d[x])
+    # changing the embark port to full name
+    n=len(df)
+    col_ls=list(df.columns)
+    idx=col_ls.index('Embarked')
+    ls=[]
+    for i in range(n):        
+        temp=df.iloc[i,idx]
+        if type(temp)==str :
+            out=Embarked_d[temp]
+            ls.append(out)
+        else :
+            ls.append('N/A')
+            #print(i,temp, type(temp))
+    df['port']=ls
+    df['Lived']=df['Survived'].apply(lambda x: 'survived' if x ==1 else 'died')
+    #dropping duplicated and re-worked column 
+    df.drop('Survived', inplace=True, axis=1)
+    df.drop('Pclass', inplace=True, axis=1)
+    df.drop('Embarked', inplace=True, axis=1)
+    grouped_by_cols=[]
+    if any(word in usr_query for word in ['first class','second class','third class']) :
+        grouped_by_cols.append('Class')
+    elif 'port' in usr_query:
+        grouped_by_cols.append('port')
+    elif any(word in usr_query for word in ['female','male','man','woman','men','women']) :
+        grouped_by_cols.append('Sex')
+    else:
+        pass
+    d=df.groupby(grouped_by_cols)['Lived'].value_counts()
+    #flatten the groupedby pandas series to flatten dictionary
+    d2=d.reset_index(inplace=False)
+    gpt = GPT4Pandas(model_path, d2, verbose=False)
+    out = gpt.ask(usr_query)
+    return out, titanic_csv_path , d2.to_string()
+    
 
 def _make_faiss_gpu(data_path, out_path, embeddings):
     # Here we process the txt files under the data_path folder.
@@ -136,7 +184,7 @@ def _get_qa_chain_with_sources():
     hf_embedding = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
     using_vectorstore='faiss'
     if using_vectorstore=='faiss':
-        vectorestore_path =  "<path_to_already_processd_and_saved_to_disk_vectorstore>"
+        vectorestore_path =  '/workspace/Experiment/'#"<path_to_already_processd_and_saved_to_disk_vectorstore>"
         if vectorestore_path is not None:
             index = faiss.read_index(vectorestore_path+'docs.index')
             with open(vectorestore_path+"faiss_store.pkl", "rb") as f:
@@ -158,28 +206,33 @@ async def retrieve_relevant_chunks(
 ):
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     user_message = context.get("last_user_message")
-            
-    # using faiss vector database , pip install faiss-gpu if you have gpu, otherwise please use faiss-cpu 
-    vectordb = _get_qa_chain_with_sources()
-    retriever = vectordb.as_retriever(search_type='similarity', search_kwargs={"k": 3})
+    if 'csv' in user_message:
+        result, file_loc , flattened2string =tabularQnA_gpt4pandas(user_message)
+        source_ref= file_loc
+        citing_text=flattened2string
+    else:
+        # using faiss vector database , pip install faiss-gpu if you have gpu, otherwise please use faiss-cpu 
+        vectordb = _get_qa_chain_with_sources()
+        retriever = vectordb.as_retriever(search_type='similarity', search_kwargs={"k": 3})
 
-    qa_chain = RetrievalQA.from_chain_type(llm=hf_llm, 
-                                  chain_type="stuff", 
-                                  retriever=retriever, 
-                                  return_source_documents=True)     
+        qa_chain = RetrievalQA.from_chain_type(llm=hf_llm, 
+                                    chain_type="stuff", 
+                                    retriever=retriever, 
+                                    return_source_documents=True)     
 
-    result = qa_chain(user_message)
-    result['source_documents'][0].page_content
-    source_ref=str(result['source_documents'][0].metadata['source'])
-    
+        out = qa_chain(user_message)
+        result=out['result']
+        citing_text= out['source_documents'][0].page_content
+        source_ref=str(out['source_documents'][0].metadata['source'])   
 
     context_updates = {
         "relevant_chunks": f"""
             Question: {user_message}
-            Answer: {result['result']},
-            Citing : {result['source_documents'][0].page_content},
+            Answer: {result},
+            Citing : {citing_text},
             Source : {source_ref}
     """ }
+
 
     return ActionResult(
         return_value=context_updates["relevant_chunks"],
@@ -191,7 +244,7 @@ def init(llm_rails: LLMRails):
 
 def get_bloke_13b_llm():   
     # loading custom llm  from disk with multiGPUs support
-    model_name = "< path_to_the_saved_custom_llm_checkpoints >"  # loading model ckpt from disk
+    model_name = '/workspace/ckpt/bloke/'#"< path_to_the_saved_custom_llm_checkpoints >"  # loading model ckpt from disk
     device = "cuda"
     num_gpus = 2  # number of GPUs you have , do nvidia-smi to check 
     model, tokenizer = load_model(model_name, device, num_gpus, debug=False)

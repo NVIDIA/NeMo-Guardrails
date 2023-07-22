@@ -2,3 +2,4 @@ accelerate
 pandas
 faiss-gpu
 einops
+gpt4pandas
