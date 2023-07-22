@@ -83,8 +83,8 @@ def tabularQnA_gpt4pandas(usr_query):
     # loading titanic csv file
     cut_idx=usr_query.find('based on')
     usr_query=usr_query[:cut_idx]+'?'
-    model_path='/workspace/ckpt/gpt4all/ggml-vicuna-13b-4bit-rev1.bin'#<'path to the model file'>
-    titanic_csv_path='/workspace/Experiment/titanic.csv' # <path to titanic.csv is downloaded>
+    model_path=<'path to the model file'>
+    titanic_csv_path=<path to titanic.csv is downloaded>
     df = pd.read_csv(titanic_csv_path,sep=',')
 
     # working on the data    
@@ -103,7 +103,7 @@ def tabularQnA_gpt4pandas(usr_query):
             ls.append(out)
         else :
             ls.append('N/A')
-            #print(i,temp, type(temp))
+            
     df['port']=ls
     df['Lived']=df['Survived'].apply(lambda x: 'survived' if x ==1 else 'died')
     #dropping duplicated and re-worked column 
@@ -184,7 +184,7 @@ def _get_qa_chain_with_sources():
     hf_embedding = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
     using_vectorstore='faiss'
     if using_vectorstore=='faiss':
-        vectorestore_path =  '/workspace/Experiment/'#"<path_to_already_processd_and_saved_to_disk_vectorstore>"
+        vectorestore_path =  "<path_to_already_processd_and_saved_to_disk_vectorstore>"
         if vectorestore_path is not None:
             index = faiss.read_index(vectorestore_path+'docs.index')
             with open(vectorestore_path+"faiss_store.pkl", "rb") as f:
@@ -244,7 +244,7 @@ def init(llm_rails: LLMRails):
 
 def get_bloke_13b_llm():   
     # loading custom llm  from disk with multiGPUs support
-    model_name = '/workspace/ckpt/bloke/'#"< path_to_the_saved_custom_llm_checkpoints >"  # loading model ckpt from disk
+    model_name = "< path_to_the_saved_custom_llm_checkpoints >"  # loading model ckpt from disk
     device = "cuda"
     num_gpus = 2  # number of GPUs you have , do nvidia-smi to check 
     model, tokenizer = load_model(model_name, device, num_gpus, debug=False)
