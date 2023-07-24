@@ -49,7 +49,7 @@ def test_1():
     print(json.dumps(new_events, indent=True))
 
     # We check certain key events are present.
-    assert {"intent": "express greeting", "type": "user_intent"} in new_events
+    assert {"intent": "express greeting", "type": "UserIntent"} in new_events
     assert {"intent": "express greeting", "type": "bot_intent"} in new_events
     assert {"content": "Hello!", "type": "bot_said"} in new_events
     assert {"type": "listen"} in new_events

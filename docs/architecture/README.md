@@ -127,7 +127,7 @@ The stream of events processed by the guardrails runtime (a simplified view with
   action_name: generate_user_intent
   status: success
 
-- type: user_intent
+- type: UserIntent
   intent: ask about headline numbers
 
 # Stage 2: generate next step

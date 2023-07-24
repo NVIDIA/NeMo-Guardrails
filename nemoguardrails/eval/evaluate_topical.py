@@ -182,7 +182,7 @@ class TopicalRailsEvaluation:
         for flow in self.rails_app.config.flows:
             intent_next_actions = None
             for event in flow["elements"]:
-                if event["_type"] == "user_intent":
+                if event["_type"] == "UserIntent":
                     intent_name = event["intent_name"]
                     if intent_name in intents_with_flows:
                         print(intent_name)
@@ -231,7 +231,7 @@ class TopicalRailsEvaluation:
             for sample in samples:
                 prediction = {
                     "UtteranceUserActionFinished": sample,
-                    "user_intent": intent,
+                    "UserIntent": intent,
                 }
                 history_events = [
                     {"type": "UtteranceUserActionFinished", "final_transcript": sample}

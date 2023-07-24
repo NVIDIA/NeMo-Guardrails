@@ -37,14 +37,14 @@ Example output:
   "return_value": null,
   "events": [
    {
-    "type": "user_intent",
+    "type": "UserIntent",
     "intent": "express greeting"
    }
   ],
   "is_system_action": true
  },
  {
-  "type": "user_intent",
+  "type": "UserIntent",
   "intent": "express greeting"
  },
  {
@@ -128,14 +128,14 @@ Example:
 }
 ```
 
-### `user_intent`
+### `UserIntent`
 
 The computed intent (a.k.a. canonical form) for what the user said.
 
 Example:
 ```json
 {
-  "type": "user_intent",
+  "type": "UserIntent",
   "intent": "express greeting"
 }
 ```
@@ -194,7 +194,7 @@ Example:
   "return_value": null,
   "events": [
    {
-    "type": "user_intent",
+    "type": "UserIntent",
     "intent": "express greeting"
    }
   ],

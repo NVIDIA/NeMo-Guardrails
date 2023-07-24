@@ -21,7 +21,7 @@ FLOW_CONFIGS = {
     "greeting": FlowConfig(
         id="greeting",
         elements=[
-            {"_type": "user_intent", "intent_name": "express greeting"},
+            {"_type": "UserIntent", "intent_name": "express greeting"},
             {
                 "_type": "run_action",
                 "action_name": "utter",
@@ -61,7 +61,7 @@ def test_extension_flows_1():
     state = compute_next_state(
         state,
         {
-            "type": "user_intent",
+            "type": "UserIntent",
             "intent": "express greeting",
         },
     )

@@ -214,7 +214,9 @@ class LLMGenerationActions:
         return sample_conversation
 
     @action(is_system_action=True)
-    async def generate_user_intent(self, events: List[dict], llm: Optional[BaseLLM] = None):
+    async def generate_user_intent(
+        self, events: List[dict], llm: Optional[BaseLLM] = None
+    ):
         """Generate the canonical form for what the user said i.e. user intent."""
 
         # The last event should be the "start_action" and the one before it the "UtteranceUserActionFinished".
@@ -279,11 +281,11 @@ class LLMGenerationActions:
 
             if user_intent is None:
                 return ActionResult(
-                    events=[{"type": "user_intent", "intent": "unknown message"}]
+                    events=[{"type": "UserIntent", "intent": "unknown message"}]
                 )
             else:
                 return ActionResult(
-                    events=[{"type": "user_intent", "intent": user_intent}]
+                    events=[{"type": "UserIntent", "intent": user_intent}]
                 )
         else:
             prompt = self.llm_task_manager.render_task_prompt(
@@ -298,7 +300,9 @@ class LLMGenerationActions:
             )
 
     @action(is_system_action=True)
-    async def generate_next_step(self, events: List[dict], llm: Optional[BaseLLM] = None):
+    async def generate_next_step(
+        self, events: List[dict], llm: Optional[BaseLLM] = None
+    ):
         """Generate the next step in the current conversation flow.
 
         Currently, only generates a next step after a user intent.
@@ -308,11 +312,11 @@ class LLMGenerationActions:
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
 
-        # The last event should be the "start_action" and the one before it the "user_intent".
+        # The last event should be the "StartInternalSystemAction" and the one before it the "UserIntent".
         event = get_last_user_intent_event(events)
 
         # Currently, we only predict next step after a user intent using LLM
-        if event["type"] == "user_intent":
+        if event["type"] == "UserIntent":
             user_intent = event["intent"]
 
             # We search for the most relevant similar flows
@@ -400,7 +404,9 @@ class LLMGenerationActions:
         return ActionResult(return_value=None)
 
     @action(is_system_action=True)
-    async def generate_bot_message(self, events: List[dict], context: dict, llm: Optional[BaseLLM] = None):
+    async def generate_bot_message(
+        self, events: List[dict], context: dict, llm: Optional[BaseLLM] = None
+    ):
         """Generate a bot message based on the desired bot intent."""
         log.info("Phase 3 :: Generating bot message ...")
 
@@ -480,7 +486,11 @@ class LLMGenerationActions:
 
     @action(is_system_action=True)
     async def generate_value(
-        self, instructions: str, events: List[dict], var_name: Optional[str] = None, llm: Optional[BaseLLM] = None
+        self,
+        instructions: str,
+        events: List[dict],
+        var_name: Optional[str] = None,
+        llm: Optional[BaseLLM] = None,
     ):
         """Generate a value in the context of the conversation.
 

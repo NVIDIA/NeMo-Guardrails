@@ -21,13 +21,13 @@ FLOW_CONFIGS = {
     "greeting": FlowConfig(
         id="greeting",
         elements=[
-            {"_type": "user_intent", "intent_name": "express greeting"},
+            {"_type": "UserIntent", "intent_name": "express greeting"},
             {
                 "_type": "run_action",
                 "action_name": "utter",
                 "action_params": {"value": "express greeting"},
             },
-            {"_type": "user_intent", "intent_name": "ask capabilities"},
+            {"_type": "UserIntent", "intent_name": "ask capabilities"},
             {
                 "_type": "run_action",
                 "action_name": "utter",
@@ -38,7 +38,7 @@ FLOW_CONFIGS = {
     "benefits": FlowConfig(
         id="benefits",
         elements=[
-            {"_type": "user_intent", "intent_name": "ask about benefits"},
+            {"_type": "UserIntent", "intent_name": "ask about benefits"},
             {
                 "_type": "run_action",
                 "action_name": "utter",
@@ -54,7 +54,7 @@ FLOW_CONFIGS = {
     "math": FlowConfig(
         id="math",
         elements=[
-            {"_type": "user_intent", "intent_name": "ask math question"},
+            {"_type": "UserIntent", "intent_name": "ask math question"},
             {"_type": "run_action", "action_name": "wolfram alpha request"},
             {
                 "_type": "run_action",
@@ -78,7 +78,7 @@ def test_simple_sequence():
     state = compute_next_state(
         state,
         {
-            "type": "user_intent",
+            "type": "UserIntent",
             "intent": "express greeting",
         },
     )
@@ -100,7 +100,7 @@ def test_simple_sequence():
     state = compute_next_state(
         state,
         {
-            "type": "user_intent",
+            "type": "UserIntent",
             "intent": "ask capabilities",
         },
     )
@@ -127,7 +127,7 @@ def test_not_able_to_start_a_flow():
     state = compute_next_state(
         state,
         {
-            "type": "user_intent",
+            "type": "UserIntent",
             "intent": "ask capabilities",
         },
     )
@@ -141,7 +141,7 @@ def test_two_consecutive_bot_messages():
     state = compute_next_state(
         state,
         {
-            "type": "user_intent",
+            "type": "UserIntent",
             "intent": "ask about benefits",
         },
     )
@@ -181,7 +181,7 @@ def test_action_execution():
     state = compute_next_state(
         state,
         {
-            "type": "user_intent",
+            "type": "UserIntent",
             "intent": "ask math question",
         },
     )
@@ -233,7 +233,7 @@ def test_flow_interruption():
     state = compute_next_state(
         state,
         {
-            "type": "user_intent",
+            "type": "UserIntent",
             "intent": "express greeting",
         },
     )
@@ -255,7 +255,7 @@ def test_flow_interruption():
     state = compute_next_state(
         state,
         {
-            "type": "user_intent",
+            "type": "UserIntent",
             "intent": "ask about benefits",
         },
     )
@@ -290,7 +290,7 @@ def test_flow_interruption():
     state = compute_next_state(
         state,
         {
-            "type": "user_intent",
+            "type": "UserIntent",
             "intent": "ask capabilities",
         },
     )

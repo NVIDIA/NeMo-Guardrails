@@ -78,7 +78,7 @@ def get_colang_history(
     for idx, event in enumerate(events):
         if event["type"] == "UtteranceUserActionFinished" and include_texts:
             history += f'user "{event["final_transcript"]}"\n'
-        elif event["type"] == "user_intent":
+        elif event["type"] == "UserIntent":
             if include_texts:
                 history += f'  {event["intent"]}\n'
             else:
@@ -138,7 +138,7 @@ def flow_to_colang(flow: dict):
     for element in flow["elements"]:
         if "_type" not in element:
             raise Exception("bla")
-        if element["_type"] == "user_intent":
+        if element["_type"] == "UserIntent":
             colang_flow += f'user {element["intent_name"]}\n'
         elif element["_type"] == "run_action" and element["action_name"] == "utter":
             colang_flow += f'bot {element["action_params"]["value"]}\n'
@@ -180,7 +180,7 @@ def get_last_user_utterance_event(events: List[dict]):
 def get_last_user_intent_event(events: List[dict]):
     """Returns the last user intent from the events."""
     for event in reversed(events):
-        if event["type"] == "user_intent":
+        if event["type"] == "UserIntent":
             return event
 
     return None

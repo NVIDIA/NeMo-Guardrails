@@ -46,7 +46,7 @@ class FlowConfig:
     is_subflow: bool = False
 
     # The events that can trigger this flow to advance.
-    trigger_event_types = ["user_intent", "bot_intent", "run_action", "action_finished"]
+    trigger_event_types = ["UserIntent", "bot_intent", "run_action", "action_finished"]
 
     # The actual source code, if available
     source_code: Optional[str] = None
@@ -123,8 +123,8 @@ def _is_match(element: dict, event: dict) -> bool:
     # The element type is the first key in the element dictionary
     element_type = element["_type"]
 
-    if event["type"] == "user_intent":
-        return element_type == "user_intent" and (
+    if event["type"] == "UserIntent":
+        return element_type == "UserIntent" and (
             element["intent_name"] == "..." or element["intent_name"] == event["intent"]
         )
 

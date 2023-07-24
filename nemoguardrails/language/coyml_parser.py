@@ -127,7 +127,7 @@ def _dict_to_element(d):
                 del d_params[k]
 
         element = {
-            "_type": "user_intent",
+            "_type": "UserIntent",
             # We replace all spaces in intent names with "|"
             "intent_name": d_value,
             "intent_params": {
