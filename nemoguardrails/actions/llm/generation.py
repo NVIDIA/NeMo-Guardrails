@@ -217,9 +217,9 @@ class LLMGenerationActions:
     async def generate_user_intent(self, events: List[dict], llm: Optional[BaseLLM] = None):
         """Generate the canonical form for what the user said i.e. user intent."""
 
-        # The last event should be the "start_action" and the one before it the "user_said".
+        # The last event should be the "start_action" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
-        assert event["type"] == "user_said"
+        assert event["type"] == "UtteranceUserActionFinished"
 
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
@@ -239,7 +239,7 @@ class LLMGenerationActions:
 
             if self.user_message_index:
                 results = self.user_message_index.search(
-                    text=event["content"], max_results=5
+                    text=event["final_transcript"], max_results=5
                 )
 
                 # We add these in reverse order so the most relevant is towards the end.

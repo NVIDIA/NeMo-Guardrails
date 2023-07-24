@@ -12,8 +12,8 @@ config = RailsConfig.from_path("path/to/config")
 app = LLMRails(config)
 
 new_events = app.generate_events(events=[{
-    "type": "user_said",
-    "content": "Hello! What can you do for me?"
+    "type": "UtteranceUserActionFinished",
+    "final_transcript": "Hello! What can you do for me?"
 }])
 print(json.dumps(new_events, indent=True))
 ```
@@ -114,17 +114,17 @@ Example output:
 
 ## Event Types
 
-NeMo Guardrails supports multiple types of events. Some are meant for internal use (e.g., `user_intent`, `bot_intent`), while others represent the "public" interface (e.g., `user_said`, `bot_said`).
+NeMo Guardrails supports multiple types of events. Some are meant for internal use (e.g., `user_intent`, `bot_intent`), while others represent the "public" interface (e.g., `UtteranceUserActionFinished`, `bot_said`).
 
-### `user_said`
+### `UtteranceUserActionFinished`
 
 The raw message from the user.
 
 Example:
 ```json
 {
-  "type": "user_said",
-  "content": "Hello!"
+  "type": "UtteranceUserActionFinished",
+  "final_transcript": "Hello!"
 }
 ```
 

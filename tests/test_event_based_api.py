@@ -39,7 +39,7 @@ def test_1():
     )
 
     new_events = chat.app.generate_events(
-        events=[{"type": "user_said", "content": "Hello!"}]
+        events=[{"type": "UtteranceUserActionFinished", "final_transcript": "Hello!"}]
     )
 
     # We don't want to pin the exact number here in the test as the exact number of events
@@ -82,7 +82,7 @@ def test_2():
         ],
     )
 
-    events = [{"type": "user_said", "content": "Hello!"}]
+    events = [{"type": "UtteranceUserActionFinished", "final_transcript": "Hello!"}]
     new_events = chat.app.generate_events(events)
 
     assert {"type": "bot_said", "content": "Hello!"} in new_events

@@ -66,12 +66,12 @@ async def test_simple_context_update_from_action(rails_config):
     llm_rails = LLMRails(config=rails_config, llm=llm)
     llm_rails.runtime.register_action(increase_counter)
 
-    events = [{"type": "user_said", "content": "Hello!"}]
+    events = [{"type": "UtteranceUserActionFinished", "final_transcript": "Hello!"}]
 
     new_events = await llm_rails.runtime.generate_events(events)
 
     events.extend(new_events)
-    events.append({"type": "user_said", "content": "Hello!"})
+    events.append({"type": "UtteranceUserActionFinished", "final_transcript": "Hello!"})
 
     new_events = await llm_rails.runtime.generate_events(events)
 

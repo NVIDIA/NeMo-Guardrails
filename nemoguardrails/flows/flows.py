@@ -148,9 +148,10 @@ def _is_match(element: dict, event: dict) -> bool:
             and element["action_name"] == event["action_name"]
         )
 
-    elif event["type"] == "user_said":
-        return element_type == "user_said" and (
-            element["content"] == "..." or element["content"] == event["content"]
+    elif event["type"] == "UtteranceUserActionFinished":
+        return element_type == "UtteranceUserActionFinished" and (
+            element["final_transcript"] == "..."
+            or element["final_transcript"] == event["final_transcript"]
         )
 
     elif event["type"] == "bot_said":
@@ -483,12 +484,14 @@ def compute_next_steps(
     actual_history = []
     for event in history:
         if event["type"] == "hide_prev_turn":
-            # we look up the last `user_said` event and remove everything after
+            # we look up the last `UtteranceUserActionFinished` event and remove everything after
             end = len(actual_history) - 1
-            while end > 0 and actual_history[end]["type"] != "user_said":
+            while (
+                end > 0 and actual_history[end]["type"] != "UtteranceUserActionFinished"
+            ):
                 end -= 1
 
-            assert actual_history[end]["type"] == "user_said"
+            assert actual_history[end]["type"] == "UtteranceUserActionFinished"
             actual_history = actual_history[0:end]
         else:
             actual_history.append(event)
@@ -537,8 +540,8 @@ def compute_context(history: List[dict]):
         if event["type"] == "context_update":
             context.update(event["data"])
 
-        if event["type"] == "user_said":
-            context["last_user_message"] = event["content"]
+        if event["type"] == "UtteranceUserActionFinished":
+            context["last_user_message"] = event["final_transcript"]
 
         elif event["type"] == "bot_said":
             context["last_bot_message"] = event["content"]

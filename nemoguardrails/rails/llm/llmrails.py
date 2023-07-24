@@ -187,7 +187,12 @@ class LLMRails:
         # TODO: Move this to separate function once more types of messages are supported.
         for msg in messages[p:]:
             if msg["role"] == "user":
-                events.append({"type": "user_said", "content": msg["content"]})
+                events.append(
+                    {
+                        "type": "UtteranceUserActionFinished",
+                        "final_transcript": msg["content"],
+                    }
+                )
             elif msg["role"] == "assistant":
                 events.append({"type": "bot_said", "content": msg["content"]})
             elif msg["role"] == "context":

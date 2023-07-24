@@ -230,10 +230,12 @@ class TopicalRailsEvaluation:
         for intent, samples in self.test_set.items():
             for sample in samples:
                 prediction = {
-                    "user_said": sample,
+                    "UtteranceUserActionFinished": sample,
                     "user_intent": intent,
                 }
-                history_events = [{"type": "user_said", "content": sample}]
+                history_events = [
+                    {"type": "UtteranceUserActionFinished", "final_transcript": sample}
+                ]
                 new_events = await self.rails_app.runtime.generate_events(
                     history_events
                 )

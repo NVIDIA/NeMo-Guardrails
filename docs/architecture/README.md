@@ -8,7 +8,7 @@ This document provides more details on the architecture and the approach that th
 
 This section explains in detail the process under the hood, from the utterance sent by the user to the bot utterance that is returned.
 
-The guardrails runtime uses an event-driven design (i.e., an event loop that processes events and generates back other events). Whenever the user says something to the bot, a `user_said` event is created and sent to the runtime.
+The guardrails runtime uses an event-driven design (i.e., an event loop that processes events and generates back other events). Whenever the user says something to the bot, a `UtteranceUserActionFinished` event is created and sent to the runtime.
 
 The process has three main stages:
 
@@ -28,7 +28,7 @@ This stage is itself implemented through a colang flow:
 define flow generate user intent
   """Turn the raw user utterance into a canonical form."""
 
-  event user_said(content="...")
+  event UtteranceUserActionFinished(final_transcript="...")
   execute generate_user_intent
 ```
 
@@ -116,8 +116,8 @@ bot response about headline numbers
 The stream of events processed by the guardrails runtime (a simplified view with unnecessary properties removed and values truncated for readability):
 
 ```yaml
-- type: user_said
-  content: "how many unemployed people were there in March?"
+- type: UtteranceUserActionFinished
+  final_transcript: "how many unemployed people were there in March?"
 
 # Stage 1: generate canonical form
 - type: start_action

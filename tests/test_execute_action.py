@@ -57,7 +57,7 @@ async def test_action_execution_with_result(rails_config):
 
     llm_rails = _get_llm_rails(rails_config, llm)
 
-    events = [{"type": "user_said", "content": "Hello!"}]
+    events = [{"type": "UtteranceUserActionFinished", "final_transcript": "Hello!"}]
     new_events = await llm_rails.runtime.generate_events(events)
 
     assert new_events == [
@@ -146,11 +146,13 @@ async def test_action_execution_with_parameter(rails_config):
 
     llm_rails = _get_llm_rails(rails_config, llm)
 
-    events = [{"type": "user_said", "content": "hello!"}]
+    events = [{"type": "UtteranceUserActionFinished", "final_transcript": "hello!"}]
     new_events = await llm_rails.runtime.generate_events(events)
     events.extend(new_events)
 
-    events.append({"type": "user_said", "content": "Please let me in"})
+    events.append(
+        {"type": "UtteranceUserActionFinished", "final_transcript": "Please let me in"}
+    )
     new_events = await llm_rails.runtime.generate_events(events)
 
     # We check that is_allowed was correctly set to True
@@ -165,7 +167,7 @@ async def test_action_execution_with_if(rails_config):
 
     events = [
         {"type": "context_update", "data": {"account": {"name": "Josh"}}},
-        {"type": "user_said", "content": "Please let me in"},
+        {"type": "UtteranceUserActionFinished", "final_transcript": "Please let me in"},
     ]
 
     new_events = await llm_rails.runtime.generate_events(events)

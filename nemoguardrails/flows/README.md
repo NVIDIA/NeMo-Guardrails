@@ -6,7 +6,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 
 The following is the list of standard events:
 
-- `user_said(content)`: a new utterance from the user has been received.
+- `UtteranceUserActionFinished(final_transcript)`: a new utterance from the user has been received.
 - `user_intent(intent)`: a canonical form for the user utterance has been identified.
 - `bot_intent(intent)`: a new bot intent has been decided i.e. what it should say.
 - `bot_said(content)`: the utterance for a bot message has been decided.

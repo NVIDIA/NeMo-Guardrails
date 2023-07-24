@@ -157,10 +157,10 @@ def _dict_to_element(d):
                 _pp.append(f"$intent_params.{p if p[0] != '$' else p[1:]} is not None")
             element["_match"] = " and ".join(_pp)
 
-    elif d_type in ["user_said"]:
+    elif d_type in ["UtteranceUserActionFinished"]:
         element = {
-            "_type": "user_said",
-            "content": d_value,
+            "_type": "UtteranceUserActionFinished",
+            "final_transcript": d_value,
         }
 
     elif d_type in ["bot_said"]:

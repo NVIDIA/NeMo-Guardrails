@@ -100,8 +100,8 @@ def user_assistant_sequence(events: List[dict]) -> str:
     """
     history_items = []
     for event in events:
-        if event["type"] == "user_said":
-            history_items.append("User: " + event["content"])
+        if event["type"] == "UtteranceUserActionFinished":
+            history_items.append("User: " + event["final_transcript"])
         elif event["type"] == "bot_said":
             history_items.append("Assistant: " + event["content"])
 

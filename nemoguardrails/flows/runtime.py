@@ -103,8 +103,10 @@ class Runtime:
         # We also compute what types of events can trigger this flow, in addition
         # to the default ones.
         for element in elements:
-            if element.get("user_said"):
-                self.flow_configs[flow_id].trigger_event_types.append("user_said")
+            if element.get("UtteranceUserActionFinished"):
+                self.flow_configs[flow_id].trigger_event_types.append(
+                    "UtteranceUserActionFinished"
+                )
 
     def _init_flow_configs(self):
         """Initializes the flow configs based on the config."""

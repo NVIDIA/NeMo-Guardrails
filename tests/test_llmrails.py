@@ -77,7 +77,7 @@ async def test_1(rails_config):
     llm_rails = LLMRails(config=rails_config, llm=llm)
     llm_rails.runtime.register_action(compute)
 
-    events = [{"type": "user_said", "content": "Hello!"}]
+    events = [{"type": "UtteranceUserActionFinished", "final_transcript": "Hello!"}]
 
     new_events = await llm_rails.runtime.generate_events(events)
     clean_events(new_events)
@@ -142,7 +142,7 @@ async def test_1(rails_config):
     ]
 
     events.extend(new_events)
-    events.append({"type": "user_said", "content": "2 + 3"})
+    events.append({"type": "UtteranceUserActionFinished", "final_transcript": "2 + 3"})
 
     new_events = await llm_rails.runtime.generate_events(events)
     clean_events(new_events)
