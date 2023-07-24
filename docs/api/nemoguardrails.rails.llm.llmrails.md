@@ -73,7 +73,7 @@ The format for messages is the following:
          {"role": "context", "content": {"user_name": "John"}},
          {"role": "user", "content": "Hello! How are you?"},
          {"role": "assistant", "content": "I am fine, thank you!"},
-         {"role": "event", "event": {"type": "user_silent"}},
+         {"role": "event", "event": {"type": "UserSilent"}},
          ...
      ]
 ```

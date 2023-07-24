@@ -22,14 +22,14 @@ Example output:
 ```yaml
 [
  {
-  "type": "start_action",
+  "type": "StartCustomBotAction",
   "action_name": "generate_user_intent",
   "action_params": {},
   "action_result_key": null,
   "is_system_action": true
  },
  {
-  "type": "action_finished",
+  "type": "CustomBotActionFinished",
   "action_name": "generate_user_intent",
   "action_params": {},
   "action_result_key": null,
@@ -52,20 +52,20 @@ Example output:
   "intent": "express greeting"
  },
  {
-  "type": "start_action",
+  "type": "StartCustomBotAction",
   "action_name": "retrieve_relevant_chunks",
   "action_params": {},
   "action_result_key": null,
   "is_system_action": true
  },
  {
-  "type": "context_update",
+  "type": "ContextUpdate",
   "data": {
    "relevant_chunks": ""
   }
  },
  {
-  "type": "action_finished",
+  "type": "CustomBotActionFinished",
   "action_name": "retrieve_relevant_chunks",
   "action_params": {},
   "action_result_key": null,
@@ -75,20 +75,20 @@ Example output:
   "is_system_action": true
  },
  {
-  "type": "start_action",
+  "type": "StartCustomBotAction",
   "action_name": "generate_bot_message",
   "action_params": {},
   "action_result_key": null,
   "is_system_action": true
  },
  {
-  "type": "context_update",
+  "type": "ContextUpdate",
   "data": {
    "_last_bot_prompt": "<<REMOVED FOR READABILITY>>>"
   }
  },
  {
-  "type": "action_finished",
+  "type": "CustomBotActionFinished",
   "action_name": "generate_bot_message",
   "action_params": {},
   "action_result_key": null,
@@ -96,25 +96,25 @@ Example output:
   "return_value": null,
   "events": [
    {
-    "type": "bot_said",
-    "content": "Hello!"
+    "type": "StartUtteranceBotAction",
+    "script": "Hello!"
    }
   ],
   "is_system_action": true
  },
  {
-  "type": "bot_said",
-  "content": "Hello!"
+  "type": "StartUtteranceBotAction",
+  "script": "Hello!"
  },
  {
-  "type": "listen"
+  "type": "Listen"
  }
 ]
 ```
 
 ## Event Types
 
-NeMo Guardrails supports multiple types of events. Some are meant for internal use (e.g., `UserIntent`, `BotIntent`), while others represent the "public" interface (e.g., `UtteranceUserActionFinished`, `bot_said`).
+NeMo Guardrails supports multiple types of events. Some are meant for internal use (e.g., `UserIntent`, `BotIntent`), while others represent the "public" interface (e.g., `UtteranceUserActionFinished`, `StartUtteranceBotAction`).
 
 ### `UtteranceUserActionFinished`
 
@@ -152,26 +152,26 @@ Example:
 }
 ```
 
-### `bot_said`
+### `StartUtteranceBotAction`
 
 The final message from the bot.
 
 Example:
 ```json
 {
-  "type": "bot_said",
-  "content": "Hello!"
+  "type": "StartUtteranceBotAction",
+  "script": "Hello!"
 }
 ```
 
-### `start_action`
+### `StartCustomBotAction`
 
 An action needs to be started.
 
 Example:
 ```json
 {
-  "type": "start_action",
+  "type": "StartCustomBotAction",
   "action_name": "generate_user_intent",
   "action_params": {},
   "action_result_key": null,
@@ -179,14 +179,14 @@ Example:
 }
 ```
 
-### `action_finished`
+### `CustomBotActionFinished`
 
 An action has finished.
 
 Example:
 ```json
 {
-  "type": "action_finished",
+  "type": "CustomBotActionFinished",
   "action_name": "generate_user_intent",
   "action_params": {},
   "action_result_key": null,
@@ -202,14 +202,14 @@ Example:
 }
 ```
 
-### `context_update`
+### `ContextUpdate`
 
 The context of the conversation has been updated.
 
 Example:
 ```json
 {
-  "type": "context_update",
+  "type": "ContextUpdate",
   "data": {
    "user_name": "John"
   }
@@ -223,7 +223,7 @@ The bot has finished processing the events and is waiting for new input.
 Example:
 ```json
 {
-  "type": "listen"
+  "type": "Listen"
 }
 ```
 
@@ -247,5 +247,5 @@ Typically, you will need to:
 1. Persist the events history for a particular user in a database.
 2. Whenever there is a new message or another event, you fetch the history and append the new event.
 3. Use the guardrails API to generate the next events.
-4. Filter the `bot_said` events and return them to the user.
+4. Filter the `StartUtteranceBotAction` events and return them to the user.
 5. Persist the history of events back into the database.

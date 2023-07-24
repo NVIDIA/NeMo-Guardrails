@@ -15,7 +15,7 @@
 import json
 
 from nemoguardrails import RailsConfig
-from tests.utils import TestChat
+from tests.utils import TestChat, any_event_conforms
 
 
 def test_1():
@@ -49,10 +49,16 @@ def test_1():
     print(json.dumps(new_events, indent=True))
 
     # We check certain key events are present.
-    assert {"intent": "express greeting", "type": "UserIntent"} in new_events
-    assert {"intent": "express greeting", "type": "BotIntent"} in new_events
-    assert {"content": "Hello!", "type": "bot_said"} in new_events
-    assert {"type": "listen"} in new_events
+    assert any_event_conforms(
+        {"intent": "express greeting", "type": "UserIntent"}, new_events
+    )
+    assert any_event_conforms(
+        {"intent": "express greeting", "type": "BotIntent"}, new_events
+    )
+    assert any_event_conforms(
+        {"script": "Hello!", "type": "StartUtteranceBotAction"}, new_events
+    )
+    assert any_event_conforms({"type": "Listen"}, new_events)
 
 
 CONFIG_WITH_EVENT = """
@@ -64,7 +70,7 @@ CONFIG_WITH_EVENT = """
       bot express greeting
 
     define flow
-      event user_silent
+      event UserSilent
       bot ask if more time needed
 """
 
@@ -85,14 +91,22 @@ def test_2():
     events = [{"type": "UtteranceUserActionFinished", "final_transcript": "Hello!"}]
     new_events = chat.app.generate_events(events)
 
-    assert {"type": "bot_said", "content": "Hello!"} in new_events
+    any_event_conforms(
+        {"type": "StartUtteranceBotAction", "script": "Hello!"}, new_events
+    )
 
     events.extend(new_events)
-    events.append({"type": "user_silent"})
+    events.append({"type": "UserSilent"})
 
     new_events = chat.app.generate_events(events)
 
-    assert {"type": "bot_said", "content": "Do you need more time?"} in new_events
+    any_event_conforms(
+        {
+            "type": "StartUtteranceBotAction",
+            "script": "Do you need more time?",
+        },
+        new_events,
+    )
 
 
 def test_3():
@@ -115,7 +129,7 @@ def test_3():
     assert new_message == {"role": "assistant", "content": "Hello!"}
 
     messages.append(new_message)
-    messages.append({"role": "event", "event": {"type": "user_silent"}})
+    messages.append({"role": "event", "event": {"type": "UserSilent"}})
 
     new_message = chat.app.generate(messages=messages)
 

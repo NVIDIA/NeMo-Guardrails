@@ -23,6 +23,7 @@ from nemoguardrails.actions.llm.utils import llm_call
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
+from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +56,9 @@ async def check_jailbreak(
             return ActionResult(
                 return_value=False,
                 events=[
-                    {"type": "mask_prev_user_message", "intent": "unanswerable message"}
+                    new_event_dict(
+                        "mask_prev_user_message", intent="unanswerable message"
+                    )
                 ],
             )
     # If there was no user input, we always return True i.e. the user input is allowed

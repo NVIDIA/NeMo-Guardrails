@@ -20,6 +20,7 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 from nemoguardrails.flows.sliding import slide
+from nemoguardrails.utils import new_event_dict
 
 
 @dataclass
@@ -46,7 +47,12 @@ class FlowConfig:
     is_subflow: bool = False
 
     # The events that can trigger this flow to advance.
-    trigger_event_types = ["UserIntent", "BotIntent", "run_action", "action_finished"]
+    trigger_event_types = [
+        "UserIntent",
+        "BotIntent",
+        "run_action",
+        "CustomBotActionFinished",
+    ]
 
     # The actual source code, if available
     source_code: Optional[str] = None
@@ -138,7 +144,7 @@ def _is_match(element: dict, event: dict) -> bool:
             )
         )
 
-    elif event["type"] == "action_finished":
+    elif event["type"] == "CustomBotActionFinished":
         # Currently, we only match successful execution of actions
         if event["status"] != "success":
             return False
@@ -154,9 +160,9 @@ def _is_match(element: dict, event: dict) -> bool:
             or element["final_transcript"] == event["final_transcript"]
         )
 
-    elif event["type"] == "bot_said":
-        return element_type == "bot_said" and (
-            element["content"] == "..." or element["content"] == event["content"]
+    elif event["type"] == "StartUtteranceBotAction":
+        return element_type == "StartUtteranceBotAction" and (
+            element["script"] == "..." or element["script"] == event["script"]
         )
 
     else:
@@ -265,12 +271,12 @@ def compute_next_state(state: State, event: dict) -> State:
     - No prioritization between flows, the first one that can decide something will be used.
     """
 
-    # We don't advance flow on `start_action`, but on `action_finished`.
-    if event["type"] == "start_action":
+    # We don't advance flow on `StartCustomBotAction`, but on `CustomBotActionFinished`.
+    if event["type"] == "StartCustomBotAction":
         return state
 
     # We don't need to decide any next step on context updates.
-    if event["type"] == "context_update":
+    if event["type"] == "ContextUpdate":
         # TODO: add support to also remove keys from the context.
         #  maybe with a special context key e.g. "__remove__": ["key1", "key2"]
         state.context.update(event["data"])
@@ -464,12 +470,12 @@ def _step_to_event(step: dict) -> dict:
             action_params = step.get("action_params", {})
             action_result_key = step.get("action_result_key")
 
-            return {
-                "type": "start_action",
-                "action_name": action_name,
-                "action_params": action_params,
-                "action_result_key": action_result_key,
-            }
+            return new_event_dict(
+                "StartCustomBotAction",
+                action_name=action_name,
+                action_params=action_params,
+                action_result_key=action_result_key,
+            )
     else:
         raise ValueError(f"Unknown next step type: {step_type}")
 
@@ -508,7 +514,7 @@ def compute_next_steps(
 
     # If we have context updates after this event, we first add that.
     if state.context_updates:
-        next_steps.append({"type": "context_update", "data": state.context_updates})
+        next_steps.append(new_event_dict("ContextUpdate", data=state.context_updates))
 
     # If we have a next step, we make sure to convert it to proper event structure.
     if state.next_step:
@@ -537,13 +543,13 @@ def compute_context(history: List[dict]):
     }
 
     for event in history:
-        if event["type"] == "context_update":
+        if event["type"] == "ContextUpdate":
             context.update(event["data"])
 
         if event["type"] == "UtteranceUserActionFinished":
             context["last_user_message"] = event["final_transcript"]
 
-        elif event["type"] == "bot_said":
-            context["last_bot_message"] = event["content"]
+        elif event["type"] == "StartUtteranceBotAction":
+            context["last_bot_message"] = event["script"]
 
     return context

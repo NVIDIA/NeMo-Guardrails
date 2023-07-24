@@ -39,6 +39,20 @@ def _add_modality_info(event_dict: Dict[str, Any]) -> Dict[str, Any]:
             event_dict["action_info_modality_policy"] = modality_policy
 
 
+def _update_action_properties(event_dict: Dict[str, Any]) -> Dict[str, Any]:
+    if "Finished" in event_dict["type"]:
+        event_dict["event_created_at"] = datetime.now(timezone.utc).isoformat()
+        assert (
+            "is_success" in event_dict
+        ), "***ActionFinished events require is_success field"
+        assert (
+            event_dict["is_success"] or "failure_reason" in event_dict
+        ), "Unsuccessful ***ActionFinished events need to provide 'failure_reason'."
+
+        if event_dict["is_success"] and event_dict["failure_reason"]:
+            del event_dict["failure_reason"]
+
+
 def new_event_dict(event_type: str, **payload) -> Dict[str, Any]:
     """Helper to create a generic event structure."""
 
@@ -49,7 +63,10 @@ def new_event_dict(event_type: str, **payload) -> Dict[str, Any]:
         "source_uid": "NeMoGuardrails",
     }
 
+    event = {**event, **payload}
+
     if "Action" in event_type:
         _add_modality_info(event)
+        _update_action_properties(event)
 
-    return {**event, **payload}
+    return event

@@ -194,9 +194,11 @@ class LLMRails:
                     }
                 )
             elif msg["role"] == "assistant":
-                events.append({"type": "bot_said", "content": msg["content"]})
+                events.append(
+                    {"type": "StartUtteranceBotAction", "script": msg["content"]}
+                )
             elif msg["role"] == "context":
-                events.append({"type": "context_update", "data": msg["content"]})
+                events.append({"type": "ContextUpdate", "data": msg["content"]})
             elif msg["role"] == "event":
                 events.append(msg["event"])
 
@@ -214,7 +216,7 @@ class LLMRails:
                 {"role": "context", "content": {"user_name": "John"}},
                 {"role": "user", "content": "Hello! How are you?"},
                 {"role": "assistant", "content": "I am fine, thank you!"},
-                {"role": "event", "event": {"type": "user_silent"}},
+                {"role": "event", "event": {"type": "UserSilent"}},
                 ...
             ]
         ```
@@ -248,15 +250,15 @@ class LLMRails:
         # Compute the new events.
         new_events = await self.runtime.generate_events(events)
 
-        # Extract and join all the messages from bot_said events as the response.
+        # Extract and join all the messages from StartUtteranceBotAction events as the response.
         responses = []
         for event in new_events:
-            if event["type"] == "bot_said":
+            if event["type"] == "StartUtteranceBotAction":
                 # Check if we need to remove a message
-                if event["content"] == "(remove last message)":
+                if event["script"] == "(remove last message)":
                     responses = responses[0:-1]
                 else:
-                    responses.append(event["content"])
+                    responses.append(event["script"])
 
         new_message = {"role": "assistant", "content": "\n".join(responses)}
 

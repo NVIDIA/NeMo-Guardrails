@@ -163,9 +163,9 @@ def _dict_to_element(d):
             "final_transcript": d_value,
         }
 
-    elif d_type in ["bot_said"]:
+    elif d_type in ["StartUtteranceBotAction"]:
         element = {
-            "_type": "bot_said",
+            "_type": "StartUtteranceBotAction",
             "content": d_value,
         }
 

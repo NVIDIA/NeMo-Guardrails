@@ -85,17 +85,21 @@ def get_colang_history(
                 history += f'user {event["intent"]}\n'
         elif event["type"] == "BotIntent":
             history += f'bot {event["intent"]}\n'
-        elif event["type"] == "bot_said" and include_texts:
-            history += f'  "{event["content"]}"\n'
+        elif event["type"] == "StartUtteranceBotAction" and include_texts:
+            history += f'  "{event["script"]}"\n'
         # We skip system actions from this log
-        elif event["type"] == "start_action" and not event.get("is_system_action"):
+        elif event["type"] == "StartCustomBotAction" and not event.get(
+            "is_system_action"
+        ):
             if (
                 remove_retrieval_events
                 and event["action_name"] == "retrieve_relevant_chunks"
             ):
                 continue
             history += f'execute {event["action_name"]}\n'
-        elif event["type"] == "action_finished" and not event.get("is_system_action"):
+        elif event["type"] == "CustomBotActionFinished" and not event.get(
+            "is_system_action"
+        ):
             if (
                 remove_retrieval_events
                 and event["action_name"] == "retrieve_relevant_chunks"
@@ -160,7 +164,7 @@ def get_retrieved_relevant_chunks(events: List[dict]):
     for event in reversed(events):
         if event["type"] == "UtteranceUserActionFinished":
             break
-        if event["type"] == "context_update" and "relevant_chunks" in event.get(
+        if event["type"] == "ContextUpdate" and "relevant_chunks" in event.get(
             "data", {}
         ):
             return event["data"]["relevant_chunks"]
@@ -189,7 +193,7 @@ def get_last_user_intent_event(events: List[dict]):
 def get_last_bot_utterance_event(events: List[dict]):
     """Returns the last bot utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "bot_said":
+        if event["type"] == "StartCustomBotAction":
             return event
 
     return None

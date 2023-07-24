@@ -18,7 +18,7 @@ from typing import Optional
 import pytest
 
 from nemoguardrails import LLMRails, RailsConfig
-from tests.utils import FakeLLM, clean_events
+from tests.utils import FakeLLM, clean_events, event_sequence_conforms
 
 
 @pytest.fixture
@@ -82,13 +82,13 @@ async def test_1(rails_config):
     new_events = await llm_rails.runtime.generate_events(events)
     clean_events(new_events)
 
-    assert new_events == [
+    expected_events = [
         {
             "action_name": "generate_user_intent",
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "start_action",
+            "type": "StartCustomBotAction",
         },
         {
             "action_name": "generate_user_intent",
@@ -98,7 +98,7 @@ async def test_1(rails_config):
             "is_system_action": True,
             "return_value": None,
             "status": "success",
-            "type": "action_finished",
+            "type": "CustomBotActionFinished",
         },
         {"intent": "express greeting", "type": "UserIntent"},
         {"intent": "express greeting", "type": "BotIntent"},
@@ -107,9 +107,9 @@ async def test_1(rails_config):
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "start_action",
+            "type": "StartCustomBotAction",
         },
-        {"data": {"relevant_chunks": ""}, "type": "context_update"},
+        {"data": {"relevant_chunks": ""}, "type": "ContextUpdate"},
         {
             "action_name": "retrieve_relevant_chunks",
             "action_params": {},
@@ -118,28 +118,31 @@ async def test_1(rails_config):
             "is_system_action": True,
             "return_value": "",
             "status": "success",
-            "type": "action_finished",
+            "type": "CustomBotActionFinished",
         },
         {
             "action_name": "generate_bot_message",
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "start_action",
+            "type": "StartCustomBotAction",
         },
         {
             "action_name": "generate_bot_message",
             "action_params": {},
             "action_result_key": None,
-            "events": [{"content": "Hello! How are you?", "type": "bot_said"}],
+            "events": [
+                {"script": "Hello! How are you?", "type": "StartUtteranceBotAction"}
+            ],
             "is_system_action": True,
             "return_value": None,
             "status": "success",
-            "type": "action_finished",
+            "type": "CustomBotActionFinished",
         },
-        {"content": "Hello! How are you?", "type": "bot_said"},
-        {"type": "listen"},
+        {"script": "Hello! How are you?", "type": "StartUtteranceBotAction"},
+        {"type": "Listen"},
     ]
+    assert event_sequence_conforms(expected_events, new_events)
 
     events.extend(new_events)
     events.append({"type": "UtteranceUserActionFinished", "final_transcript": "2 + 3"})
@@ -147,13 +150,13 @@ async def test_1(rails_config):
     new_events = await llm_rails.runtime.generate_events(events)
     clean_events(new_events)
 
-    assert new_events == [
+    expected_events = [
         {
             "action_name": "generate_user_intent",
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "start_action",
+            "type": "StartCustomBotAction",
         },
         {
             "action_name": "generate_user_intent",
@@ -163,7 +166,7 @@ async def test_1(rails_config):
             "is_system_action": True,
             "return_value": None,
             "status": "success",
-            "type": "action_finished",
+            "type": "CustomBotActionFinished",
         },
         {"intent": "ask math question", "type": "UserIntent"},
         {
@@ -171,7 +174,7 @@ async def test_1(rails_config):
             "action_params": {},
             "action_result_key": None,
             "is_system_action": False,
-            "type": "start_action",
+            "type": "StartCustomBotAction",
         },
         {
             "action_name": "compute",
@@ -181,7 +184,7 @@ async def test_1(rails_config):
             "is_system_action": False,
             "return_value": 5,
             "status": "success",
-            "type": "action_finished",
+            "type": "CustomBotActionFinished",
         },
         {"intent": "provide math response", "type": "BotIntent"},
         {
@@ -189,7 +192,7 @@ async def test_1(rails_config):
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "start_action",
+            "type": "StartCustomBotAction",
         },
         {
             "action_name": "retrieve_relevant_chunks",
@@ -199,66 +202,76 @@ async def test_1(rails_config):
             "is_system_action": True,
             "return_value": "",
             "status": "success",
-            "type": "action_finished",
+            "type": "CustomBotActionFinished",
         },
         {
             "action_name": "generate_bot_message",
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "start_action",
-        },
-        {
-            "action_name": "generate_bot_message",
-            "action_params": {},
-            "action_result_key": None,
-            "events": [{"content": "The answer is 5", "type": "bot_said"}],
-            "is_system_action": True,
-            "return_value": None,
-            "status": "success",
-            "type": "action_finished",
-        },
-        {"content": "The answer is 5", "type": "bot_said"},
-        {"intent": "ask if user happy", "type": "BotIntent"},
-        {
-            "action_name": "retrieve_relevant_chunks",
-            "action_params": {},
-            "action_result_key": None,
-            "is_system_action": True,
-            "type": "start_action",
-        },
-        {
-            "action_name": "retrieve_relevant_chunks",
-            "action_params": {},
-            "action_result_key": None,
-            "events": None,
-            "is_system_action": True,
-            "return_value": "",
-            "status": "success",
-            "type": "action_finished",
-        },
-        {
-            "action_name": "generate_bot_message",
-            "action_params": {},
-            "action_result_key": None,
-            "is_system_action": True,
-            "type": "start_action",
+            "type": "StartCustomBotAction",
         },
         {
             "action_name": "generate_bot_message",
             "action_params": {},
             "action_result_key": None,
             "events": [
-                {"content": "Are you happy with the result?", "type": "bot_said"}
+                {"script": "The answer is 5", "type": "StartUtteranceBotAction"}
             ],
             "is_system_action": True,
             "return_value": None,
             "status": "success",
-            "type": "action_finished",
+            "type": "CustomBotActionFinished",
         },
-        {"content": "Are you happy with the result?", "type": "bot_said"},
-        {"type": "listen"},
+        {"script": "The answer is 5", "type": "StartUtteranceBotAction"},
+        {"intent": "ask if user happy", "type": "BotIntent"},
+        {
+            "action_name": "retrieve_relevant_chunks",
+            "action_params": {},
+            "action_result_key": None,
+            "is_system_action": True,
+            "type": "StartCustomBotAction",
+        },
+        {
+            "action_name": "retrieve_relevant_chunks",
+            "action_params": {},
+            "action_result_key": None,
+            "events": None,
+            "is_system_action": True,
+            "return_value": "",
+            "status": "success",
+            "type": "CustomBotActionFinished",
+        },
+        {
+            "action_name": "generate_bot_message",
+            "action_params": {},
+            "action_result_key": None,
+            "is_system_action": True,
+            "type": "StartCustomBotAction",
+        },
+        {
+            "action_name": "generate_bot_message",
+            "action_params": {},
+            "action_result_key": None,
+            "events": [
+                {
+                    "script": "Are you happy with the result?",
+                    "type": "StartUtteranceBotAction",
+                }
+            ],
+            "is_system_action": True,
+            "return_value": None,
+            "status": "success",
+            "type": "CustomBotActionFinished",
+        },
+        {
+            "script": "Are you happy with the result?",
+            "type": "StartUtteranceBotAction",
+        },
+        {"type": "Listen"},
     ]
+
+    assert event_sequence_conforms(expected_events, new_events)
 
 
 @pytest.mark.asyncio

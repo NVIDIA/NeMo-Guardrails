@@ -44,6 +44,7 @@ from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
 from nemoguardrails.rails.llm.config import RailsConfig
+from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -219,7 +220,7 @@ class LLMGenerationActions:
     ):
         """Generate the canonical form for what the user said i.e. user intent."""
 
-        # The last event should be the "start_action" and the one before it the "UtteranceUserActionFinished".
+        # The last event should be the "StartCustomBotAction" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
         assert event["type"] == "UtteranceUserActionFinished"
 
@@ -281,11 +282,11 @@ class LLMGenerationActions:
 
             if user_intent is None:
                 return ActionResult(
-                    events=[{"type": "UserIntent", "intent": "unknown message"}]
+                    events=[new_event_dict("UserIntent", intent="unknown message")]
                 )
             else:
                 return ActionResult(
-                    events=[{"type": "UserIntent", "intent": user_intent}]
+                    events=[new_event_dict("UserIntent", intent=user_intent)]
                 )
         else:
             prompt = self.llm_task_manager.render_task_prompt(
@@ -296,7 +297,9 @@ class LLMGenerationActions:
             result = await llm_call(llm, prompt)
 
             return ActionResult(
-                events=[{"type": "bot_said", "content": result.strip()}]
+                events=[
+                    new_event_dict("StartUtteranceBotAction", script=result.strip())
+                ]
             )
 
     @action(is_system_action=True)
@@ -356,17 +359,16 @@ class LLMGenerationActions:
                 if next_step.get("execute"):
                     return ActionResult(
                         events=[
-                            {
-                                "type": "start_action",
-                                "action_name": next_step["execute"],
-                            }
+                            new_event_dict(
+                                "StartCustomBotAction", action_name=next_step["execute"]
+                            )
                         ]
                     )
                 else:
                     bot_intent = next_step.get("bot")
 
                     return ActionResult(
-                        events=[{"type": "BotIntent", "intent": bot_intent}]
+                        events=[new_event_dict("BotIntent", intent=bot_intent)]
                     )
             else:
                 # Otherwise, we parse the output as a single flow.
@@ -383,7 +385,9 @@ class LLMGenerationActions:
                             log.info("Exception while parsing single line: %s", e)
                             return ActionResult(
                                 events=[
-                                    {"type": "BotIntent", "intent": "general response"}
+                                    new_event_dict(
+                                        "BotIntent", intent="general response"
+                                    )
                                 ]
                             )
 
@@ -392,12 +396,12 @@ class LLMGenerationActions:
 
                 return ActionResult(
                     events=[
-                        {
-                            "type": "start_flow",
-                            # We generate a random UUID as the flow_id
-                            "flow_id": str(uuid.uuid4()),
-                            "flow_body": "\n".join(lines),
-                        }
+                        # We generate a random UUID as the flow_id
+                        new_event_dict(
+                            "start_flow",
+                            flow_id=str(uuid.uuid4()),
+                            flow_body="\n".join(lines),
+                        )
                     ]
                 )
 
@@ -475,12 +479,18 @@ class LLMGenerationActions:
 
         if bot_utterance:
             return ActionResult(
-                events=[{"type": "bot_said", "content": bot_utterance}],
+                events=[
+                    new_event_dict("StartUtteranceBotAction", script=bot_utterance)
+                ],
                 context_updates=context_updates,
             )
         else:
             return ActionResult(
-                events=[{"type": "bot_said", "content": "I'm not sure what to say."}],
+                events=[
+                    new_event_dict(
+                        "StartUtteranceBotAction", script="I'm not sure what to say."
+                    )
+                ],
                 context_updates=context_updates,
             )
 
@@ -504,7 +514,7 @@ class LLMGenerationActions:
         llm = llm or self.llm
 
         last_event = events[-1]
-        assert last_event["type"] == "start_action"
+        assert last_event["type"] == "StartCustomBotAction"
 
         if not var_name:
             var_name = last_event["action_result_key"]

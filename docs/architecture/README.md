@@ -65,9 +65,9 @@ define flow generate next step
 Regardless of the path taken, there are two categories of next steps:
 
 1. The bot should say something (`BotIntent` events)
-2. The bot should execute an action (`start_action` events)
+2. The bot should execute an action (`StartCustomBotAction` events)
 
-When an action needs to be executed, the runtime will invoke the action and wait for the result. When the action finishes, an `action_finished` event is created with the result of the action.
+When an action needs to be executed, the runtime will invoke the action and wait for the result. When the action finishes, an `CustomBotActionFinished` event is created with the result of the action.
 
 **Note**: the default implementation of the runtime is async, so the action execution is only blocking for a specific user.
 
@@ -98,7 +98,7 @@ define extension flow generate bot message
   execute generate_bot_message
 ```
 
-Once the bot utterance is generated, a new `bot_said` event is created.
+Once the bot utterance is generated, a new `StartUtteranceBotAction` event is created.
 
 ### Complete Example
 
@@ -120,10 +120,10 @@ The stream of events processed by the guardrails runtime (a simplified view with
   final_transcript: "how many unemployed people were there in March?"
 
 # Stage 1: generate canonical form
-- type: start_action
+- type: StartCustomBotAction
   action_name: generate_user_intent
 
-- type: action_finished
+- type: CustomBotActionFinished
   action_name: generate_user_intent
   status: success
 
@@ -131,10 +131,10 @@ The stream of events processed by the guardrails runtime (a simplified view with
   intent: ask about headline numbers
 
 # Stage 2: generate next step
-- type: start_action
+- type: StartCustomBotAction
   action_name: generate_next_step
 
-- type: action_finished
+- type: CustomBotActionFinished
   action_name: generate_next_step
   status: success
 
@@ -142,28 +142,28 @@ The stream of events processed by the guardrails runtime (a simplified view with
   intent: response about headline numbers
 
 # Stage 3: generate bot utterance
-- type: start_action
+- type: StartCustomBotAction
   action_name: retrieve_relevant_chunks
 
-- type: context_update
+- type: ContextUpdate
   data:
     relevant_chunks: "The number of persons not in the labor force who ..."
 
-- type: action_finished
+- type: CustomBotActionFinished
   action_name: retrieve_relevant_chunks
   status: success
 
-- type: start_action
+- type: StartCustomBotAction
   action_name: generate_bot_message
 
-- type: action_finished
+- type: CustomBotActionFinished
   action_name: generate_bot_message
   status: success
 
-- type: bot_said
+- type: StartCustomBotAction
   content: "According to the US Bureau of Labor Statistics, there were 8.4 million unemployed people in March 2021."
 
-- type: listen
+- type: Listen
 ```
 
 ### Extending the Default Process
