@@ -91,7 +91,7 @@ def test_simple_sequence():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "express greeting",
         },
     )
@@ -113,7 +113,7 @@ def test_simple_sequence():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "inform capabilities",
         },
     )
@@ -154,7 +154,7 @@ def test_two_consecutive_bot_messages():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "respond about benefits",
         },
     )
@@ -167,7 +167,7 @@ def test_two_consecutive_bot_messages():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "ask if user happy",
         },
     )
@@ -207,7 +207,7 @@ def test_action_execution():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "respond to math question",
         },
     )
@@ -220,7 +220,7 @@ def test_action_execution():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "ask if user happy",
         },
     )
@@ -246,7 +246,7 @@ def test_flow_interruption():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "express greeting",
         },
     )
@@ -268,7 +268,7 @@ def test_flow_interruption():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "respond about benefits",
         },
     )
@@ -281,7 +281,7 @@ def test_flow_interruption():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "ask if user happy",
         },
     )
@@ -303,7 +303,7 @@ def test_flow_interruption():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "inform capabilities",
         },
     )

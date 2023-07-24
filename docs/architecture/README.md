@@ -36,11 +36,11 @@ The `generate_user_intent` action will do a vector search on all the canonical f
 
 **Note**: The prompt itself contains other elements, such as the sample conversation and the current history of the conversation.
 
-Once the canonical form is generated, a new `user_intent` event is created.
+Once the canonical form is generated, a new `UserIntent` event is created.
 
 ### Decide Next Steps
 
-Once the `user_intent` event is created, there are two potential paths:
+Once the `UserIntent` event is created, there are two potential paths:
 
 1. There is a pre-defined flow that can decide what should happen next; or
 2. The LLM is used to decide the next step.
@@ -64,7 +64,7 @@ define flow generate next step
 
 Regardless of the path taken, there are two categories of next steps:
 
-1. The bot should say something (`bot_intent` events)
+1. The bot should say something (`BotIntent` events)
 2. The bot should execute an action (`start_action` events)
 
 When an action needs to be executed, the runtime will invoke the action and wait for the result. When the action finishes, an `action_finished` event is created with the result of the action.
@@ -77,7 +77,7 @@ After an action is executed or a bot message is generated, the runtime will try 
 
 ### Generate Bot Utterances
 
-Once the `bot_intent` event is generated, the `generate_bot_message` action is invoked.
+Once the `BotIntent` event is generated, the `generate_bot_message` action is invoked.
 
 Similar to the previous stages, the `generate_bot_message` action performs a vector search for the most relevant bot utterance examples included in the guardrails configuration. Next, they get included in the prompt, and we ask the LLM to generate the utterance for the current bot intent.
 
@@ -138,7 +138,7 @@ The stream of events processed by the guardrails runtime (a simplified view with
   action_name: generate_next_step
   status: success
 
-- type: bot_intent
+- type: BotIntent
   intent: response about headline numbers
 
 # Stage 3: generate bot utterance

@@ -101,7 +101,7 @@ async def test_1(rails_config):
             "type": "action_finished",
         },
         {"intent": "express greeting", "type": "UserIntent"},
-        {"intent": "express greeting", "type": "bot_intent"},
+        {"intent": "express greeting", "type": "BotIntent"},
         {
             "action_name": "retrieve_relevant_chunks",
             "action_params": {},
@@ -183,7 +183,7 @@ async def test_1(rails_config):
             "status": "success",
             "type": "action_finished",
         },
-        {"intent": "provide math response", "type": "bot_intent"},
+        {"intent": "provide math response", "type": "BotIntent"},
         {
             "action_name": "retrieve_relevant_chunks",
             "action_params": {},
@@ -219,7 +219,7 @@ async def test_1(rails_config):
             "type": "action_finished",
         },
         {"content": "The answer is 5", "type": "bot_said"},
-        {"intent": "ask if user happy", "type": "bot_intent"},
+        {"intent": "ask if user happy", "type": "BotIntent"},
         {
             "action_name": "retrieve_relevant_chunks",
             "action_params": {},

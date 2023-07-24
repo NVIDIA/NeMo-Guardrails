@@ -50,7 +50,7 @@ def test_1():
 
     # We check certain key events are present.
     assert {"intent": "express greeting", "type": "UserIntent"} in new_events
-    assert {"intent": "express greeting", "type": "bot_intent"} in new_events
+    assert {"intent": "express greeting", "type": "BotIntent"} in new_events
     assert {"content": "Hello!", "type": "bot_said"} in new_events
     assert {"type": "listen"} in new_events
 

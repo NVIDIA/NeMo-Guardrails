@@ -210,7 +210,7 @@ class Runtime:
         return ActionResult(
             events=[
                 {
-                    "type": "bot_intent",
+                    "type": "BotIntent",
                     "intent": "inform internal error occurred",
                 },
                 {

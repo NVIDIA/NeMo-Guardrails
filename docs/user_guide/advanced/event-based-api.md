@@ -48,7 +48,7 @@ Example output:
   "intent": "express greeting"
  },
  {
-  "type": "bot_intent",
+  "type": "BotIntent",
   "intent": "express greeting"
  },
  {
@@ -114,7 +114,7 @@ Example output:
 
 ## Event Types
 
-NeMo Guardrails supports multiple types of events. Some are meant for internal use (e.g., `user_intent`, `bot_intent`), while others represent the "public" interface (e.g., `UtteranceUserActionFinished`, `bot_said`).
+NeMo Guardrails supports multiple types of events. Some are meant for internal use (e.g., `UserIntent`, `BotIntent`), while others represent the "public" interface (e.g., `UtteranceUserActionFinished`, `bot_said`).
 
 ### `UtteranceUserActionFinished`
 
@@ -140,14 +140,14 @@ Example:
 }
 ```
 
-### `bot_intent`
+### `BotIntent`
 
 The computed intent for what the bot should say.
 
 Example:
 ```json
 {
-  "type": "bot_intent",
+  "type": "BotIntent",
   "intent": "express greeting"
 }
 ```

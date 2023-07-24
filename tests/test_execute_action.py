@@ -97,7 +97,7 @@ async def test_action_execution_with_result(rails_config):
             "status": "success",
             "type": "action_finished",
         },
-        {"intent": "express greeting", "type": "bot_intent"},
+        {"intent": "express greeting", "type": "BotIntent"},
         {
             "action_name": "retrieve_relevant_chunks",
             "action_params": {},
@@ -173,4 +173,4 @@ async def test_action_execution_with_if(rails_config):
     new_events = await llm_rails.runtime.generate_events(events)
 
     # We check that is_allowed was correctly set to True
-    assert {"intent": "inform access denied", "type": "bot_intent"} in new_events
+    assert {"intent": "inform access denied", "type": "BotIntent"} in new_events

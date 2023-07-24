@@ -366,7 +366,7 @@ class LLMGenerationActions:
                     bot_intent = next_step.get("bot")
 
                     return ActionResult(
-                        events=[{"type": "bot_intent", "intent": bot_intent}]
+                        events=[{"type": "BotIntent", "intent": bot_intent}]
                     )
             else:
                 # Otherwise, we parse the output as a single flow.
@@ -383,7 +383,7 @@ class LLMGenerationActions:
                             log.info("Exception while parsing single line: %s", e)
                             return ActionResult(
                                 events=[
-                                    {"type": "bot_intent", "intent": "general response"}
+                                    {"type": "BotIntent", "intent": "general response"}
                                 ]
                             )
 
@@ -413,9 +413,9 @@ class LLMGenerationActions:
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
 
-        # The last event should be the "start_action" and the one before it the "bot_intent".
+        # The last event should be the "StartInternalSystemAction" and the one before it the "BotIntent".
         event = get_last_bot_intent_event(events)
-        assert event["type"] == "bot_intent"
+        assert event["type"] == "BotIntent"
         bot_intent = event["intent"]
         context_updates = {}
 

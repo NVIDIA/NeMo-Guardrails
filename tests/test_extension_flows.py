@@ -74,7 +74,7 @@ def test_extension_flows_1():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "express greeting",
         },
     )
@@ -87,7 +87,7 @@ def test_extension_flows_1():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "comment random fact about today",
         },
     )
@@ -100,7 +100,7 @@ def test_extension_flows_1():
     state = compute_next_state(
         state,
         {
-            "type": "bot_intent",
+            "type": "BotIntent",
             "intent": "offer to help",
         },
     )

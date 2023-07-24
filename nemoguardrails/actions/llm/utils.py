@@ -83,7 +83,7 @@ def get_colang_history(
                 history += f'  {event["intent"]}\n'
             else:
                 history += f'user {event["intent"]}\n'
-        elif event["type"] == "bot_intent":
+        elif event["type"] == "BotIntent":
             history += f'bot {event["intent"]}\n'
         elif event["type"] == "bot_said" and include_texts:
             history += f'  "{event["content"]}"\n'
@@ -198,7 +198,7 @@ def get_last_bot_utterance_event(events: List[dict]):
 def get_last_bot_intent_event(events: List[dict]):
     """Returns the last bot intent from the events."""
     for event in reversed(events):
-        if event["type"] == "bot_intent":
+        if event["type"] == "BotIntent":
             return event
 
     return None

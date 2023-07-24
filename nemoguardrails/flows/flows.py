@@ -46,7 +46,7 @@ class FlowConfig:
     is_subflow: bool = False
 
     # The events that can trigger this flow to advance.
-    trigger_event_types = ["UserIntent", "bot_intent", "run_action", "action_finished"]
+    trigger_event_types = ["UserIntent", "BotIntent", "run_action", "action_finished"]
 
     # The actual source code, if available
     source_code: Optional[str] = None
@@ -128,7 +128,7 @@ def _is_match(element: dict, event: dict) -> bool:
             element["intent_name"] == "..." or element["intent_name"] == event["intent"]
         )
 
-    elif event["type"] == "bot_intent":
+    elif event["type"] == "BotIntent":
         return (
             element_type == "run_action"
             and element["action_name"] == "utter"
@@ -455,7 +455,7 @@ def _step_to_event(step: dict) -> dict:
     if step_type == "run_action":
         if step["action_name"] == "utter":
             return {
-                "type": "bot_intent",
+                "type": "BotIntent",
                 "intent": step["action_params"]["value"],
             }
 
@@ -517,7 +517,7 @@ def compute_next_steps(
     # Finally, we check if there was an explicit "stop" request
     if actual_history:
         last_event = actual_history[-1]
-        if last_event["type"] == "bot_intent" and last_event["intent"] == "stop":
+        if last_event["type"] == "BotIntent" and last_event["intent"] == "stop":
             # In this case, we remove any next steps
             next_steps = []
 
