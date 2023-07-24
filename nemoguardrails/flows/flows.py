@@ -496,6 +496,11 @@ def compute_next_steps(
     for event in actual_history:
         state = compute_next_state(state, event)
 
+        # NOTE (Jul 24, Razvan): this is a quick fix. Will debug further.
+        if event["type"] == "bot_intent" and event["intent"] == "stop":
+            # Reset all flows
+            state.flow_states = []
+
     next_steps = []
 
     # If we have context updates after this event, we first add that.
