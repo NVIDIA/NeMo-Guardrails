@@ -7,9 +7,20 @@
     "engines": {
       "vscode": "^1.0.0"
     },
-    "fileExtensions": [
-      ".co",
-      ".colang"
-  ]
+    "categories": [
+      "Programming Languages"
+    ],
+    "contributes": {
+      "languages": [{
+        "id": "colang",
+        "aliases": ["Colang", "colang"],
+        "extensions": [".co",".colang"]
+      }],
+      "grammars": [{
+        "language": "colang",
+        "scopeName": "source.colang",
+        "path": "./syntaxes/colang.tmLanguage.json"
+      }]
+  }
 
   }
