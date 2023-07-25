@@ -109,7 +109,7 @@ def get_colang_history(
             utterance_to_replace = get_last_user_utterance(events[:idx])
             # We replace the last user utterance that led to jailbreak rail trigger with a placeholder text
             split_history = history.rsplit(utterance_to_replace, 1)
-            placeholder_text = "unanswerable question"
+            placeholder_text = "<<<This text is hidden because the assistant should not talk about this.>>>"
             history = placeholder_text.join(split_history)
     return history
 
