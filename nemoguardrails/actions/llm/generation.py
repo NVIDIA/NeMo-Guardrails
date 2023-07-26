@@ -214,12 +214,15 @@ class LLMGenerationActions:
         return sample_conversation
 
     @action(is_system_action=True)
-    async def generate_user_intent(self, events: List[dict]):
+    async def generate_user_intent(self, events: List[dict], llm: Optional[BaseLLM] = None):
         """Generate the canonical form for what the user said i.e. user intent."""
 
         # The last event should be the "start_action" and the one before it the "user_said".
         event = get_last_user_utterance_event(events)
         assert event["type"] == "user_said"
+
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
 
         # TODO: check for an explicit way of enabling the canonical form detection
 
@@ -254,8 +257,8 @@ class LLMGenerationActions:
             )
 
             # We make this call with temperature 0 to have it as deterministic as possible.
-            with llm_params(self.llm, temperature=self.config.lowest_temperature):
-                result = await llm_call(self.llm, prompt)
+            with llm_params(llm, temperature=self.config.lowest_temperature):
+                result = await llm_call(llm, prompt)
 
             # Parse the output using the associated parser
             result = self.llm_task_manager.parse_task_output(
@@ -288,19 +291,22 @@ class LLMGenerationActions:
             )
 
             # We make this call with temperature 0 to have it as deterministic as possible.
-            result = await llm_call(self.llm, prompt)
+            result = await llm_call(llm, prompt)
 
             return ActionResult(
                 events=[{"type": "bot_said", "content": result.strip()}]
             )
 
     @action(is_system_action=True)
-    async def generate_next_step(self, events: List[dict]):
+    async def generate_next_step(self, events: List[dict], llm: Optional[BaseLLM] = None):
         """Generate the next step in the current conversation flow.
 
         Currently, only generates a next step after a user intent.
         """
         log.info("Phase 2 :: Generating next step ...")
+
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
 
         # The last event should be the "start_action" and the one before it the "user_intent".
         event = get_last_user_intent_event(events)
@@ -325,8 +331,8 @@ class LLMGenerationActions:
             )
 
             # We use temperature 0 for next step prediction as well
-            with llm_params(self.llm, temperature=self.config.lowest_temperature):
-                result = await llm_call(self.llm, prompt)
+            with llm_params(llm, temperature=self.config.lowest_temperature):
+                result = await llm_call(llm, prompt)
 
             # Parse the output using the associated parser
             result = self.llm_task_manager.parse_task_output(
@@ -394,9 +400,12 @@ class LLMGenerationActions:
         return ActionResult(return_value=None)
 
     @action(is_system_action=True)
-    async def generate_bot_message(self, events: List[dict], context: dict):
+    async def generate_bot_message(self, events: List[dict], context: dict, llm: Optional[BaseLLM] = None):
         """Generate a bot message based on the desired bot intent."""
         log.info("Phase 3 :: Generating bot message ...")
+
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
 
         # The last event should be the "start_action" and the one before it the "bot_intent".
         event = get_last_bot_intent_event(events)
@@ -439,7 +448,7 @@ class LLMGenerationActions:
                 context={"examples": examples, "relevant_chunks": relevant_chunks},
             )
 
-            result = await llm_call(self.llm, prompt)
+            result = await llm_call(llm, prompt)
 
             # Parse the output using the associated parser
             result = self.llm_task_manager.parse_task_output(
@@ -471,7 +480,7 @@ class LLMGenerationActions:
 
     @action(is_system_action=True)
     async def generate_value(
-        self, instructions: str, events: List[dict], var_name: Optional[str] = None
+        self, instructions: str, events: List[dict], var_name: Optional[str] = None, llm: Optional[BaseLLM] = None
     ):
         """Generate a value in the context of the conversation.
 
@@ -479,7 +488,11 @@ class LLMGenerationActions:
         :param events: The full stream of events so far.
         :param var_name: The name of the variable to generate. If not specified, it will use
           the `action_result_key` as the name of the variable.
+        :param llm: Custom llm model to generate_value
         """
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
         last_event = events[-1]
         assert last_event["type"] == "start_action"
 
@@ -505,8 +518,8 @@ class LLMGenerationActions:
             },
         )
 
-        with llm_params(self.llm, temperature=self.config.lowest_temperature):
-            result = await llm_call(self.llm, prompt)
+        with llm_params(llm, temperature=self.config.lowest_temperature):
+            result = await llm_call(llm, prompt)
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(
