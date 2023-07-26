@@ -160,7 +160,7 @@ class Runtime:
             )
 
             # If we need to execute an action, we start doing that.
-            if last_event["type"] == "StartCustomBotAction":
+            if last_event["type"] == "StartInternalSystemAction":
                 next_events = await self._process_start_action(events)
 
             # If we need to start a flow, we parse the content and register it.
@@ -193,9 +193,9 @@ class Runtime:
         """Computes the next step based on the current flow."""
         next_steps = compute_next_steps(events, self.flow_configs)
 
-        # If there are any StartCustomBotAction events, we mark if they are system actions or not
+        # If there are any StartInternalSystemAction events, we mark if they are system actions or not
         for event in next_steps:
-            if event["type"] == "StartCustomBotAction":
+            if event["type"] == "StartInternalSystemAction":
                 is_system_action = False
                 fn = self.action_dispatcher.get_action(event["action_name"])
                 if fn:
@@ -354,7 +354,7 @@ class Runtime:
 
         next_steps.append(
             new_event_dict(
-                "CustomBotActionFinished",
+                "InternalSystemActionFinished",
                 action_name=action_name,
                 action_params=action_params,
                 action_result_key=action_result_key,

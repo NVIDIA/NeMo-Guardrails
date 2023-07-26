@@ -220,7 +220,7 @@ class LLMGenerationActions:
     ):
         """Generate the canonical form for what the user said i.e. user intent."""
 
-        # The last event should be the "StartCustomBotAction" and the one before it the "UtteranceUserActionFinished".
+        # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
         assert event["type"] == "UtteranceUserActionFinished"
 
@@ -360,7 +360,8 @@ class LLMGenerationActions:
                     return ActionResult(
                         events=[
                             new_event_dict(
-                                "StartCustomBotAction", action_name=next_step["execute"]
+                                "StartInternalSystemAction",
+                                action_name=next_step["execute"],
                             )
                         ]
                     )
@@ -514,7 +515,7 @@ class LLMGenerationActions:
         llm = llm or self.llm
 
         last_event = events[-1]
-        assert last_event["type"] == "StartCustomBotAction"
+        assert last_event["type"] == "StartInternalSystemAction"
 
         if not var_name:
             var_name = last_event["action_result_key"]

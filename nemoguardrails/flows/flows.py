@@ -51,7 +51,7 @@ class FlowConfig:
         "UserIntent",
         "BotIntent",
         "run_action",
-        "CustomBotActionFinished",
+        "InternalSystemActionFinished",
     ]
 
     # The actual source code, if available
@@ -144,7 +144,7 @@ def _is_match(element: dict, event: dict) -> bool:
             )
         )
 
-    elif event["type"] == "CustomBotActionFinished":
+    elif event["type"] == "InternalSystemActionFinished":
         # Currently, we only match successful execution of actions
         if event["status"] != "success":
             return False
@@ -271,8 +271,8 @@ def compute_next_state(state: State, event: dict) -> State:
     - No prioritization between flows, the first one that can decide something will be used.
     """
 
-    # We don't advance flow on `StartCustomBotAction`, but on `CustomBotActionFinished`.
-    if event["type"] == "StartCustomBotAction":
+    # We don't advance flow on `StartInternalSystemAction`, but on `InternalSystemActionFinished`.
+    if event["type"] == "StartInternalSystemAction":
         return state
 
     # We don't need to decide any next step on context updates.
@@ -471,7 +471,7 @@ def _step_to_event(step: dict) -> dict:
             action_result_key = step.get("action_result_key")
 
             return new_event_dict(
-                "StartCustomBotAction",
+                "StartInternalSystemAction",
                 action_name=action_name,
                 action_params=action_params,
                 action_result_key=action_result_key,

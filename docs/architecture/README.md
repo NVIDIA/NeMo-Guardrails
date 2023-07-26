@@ -65,9 +65,9 @@ define flow generate next step
 Regardless of the path taken, there are two categories of next steps:
 
 1. The bot should say something (`BotIntent` events)
-2. The bot should execute an action (`StartCustomBotAction` events)
+2. The bot should execute an action (`StartInternalSystemAction` events)
 
-When an action needs to be executed, the runtime will invoke the action and wait for the result. When the action finishes, an `CustomBotActionFinished` event is created with the result of the action.
+When an action needs to be executed, the runtime will invoke the action and wait for the result. When the action finishes, an `InternalSystemActionFinished` event is created with the result of the action.
 
 **Note**: the default implementation of the runtime is async, so the action execution is only blocking for a specific user.
 
@@ -120,10 +120,10 @@ The stream of events processed by the guardrails runtime (a simplified view with
   final_transcript: "how many unemployed people were there in March?"
 
 # Stage 1: generate canonical form
-- type: StartCustomBotAction
+- type: StartInternalSystemAction
   action_name: generate_user_intent
 
-- type: CustomBotActionFinished
+- type: InternalSystemActionFinished
   action_name: generate_user_intent
   status: success
 
@@ -131,10 +131,10 @@ The stream of events processed by the guardrails runtime (a simplified view with
   intent: ask about headline numbers
 
 # Stage 2: generate next step
-- type: StartCustomBotAction
+- type: StartInternalSystemAction
   action_name: generate_next_step
 
-- type: CustomBotActionFinished
+- type: InternalSystemActionFinished
   action_name: generate_next_step
   status: success
 
@@ -142,25 +142,25 @@ The stream of events processed by the guardrails runtime (a simplified view with
   intent: response about headline numbers
 
 # Stage 3: generate bot utterance
-- type: StartCustomBotAction
+- type: StartInternalSystemAction
   action_name: retrieve_relevant_chunks
 
 - type: ContextUpdate
   data:
     relevant_chunks: "The number of persons not in the labor force who ..."
 
-- type: CustomBotActionFinished
+- type: InternalSystemActionFinished
   action_name: retrieve_relevant_chunks
   status: success
 
-- type: StartCustomBotAction
+- type: StartInternalSystemAction
   action_name: generate_bot_message
 
-- type: CustomBotActionFinished
+- type: InternalSystemActionFinished
   action_name: generate_bot_message
   status: success
 
-- type: StartCustomBotAction
+- type: StartInternalSystemAction
   content: "According to the US Bureau of Labor Statistics, there were 8.4 million unemployed people in March 2021."
 
 - type: Listen
@@ -246,11 +246,9 @@ user "how many unemployed people were there in March?"
 
 Notice the various sections included in the prompt: the general instruction, the sample conversation, the most relevant examples of canonical forms and the current conversation.
 
-
 ## Interaction with LLMs
 
 This toolkit relies on LangChain for the interaction with LLMs. Below is a high-level sequence diagram showing the interaction between the user's code (the one using the guardrails), the `LLMRails`, LangChain and the LLM API.
-
 
 ![Sequence Diagram LLMRails](sequence-diagram-llmrails.png)
 

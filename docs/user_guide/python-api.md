@@ -53,40 +53,47 @@ properties:
 An example of conversation history is the following:
 
 ```json
-[{
-  "role": "user",
-  "content": "Hello!"
-}, {
-  "role": "assistant",
-  "content": "Hello! How can I help you?"
-}, {
-  "role": "user",
-  "content": "I want to know if my insurance covers certain expenses."
-}]
+[
+  {
+    "role": "user",
+    "content": "Hello!"
+  },
+  {
+    "role": "assistant",
+    "content": "Hello! How can I help you?"
+  },
+  {
+    "role": "user",
+    "content": "I want to know if my insurance covers certain expenses."
+  }
+]
 ```
 
 An example which also sets the initial context is the following:
 
 ```json
-[{
-  "role": "context",
-  "content": {
-    "user_name": "John",
-    "access_level": "admin"
+[
+  {
+    "role": "context",
+    "content": {
+      "user_name": "John",
+      "access_level": "admin"
+    }
+  },
+  {
+    "role": "user",
+    "content": "Hello!"
+  },
+  {
+    "role": "assistant",
+    "content": "Hello! How can I help you?"
+  },
+  {
+    "role": "user",
+    "content": "I want to know if my insurance covers certain expenses."
   }
-},
-{
-  "role": "user",
-  "content": "Hello!"
-}, {
-  "role": "assistant",
-  "content": "Hello! How can I help you?"
-}, {
-  "role": "user",
-  "content": "I want to know if my insurance covers certain expenses."
-}]
+]
 ```
-
 
 ## Actions
 
@@ -109,7 +116,6 @@ Guardrail-specific actions:
 - `check_jailbreak`: Check if the user response is malicious and should be masked.
 - `check_hallucination`: Check if the last bot response is a hallucination.
 - `output_moderation`: Check if the bot response is appropriate and passes moderation.
-
 
 For convenience, this toolkit also includes a selection of LangChain tools, wrapped as actions:
 
@@ -160,7 +166,7 @@ async def some_action():
     return "some_result"
 ```
 
-Actions can take any number of parameters. Since actions are invoked from Colang flows, the parameters' type is limited to *string*, *integer*, *float*, *boolean*, *list* and *dictionary*.
+Actions can take any number of parameters. Since actions are invoked from Colang flows, the parameters' type is limited to _string_, _integer_, _float_, _boolean_, _list_ and _dictionary_.
 
 #### Special parameters
 
@@ -179,8 +185,8 @@ These parameters are only meant to be used in advanced use cases.
 
 The following are the parameters that can be used in the actions:
 
-| Parameters | Description                                                                         | Type       | Example                                                                                                                                                                                          |
-|------------|-------------------------------------------------------------------------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `events`   | The history of events so far; the last one is the one triggering the action itself. | List[dict] | ```[     {'type': 'UtteranceUserActionFinished', ...},     {'type': 'StartCustomBotAction', 'action_name': 'generate_user_intent', ...},      {'type': 'CustomBotActionFinished', 'action_name': 'generate_user_intent', ...} ]``` |
-| `context`  | The context data available to the action.                                           | dict       | ```{ 'last_user_message': ...,  'last_bot_message': ..., 'retrieved_relevant_chunks': ... }```                                                                                                   |
-| `llm`      | Access to the LLM instance (BaseLLM from LangChain).                                | BaseLLM    | ```OpenAI(model="text-davinci-003",...)```                                                                                                                                                       |
+| Parameters | Description                                                                         | Type       | Example                                                                                                                                                                                                                                  |
+| ---------- | ----------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `events`   | The history of events so far; the last one is the one triggering the action itself. | List[dict] | `[     {'type': 'UtteranceUserActionFinished', ...},     {'type': 'StartInternalSystemAction', 'action_name': 'generate_user_intent', ...},      {'type': 'InternalSystemActionFinished', 'action_name': 'generate_user_intent', ...} ]` |
+| `context`  | The context data available to the action.                                           | dict       | `{ 'last_user_message': ...,  'last_bot_message': ..., 'retrieved_relevant_chunks': ... }`                                                                                                                                               |
+| `llm`      | Access to the LLM instance (BaseLLM from LangChain).                                | BaseLLM    | `OpenAI(model="text-davinci-003",...)`                                                                                                                                                                                                   |

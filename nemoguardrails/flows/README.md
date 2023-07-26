@@ -10,11 +10,10 @@ The following is the list of standard events:
 - `UserIntent(intent)`: a canonical form for the user utterance has been identified.
 - `BotIntent(intent)`: a new bot intent has been decided i.e. what it should say.
 - `StartUtteranceBotAction(content)`: the utterance for a bot message has been decided.
-- `StartCustomBotAction(action_name, is_system_action, action_parameters)`: it has been decided that an action should be started.
-- `CustomBotActionFinished(action_name, action_parameters, action_result)`: an action has finished.
+- `StartInternalSystemAction(action_name, is_system_action, action_parameters)`: it has been decided that an action should be started.
+- `InternalSystemActionFinished(action_name, action_parameters, action_result)`: an action has finished.
 - `Listen`: there's nothing let to do and the bot should listen for new user input/events.
 - `ContextUpdate`: the context data has been updated.
-
 
 ## Context Variables
 

@@ -193,7 +193,7 @@ def test_action_execution():
     state = compute_next_state(
         state,
         {
-            "type": "CustomBotActionFinished",
+            "type": "InternalSystemActionFinished",
             "action_name": "wolfram alpha request",
             "status": "success",
         },

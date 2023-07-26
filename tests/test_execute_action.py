@@ -66,7 +66,7 @@ async def test_action_execution_with_result(rails_config):
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "StartCustomBotAction",
+            "type": "StartInternalSystemAction",
         },
         {
             "action_name": "generate_user_intent",
@@ -76,7 +76,7 @@ async def test_action_execution_with_result(rails_config):
             "is_system_action": True,
             "return_value": None,
             "status": "success",
-            "type": "CustomBotActionFinished",
+            "type": "InternalSystemActionFinished",
         },
         {"intent": "express greeting", "type": "UserIntent"},
         {
@@ -84,7 +84,7 @@ async def test_action_execution_with_result(rails_config):
             "action_params": {},
             "action_result_key": "account",
             "is_system_action": False,
-            "type": "StartCustomBotAction",
+            "type": "StartInternalSystemAction",
         },
         {"data": {"account": {"name": "John"}}, "type": "ContextUpdate"},
         {
@@ -95,7 +95,7 @@ async def test_action_execution_with_result(rails_config):
             "is_system_action": False,
             "return_value": {"name": "John"},
             "status": "success",
-            "type": "CustomBotActionFinished",
+            "type": "InternalSystemActionFinished",
         },
         {"intent": "express greeting", "type": "BotIntent"},
         {
@@ -103,7 +103,7 @@ async def test_action_execution_with_result(rails_config):
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "StartCustomBotAction",
+            "type": "StartInternalSystemAction",
         },
         {"data": {"relevant_chunks": ""}, "type": "ContextUpdate"},
         {
@@ -114,14 +114,14 @@ async def test_action_execution_with_result(rails_config):
             "is_system_action": True,
             "return_value": "",
             "status": "success",
-            "type": "CustomBotActionFinished",
+            "type": "InternalSystemActionFinished",
         },
         {
             "action_name": "generate_bot_message",
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "StartCustomBotAction",
+            "type": "StartInternalSystemAction",
         },
         {
             "action_name": "generate_bot_message",
@@ -131,7 +131,7 @@ async def test_action_execution_with_result(rails_config):
             "is_system_action": True,
             "return_value": None,
             "status": "success",
-            "type": "CustomBotActionFinished",
+            "type": "InternalSystemActionFinished",
         },
         {"script": "Hello!", "type": "StartUtteranceBotAction"},
         {"type": "Listen"},

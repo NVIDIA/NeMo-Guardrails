@@ -19,96 +19,69 @@ print(json.dumps(new_events, indent=True))
 ```
 
 Example output:
+
 ```yaml
 [
- {
-  "type": "StartCustomBotAction",
-  "action_name": "generate_user_intent",
-  "action_params": {},
-  "action_result_key": null,
-  "is_system_action": true
- },
- {
-  "type": "CustomBotActionFinished",
-  "action_name": "generate_user_intent",
-  "action_params": {},
-  "action_result_key": null,
-  "status": "success",
-  "return_value": null,
-  "events": [
-   {
-    "type": "UserIntent",
-    "intent": "express greeting"
-   }
-  ],
-  "is_system_action": true
- },
- {
-  "type": "UserIntent",
-  "intent": "express greeting"
- },
- {
-  "type": "BotIntent",
-  "intent": "express greeting"
- },
- {
-  "type": "StartCustomBotAction",
-  "action_name": "retrieve_relevant_chunks",
-  "action_params": {},
-  "action_result_key": null,
-  "is_system_action": true
- },
- {
-  "type": "ContextUpdate",
-  "data": {
-   "relevant_chunks": ""
-  }
- },
- {
-  "type": "CustomBotActionFinished",
-  "action_name": "retrieve_relevant_chunks",
-  "action_params": {},
-  "action_result_key": null,
-  "status": "success",
-  "return_value": "",
-  "events": null,
-  "is_system_action": true
- },
- {
-  "type": "StartCustomBotAction",
-  "action_name": "generate_bot_message",
-  "action_params": {},
-  "action_result_key": null,
-  "is_system_action": true
- },
- {
-  "type": "ContextUpdate",
-  "data": {
-   "_last_bot_prompt": "<<REMOVED FOR READABILITY>>>"
-  }
- },
- {
-  "type": "CustomBotActionFinished",
-  "action_name": "generate_bot_message",
-  "action_params": {},
-  "action_result_key": null,
-  "status": "success",
-  "return_value": null,
-  "events": [
-   {
-    "type": "StartUtteranceBotAction",
-    "script": "Hello!"
-   }
-  ],
-  "is_system_action": true
- },
- {
-  "type": "StartUtteranceBotAction",
-  "script": "Hello!"
- },
- {
-  "type": "Listen"
- }
+  {
+    "type": "StartInternalSystemAction",
+    "action_name": "generate_user_intent",
+    "action_params": {},
+    "action_result_key": null,
+    "is_system_action": true,
+  },
+  {
+    "type": "InternalSystemActionFinished",
+    "action_name": "generate_user_intent",
+    "action_params": {},
+    "action_result_key": null,
+    "status": "success",
+    "return_value": null,
+    "events": [{ "type": "UserIntent", "intent": "express greeting" }],
+    "is_system_action": true,
+  },
+  { "type": "UserIntent", "intent": "express greeting" },
+  { "type": "BotIntent", "intent": "express greeting" },
+  {
+    "type": "StartInternalSystemAction",
+    "action_name": "retrieve_relevant_chunks",
+    "action_params": {},
+    "action_result_key": null,
+    "is_system_action": true,
+  },
+  { "type": "ContextUpdate", "data": { "relevant_chunks": "" } },
+  {
+    "type": "InternalSystemActionFinished",
+    "action_name": "retrieve_relevant_chunks",
+    "action_params": {},
+    "action_result_key": null,
+    "status": "success",
+    "return_value": "",
+    "events": null,
+    "is_system_action": true,
+  },
+  {
+    "type": "StartInternalSystemAction",
+    "action_name": "generate_bot_message",
+    "action_params": {},
+    "action_result_key": null,
+    "is_system_action": true,
+  },
+  {
+    "type": "ContextUpdate",
+    "data": { "_last_bot_prompt": "<<REMOVED FOR READABILITY>>>" },
+  },
+  {
+    "type": "InternalSystemActionFinished",
+    "action_name": "generate_bot_message",
+    "action_params": {},
+    "action_result_key": null,
+    "status": "success",
+    "return_value": null,
+    "events": [{ "type": "StartUtteranceBotAction", "script": "Hello!" }],
+    "is_system_action": true,
+  },
+  { "type": "StartUtteranceBotAction", "script": "Hello!" },
+  { "type": "Listen" },
 ]
 ```
 
@@ -121,6 +94,7 @@ NeMo Guardrails supports multiple types of events. Some are meant for internal u
 The raw message from the user.
 
 Example:
+
 ```json
 {
   "type": "UtteranceUserActionFinished",
@@ -133,6 +107,7 @@ Example:
 The computed intent (a.k.a. canonical form) for what the user said.
 
 Example:
+
 ```json
 {
   "type": "UserIntent",
@@ -145,6 +120,7 @@ Example:
 The computed intent for what the bot should say.
 
 Example:
+
 ```json
 {
   "type": "BotIntent",
@@ -157,6 +133,7 @@ Example:
 The final message from the bot.
 
 Example:
+
 ```json
 {
   "type": "StartUtteranceBotAction",
@@ -164,14 +141,15 @@ Example:
 }
 ```
 
-### `StartCustomBotAction`
+### `StartInternalSystemAction`
 
 An action needs to be started.
 
 Example:
+
 ```json
 {
-  "type": "StartCustomBotAction",
+  "type": "StartInternalSystemAction",
   "action_name": "generate_user_intent",
   "action_params": {},
   "action_result_key": null,
@@ -179,24 +157,25 @@ Example:
 }
 ```
 
-### `CustomBotActionFinished`
+### `InternalSystemActionFinished`
 
 An action has finished.
 
 Example:
+
 ```json
 {
-  "type": "CustomBotActionFinished",
+  "type": "InternalSystemActionFinished",
   "action_name": "generate_user_intent",
   "action_params": {},
   "action_result_key": null,
   "status": "success",
   "return_value": null,
   "events": [
-   {
-    "type": "UserIntent",
-    "intent": "express greeting"
-   }
+    {
+      "type": "UserIntent",
+      "intent": "express greeting"
+    }
   ],
   "is_system_action": true
 }
@@ -207,11 +186,12 @@ Example:
 The context of the conversation has been updated.
 
 Example:
+
 ```json
 {
   "type": "ContextUpdate",
   "data": {
-   "user_name": "John"
+    "user_name": "John"
   }
 }
 ```
@@ -221,6 +201,7 @@ Example:
 The bot has finished processing the events and is waiting for new input.
 
 Example:
+
 ```json
 {
   "type": "Listen"
@@ -238,7 +219,7 @@ You can also use custom events:
 }
 ```
 
-**Note**: You need to make sure that the guardrails logic can handle the custom event.  You do this by updating your flows to deal with the new events where needed. Otherwise, the custom event will just be ignored.
+**Note**: You need to make sure that the guardrails logic can handle the custom event. You do this by updating your flows to deal with the new events where needed. Otherwise, the custom event will just be ignored.
 
 ## Typical Usage
 

@@ -88,7 +88,7 @@ def get_colang_history(
         elif event["type"] == "StartUtteranceBotAction" and include_texts:
             history += f'  "{event["script"]}"\n'
         # We skip system actions from this log
-        elif event["type"] == "StartCustomBotAction" and not event.get(
+        elif event["type"] == "StartInternalSystemAction" and not event.get(
             "is_system_action"
         ):
             if (
@@ -97,7 +97,7 @@ def get_colang_history(
             ):
                 continue
             history += f'execute {event["action_name"]}\n'
-        elif event["type"] == "CustomBotActionFinished" and not event.get(
+        elif event["type"] == "InternalSystemActionFinished" and not event.get(
             "is_system_action"
         ):
             if (
@@ -193,7 +193,7 @@ def get_last_user_intent_event(events: List[dict]):
 def get_last_bot_utterance_event(events: List[dict]):
     """Returns the last bot utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "StartCustomBotAction":
+        if event["type"] == "StartInternalSystemAction":
             return event
 
     return None
