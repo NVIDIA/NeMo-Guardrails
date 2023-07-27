@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Event-based API](./docs/user_guide/advanced/event-based-api.md) for guardrails.
 - Support for message with type "event" in [`LLMRails.generate_async`](./docs/api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async).
 
+### Changed
+
+- Changed the naming of the internal events to align to the upcoming UMIM spec (Unified Multimodal Interaction Management).
+
 ### Fixed
 
 - [#58](https://github.com/NVIDIA/NeMo-Guardrails/issues/58): Fix install on Mac OS 13.
