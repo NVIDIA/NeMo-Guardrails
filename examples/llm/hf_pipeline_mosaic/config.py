@@ -29,8 +29,10 @@ def get_mpt_7b_instruct_llm():
     # Bug submitted here: https://github.com/huggingface/transformers/issues/24471#issuecomment-1606549042
     name = "mosaicml/mpt-7b-instruct"
     config = AutoConfig.from_pretrained(name, trust_remote_code=True)
-    config.init_device = "cuda:0"  # For fast initialization directly on GPU!
-    config.max_seq_len = 4500
+    # Use GPU (with id 0 in this case) for fast initialization
+    device = "cuda:0"
+    config.init_device = device
+    config.max_seq_len = 450
 
     params = {"temperature": 0, "max_new_tokens": 100, "max_length": 450}
 
@@ -46,7 +48,7 @@ def get_mpt_7b_instruct_llm():
         model=model,
         task="text-generation",
         tokenizer=tokenizer,
-        device="cuda:0",
+        device=device,
         max_new_tokens=100,
         do_sample=True,
         use_cache=True,
