@@ -1,5 +1,10 @@
-# HuggingFace Pipeline
+# HuggingFace Pipeline with Dolly models
 
-This configuration uses the HuggingFace Pipeline LLM.
+This configuration uses the HuggingFace Pipeline LLM with the [dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b) model.
 
-**Disclaimer**: The `dolly-v2-3b` LLM model has only been tested on basic use cases, e.g., greetings and recognizing specific questions. On more complex queries, this model may not work correctly. Thorough testing and optimizations are needed before considering a production deployment.
+The `dolly-v2-3b` LLM model has been tested on the topical rails evaluation sets, results are available [here](../../../nemoguardrails/eval/README.md).
+
+In this folder, the guardrails application is very basic, but anyone can change it with any other more complex configuration.
+
+**Disclaimer**: The current results of using `dolly-v2-3b` LLM are promising, but still incipient.
+On more complex guardrails apps, this model may not work correctly. Thorough testing and optimizations, including for the prompts, are needed before considering a production deployment.
