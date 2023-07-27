@@ -95,6 +95,7 @@ class LLMRails:
             config=config,
             llm=self.llm,
             llm_task_manager=self.runtime.llm_task_manager,
+            embedding_search_providers=self.runtime.registered_embedding_search_providers,
             verbose=verbose,
         )
         self.runtime.register_actions(actions)
@@ -373,3 +374,15 @@ class LLMRails:
         :value_or_fn: The value or function that will be used to generate the value.
         """
         self.runtime.llm_task_manager.register_prompt_context(name, value_or_fn)
+
+    def register_embedding_search_provider(self, name, cls):
+        """Register a new embedding search provider.
+
+        Args:
+            name:
+            cls:
+
+        Returns:
+
+        """
+        self.runtime.registered_embedding_search_providers[name] = cls

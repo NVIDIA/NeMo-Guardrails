@@ -28,6 +28,8 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     It uses Annoy to perform the search.
     """
 
+    # TODO: update this interface to async
+
     def __init__(self, embedding_model=None, index=None):
         self._model = None
         self._items = []

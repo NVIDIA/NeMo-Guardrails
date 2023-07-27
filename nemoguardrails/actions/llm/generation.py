@@ -60,6 +60,7 @@ class LLMGenerationActions:
         config: RailsConfig,
         llm: BaseLLM,
         llm_task_manager: LLMTaskManager,
+        embedding_search_providers: Optional[dict] = None,
         verbose: bool = False,
     ):
         self.config = config
@@ -93,6 +94,27 @@ class LLMGenerationActions:
         # We also initialize the environment for rendering bot messages
         self.env = Environment()
 
+        self.embedding_search_providers = embedding_search_providers
+
+    def _get_embeddings_search_instance(self):
+        if self.config.embedding_search_provider == "default":
+            return BasicEmbeddingsIndex(self.embedding_model)
+        else:
+            if (
+                self.config.embedding_search_provider
+                not in self.embedding_search_providers
+            ):
+                raise Exception(
+                    "Unknown embedding search provider: ",
+                    self.config.embedding_search_provider,
+                )
+            else:
+                # TODO: add support for parameters
+                kwargs = {}
+                return self.embedding_search_providers[
+                    self.config.embedding_search_provider
+                ](**kwargs)
+
     def _init_user_message_index(self):
         """Initializes the index of user messages."""
 
@@ -108,7 +130,7 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.user_message_index = BasicEmbeddingsIndex(self.embedding_model)
+        self.user_message_index = self._get_embeddings_search_instance()
         self.user_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -129,7 +151,7 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.bot_message_index = BasicEmbeddingsIndex(self.embedding_model)
+        self.bot_message_index = self._get_embeddings_search_instance()
         self.bot_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -163,7 +185,7 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.flows_index = BasicEmbeddingsIndex(self.embedding_model)
+        self.flows_index = self._get_embeddings_search_instance()
         self.flows_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.

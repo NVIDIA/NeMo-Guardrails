@@ -70,6 +70,9 @@ class Runtime:
         # Initialize the prompt renderer as well.
         self.llm_task_manager = LLMTaskManager(config)
 
+        # The registered embedding search providers
+        self.registered_embedding_search_providers = {}
+
     def _load_flow_config(self, flow: dict):
         """Loads a flow into the list of flow configurations."""
         elements = flow["elements"]

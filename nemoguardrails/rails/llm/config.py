@@ -229,6 +229,11 @@ class RailsConfig(BaseModel):
         default_factory=dict,
         description="Any custom configuration data that might be needed.",
     )
+    
+    embedding_search_provider: Optional[str] = Field(
+        default="default",
+        description="The engine to use for computing the embeddings and doing the search.",
+    )
 
     @staticmethod
     def from_path(
