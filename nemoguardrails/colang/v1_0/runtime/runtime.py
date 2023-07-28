@@ -32,7 +32,11 @@ from nemoguardrails.actions.math import wolfram_alpha_request
 from nemoguardrails.actions.output_moderation import output_moderation
 from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.colang.v1_0.lang.parser import parse_colang_file
-from nemoguardrails.flows.flows import FlowConfig, compute_context, compute_next_steps
+from nemoguardrails.colang.v1_0.runtime.flows import (
+    FlowConfig,
+    compute_context,
+    compute_next_steps,
+)
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict

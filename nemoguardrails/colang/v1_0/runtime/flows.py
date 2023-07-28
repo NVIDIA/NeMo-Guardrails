@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
 
-from nemoguardrails.flows.sliding import slide
+from nemoguardrails.colang.v1_0.runtime.sliding import slide
 from nemoguardrails.utils import new_event_dict
 
 
