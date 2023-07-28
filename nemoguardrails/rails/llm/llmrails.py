@@ -33,6 +33,7 @@ from nemoguardrails.actions.output_moderation import output_moderation
 from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
+from nemoguardrails.colang.v1_1.runtime.runtime import RuntimeV1_1
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.rails.llm.config import RailsConfig
@@ -92,6 +93,8 @@ class LLMRails:
         # First, we initialize the runtime.
         if config.colang_version == "1.0":
             self.runtime = RuntimeV1_0(config=config, verbose=verbose)
+        elif config.colang_version == "1.1":
+            self.runtime = RuntimeV1_1(config=config, verbose=verbose)
         else:
             raise ValueError(f"Unsupported colang version: {config.colang_version}.")
 
