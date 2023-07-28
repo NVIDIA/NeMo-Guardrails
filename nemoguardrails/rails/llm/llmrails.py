@@ -23,10 +23,16 @@ from typing import Any, List, Optional, Union
 
 from langchain.llms.base import BaseLLM
 
+from nemoguardrails.actions.fact_checking import check_facts
+from nemoguardrails.actions.hallucination import check_hallucination
+from nemoguardrails.actions.jailbreak_check import check_jailbreak
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
+from nemoguardrails.actions.math import wolfram_alpha_request
+from nemoguardrails.actions.output_moderation import output_moderation
+from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_0.runtime.runtime import Runtime
+from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.rails.llm.config import RailsConfig
@@ -37,6 +43,10 @@ log = logging.getLogger(__name__)
 
 class LLMRails:
     """Rails based on a given configuration."""
+
+    config: RailsConfig
+    llm: Optional[BaseLLM]
+    runtime: Runtime
 
     def __init__(
         self, config: RailsConfig, llm: Optional[BaseLLM] = None, verbose: bool = False
@@ -80,10 +90,26 @@ class LLMRails:
                 spec.loader.exec_module(config_module)
 
         # First, we initialize the runtime.
-        self.runtime = Runtime(config=config, verbose=verbose)
+        if config.colang_version == "1.0":
+            self.runtime = RuntimeV1_0(config=config, verbose=verbose)
+        else:
+            raise ValueError(f"Unsupported colang version: {config.colang_version}.")
 
         # Next, we initialize the LLM engines (main engine and action engines if specified).
         self._init_llms()
+
+        # Initialize the default actions
+        default_actions = {
+            "wolfram alpha request": wolfram_alpha_request,
+            "check_facts": check_facts,
+            "check_jailbreak": check_jailbreak,
+            "output_moderation": output_moderation,
+            "check_hallucination": check_hallucination,
+            "retrieve_relevant_chunks": retrieve_relevant_chunks,
+        }
+
+        for name, action in default_actions.items():
+            self.runtime.register_action(action, name)
 
         # Next, we initialize the LLM Generate actions and register them.
         actions = LLMGenerationActions(

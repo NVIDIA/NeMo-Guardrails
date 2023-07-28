@@ -15,130 +15,24 @@
 
 import inspect
 import logging
-import uuid
 from textwrap import indent
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 from urllib.parse import urljoin
 
 import aiohttp
 from langchain.chains.base import Chain
 
-from nemoguardrails.actions.action_dispatcher import ActionDispatcher
 from nemoguardrails.actions.actions import ActionResult
-from nemoguardrails.actions.fact_checking import check_facts
-from nemoguardrails.actions.hallucination import check_hallucination
-from nemoguardrails.actions.jailbreak_check import check_jailbreak
-from nemoguardrails.actions.math import wolfram_alpha_request
-from nemoguardrails.actions.output_moderation import output_moderation
-from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_0.runtime.flows import (
-    FlowConfig,
-    compute_context,
-    compute_next_steps,
-)
-from nemoguardrails.llm.taskmanager import LLMTaskManager
-from nemoguardrails.rails.llm.config import RailsConfig
+from nemoguardrails.colang.runtime import Runtime
+from nemoguardrails.colang.v1_0.runtime.flows import compute_context, compute_next_steps
 from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
 
 
-class Runtime:
+class RuntimeV1_0(Runtime):
     """Runtime for executing the guardrails."""
-
-    def __init__(self, config: RailsConfig, verbose: bool = False):
-        self.config = config
-        self.verbose = verbose
-
-        # The dictionary of registered actions, initialized with default ones.
-        self.registered_actions = {
-            "wolfram alpha request": wolfram_alpha_request,
-            "check_facts": check_facts,
-            "check_jailbreak": check_jailbreak,
-            "output_moderation": output_moderation,
-            "check_hallucination": check_hallucination,
-            "retrieve_relevant_chunks": retrieve_relevant_chunks,
-        }
-
-        # Register the actions with the dispatcher.
-        self.action_dispatcher = ActionDispatcher(config_path=config.config_path)
-        for action_name, action_fn in self.registered_actions.items():
-            self.action_dispatcher.register_action(action_fn, action_name)
-
-        # The list of additional parameters that can be passed to the actions.
-        self.registered_action_params = {}
-
-        self._init_flow_configs()
-
-        # Initialize the prompt renderer as well.
-        self.llm_task_manager = LLMTaskManager(config)
-
-    def _load_flow_config(self, flow: dict):
-        """Loads a flow into the list of flow configurations."""
-        elements = flow["elements"]
-
-        # If we have an element with meta information, we move the relevant properties
-        # to top level.
-        if elements and elements[0].get("_type") == "meta":
-            meta_data = elements[0]["meta"]
-
-            if "priority" in meta_data:
-                flow["priority"] = meta_data["priority"]
-            if "is_extension" in meta_data:
-                flow["is_extension"] = meta_data["is_extension"]
-            if "interruptable" in meta_data:
-                flow["is_interruptible"] = meta_data["interruptable"]
-
-            # Finally, remove the meta element
-            elements = elements[1:]
-
-        # If we don't have an id, we generate a random UID.
-        flow_id = flow.get("id") or str(uuid.uuid4())
-
-        self.flow_configs[flow_id] = FlowConfig(
-            id=flow_id,
-            elements=elements,
-            priority=flow.get("priority", 1.0),
-            is_extension=flow.get("is_extension", False),
-            is_interruptible=flow.get("is_interruptible", True),
-            source_code=flow.get("source_code"),
-        )
-
-        # We also compute what types of events can trigger this flow, in addition
-        # to the default ones.
-        for element in elements:
-            if element.get("UtteranceUserActionFinished"):
-                self.flow_configs[flow_id].trigger_event_types.append(
-                    "UtteranceUserActionFinished"
-                )
-
-    def _init_flow_configs(self):
-        """Initializes the flow configs based on the config."""
-        self.flow_configs = {}
-
-        for flow in self.config.flows:
-            self._load_flow_config(flow)
-
-    def register_action(self, action: callable, name: Optional[str] = None):
-        """Registers an action with the given name.
-
-        :param name: The name of the action.
-        :param action: The action function.
-        """
-        self.action_dispatcher.register_action(action, name)
-
-    def register_actions(self, actions_obj: any):
-        """Registers all the actions from the given object."""
-        self.action_dispatcher.register_actions(actions_obj)
-
-    def register_action_param(self, name: str, value: any):
-        """Registers an additional parameter that can be passed to the actions.
-
-        :param name: The name of the parameter.
-        :param value: The value of the parameter.
-        """
-        self.registered_action_params[name] = value
 
     async def generate_events(self, events: List[dict]) -> List[dict]:
         """Generates the next events based on the provided history.

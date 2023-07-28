@@ -223,6 +223,8 @@ class RailsConfig(BaseModel):
         description="Whether to enable multi-step generation for the LLM.",
     )
 
+    colang_version: str = Field(default="1.0", description="The Colang version to use.")
+
     @staticmethod
     def from_path(
         config_path: str,
