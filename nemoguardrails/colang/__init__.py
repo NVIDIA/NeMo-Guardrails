@@ -16,12 +16,17 @@ from .v1_0.lang import parser as parser_v1_0
 from .v1_1.lang import parser as parser_v1_1
 
 
-def parse_colang_file(filename: str, content: str, version: str = "1.0"):
+def parse_colang_file(
+    filename: str,
+    content: str,
+    include_source_mapping: bool = True,
+    version: str = "1.0",
+):
     """Parse the content of a .co file into the CoYML format."""
     if version == "1.0":
-        return parser_v1_0.parse_colang_file(filename, content)
+        return parser_v1_0.parse_colang_file(filename, content, include_source_mapping)
     elif version == "1.1":
-        return parser_v1_1.parse_colang_file(filename, content)
+        return parser_v1_1.parse_colang_file(filename, content, include_source_mapping)
     else:
         raise Exception(f"Unsupported colang version {version}")
 
