@@ -148,6 +148,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "sample_conversation",
         "lowest_temperature",
         "enable_multi_step_generation",
+        "colang_version",
     ]
 
     for field in additional_fields:
