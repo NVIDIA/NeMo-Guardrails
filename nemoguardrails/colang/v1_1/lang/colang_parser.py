@@ -83,6 +83,7 @@ VALID_MAIN_TOKENS = [
     "while",
     "for",
     "foreach",
+    "match",
 ]
 
 
@@ -353,6 +354,7 @@ class ColangParser:
             "user",
             "bot",
             "event",
+            "match",
             "if",
             "while",
             "for",
@@ -1718,7 +1720,7 @@ class ColangParser:
                     self._parse_user()
                 elif self.main_token == "bot":
                     self._parse_bot()
-                elif self.main_token == "event":
+                elif self.main_token in ["event", "match"]:
                     self._parse_event()
                 elif self.main_token in ["do"]:
                     self._parse_do()
