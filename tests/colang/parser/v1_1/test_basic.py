@@ -16,6 +16,7 @@
 import json
 
 from nemoguardrails.colang import parse_colang_file
+from nemoguardrails.colang.v1_1.lang.colang_parser import parse_coflows_to_yml_flows
 
 
 def test_1():
@@ -24,30 +25,36 @@ def test_1():
       match UserIntent(intent="dfdf")
       bot express greeting
     """
-    result = parse_colang_file(filename="", content=content, version="1.1")
+    result = parse_colang_file(
+        filename="", content=content, include_source_mapping=False, version="1.1"
+    )
 
     print(json.dumps(result, indent=True))
 
     assert result["flows"][0]["elements"] == [
+        {"_type": "UserIntent", "intent": "dfdf"},
         {
-            "_source_mapping": {
-                "comment": None,
-                "filename": "",
-                "line_number": 3,
-                "line_text": 'match UserIntent(intent="dfdf")',
-            },
-            "_type": "UserIntent",
-            "intent": "dfdf",
-        },
-        {
-            "_source_mapping": {
-                "comment": None,
-                "filename": "",
-                "line_number": 4,
-                "line_text": "bot express greeting",
-            },
             "_type": "run_action",
             "action_name": "utter",
             "action_params": {"value": "express greeting"},
         },
+    ]
+
+
+def test_2():
+    content = """
+        define flow
+          match UserSilent(duration="5")
+          bot ask if more time needed
+        """
+
+    result = parse_coflows_to_yml_flows(
+        filename="", content=content, snippets={}, include_source_mapping=False
+    )
+
+    flow = list(result["flows"].values())[0]
+
+    assert flow == [
+        {"event": 'UserSilent(duration="5")'},
+        {"bot": "ask if more time needed"},
     ]
