@@ -17,12 +17,12 @@ import logging
 import textwrap
 from typing import List, Optional
 
-from nemoguardrails.colang.v1_0.lang.colang_parser import (
+from nemoguardrails.colang.v1_1.lang.colang_parser import (
     parse_coflows_to_yml_flows,
     parse_snippets_and_imports,
 )
-from nemoguardrails.colang.v1_0.lang.comd_parser import parse_md_file
-from nemoguardrails.colang.v1_0.lang.coyml_parser import parse_flow_elements
+from nemoguardrails.colang.v1_1.lang.comd_parser import parse_md_file
+from nemoguardrails.colang.v1_1.lang.coyml_parser import parse_flow_elements
 
 log = logging.getLogger(__name__)
 
