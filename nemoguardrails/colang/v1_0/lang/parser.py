@@ -61,7 +61,7 @@ def _extract_flow_code(file_content: str, flow_elements: List[dict]) -> Optional
     return None
 
 
-def parse_colang_file(filename: str, content: str, version="1.0"):
+def parse_colang_file(filename: str, content: str):
     """Parse the content of a .co file into the CoYML format."""
     snippets, imports = parse_snippets_and_imports(filename, content)
     result = parse_coflows_to_yml_flows(

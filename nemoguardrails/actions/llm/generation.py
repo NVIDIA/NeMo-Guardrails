@@ -38,7 +38,7 @@ from nemoguardrails.actions.llm.utils import (
     llm_call,
     strip_quotes,
 )
-from nemoguardrails.colang.v1_0.lang.parser import parse_colang_file
+from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.kb.basic import BasicEmbeddingsIndex
 from nemoguardrails.kb.index import IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase

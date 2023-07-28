@@ -25,7 +25,7 @@ from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
-from nemoguardrails.colang.v1_0.lang.parser import parse_colang_file
+from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.stats import llm_stats
@@ -84,6 +84,7 @@ class LLMRails:
 
         # Next, we initialize the LLM engines (main engine and action engines if specified).
         self._init_llms()
+
         # Next, we initialize the LLM Generate actions and register them.
         actions = LLMGenerationActions(
             config=config,

@@ -31,7 +31,7 @@ from nemoguardrails.actions.jailbreak_check import check_jailbreak
 from nemoguardrails.actions.math import wolfram_alpha_request
 from nemoguardrails.actions.output_moderation import output_moderation
 from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
-from nemoguardrails.colang.v1_0.lang.parser import parse_colang_file
+from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.flows import (
     FlowConfig,
     compute_context,
