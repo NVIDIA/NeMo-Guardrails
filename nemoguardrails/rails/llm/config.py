@@ -22,8 +22,10 @@ import yaml
 from pydantic import BaseModel, ValidationError, root_validator
 from pydantic.fields import Field
 
-from nemoguardrails.language.coyml_parser import parse_flow_elements
-from nemoguardrails.language.parser import parse_colang_file
+from nemoguardrails.colang.v1_0.lang.parser import (
+    parse_colang_file,
+    parse_flow_elements,
+)
 
 
 class Model(BaseModel):
