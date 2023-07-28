@@ -68,7 +68,7 @@ class RuntimeV1_0(Runtime):
             else:
                 # We need to slide all the flows based on the current event,
                 # to compute the next steps.
-                next_events = await self.compute_next_steps(events)
+                next_events = await self._compute_next_steps(events)
 
                 if len(next_events) == 0:
                     next_events = [new_event_dict("Listen")]
@@ -87,7 +87,7 @@ class RuntimeV1_0(Runtime):
 
         return new_events
 
-    async def compute_next_steps(self, events: List[dict]) -> List[dict]:
+    async def _compute_next_steps(self, events: List[dict]) -> List[dict]:
         """Computes the next step based on the current flow."""
         next_steps = compute_next_steps(events, self.flow_configs)
 
@@ -339,6 +339,6 @@ class RuntimeV1_0(Runtime):
 
         # And we compute the next steps. The new flow should match the current event,
         # and start.
-        next_steps = await self.compute_next_steps(events)
+        next_steps = await self._compute_next_steps(events)
 
         return next_steps
