@@ -256,6 +256,9 @@ class RailsConfig(BaseModel):
             # Iterate all .yml files and join them
             raw_config = {}
 
+            # First, we need to gather the names of the colang files.
+            colang_files = []
+
             for root, dirs, files in os.walk(config_path):
                 for file in files:
                     # This is the raw configuration that will be loaded from the file.
@@ -279,8 +282,7 @@ class RailsConfig(BaseModel):
                             _raw_config = yaml.safe_load(f.read())
 
                     elif file.endswith(".co"):
-                        with open(full_path, "r", encoding="utf-8") as f:
-                            _raw_config = parse_colang_file(file, content=f.read())
+                        colang_files.append((file, full_path))
 
                     # Extract test set if needed before adding the _raw_config to the app config in raw_config
                     if "user_messages" in _raw_config and test_set_percentage > 0:
@@ -306,6 +308,17 @@ class RailsConfig(BaseModel):
                                     ][intent][:max_samples_per_intent]
 
                     _join_config(raw_config, _raw_config)
+
+            # Parse the colang files after we know the colang version
+            colang_version = raw_config.get("colang_version", "1.0")
+
+            for file, full_path in colang_files:
+                with open(full_path, "r", encoding="utf-8") as f:
+                    _raw_config = parse_colang_file(
+                        file, content=f.read(), version=colang_version
+                    )
+                    _join_config(raw_config, _raw_config)
+
         else:
             raise ValueError(f"Invalid config path {config_path}.")
 
