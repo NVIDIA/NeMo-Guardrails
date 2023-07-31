@@ -21,6 +21,7 @@ import sys
 import uuid
 from ast import literal_eval
 from functools import lru_cache
+from time import time
 from typing import List, Optional
 
 from jinja2 import Environment, meta
@@ -503,7 +504,11 @@ class LLMGenerationActions:
                 context={"examples": examples, "relevant_chunks": relevant_chunks},
             )
 
+            t0 = time()
             result = await llm_call(llm, prompt)
+            log.info(
+                "--- :: LLM Bot Message Generation call took %.2f seconds", time() - t0
+            )
 
             # Parse the output using the associated parser
             result = self.llm_task_manager.parse_task_output(
