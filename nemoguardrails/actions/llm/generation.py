@@ -484,7 +484,8 @@ class LLMGenerationActions:
         else:
             # We search for the most relevant similar bot utterance
             examples = ""
-            if self.bot_message_index:
+            # NOTE: disabling bot message index when there are no user messages
+            if self.config.user_messages and self.bot_message_index:
                 results = self.bot_message_index.search(
                     text=event["intent"], max_results=5
                 )
