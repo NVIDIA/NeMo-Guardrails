@@ -4,19 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.4.0] - 2023-08-03
 
 ### Added
 
 - [Event-based API](./docs/user_guide/advanced/event-based-api.md) for guardrails.
 - Support for message with type "event" in [`LLMRails.generate_async`](./docs/api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async).
 - Support for [bot message instructions](docs/user_guide/advanced/bot-message-instructions.md).
+- Support for [using variables inside bot message definitions](./docs/user_guide/colang-language-syntax-guide.md#bot-messages-with-variables).
+- Support for `vicuna-7b-v1.3` and `mpt-7b-instruct`.
+- Topical evaluation results for `vicuna-7b-v1.3` and `mpt-7b-instruct`.
+- Support to use different models for different LLM tasks.
+- Support for red-teaming using challenges.
+- Support to disable the Chat UI when running the server using `--disable-chat-ui`.
+- Support for accessing the API request headers in server mode.
 
 ### Changed
 
 - Changed the naming of the internal events to align to the upcoming UMIM spec (Unified Multimodal Interaction Management).
 comments.)
-- Add support for [using variables inside bot message definitions](./docs/user_guide/colang-language-syntax-guide.md#bot-messages-with-variables).
+- If there are no user message examples, the bot messages examples lookup is disabled as well.
 
 ### Fixed
 
@@ -27,6 +34,8 @@ comments.)
 - [#55](https://github.com/NVIDIA/NeMo-Guardrails/issues/83): Fix bug related to LangChain callbacks initialization.
 - Fixed generation of "..." on value generation.
 - Fixed the parameters type conversion when invoking actions from colang (previously everything was string).
+- Fixed `model_kwargs` property for the `WrapperLLM`.
+- Fixed bug when `stop` was used inside flows.
 
 ## [0.3.0] - 2023-06-30
 
