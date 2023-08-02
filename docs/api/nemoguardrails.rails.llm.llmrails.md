@@ -41,7 +41,7 @@ Initializes the LLMRails instance.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L256"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L281"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.generate`
 
@@ -53,7 +53,7 @@ Synchronous version of generate_async.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L185"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L207"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.generate_async`
 
@@ -94,7 +94,7 @@ System messages are not yet supported.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L310"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L335"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.generate_events`
 
@@ -106,7 +106,7 @@ Synchronous version of `LLMRails.generate_events_async`.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L274"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L299"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.generate_events_async`
 
@@ -138,7 +138,7 @@ The format for events is the following:
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L326"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L351"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.register_action`
 
@@ -153,7 +153,7 @@ Register a custom action for the rails configuration.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L330"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L355"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.register_action_param`
 
@@ -165,7 +165,7 @@ Registers a custom action parameter.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L334"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L359"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.register_filter`
 
@@ -180,7 +180,7 @@ Register a custom filter for the rails configuration.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L338"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L363"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.register_output_parser`
 
@@ -192,7 +192,7 @@ Register a custom output parser for the rails configuration.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L342"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L367"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.register_prompt_context`
 
