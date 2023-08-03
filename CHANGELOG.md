@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for red-teaming using challenges.
 - Support to disable the Chat UI when running the server using `--disable-chat-ui`.
 - Support for accessing the API request headers in server mode.
+- Support to enable CORS settings for the guardrails server.
 
 ### Changed
 

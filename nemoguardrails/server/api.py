@@ -21,6 +21,7 @@ import os.path
 from typing import List
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.staticfiles import StaticFiles
 
@@ -46,6 +47,22 @@ app = FastAPI(
     license_info={"name": "Apache License, Version 2.0"},
 )
 
+ENABLE_CORS = os.getenv("NEMO_GUARDRAILS_SERVER_ENABLE_CORS", "false").lower() == "true"
+ALLOWED_ORIGINS = os.getenv("NEMO_GUARDRAILS_SERVER_ALLOWED_ORIGINS", "*")
+
+if ENABLE_CORS:
+    # Split origins by comma
+    origins = ALLOWED_ORIGINS.split(",")
+
+    log.info(f"CORS enabled with the following origins: {origins}")
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # By default, we use the rails in the examples folder
 app.rails_config_path = os.path.join(os.path.dirname(__file__), "..", "..", "examples")
@@ -81,6 +98,11 @@ def get_rails_configs():
         if os.path.isdir(os.path.join(app.rails_config_path, f))
         and f[0] != "."
         and f[0] != "_"
+        # We filter out all the configs for which there is no `config.yml` file.
+        and (
+            os.path.exists(os.path.join(app.rails_config_path, f, "config.yml"))
+            or os.path.exists(os.path.join(app.rails_config_path, f, "config.yaml"))
+        )
     ]
 
     return [{"id": config_id} for config_id in config_ids]

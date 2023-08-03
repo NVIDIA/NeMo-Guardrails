@@ -27,6 +27,13 @@ If no `--config` option is specified, the server will try to load the configurat
 │   ...
 ```
 
+### CORS
+
+If you want to enable your guardrails server to receive requests directly from another browser-based UI, you need to enable the CORS configuration. You can do this by setting the following environment variables:
+
+- `NEMO_GUARDRAILS_SERVER_ENABLE_CORS`: `True` or `False` (default `False`).
+- `NEMO_GUARDRAILS_SERVER_ALLOWED_ORIGINS`: The list of allowed origins (default `*`). You can separate multiple origins using commas.
+
 ### Endpoints
 
 The OpenAPI specification for the server is available at `http://localhost:8000/redoc` or `http://localhost:8000/docs`.
