@@ -23,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Changed the naming of the internal events to align to the upcoming UMIM spec (Unified Multimodal Interaction Management).
-comments.)
 - If there are no user message examples, the bot messages examples lookup is disabled as well.
 
 ### Fixed
