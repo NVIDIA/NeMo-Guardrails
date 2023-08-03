@@ -299,57 +299,6 @@ async def T5_translation(
     return translated_message
 ```
 
-## Conversations with the bot
-**Note:** While this section shows the mechanism in which the bot is answering
-a question, it is highly recommended to review the [colang runtime guide](../../docs/architecture/README.md)
- for an in-depth explanation.
-
-**A Brief explanation about how `.co` and `.yml` files are absorbed by the bot:**
-When the bot is launched, all the user and bot messages and flows are
-indexed and stored in two in-memory vector stores. These vector stores are then
-used to retrieve an exact match or the "top N" most relevant messages and
-flows at different steps of the bot's process.
-
-### Simple Conversation
-
-With the basics understood, let's discuss some sample conversations. Below is
-an interaction between a user and the bot. There are five points of
-interest in this conversation marked **A, B, C, D, and E**. Let's discuss it in
-some detail.
-
-![simple conversation](./img/simple_conversation.PNG)
-
-* **A:** The user is asking the bot "How can you help me?"
-* **B:** The bot then searches its vector store for `messages` and finds the
-most relevant `message`, which in this case is "ask capabilities".
-* **C:** Next, the bot searches for a relevant `flow` in the respective vector
-store and identifies the `flow` that it is supposed to execute. In this case,
-the bot intends to inform about its capabilities.
-* **D&E:** Since there is a bot `message` in the vector store, the bot retrieves
-it and sends it to the user. If in case we hadn't defined the `bot message`, the
-canonical form of the flow, the question, and the sample few shot prompts would
-have been used by the LLM to generate a message to be sent to the user. This
-exact mechanism would have been used at steps **B** & **C** as well if a match
-wasn't found.
-
-### Asking a Mathematical Question
-
-Let's move to a more interesting case, say the user asks the bot a mathematical
-question.
-
-![mathematical question](./img/math_question.PNG)
-* **A:** The user is asking the bot "What is 434 + 56*7.5?"
-* **B:** The bot then searches its vector store for `messages` and finds the
-most relevant `message`, which in this case is "ask math question". Next, the
-bot searches for a relevant `flow` in the respective vector
-store and identifies the `flow` that it is supposed to execute. In this case,
-the bot intends to execute the action `wolfram alpha request`.
-* **C:** The request is then routed to the Wolfram|Alpha API and a response is
-received.
-* **D&E:** According to the flow, the next step for the bot is `respond to
-math question` which is done by appending the response from Wolfram|Alpha to the
-canonical form and sending it to the LLM to generate a response
-
 ## Launching the bot
 
 With a basic understanding of building topic rails, the next step is to try out
