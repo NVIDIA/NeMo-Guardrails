@@ -1,15 +1,15 @@
 # Server Guide
 
-The NeMo Guardrails toolkit enables you to create guardrails configurations and deploy them in a scalable and secure way using a **guardrails server** and an **actions server**.
+The NeMo Guardrails toolkit enables you to create guardrails configurations and deploy them scalable and securely using a **guardrails server** and an **actions server**.
 
 ## Guardrails Server
 
-The Guardrails Server loads a predefined set of guardrails configurations at startup and exposes an HTTP API to use them. The server is developed using [FastAPI](https://fastapi.tiangolo.com/) and the interface is based on the [chatbot-ui](https://github.com/mckaywrigley/chatbot-ui) project. This server is best suited to provide a visual interface/ playground to interact with the bot and try out the rails.
+The Guardrails Server loads a predefined set of guardrails configurations at startup and exposes an HTTP API to use them. The server uses [FastAPI](https://fastapi.tiangolo.com/), and the interface is based on the [chatbot-ui](https://github.com/mckaywrigley/chatbot-ui) project. This server is best suited to provide a visual interface/ playground to interact with the bot and try out the rails.
 
 To launch the server:
 
 ```
-> nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT]
+> nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT] [--disable-chat-ui]
 ```
 
 If no `--config` option is specified, the server will try to load the configurations from the `config` folder in the current directory. If no configurations are found, it will load all the example guardrails configurations.
@@ -74,17 +74,23 @@ Sample response:
 }]
 ```
 
+### Chat UI
+
+You can use the Chat UI to test a guardrails configuration quickly.
+
+**IMPORTANT**: You should only use the Chat UI for internal testing. For a production deployment of the NeMo Guardrails server, the Chat UI should be disabled using the `--disable-chat-ui` flag.
+
 ## Actions Server
 
-The Actions Server enables you to run the actions invoked from the guardrails in a more secure way (see [Security Guidelines](../security/guidelines.md) for more details). The action server should be deployed in a separate environment.
+The Actions Server enables you to run the actions invoked from the guardrails more securely (see [Security Guidelines](../security/guidelines.md) for more details). The action server should be deployed in a separate environment.
 
-**Note**: Even though highly recommended for production deployments, the use of an *actions server* is optional, and it's configured per guardrails configuration. If no actions server is specified in a guardrails configuration, the actions will run in the same process as the guardrails server. To launch the server:
+**Note**: Even though highly recommended for production deployments, using an *actions server* is optional and configured per guardrails configuration. If no actions server is specified in a guardrails configuration, the actions will run in the same process as the guardrails server. To launch the server:
 
 ```
 > nemoguardrails actions-server [--port PORT]
 ```
 
-On startup, the actions server will automatically register all predefined actions and all the actions included in the current folder (including sub-folders).
+On startup, the actions server will automatically register all predefined actions and all actions in the current folder (including sub-folders).
 
 ### Endpoints
 
