@@ -15,10 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for `vicuna-7b-v1.3` and `mpt-7b-instruct`.
 - Topical evaluation results for `vicuna-7b-v1.3` and `mpt-7b-instruct`.
 - Support to use different models for different LLM tasks.
-- Support for red-teaming using challenges.
+- Support for [red-teaming](docs/user_guide/advanced/red-teaming.md) using challenges.
 - Support to disable the Chat UI when running the server using `--disable-chat-ui`.
 - Support for accessing the API request headers in server mode.
-- Support to enable CORS settings for the guardrails server.
+- Support to [enable CORS settings](docs/user_guide/server-guide.md#cors) for the guardrails server.
 
 ### Changed
 
@@ -37,6 +37,7 @@ comments.)
 - Fixed the parameters type conversion when invoking actions from colang (previously everything was string).
 - Fixed `model_kwargs` property for the `WrapperLLM`.
 - Fixed bug when `stop` was used inside flows.
+- Fixed Chat UI bug when an invalid guardrails configuration was used.
 
 ## [0.3.0] - 2023-06-30
 
