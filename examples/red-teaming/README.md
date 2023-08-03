@@ -2,8 +2,8 @@
 
 This is a sample server configuration with support for red teaming. It contains the following:
 
-1. A sample `challengs.json` file.
-2. Two sample guardrails configuration.
+1. A sample `challenges.json` file.
+2. Two sample guardrails configurations.
 
 To run the server with this configuration you can use the following command (assuming you've cloned the repository and are running the command from the root of the project):
 
