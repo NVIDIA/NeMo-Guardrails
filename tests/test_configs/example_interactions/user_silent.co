@@ -1,0 +1,8 @@
+# include core_flows.co
+
+flow user silent $time
+  start TimerBotAction(uuid(), $time) as $action
+  when match $action.Finished()
+    return
+  else when user said anything
+    abort # How can we actively abort a flow? Alternatively, we would need to be able to specify all events that the flow is listening to since the implicit definition does not work here

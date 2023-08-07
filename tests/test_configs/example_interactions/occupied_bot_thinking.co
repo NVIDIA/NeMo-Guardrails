@@ -1,0 +1,22 @@
+# Demonstrates how to react to user utterances while waiting for another event like a LLM request answer.
+# Question: would the 'bot ask and respond' flow abort for user 'said something' FlowFinished event from a different parallel flow?
+
+# include core_flows.co
+
+flow bot occupied thinking
+  start bot expression "Thinking"
+  while true
+    user said something
+    bot gesture "Raise index finger to lips"
+  # stop bot expression "Thinking"
+
+flow bot ask and respond $text
+  bot say $text
+  user said something as $user_said
+  start bot say """Reply something to {$user_said.event.utterance.text}""" as $bot_response
+  start bot occupied thinking
+  match $bot_response.Finished()
+  # stop bot occupied thinking
+
+flow main
+  bot ask and respond "How are you doing?"

@@ -1,0 +1,7 @@
+flow user confirms
+  """User confirms"""
+  await user said "Yes"
+
+flow user denies
+  """User denies"""
+  await user said "No"

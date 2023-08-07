@@ -1,0 +1,20 @@
+# Template flow for deriving states form events
+flow event_state $event_flow $state_variable $state
+  while true
+    await $event_flow
+    $state_variable = $state
+
+# State tracking based on events
+flow user ready state tracking
+  await event_state(user appears, $user_is_present, true)
+    and event_state(user disappears, $user_is_present, false)
+    and event_state(user becomes attentive, $user_is_attentive, true)
+    and event_state(user becomes inattentive, $user_is_attentive, false)
+
+# Wait for a combined user state to change
+flow user is ready
+  require user ready state tracking
+  when $user_is_attentive and $user_is_present
+
+flow main
+  await user is ready
