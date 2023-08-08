@@ -5,7 +5,6 @@ flow user ready state tracking
   await user presents state tracking and user attention state tracking
 
 flow user presents state tracking
-  # Option 2 (preferred)
   start user appears and user disappears
   while true
     when match user appears

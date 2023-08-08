@@ -1,0 +1,56 @@
+flow bot comes closer
+  # (await) bot move "front":
+  start bot move "front"
+  match bot move "front"
+
+flow bot greets
+  # (await) bot say "hello" and gesture "raise hand" and bot express "smile" and bot comes closer:
+  start bot say "hello" and gesture "raise hand" and bot express "smile" and bot comes closer
+  # Line above could also be written as four consecutive start action statements
+  match bot say "hello" and gesture "raise hand" and bot express "smile" and bot comes closer
+
+flow main
+  start bot greets
+  # (await) user said anything:
+  start user said anything
+  match user said anything
+  start bot say "Ok, let's start!"
+
+# Event processing log
+
+# -> event_0: FlowStartInternalEvent("main")
+# send FlowStartInternalEvent("bot greets") -> event_1
+# send FlowStartInternalEvent("user said anything") -> event_2
+# main/head_1: match user said anything
+
+# -> event_1: FlowStartInternalEvent("bot greets")
+# send FlowStartInternalEvent("bot say 'hello'") -> event_1.1
+# send FlowStartInternalEvent("bot gesture 'raise hand'") -> event_1.2
+# send FlowStartInternalEvent("bot express 'smile'") -> event_1.3
+# send FlowStartInternalEvent("bot comes closer") -> event_1.4
+# bot greets/head_1: match bot say "hello" and gesture "raise hand" and bot express "smile" and bot comes closer
+
+# -> event_1.1: FlowStartInternalEvent("bot say 'hello'")
+# send StartUtteranceBotAction(text="hello") -> external_event_1
+# bot say "hello"/head_1: match UtteranceBotActionFinished(text="hello")
+
+# -> event_1.2: FlowStartInternalEvent("bot gesture 'raise hand'")
+# send StartGestureBotAction("raise hand") -> external_event_2
+# bot gesture "raise hand"/head_1: match GestureBotActionFinished("raise hand")
+
+# -> event_1.3: FlowStartInternalEvent("bot express 'smile'")
+# send StartExpressionBotAction("smile") -> external_event_3
+# bot express "smile"/head_1: match ExpressionBotActionFinished("smile")
+
+# -> event_1.4: FlowStartInternalEvent("bot comes closer") 
+# send FlowStartInternalEvent("bot move 'front'") -> event_1.4.1
+# bot comes closer/head_1: match bot move "front"
+
+# -> event_1.4.1: FlowStartInternalEvent("bot move 'front'")
+# send StartPositionChangeBotAction("front") -> external_event_4
+# bot move "front"/head_1: match PositionChangeBotActionFinished("front")
+
+# -> event_2: FlowStartInternalEvent("user said anything")
+# user said anything/head_1: match UtteranceUserActionFinished()
+
+# At this point we have no more internal events to process

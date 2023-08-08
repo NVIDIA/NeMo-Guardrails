@@ -5,36 +5,48 @@
 # ----------------------------------
 # Bot event and action wrapper flows
 # -----------------------------------
-
+@thread("main") # Default interaction thread
 flow bot say $text
   await UtteranceBotAction(text=$text) as $action
 
-flow bot expression $expression
+@thread("expression")
+flow bot express $expression
   await ExpressionBotAction($expression) as $action
 
-flow bot expression $expression
-  await ExpressionBotAction($expression) as $action
+@thread("gesture")
+flow bot gesture $gesture
+  await GestureBotAction($gesture) as $action
+
+@thread("position")
+flow bot move $position
+  await PositionChangeBotAction($position) as $action
 
 # -----------------------------------
 # User event and action wrapper flows
 # -----------------------------------
 
+@thread("main")
 flow user said $text
   match UtteranceUserActionFinished(text=$text) as $event
 
+@thread("main")
 flow user said anything
   match UtteranceUserActionFinished() as $event
 
 # Vision related events and actions
 
+@thread("vision")
 flow user appears
   match DetectedUserAction.Finished() as $event
 
+@thread("vision")
 flow user disappears
   match DetectedUserAction.Finished() as $event
 
+@thread("vision")
 flow user becomes attentive
   match AttentionUserAction.Finished() as $event
 
+@thread("vision")
 flow user becomes inattentive
   match AttentionUserAction.Finished() as $event
