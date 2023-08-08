@@ -13,37 +13,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pickle
+import textwrap
+from pathlib import Path
 from typing import Optional
-from nemoguardrails import LLMRails
+
+import faiss
+import pandas as pd
+import torch
+from gpt4pandas import GPT4Pandas
+from langchain import HuggingFacePipeline
+from langchain.chains import RetrievalQA
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.llms import BaseLLM
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.vectorstores import FAISS
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+
+from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
-from langchain.text_splitter import CharacterTextSplitter
-import faiss
-from langchain import HuggingFacePipeline
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
 from nemoguardrails.llm.providers import register_llm_provider
-import torch
-from langchain import HuggingFacePipeline
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
-import pickle
-from langchain import HuggingFacePipeline
-from transformers import AutoTokenizer, pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-from pathlib import Path
-from langchain.chains import RetrievalQA
-import textwrap
-import transformers
-import pandas as pd
-from langchain import HuggingFacePipeline
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    pipeline,
-)
-import pandas as pd
-from gpt4pandas import GPT4Pandas
 
-def load_model(model_name, device, num_gpus, debug=False):
+
+def _get_model_config(config: RailsConfig, type: str):
+    """Quick helper to return the config for a specific model type."""
+    for model_config in config.models:
+        if model_config.type == type:
+            return model_config
+
+
+def _load_model(model_name_or_path, device, num_gpus, debug=False):
+    """Load an HF locally saved checkpoint."""
     if device == "cpu":
         kwargs = {}
     elif device == "cuda":
@@ -66,9 +68,9 @@ def load_model(model_name, device, num_gpus, debug=False):
     else:
         raise ValueError(f"Invalid device: {device}")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=False)
     model = AutoModelForCausalLM.from_pretrained(
-        model_name, low_cpu_mem_usage=True, **kwargs
+        model_name_or_path, low_cpu_mem_usage=True, **kwargs
     )
 
     if device == "cuda" and num_gpus == 1:
@@ -79,57 +81,10 @@ def load_model(model_name, device, num_gpus, debug=False):
 
     return model, tokenizer
 
-def tabularQnA_gpt4pandas(usr_query):
-    # loading titanic csv file
-    cut_idx=usr_query.find('based on')
-    usr_query=usr_query[:cut_idx]+'?'
-    model_path=<'path to the model file'>
-    titanic_csv_path=<path to titanic.csv is downloaded>
-    df = pd.read_csv(titanic_csv_path,sep=',')
-
-    # working on the data    
-    Embarked_d={'C' : "Cherbourg", 'Q': "Queenstown", 'S' : "Southampton"}
-    class_d={1:'first class',2:'second class',3:'third class'}
-    df['Class']=df['Pclass'].apply(lambda x : class_d[x])
-    # changing the embark port to full name
-    n=len(df)
-    col_ls=list(df.columns)
-    idx=col_ls.index('Embarked')
-    ls=[]
-    for i in range(n):        
-        temp=df.iloc[i,idx]
-        if type(temp)==str :
-            out=Embarked_d[temp]
-            ls.append(out)
-        else :
-            ls.append('N/A')
-            
-    df['port']=ls
-    df['Lived']=df['Survived'].apply(lambda x: 'survived' if x ==1 else 'died')
-    #dropping duplicated and re-worked column 
-    df.drop('Survived', inplace=True, axis=1)
-    df.drop('Pclass', inplace=True, axis=1)
-    df.drop('Embarked', inplace=True, axis=1)
-    grouped_by_cols=[]
-    if any(word in usr_query for word in ['first class','second class','third class']) :
-        grouped_by_cols.append('Class')
-    elif 'port' in usr_query:
-        grouped_by_cols.append('port')
-    elif any(word in usr_query for word in ['female','male','man','woman','men','women']) :
-        grouped_by_cols.append('Sex')
-    else:
-        pass
-    d=df.groupby(grouped_by_cols)['Lived'].value_counts()
-    #flatten the groupedby pandas series to flatten dictionary
-    d2=d.reset_index(inplace=False)
-    gpt = GPT4Pandas(model_path, d2, verbose=False)
-    out = gpt.ask(usr_query)
-    return out, titanic_csv_path , d2.to_string()
-    
 
 def _make_faiss_gpu(data_path, out_path, embeddings):
     # Here we process the txt files under the data_path folder.
-    ps = list(Path(data_path).glob('**/*.txt'))
+    ps = list(Path(data_path).glob("**/*.txt"))
     print(ps)
     data = []
     sources = []
@@ -151,79 +106,186 @@ def _make_faiss_gpu(data_path, out_path, embeddings):
 
     # Here we create a vector store from the documents and save it to disk.
     store = FAISS.from_texts(docs, embeddings, metadatas=metadatas)
-    faiss.write_index(store.index, out_path+"docs.index")
+    faiss.write_index(store.index, out_path + "docs.index")
     store.index = None
-    with open(out_path+"faiss_store.pkl", "wb") as f:
+    with open(out_path + "faiss_store.pkl", "wb") as f:
         pickle.dump(store, f)
     return store
 
-def wrap_text_preserve_newlines(text, width=110):
-    # Split the input text into lines based on newline characters
-    lines = text.split('\n')
 
-    # Wrap each line individually
-    wrapped_lines = [textwrap.fill(line, width=width) for line in lines]
-
-    # Join the wrapped lines back together using newline characters
-    wrapped_text = '\n'.join(wrapped_lines)
-
-    return wrapped_text
-
-def process_llm_response(llm_response):
-    print(wrap_text_preserve_newlines(llm_response['result']))
-    print('\n\nSources:')
-    for source in llm_response["source_documents"]:
-        print(source.metadata['source'])
-
-
-def _get_qa_chain_with_sources():
+def _get_vector_db(model_name: str, persist_path: str):
     # use other embeddings from huggingface
-    model_name = "sentence-transformers/all-mpnet-base-v2"
     model_kwargs = {"device": "cuda"}
 
-    hf_embedding = HuggingFaceEmbeddings(model_name=model_name, model_kwargs=model_kwargs)
-    using_vectorstore='faiss'
-    if using_vectorstore=='faiss':
-        vectorestore_path =  "<path_to_already_processd_and_saved_to_disk_vectorstore>"
+    hf_embedding = HuggingFaceEmbeddings(
+        model_name=model_name, model_kwargs=model_kwargs
+    )
+    using_vectorstore = "faiss"
+    if using_vectorstore == "faiss":
+        vectorestore_path = persist_path
         if vectorestore_path is not None:
-            index = faiss.read_index(vectorestore_path+'docs.index')
-            with open(vectorestore_path+"faiss_store.pkl", "rb") as f:
+            index = faiss.read_index(vectorestore_path + "docs.index")
+            with open(vectorestore_path + "faiss_store.pkl", "rb") as f:
                 vectordb = pickle.load(f)
             vectordb.index = index
         else:
-            data_path="<path to the folder contain xxx.txt files for processing into vectorstores>"
-            out_path="<path to the folder where you would like to save the processed vectorstores>"
-            vectordb = _make_faiss_gpu(data_path,out_path, hf_embedding)
+            data_path = "<path to the folder contain xxx.txt files for processing into vectorstores>"
+            out_path = "<path to the folder where you would like to save the processed vectorstores>"
+            vectordb = _make_faiss_gpu(data_path, out_path, hf_embedding)
     return vectordb
 
 
-vectordb = _get_qa_chain_with_sources()
+def init_main_llm(config: RailsConfig):
+    """Initialize the main model from a locally saved path.
+
+    The path is taken from the main model config.
+
+    models:
+      - type: main
+        engine: hf_pipeline_bloke
+        parameters:
+          path: "<PATH TO THE LOCALLY SAVED CHECKPOINT>"
+    """
+    # loading custom llm  from disk with multiGPUs support
+    # model_name = "< path_to_the_saved_custom_llm_checkpoints >"  # loading model ckpt from disk
+    model_config = _get_model_config(config, "main")
+    model_name = model_config.parameters.get("path")
+
+    device = "cuda"
+    num_gpus = 2  # number of GPUs you have , do nvidia-smi to check
+    model, tokenizer = _load_model(model_name, device, num_gpus, debug=False)
+
+    # repo_id="TheBloke/Wizard-Vicuna-13B-Uncensored-HF"
+    # pipe = pipeline("text-generation", model=repo_id, device_map={"":"cuda:0"}, max_new_tokens=256, temperature=0.1, do_sample=True,use_cache=True)
+    pipe = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        max_new_tokens=256,
+        temperature=0.1,
+        do_sample=True,
+    )
+
+    hf_llm = HuggingFacePipeline(pipeline=pipe)
+    provider = get_llm_instance_wrapper(
+        llm_instance=hf_llm, llm_type="hf_pipeline_bloke"
+    )
+    register_llm_provider("hf_pipeline_bloke", provider)
+
+
+def init_tabular_llm(config: RailsConfig):
+    """Initialize the model for searching tabular data."""
+    model_config = _get_model_config(config, "tabular")
+
+    # loading titanic csv file
+    # cut_idx = usr_query.find("based on")
+    # usr_query = usr_query[:cut_idx] + "?"
+    model_path = model_config.parameters.get("path")
+    titanic_csv_path = config.custom_data.get("tabular_data_path")
+    df = pd.read_csv(titanic_csv_path, sep=",")
+
+    # working on the data
+    Embarked_d = {"C": "Cherbourg", "Q": "Queenstown", "S": "Southampton"}
+    class_d = {1: "first class", 2: "second class", 3: "third class"}
+    df["Class"] = df["Pclass"].apply(lambda x: class_d[x])
+    # changing the embark port to full name
+    n = len(df)
+    col_ls = list(df.columns)
+    idx = col_ls.index("Embarked")
+    ls = []
+    for i in range(n):
+        temp = df.iloc[i, idx]
+        if type(temp) == str:
+            out = Embarked_d[temp]
+            ls.append(out)
+        else:
+            ls.append("N/A")
+
+    df["port"] = ls
+    df["Lived"] = df["Survived"].apply(lambda x: "survived" if x == 1 else "died")
+    # dropping duplicated and re-worked column
+    df.drop("Survived", inplace=True, axis=1)
+    df.drop("Pclass", inplace=True, axis=1)
+    df.drop("Embarked", inplace=True, axis=1)
+
+    # TODO: check if there's a way to do this grouping dynamically
+    grouped_by_cols = ["Class"]
+
+    # if any(
+    #         word in usr_query for word in ["first class", "second class", "third class"]
+    # ):
+    #     grouped_by_cols.append("Class")
+    # elif "port" in usr_query:
+    #     grouped_by_cols.append("port")
+    # elif any(
+    #         word in usr_query for word in ["female", "male", "man", "woman", "men", "women"]
+    # ):
+    #     grouped_by_cols.append("Sex")
+    # else:
+    #     pass
+
+    d = df.groupby(grouped_by_cols)["Lived"].value_counts()
+    # flatten the groupedby pandas series to flatten dictionary
+    d2 = d.reset_index(inplace=False)
+
+    gpt = GPT4Pandas(model_path, d2, verbose=False)
+
+    register_llm_provider("tabular_llm", gpt)
+
+
+def init_embeddings_model(config: RailsConfig):
+    model_config = _get_model_config(config, "embeddings")
+    vectordb = _get_vector_db(
+        model_name=model_config.model,
+        persist_path=model_config.parameters.get("persist_path"),
+    )
+
+    register_llm_provider("embeddings", vectordb)
+
+
+def tabularQnA_gpt4pandas(usr_query: str, llm: BaseLLM):
+    """Answer a question based on some tabular data"""
+
+    out = llm.ask(usr_query)
+
+    return out, titanic_csv_path, d2.to_string()
 
 
 @action(is_system_action=True)
 async def retrieve_relevant_chunks(
     context: Optional[dict] = None,
+    llm: Optional[BaseLLM] = None,
+    tabular_llm: Optional[BaseLLM] = None,
+    embeddings_model: Optional = None,
 ):
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     user_message = context.get("last_user_message")
-    if 'csv' in user_message:
-        result, file_loc , flattened2string =tabularQnA_gpt4pandas(user_message)
-        source_ref= file_loc
-        citing_text=flattened2string
-    else:
-        # using faiss vector database , pip install faiss-gpu if you have gpu, otherwise please use faiss-cpu 
-        vectordb = _get_qa_chain_with_sources()
-        retriever = vectordb.as_retriever(search_type='similarity', search_kwargs={"k": 3})
 
-        qa_chain = RetrievalQA.from_chain_type(llm=hf_llm, 
-                                    chain_type="stuff", 
-                                    retriever=retriever, 
-                                    return_source_documents=True)     
+    # TODO: do this better using a separate canonical form
+    if "csv" in user_message:
+        result, file_loc, flattened2string = tabularQnA_gpt4pandas(
+            user_message, llm=tabular_llm
+        )
+        source_ref = file_loc
+        citing_text = flattened2string
+    else:
+        # using faiss vector database , pip install faiss-gpu if you have gpu, otherwise please use faiss-cpu
+        vectordb = embeddings_model
+        retriever = vectordb.as_retriever(
+            search_type="similarity", search_kwargs={"k": 3}
+        )
+
+        qa_chain = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type="stuff",
+            retriever=retriever,
+            return_source_documents=True,
+        )
 
         out = qa_chain(user_message)
-        result=out['result']
-        citing_text= out['source_documents'][0].page_content
-        source_ref=str(out['source_documents'][0].metadata['source'])   
+        result = out["result"]
+        citing_text = out["source_documents"][0].page_content
+        source_ref = str(out["source_documents"][0].metadata["source"])
 
     context_updates = {
         "relevant_chunks": f"""
@@ -231,38 +293,22 @@ async def retrieve_relevant_chunks(
             Answer: {result},
             Citing : {citing_text},
             Source : {source_ref}
-    """ }
-
+    """
+    }
 
     return ActionResult(
         return_value=context_updates["relevant_chunks"],
         context_updates=context_updates,
     )
 
+
 def init(llm_rails: LLMRails):
+    config = llm_rails.config
+
+    # Initialize the various models
+    init_main_llm(config)
+    init_embeddings_model(config)
+    init_tabular_llm(config)
+
+    # Register the custom `retrieve_relevant_chunks` for custom retrieval
     llm_rails.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
-
-def get_bloke_13b_llm():   
-    # loading custom llm  from disk with multiGPUs support
-    model_name = "< path_to_the_saved_custom_llm_checkpoints >"  # loading model ckpt from disk
-    device = "cuda"
-    num_gpus = 2  # number of GPUs you have , do nvidia-smi to check 
-    model, tokenizer = load_model(model_name, device, num_gpus, debug=False)
-
-	# repo_id="TheBloke/Wizard-Vicuna-13B-Uncensored-HF"
-	# pipe = pipeline("text-generation", model=repo_id, device_map={"":"cuda:0"}, max_new_tokens=256, temperature=0.1, do_sample=True,use_cache=True)
-    pipe = pipeline(
-		"text-generation",
-		model=model,
-		tokenizer=tokenizer,
-		max_new_tokens=256,
-		temperature=0.1,
-		do_sample=True,
-	)
-    local_llm = HuggingFacePipeline(pipeline=pipe)
-    return local_llm
-
-
-hf_llm=get_bloke_13b_llm()
-HFPipelineBloke = get_llm_instance_wrapper(llm_instance=get_bloke_13b_llm(), llm_type="hf_pipeline_bloke")
-register_llm_provider("hf_pipeline_bloke", HFPipelineBloke)

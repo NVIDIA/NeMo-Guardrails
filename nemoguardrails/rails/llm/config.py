@@ -224,6 +224,11 @@ class RailsConfig(BaseModel):
         description="Whether to enable multi-step generation for the LLM.",
     )
 
+    custom_data: Dict = Field(
+        default_factory=dict,
+        description="Any custom configuration data that might be needed.",
+    )
+
     @staticmethod
     def from_path(
         config_path: str,
