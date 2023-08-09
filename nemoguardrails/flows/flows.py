@@ -294,6 +294,14 @@ def compute_next_state(state: State, event: dict) -> State:
         state.next_step = None
         return state
 
+    # Update the default context variables
+    # TODO: refactor this logic in a single lace
+    if event["type"] == "UtteranceUserActionFinished":
+        state.context["last_user_message"] = event["final_transcript"]
+
+    elif event["type"] == "StartUtteranceBotAction":
+        state.context["last_bot_message"] = event["script"]
+
     # Initialize the new state
     new_state = State(
         context=state.context, flow_states=[], flow_configs=state.flow_configs
