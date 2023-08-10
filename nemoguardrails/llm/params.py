@@ -41,9 +41,7 @@ class LLMParams:
             if hasattr(self.llm, param):
                 self.original_params[param] = getattr(self.llm, param)
                 setattr(self.llm, param, value)
-            elif hasattr(self.llm, "model_kwargs") and param in getattr(
-                self.llm, "model_kwargs", {}
-            ):
+            elif param in getattr(self.llm, "model_kwargs", {}):
                 self.original_params[param] = self.llm.model_kwargs[param]
                 self.llm.model_kwargs[param] = value
             else:
