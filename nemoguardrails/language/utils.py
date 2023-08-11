@@ -31,6 +31,51 @@ def split_max(text, separator, max_instances):
     return parts
 
 
+def split_args(args_str: str) -> List[str]:
+    """Split a string that represents arguments for a function.
+
+    It supports keyword arguments and also correctly handles strings and lists/dicts.
+
+    Args:
+        args_str: The string with the arguments e.g. 'name="John", colors=["blue", "red"]'
+
+    Returns:
+        The string that correspond to each individual argument value.
+    """
+
+    parts = []
+    stack = []
+
+    current = []
+
+    closing_char = {"[": "]", "(": ")", "{": "}", "'": "'", '"': '"'}
+
+    for char in args_str:
+        if char in "([{":
+            stack.append(char)
+            current.append(char)
+        elif char in "\"'" and (len(stack) == 0 or stack[-1] != char):
+            stack.append(char)
+            current.append(char)
+        elif char in ")]}\"'":
+            if char != closing_char[stack[-1]]:
+                raise ValueError(
+                    f"Invalid syntax for string: {args_str}; "
+                    f"expecting {closing_char[stack[-1]]} and got {char}"
+                )
+            stack.pop()
+            current.append(char)
+        elif char == "," and len(stack) == 0:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+
+    parts.append("".join(current))
+
+    return [part.strip() for part in parts]
+
+
 def get_numbered_lines(content: str):
     """Helper to returned numbered lines.
 

@@ -90,7 +90,7 @@ class TaskPrompt(BaseModel):
         description="The name of the output parser to use for this prompt.",
     )
 
-    @root_validator(pre=True)
+    @root_validator(pre=True, allow_reuse=True)
     def check_fields(cls, values):
         if not values.get("content") and not values.get("messages"):
             raise ValidationError("One of `content` or `messages` must be provided.")
@@ -104,8 +104,8 @@ class TaskPrompt(BaseModel):
 
 
 # Load the default config values from the file
-with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as fc:
-    default_config = yaml.safe_load(fc)
+with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
+    _default_config = yaml.safe_load(_fc)
 
 
 def _join_config(dest_config: dict, additional_config: dict):
@@ -182,7 +182,7 @@ class RailsConfig(BaseModel):
     )
 
     instructions: Optional[List[Instruction]] = Field(
-        default=[Instruction.parse_obj(obj) for obj in default_config["instructions"]],
+        default=[Instruction.parse_obj(obj) for obj in _default_config["instructions"]],
         description="List of instructions in natural language that the LLM should use.",
     )
 
@@ -197,7 +197,7 @@ class RailsConfig(BaseModel):
     )
 
     sample_conversation: Optional[str] = Field(
-        default=default_config["sample_conversation"],
+        default=_default_config["sample_conversation"],
         description="The sample conversation that should be used inside the prompts.",
     )
 
@@ -314,7 +314,7 @@ class RailsConfig(BaseModel):
 
         # If there are no instructions, we use the default ones.
         if len(raw_config.get("instructions", [])) == 0:
-            raw_config["instructions"] = default_config["instructions"]
+            raw_config["instructions"] = _default_config["instructions"]
 
         raw_config["config_path"] = config_path
 
@@ -337,7 +337,7 @@ class RailsConfig(BaseModel):
 
         # If there are no instructions, we use the default ones.
         if len(raw_config.get("instructions", [])) == 0:
-            raw_config["instructions"] = default_config["instructions"]
+            raw_config["instructions"] = _default_config["instructions"]
 
         return RailsConfig.parse_object(raw_config)
 

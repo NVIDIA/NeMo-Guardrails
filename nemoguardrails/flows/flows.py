@@ -20,6 +20,7 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 from nemoguardrails.flows.sliding import slide
+from nemoguardrails.utils import new_event_dict
 
 
 @dataclass
@@ -46,7 +47,12 @@ class FlowConfig:
     is_subflow: bool = False
 
     # The events that can trigger this flow to advance.
-    trigger_event_types = ["user_intent", "bot_intent", "run_action", "action_finished"]
+    trigger_event_types = [
+        "UserIntent",
+        "BotIntent",
+        "run_action",
+        "InternalSystemActionFinished",
+    ]
 
     # The actual source code, if available
     source_code: Optional[str] = None
@@ -99,6 +105,9 @@ class State:
     next_step_by_flow_uid: Optional[str] = None
     next_step_priority: float = 0.0
 
+    # The comment is extract from the source code
+    next_step_comment: Optional[str] = None
+
     # The updates to the context that should be applied before the next step
     context_updates: dict = field(default_factory=dict)
 
@@ -123,12 +132,12 @@ def _is_match(element: dict, event: dict) -> bool:
     # The element type is the first key in the element dictionary
     element_type = element["_type"]
 
-    if event["type"] == "user_intent":
-        return element_type == "user_intent" and (
+    if event["type"] == "UserIntent":
+        return element_type == "UserIntent" and (
             element["intent_name"] == "..." or element["intent_name"] == event["intent"]
         )
 
-    elif event["type"] == "bot_intent":
+    elif event["type"] == "BotIntent":
         return (
             element_type == "run_action"
             and element["action_name"] == "utter"
@@ -138,7 +147,7 @@ def _is_match(element: dict, event: dict) -> bool:
             )
         )
 
-    elif event["type"] == "action_finished":
+    elif event["type"] == "InternalSystemActionFinished":
         # Currently, we only match successful execution of actions
         if event["status"] != "success":
             return False
@@ -148,14 +157,15 @@ def _is_match(element: dict, event: dict) -> bool:
             and element["action_name"] == event["action_name"]
         )
 
-    elif event["type"] == "user_said":
-        return element_type == "user_said" and (
-            element["content"] == "..." or element["content"] == event["content"]
+    elif event["type"] == "UtteranceUserActionFinished":
+        return element_type == "UtteranceUserActionFinished" and (
+            element["final_transcript"] == "..."
+            or element["final_transcript"] == event["final_transcript"]
         )
 
-    elif event["type"] == "bot_said":
-        return element_type == "bot_said" and (
-            element["content"] == "..." or element["content"] == event["content"]
+    elif event["type"] == "StartUtteranceBotAction":
+        return element_type == "StartUtteranceBotAction" and (
+            element["script"] == "..." or element["script"] == event["script"]
         )
 
     else:
@@ -191,6 +201,13 @@ def _record_next_step(
         new_state.next_step = flow_config.elements[flow_state.head]
         new_state.next_step_by_flow_uid = flow_state.uid
         new_state.next_step_priority = flow_config.priority * priority_modifier
+
+        # Extract the comment, if any.
+        new_state.next_step_comment = (
+            flow_config.elements[flow_state.head]
+            .get("_source_mapping", {})
+            .get("comment")
+        )
 
 
 def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState]:
@@ -264,12 +281,12 @@ def compute_next_state(state: State, event: dict) -> State:
     - No prioritization between flows, the first one that can decide something will be used.
     """
 
-    # We don't advance flow on `start_action`, but on `action_finished`.
-    if event["type"] == "start_action":
+    # We don't advance flow on `StartInternalSystemAction`, but on `InternalSystemActionFinished`.
+    if event["type"] == "StartInternalSystemAction":
         return state
 
     # We don't need to decide any next step on context updates.
-    if event["type"] == "context_update":
+    if event["type"] == "ContextUpdate":
         # TODO: add support to also remove keys from the context.
         #  maybe with a special context key e.g. "__remove__": ["key1", "key2"]
         state.context.update(event["data"])
@@ -454,7 +471,7 @@ def _step_to_event(step: dict) -> dict:
     if step_type == "run_action":
         if step["action_name"] == "utter":
             return {
-                "type": "bot_intent",
+                "type": "BotIntent",
                 "intent": step["action_params"]["value"],
             }
 
@@ -463,12 +480,12 @@ def _step_to_event(step: dict) -> dict:
             action_params = step.get("action_params", {})
             action_result_key = step.get("action_result_key")
 
-            return {
-                "type": "start_action",
-                "action_name": action_name,
-                "action_params": action_params,
-                "action_result_key": action_result_key,
-            }
+            return new_event_dict(
+                "StartInternalSystemAction",
+                action_name=action_name,
+                action_params=action_params,
+                action_result_key=action_result_key,
+            )
     else:
         raise ValueError(f"Unknown next step type: {step_type}")
 
@@ -483,12 +500,14 @@ def compute_next_steps(
     actual_history = []
     for event in history:
         if event["type"] == "hide_prev_turn":
-            # we look up the last `user_said` event and remove everything after
+            # we look up the last `UtteranceUserActionFinished` event and remove everything after
             end = len(actual_history) - 1
-            while end > 0 and actual_history[end]["type"] != "user_said":
+            while (
+                end > 0 and actual_history[end]["type"] != "UtteranceUserActionFinished"
+            ):
                 end -= 1
 
-            assert actual_history[end]["type"] == "user_said"
+            assert actual_history[end]["type"] == "UtteranceUserActionFinished"
             actual_history = actual_history[0:end]
         else:
             actual_history.append(event)
@@ -496,20 +515,30 @@ def compute_next_steps(
     for event in actual_history:
         state = compute_next_state(state, event)
 
+        # NOTE (Jul 24, Razvan): this is a quick fix. Will debug further.
+        if event["type"] == "BotIntent" and event["intent"] == "stop":
+            # Reset all flows
+            state.flow_states = []
+
     next_steps = []
 
     # If we have context updates after this event, we first add that.
     if state.context_updates:
-        next_steps.append({"type": "context_update", "data": state.context_updates})
+        next_steps.append(new_event_dict("ContextUpdate", data=state.context_updates))
 
     # If we have a next step, we make sure to convert it to proper event structure.
     if state.next_step:
-        next_steps.append(_step_to_event(state.next_step))
+        next_step_event = _step_to_event(state.next_step)
+        if next_step_event["type"] == "BotIntent" and state.next_step_comment:
+            # For bot intents, we use the comment as instructions
+            next_step_event["instructions"] = state.next_step_comment
+
+        next_steps.append(next_step_event)
 
     # Finally, we check if there was an explicit "stop" request
     if actual_history:
         last_event = actual_history[-1]
-        if last_event["type"] == "bot_intent" and last_event["intent"] == "stop":
+        if last_event["type"] == "BotIntent" and last_event["intent"] == "stop":
             # In this case, we remove any next steps
             next_steps = []
 
@@ -529,13 +558,13 @@ def compute_context(history: List[dict]):
     }
 
     for event in history:
-        if event["type"] == "context_update":
+        if event["type"] == "ContextUpdate":
             context.update(event["data"])
 
-        if event["type"] == "user_said":
-            context["last_user_message"] = event["content"]
+        if event["type"] == "UtteranceUserActionFinished":
+            context["last_user_message"] = event["final_transcript"]
 
-        elif event["type"] == "bot_said":
-            context["last_bot_message"] = event["content"]
+        elif event["type"] == "StartUtteranceBotAction":
+            context["last_bot_message"] = event["script"]
 
     return context

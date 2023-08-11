@@ -7,7 +7,7 @@ define bot inform cannot answer question
 define flow check bot response
   bot ...
   $allowed = execute output_moderation
-  $is_blocked = execute block_list(file_name=block_list.txt)
+  $is_blocked = execute block_list(file_name="block_list.txt")
   if not $allowed
     bot remove last message
     bot inform cannot answer question

@@ -31,6 +31,16 @@ def get_llm_instance_wrapper(llm_instance: LLM, llm_type: str) -> Type[LLM]:
 
     class WrapperLLM(LLM):
         @property
+        def model_kwargs(self):
+            """Return the model's kwargs.
+
+            These are needed to allow changes to the arguments of the LLM calls.
+            """
+            if hasattr(llm_instance, "model_kwargs"):
+                return llm_instance.model_kwargs
+            return {}
+
+        @property
         def _llm_type(self) -> str:
             """Return type of llm.
 

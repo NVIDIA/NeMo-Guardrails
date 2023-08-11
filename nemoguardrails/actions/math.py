@@ -22,6 +22,7 @@ import aiohttp
 
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
+from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -49,15 +50,14 @@ async def wolfram_alpha_request(
         return ActionResult(
             return_value=False,
             events=[
-                {
-                    "type": "bot_intent",
-                    "intent": "inform wolfram alpha app id not set",
-                },
-                {
-                    "type": "bot_said",
-                    "content": "Wolfram Alpha app ID is not set. Please set the WOLFRAM_ALPHA_APP_ID environment variable.",
-                },
-                {"type": "bot_intent", "intent": "stop"},
+                new_event_dict(
+                    "BotIntent", intent="inform wolfram alpha app id not set"
+                ),
+                new_event_dict(
+                    "StartUtteranceBotAction",
+                    script="Wolfram Alpha app ID is not set. Please set the WOLFRAM_ALPHA_APP_ID environment variable.",
+                ),
+                new_event_dict("BotIntent", intent="stop"),
             ],
         )
 
@@ -72,15 +72,14 @@ async def wolfram_alpha_request(
                 return ActionResult(
                     return_value=False,
                     events=[
-                        {
-                            "type": "bot_intent",
-                            "intent": "inform wolfram alpha not working",
-                        },
-                        {
-                            "type": "bot_said",
-                            "content": "Apologies, but I cannot answer this question at this time. I am having trouble getting the answer from Wolfram Alpha.",
-                        },
-                        {"type": "bot_intent", "intent": "stop"},
+                        new_event_dict(
+                            "BotIntent", intent="inform wolfram alpha not working"
+                        ),
+                        new_event_dict(
+                            "StartUtteranceBotAction",
+                            script="Apologies, but I cannot answer this question at this time. I am having trouble getting the answer from Wolfram Alpha.",
+                        ),
+                        new_event_dict("BotIntent", intent="stop"),
                     ],
                 )
 

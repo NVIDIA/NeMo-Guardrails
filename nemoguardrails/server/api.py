@@ -12,12 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import asyncio
+import contextvars
+import importlib.util
+import json
 import logging
 import os.path
 from typing import List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.staticfiles import StaticFiles
 
@@ -26,7 +30,14 @@ from nemoguardrails import LLMRails, RailsConfig
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
+# The list of registered loggers. Can be used to send logs to various
+# backends and storage engines.
+registered_loggers = []
+
 api_description = """Guardrails Sever API."""
+
+# The headers for each request
+api_request_headers = contextvars.ContextVar("headers")
 
 
 app = FastAPI(
@@ -36,9 +47,28 @@ app = FastAPI(
     license_info={"name": "Apache License, Version 2.0"},
 )
 
+ENABLE_CORS = os.getenv("NEMO_GUARDRAILS_SERVER_ENABLE_CORS", "false").lower() == "true"
+ALLOWED_ORIGINS = os.getenv("NEMO_GUARDRAILS_SERVER_ALLOWED_ORIGINS", "*")
+
+if ENABLE_CORS:
+    # Split origins by comma
+    origins = ALLOWED_ORIGINS.split(",")
+
+    log.info(f"CORS enabled with the following origins: {origins}")
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # By default, we use the rails in the examples folder
 app.rails_config_path = os.path.join(os.path.dirname(__file__), "..", "..", "examples")
+
+# Weather the chat UI is enabled or not.
+app.disable_chat_ui = False
 
 
 class RequestBody(BaseModel):
@@ -68,6 +98,11 @@ def get_rails_configs():
         if os.path.isdir(os.path.join(app.rails_config_path, f))
         and f[0] != "."
         and f[0] != "_"
+        # We filter out all the configs for which there is no `config.yml` file.
+        and (
+            os.path.exists(os.path.join(app.rails_config_path, f, "config.yml"))
+            or os.path.exists(os.path.join(app.rails_config_path, f, "config.yaml"))
+        )
     ]
 
     return [{"id": config_id} for config_id in config_ids]
@@ -93,12 +128,19 @@ def _get_rails(config_id: str) -> LLMRails:
     "/v1/chat/completions",
     response_model=ResponseBody,
 )
-async def chat_completion(body: RequestBody):
+async def chat_completion(body: RequestBody, request: Request):
     """Chat completion for the provided conversation.
 
     TODO: add support for explicit state object.
     """
     log.info("Got request for config %s", body.config_id)
+    for logger in registered_loggers:
+        asyncio.get_event_loop().create_task(
+            logger({"endpoint": "/v1/chat/completions", "body": body.json()})
+        )
+
+    # Save the request headers in a context variable.
+    api_request_headers.set(request.headers)
 
     config_id = body.config_id
     try:
@@ -124,17 +166,68 @@ async def chat_completion(body: RequestBody):
     return {"messages": [bot_message]}
 
 
-# Finally, we register the static frontend UI serving
+# By default, there are no challenges
+challenges = []
 
-FRONTEND_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "..", "chat-ui", "frontend"
-)
 
-app.mount(
-    "/",
-    StaticFiles(
-        directory=FRONTEND_DIR,
-        html=True,
-    ),
-    name="chat",
+def register_challenges(additional_challenges: List[dict]):
+    """Register additional challenges
+
+    Args:
+        additional_challenges: The new challenges to be registered.
+    """
+    challenges.extend(additional_challenges)
+
+
+@app.get(
+    "/v1/challenges",
+    summary="Get list of available challenges.",
 )
+def get_challenges():
+    """Returns the list of available challenges for red teaming."""
+
+    return challenges
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Register any additional challenges, if available at startup."""
+    challenges_files = os.path.join(app.rails_config_path, "challenges.json")
+
+    if os.path.exists(challenges_files):
+        with open(challenges_files) as f:
+            register_challenges(json.load(f))
+
+    # Finally, check if we have a config.py for the server configuration
+    filepath = os.path.join(app.rails_config_path, "config.py")
+    if os.path.exists(filepath):
+        filename = os.path.basename(filepath)
+        spec = importlib.util.spec_from_file_location(filename, filepath)
+        config_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(config_module)
+
+    # Finally, we register the static frontend UI serving
+
+    if not app.disable_chat_ui:
+        FRONTEND_DIR = os.path.join(
+            os.path.dirname(__file__), "..", "..", "chat-ui", "frontend"
+        )
+
+        app.mount(
+            "/",
+            StaticFiles(
+                directory=FRONTEND_DIR,
+                html=True,
+            ),
+            name="chat",
+        )
+    else:
+
+        @app.get("/")
+        async def root_handler():
+            return {"status": "ok"}
+
+
+def register_logger(logger: callable):
+    """Register an additional logger"""
+    registered_loggers.append(logger)

@@ -61,6 +61,24 @@ define bot ask welfare
 
 If more than one utterance is specified per bot message, the meaning is that one of them should be chosen randomly.
 
+##### Bot Messages with Variables
+
+The utterance definition can also include reference to variables (see the [Variables](#variables) section below).
+
+```colang
+define bot express greeting
+  "Hello there, $name!"
+```
+
+Alternatively, you can also use the Jinja syntax:
+
+```colang
+define bot express greeting
+  "Hello there, {{ name }}!"
+```
+
+**NOTE**: for more advanced use cases you can also use other Jinja features like `{% if ... %} ... {% endif %}`.
+
 #### Flows
 
 Flows represent how you want the conversation to unfold. It includes sequences of user messages, bot messages and potentially other events.

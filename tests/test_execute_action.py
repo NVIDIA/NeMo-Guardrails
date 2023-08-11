@@ -18,7 +18,7 @@ import os
 import pytest
 
 from nemoguardrails import LLMRails, RailsConfig
-from tests.utils import FakeLLM
+from tests.utils import FakeLLM, any_event_conforms, event_sequence_conforms
 
 TEST_CONFIGS_PATH = os.path.join(os.path.dirname(__file__), "test_configs")
 
@@ -57,36 +57,36 @@ async def test_action_execution_with_result(rails_config):
 
     llm_rails = _get_llm_rails(rails_config, llm)
 
-    events = [{"type": "user_said", "content": "Hello!"}]
+    events = [{"type": "UtteranceUserActionFinished", "final_transcript": "Hello!"}]
     new_events = await llm_rails.runtime.generate_events(events)
 
-    assert new_events == [
+    expected_events = [
         {
             "action_name": "generate_user_intent",
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "start_action",
+            "type": "StartInternalSystemAction",
         },
         {
             "action_name": "generate_user_intent",
             "action_params": {},
             "action_result_key": None,
-            "events": [{"intent": "express greeting", "type": "user_intent"}],
+            "events": [{"intent": "express greeting", "type": "UserIntent"}],
             "is_system_action": True,
             "return_value": None,
             "status": "success",
-            "type": "action_finished",
+            "type": "InternalSystemActionFinished",
         },
-        {"intent": "express greeting", "type": "user_intent"},
+        {"intent": "express greeting", "type": "UserIntent"},
         {
             "action_name": "fetch_profile",
             "action_params": {},
             "action_result_key": "account",
             "is_system_action": False,
-            "type": "start_action",
+            "type": "StartInternalSystemAction",
         },
-        {"data": {"account": {"name": "John"}}, "type": "context_update"},
+        {"data": {"account": {"name": "John"}}, "type": "ContextUpdate"},
         {
             "action_name": "fetch_profile",
             "action_params": {},
@@ -95,17 +95,17 @@ async def test_action_execution_with_result(rails_config):
             "is_system_action": False,
             "return_value": {"name": "John"},
             "status": "success",
-            "type": "action_finished",
+            "type": "InternalSystemActionFinished",
         },
-        {"intent": "express greeting", "type": "bot_intent"},
+        {"intent": "express greeting", "type": "BotIntent"},
         {
             "action_name": "retrieve_relevant_chunks",
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "start_action",
+            "type": "StartInternalSystemAction",
         },
-        {"data": {"relevant_chunks": ""}, "type": "context_update"},
+        {"data": {"relevant_chunks": ""}, "type": "ContextUpdate"},
         {
             "action_name": "retrieve_relevant_chunks",
             "action_params": {},
@@ -114,28 +114,30 @@ async def test_action_execution_with_result(rails_config):
             "is_system_action": True,
             "return_value": "",
             "status": "success",
-            "type": "action_finished",
+            "type": "InternalSystemActionFinished",
         },
         {
             "action_name": "generate_bot_message",
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
-            "type": "start_action",
+            "type": "StartInternalSystemAction",
         },
         {
             "action_name": "generate_bot_message",
             "action_params": {},
             "action_result_key": None,
-            "events": [{"content": "Hello!", "type": "bot_said"}],
+            "events": [{"script": "Hello!", "type": "StartUtteranceBotAction"}],
             "is_system_action": True,
             "return_value": None,
             "status": "success",
-            "type": "action_finished",
+            "type": "InternalSystemActionFinished",
         },
-        {"content": "Hello!", "type": "bot_said"},
-        {"type": "listen"},
+        {"script": "Hello!", "type": "StartUtteranceBotAction"},
+        {"type": "Listen"},
     ]
+
+    assert event_sequence_conforms(expected_events, new_events)
 
 
 @pytest.mark.asyncio
@@ -146,15 +148,19 @@ async def test_action_execution_with_parameter(rails_config):
 
     llm_rails = _get_llm_rails(rails_config, llm)
 
-    events = [{"type": "user_said", "content": "hello!"}]
+    events = [{"type": "UtteranceUserActionFinished", "final_transcript": "hello!"}]
     new_events = await llm_rails.runtime.generate_events(events)
     events.extend(new_events)
 
-    events.append({"type": "user_said", "content": "Please let me in"})
+    events.append(
+        {"type": "UtteranceUserActionFinished", "final_transcript": "Please let me in"}
+    )
     new_events = await llm_rails.runtime.generate_events(events)
 
     # We check that is_allowed was correctly set to True
-    assert {"data": {"is_allowed": True}, "type": "context_update"} in new_events
+    assert any_event_conforms(
+        {"data": {"is_allowed": True}, "type": "ContextUpdate"}, new_events
+    )
 
 
 @pytest.mark.asyncio
@@ -164,11 +170,13 @@ async def test_action_execution_with_if(rails_config):
     llm_rails = _get_llm_rails(rails_config, llm)
 
     events = [
-        {"type": "context_update", "data": {"account": {"name": "Josh"}}},
-        {"type": "user_said", "content": "Please let me in"},
+        {"type": "ContextUpdate", "data": {"account": {"name": "Josh"}}},
+        {"type": "UtteranceUserActionFinished", "final_transcript": "Please let me in"},
     ]
 
     new_events = await llm_rails.runtime.generate_events(events)
 
     # We check that is_allowed was correctly set to True
-    assert {"intent": "inform access denied", "type": "bot_intent"} in new_events
+    assert any_event_conforms(
+        {"intent": "inform access denied", "type": "BotIntent"}, new_events
+    )

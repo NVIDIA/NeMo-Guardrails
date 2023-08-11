@@ -19,7 +19,7 @@ import importlib.util
 import logging
 import os
 import time
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from langchain.llms.base import BaseLLM
 
@@ -41,6 +41,13 @@ class LLMRails:
     def __init__(
         self, config: RailsConfig, llm: Optional[BaseLLM] = None, verbose: bool = False
     ):
+        """Initializes the LLMRails instance.
+
+        Args:
+            config: A rails configuration.
+            llm: An optional LLM engine to use.
+            verbose: Whether the logging should be verbose or not.
+        """
         self.config = config
         self.llm = llm
         self.verbose = verbose
@@ -75,10 +82,8 @@ class LLMRails:
         # First, we initialize the runtime.
         self.runtime = Runtime(config=config, verbose=verbose)
 
-        # Next, we initialize the LLM engine.
-        self._init_llm()
-        self.runtime.register_action_param("llm", self.llm)
-
+        # Next, we initialize the LLM engines (main engine and action engines if specified).
+        self._init_llms()
         # Next, we initialize the LLM Generate actions and register them.
         actions = LLMGenerationActions(
             config=config,
@@ -94,8 +99,16 @@ class LLMRails:
         if config_module is not None and hasattr(config_module, "init"):
             config_module.init(self)
 
-    def _init_llm(self):
-        """Initializes the right LLM engine based on the configuration."""
+    def _init_llms(self):
+        """
+        Initializes the right LLM engines based on the configuration.
+        There can be multiple LLM engines and types that can be specified in the config.
+        The main LLM engine is the one that will be used for all the core guardrails generations.
+        Other LLM engines can be specified for use in specific actions.
+
+        The reason we provide an option for decoupling the main LLM engine from the action LLM
+        is to allow for flexibility in using specialized LLM engines for specific actions.
+        """
 
         # If we already have a pre-configured one, we do nothing.
         if self.llm is not None:
@@ -103,47 +116,119 @@ class LLMRails:
 
         # TODO: Currently we assume the first model is the main one. Add proper support
         #  to search for the main model config.
-        main_llm_config = self.config.models[0]
 
-        if main_llm_config.engine not in get_llm_provider_names():
-            raise Exception(f"Unknown LLM engine: {main_llm_config.engine}")
+        for llm_config in self.config.models:
+            if llm_config.engine not in get_llm_provider_names():
+                raise Exception(f"Unknown LLM engine: {llm_config.engine}")
 
-        provider_cls = get_llm_provider(main_llm_config)
+            provider_cls = get_llm_provider(llm_config)
+            # We need to compute the kwargs for initializing the LLM
+            kwargs = llm_config.parameters
 
-        # We need to compute the kwargs for initializing the LLM
-        kwargs = main_llm_config.parameters
+            # We also need to pass the model, if specified
+            if llm_config.model:
+                # Some LLM providers use `model_name` instead of model. For backward compatibility
+                # we keep this hard-coded mapping.
+                if llm_config.engine in [
+                    "azure",
+                    "openai",
+                    "gooseai",
+                    "nlpcloud",
+                    "petals",
+                ]:
+                    kwargs["model_name"] = llm_config.model
+                else:
+                    # The `__fields__` attribute is computed dynamically by pydantic.
+                    if "model" in provider_cls.__fields__:
+                        kwargs["model"] = llm_config.model
 
-        # We also need to pass the model, if specified
-        if main_llm_config.model:
-            # Some LLM providers use `model_name` instead of model. For backward compatibility
-            # we keep this hard-coded mapping.
-            if main_llm_config.engine in [
-                "azure",
-                "openai",
-                "gooseai",
-                "nlpcloud",
-                "petals",
-            ]:
-                kwargs["model_name"] = main_llm_config.model
+            if llm_config.type == "main" or len(self.config.models) == 1:
+                self.llm = provider_cls(**kwargs)
+                self.runtime.register_action_param("llm", self.llm)
             else:
-                if hasattr(provider_cls, "model"):
-                    kwargs["model"] = main_llm_config.model
+                model_name = f"{llm_config.type}_llm"
+                setattr(self, model_name, provider_cls(**kwargs))
+                self.runtime.register_action_param(
+                    model_name, getattr(self, model_name)
+                )
 
-        self.llm = provider_cls(**kwargs)
+    def _get_events_for_messages(self, messages: List[dict]):
+        """Return the list of events corresponding to the provided messages.
+
+        Tries to find a prefix of messages for which we have already a list of events
+        in the cache. For the rest, they are converted as is.
+
+        The reason this cache exists is that we want to benefit from events generated in
+        previous turns, which can't be computed again because it would be expensive (e.g.,
+        involving multiple LLM calls).
+
+        When an explicit state object will be added, this mechanism can be removed.
+
+        Args:
+            messages: The list of messages.
+
+        Returns:
+            A list of events.
+        """
+        events = []
+
+        # We try to find the longest prefix of messages for which we have a cache
+        # of events.
+        p = len(messages) - 1
+        while p > 0:
+            cache_key = get_history_cache_key(messages[0:p])
+            if cache_key in self.events_history_cache:
+                events = self.events_history_cache[cache_key].copy()
+                break
+
+            p -= 1
+
+        # For the rest of the messages, we transform them directly into events.
+        # TODO: Move this to separate function once more types of messages are supported.
+        for msg in messages[p:]:
+            if msg["role"] == "user":
+                events.append(
+                    {
+                        "type": "UtteranceUserActionFinished",
+                        "final_transcript": msg["content"],
+                    }
+                )
+            elif msg["role"] == "assistant":
+                events.append(
+                    {"type": "StartUtteranceBotAction", "script": msg["content"]}
+                )
+            elif msg["role"] == "context":
+                events.append({"type": "ContextUpdate", "data": msg["content"]})
+            elif msg["role"] == "event":
+                events.append(msg["event"])
+
+        return events
 
     async def generate_async(
         self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None
-    ):
-        """Generates a completion or a next message.
+    ) -> Union[str, dict]:
+        """Generate a completion or a next message.
 
-        The format for messages is currently the following:
-        [
-            {"role": "user", "content": "Hello! How are you?"},
-            {"role": "assistant", "content": "I am fine, thank you!"},
-        ]
-        System messages are not yet supported.
+        The format for messages is the following:
 
-        """
+        ```python
+            [
+                {"role": "context", "content": {"user_name": "John"}},
+                {"role": "user", "content": "Hello! How are you?"},
+                {"role": "assistant", "content": "I am fine, thank you!"},
+                {"role": "event", "event": {"type": "UserSilent"}},
+                ...
+            ]
+        ```
+
+        Args:
+            prompt: The prompt to be used for completion.
+            messages: The history of messages to be used to generate the next message.
+
+        Returns:
+            The completion (when a prompt is provided) or the next message.
+
+        System messages are not yet supported."""
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
             new_message = await self.generate_async(
@@ -159,28 +244,28 @@ class LLMRails:
         t0 = time.time()
         llm_stats.reset()
 
-        # First, we turn the messages into a history of events.
-        cache_key = get_history_cache_key(messages, include_last=False)
-        events = self.events_history_cache.get(cache_key, []).copy()
+        # The array of events corresponding to the provided sequence of messages.
+        events = self._get_events_for_messages(messages)
 
-        events.append({"type": "user_said", "content": messages[-1]["content"]})
-
+        # Compute the new events.
         new_events = await self.runtime.generate_events(events)
+
+        # Extract and join all the messages from StartUtteranceBotAction events as the response.
+        responses = []
+        for event in new_events:
+            if event["type"] == "StartUtteranceBotAction":
+                # Check if we need to remove a message
+                if event["script"] == "(remove last message)":
+                    responses = responses[0:-1]
+                else:
+                    responses.append(event["script"])
+
+        new_message = {"role": "assistant", "content": "\n".join(responses)}
 
         # Save the new events in the history and update the cache
         events.extend(new_events)
-        cache_key = get_history_cache_key(messages, include_last=True)
+        cache_key = get_history_cache_key(messages + [new_message])
         self.events_history_cache[cache_key] = events
-
-        # Extract and join all the messages from bot_said events as the response.
-        responses = []
-        for event in new_events:
-            if event["type"] == "bot_said":
-                # Check if we need to remove a message
-                if event["content"] == "(remove last message)":
-                    responses = responses[0:-1]
-                else:
-                    responses.append(event["content"])
 
         # If logging is enabled, we log the conversation
         # TODO: add support for logging flag
@@ -190,7 +275,8 @@ class LLMRails:
 
         log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
         log.info("--- :: Stats: %s" % llm_stats)
-        return {"role": "assistant", "content": "\n".join(responses)}
+
+        return new_message
 
     def generate(
         self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None
@@ -209,6 +295,58 @@ class LLMRails:
             )
 
         return asyncio.run(self.generate_async(prompt=prompt, messages=messages))
+
+    async def generate_events_async(self, events: List[dict]) -> List[dict]:
+        """Generate the next events based on the provided history.
+
+        The format for events is the following:
+
+        ```python
+            [
+                {"type": "...", ...},
+                ...
+            ]
+        ```
+
+        Args:
+            events: The history of events to be used to generate the next events.
+
+        Returns:
+            The newly generate event(s).
+
+        """
+        t0 = time.time()
+        llm_stats.reset()
+
+        # Compute the new events.
+        new_events = await self.runtime.generate_events(events)
+
+        # If logging is enabled, we log the conversation
+        # TODO: add support for logging flag
+        if self.verbose:
+            history = get_colang_history(events)
+            log.info(f"Conversation history so far: \n{history}")
+
+        log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
+        log.info("--- :: Stats: %s" % llm_stats)
+
+        return new_events
+
+    def generate_events(self, events: List[dict]) -> List[dict]:
+        """Synchronous version of `LLMRails.generate_events_async`."""
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            raise RuntimeError(
+                "You are using the sync `generate_events` inside async code. "
+                "You should replace with `await generate_events_async(...)."
+            )
+
+        return asyncio.run(self.generate_events_async(events=events))
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""

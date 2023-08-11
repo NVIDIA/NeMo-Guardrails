@@ -35,6 +35,7 @@ from nemoguardrails.flows.flows import FlowConfig, compute_context, compute_next
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.rails.llm.config import RailsConfig
+from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -103,8 +104,10 @@ class Runtime:
         # We also compute what types of events can trigger this flow, in addition
         # to the default ones.
         for element in elements:
-            if element.get("user_said"):
-                self.flow_configs[flow_id].trigger_event_types.append("user_said")
+            if element.get("UtteranceUserActionFinished"):
+                self.flow_configs[flow_id].trigger_event_types.append(
+                    "UtteranceUserActionFinished"
+                )
 
     def _init_flow_configs(self):
         """Initializes the flow configs based on the config."""
@@ -157,7 +160,7 @@ class Runtime:
             )
 
             # If we need to execute an action, we start doing that.
-            if last_event["type"] == "start_action":
+            if last_event["type"] == "StartInternalSystemAction":
                 next_events = await self._process_start_action(events)
 
             # If we need to start a flow, we parse the content and register it.
@@ -170,14 +173,14 @@ class Runtime:
                 next_events = await self.compute_next_steps(events)
 
                 if len(next_events) == 0:
-                    next_events = [{"type": "listen"}]
+                    next_events = [new_event_dict("Listen")]
 
             # Otherwise, we append the event and continue the processing.
             events.extend(next_events)
             new_events.extend(next_events)
 
             # If the next event is a listen, we stop the processing.
-            if next_events[-1]["type"] == "listen":
+            if next_events[-1]["type"] == "Listen":
                 break
 
             # As a safety measure, we stop the processing if we have too many events.
@@ -190,9 +193,9 @@ class Runtime:
         """Computes the next step based on the current flow."""
         next_steps = compute_next_steps(events, self.flow_configs)
 
-        # If there are any start_action events, we mark if they are system actions or not
+        # If there are any StartInternalSystemAction events, we mark if they are system actions or not
         for event in next_steps:
-            if event["type"] == "start_action":
+            if event["type"] == "StartInternalSystemAction":
                 is_system_action = False
                 fn = self.action_dispatcher.get_action(event["action_name"])
                 if fn:
@@ -208,12 +211,12 @@ class Runtime:
         return ActionResult(
             events=[
                 {
-                    "type": "bot_intent",
+                    "type": "BotIntent",
                     "intent": "inform internal error occurred",
                 },
                 {
-                    "type": "bot_said",
-                    "content": message,
+                    "type": "StartUtteranceBotAction",
+                    "script": message,
                 },
                 # We also want to hide this from now from the history moving forward
                 {"type": "hide_prev_turn"},
@@ -305,6 +308,12 @@ class Runtime:
                     if k in parameters:
                         kwargs[k] = v
 
+                if (
+                    "llm" in kwargs
+                    and f"{action_name}_llm" in self.registered_action_params
+                ):
+                    kwargs["llm"] = self.registered_action_params[f"{action_name}_llm"]
+
                 log.info("Executing action :: %s", action_name)
                 result, status = await self.action_dispatcher.execute_action(
                     action_name, kwargs
@@ -341,19 +350,21 @@ class Runtime:
                     break
 
             if changes:
-                next_steps.append({"type": "context_update", "data": context_updates})
+                next_steps.append(new_event_dict("ContextUpdate", data=context_updates))
 
         next_steps.append(
-            {
-                "type": "action_finished",
-                "action_name": action_name,
-                "action_params": action_params,
-                "action_result_key": action_result_key,
-                "status": status,
-                "return_value": return_value,
-                "events": return_events,
-                "is_system_action": action_meta.get("is_system_action", False),
-            }
+            new_event_dict(
+                "InternalSystemActionFinished",
+                action_name=action_name,
+                action_params=action_params,
+                action_result_key=action_result_key,
+                status=status,
+                is_success=status != "failed",
+                failure_reason=status,
+                return_value=return_value,
+                events=return_events,
+                is_system_action=action_meta.get("is_system_action", False),
+            )
         )
 
         # If the action returned additional events, we also add them to the next steps.

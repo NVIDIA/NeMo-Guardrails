@@ -16,12 +16,15 @@
 """A set of actions for generating various types of completions using an LLMs."""
 import logging
 import random
+import re
 import sys
 import uuid
 from ast import literal_eval
 from functools import lru_cache
+from time import time
 from typing import List, Optional
 
+from jinja2 import Environment, meta
 from langchain.llms import BaseLLM
 
 from nemoguardrails.actions.actions import ActionResult, action
@@ -44,6 +47,7 @@ from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
 from nemoguardrails.rails.llm.config import RailsConfig
+from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -85,6 +89,9 @@ class LLMGenerationActions:
         self._init_kb()
 
         self.llm_task_manager = llm_task_manager
+
+        # We also initialize the environment for rendering bot messages
+        self.env = Environment()
 
     def _init_user_message_index(self):
         """Initializes the index of user messages."""
@@ -214,12 +221,17 @@ class LLMGenerationActions:
         return sample_conversation
 
     @action(is_system_action=True)
-    async def generate_user_intent(self, events: List[dict]):
+    async def generate_user_intent(
+        self, events: List[dict], llm: Optional[BaseLLM] = None
+    ):
         """Generate the canonical form for what the user said i.e. user intent."""
 
-        # The last event should be the "start_action" and the one before it the "user_said".
+        # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
-        assert event["type"] == "user_said"
+        assert event["type"] == "UtteranceUserActionFinished"
+
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
 
         # TODO: check for an explicit way of enabling the canonical form detection
 
@@ -236,7 +248,7 @@ class LLMGenerationActions:
 
             if self.user_message_index:
                 results = self.user_message_index.search(
-                    text=event["content"], max_results=5
+                    text=event["final_transcript"], max_results=5
                 )
 
                 # We add these in reverse order so the most relevant is towards the end.
@@ -254,8 +266,8 @@ class LLMGenerationActions:
             )
 
             # We make this call with temperature 0 to have it as deterministic as possible.
-            with llm_params(self.llm, temperature=self.config.lowest_temperature):
-                result = await llm_call(self.llm, prompt)
+            with llm_params(llm, temperature=self.config.lowest_temperature):
+                result = await llm_call(llm, prompt)
 
             # Parse the output using the associated parser
             result = self.llm_task_manager.parse_task_output(
@@ -276,11 +288,11 @@ class LLMGenerationActions:
 
             if user_intent is None:
                 return ActionResult(
-                    events=[{"type": "user_intent", "intent": "unknown message"}]
+                    events=[new_event_dict("UserIntent", intent="unknown message")]
                 )
             else:
                 return ActionResult(
-                    events=[{"type": "user_intent", "intent": user_intent}]
+                    events=[new_event_dict("UserIntent", intent=user_intent)]
                 )
         else:
             prompt = self.llm_task_manager.render_task_prompt(
@@ -288,25 +300,32 @@ class LLMGenerationActions:
             )
 
             # We make this call with temperature 0 to have it as deterministic as possible.
-            result = await llm_call(self.llm, prompt)
+            result = await llm_call(llm, prompt)
 
             return ActionResult(
-                events=[{"type": "bot_said", "content": result.strip()}]
+                events=[
+                    new_event_dict("StartUtteranceBotAction", script=result.strip())
+                ]
             )
 
     @action(is_system_action=True)
-    async def generate_next_step(self, events: List[dict]):
+    async def generate_next_step(
+        self, events: List[dict], llm: Optional[BaseLLM] = None
+    ):
         """Generate the next step in the current conversation flow.
 
         Currently, only generates a next step after a user intent.
         """
         log.info("Phase 2 :: Generating next step ...")
 
-        # The last event should be the "start_action" and the one before it the "user_intent".
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
+        # The last event should be the "StartInternalSystemAction" and the one before it the "UserIntent".
         event = get_last_user_intent_event(events)
 
         # Currently, we only predict next step after a user intent using LLM
-        if event["type"] == "user_intent":
+        if event["type"] == "UserIntent":
             user_intent = event["intent"]
 
             # We search for the most relevant similar flows
@@ -325,8 +344,8 @@ class LLMGenerationActions:
             )
 
             # We use temperature 0 for next step prediction as well
-            with llm_params(self.llm, temperature=self.config.lowest_temperature):
-                result = await llm_call(self.llm, prompt)
+            with llm_params(llm, temperature=self.config.lowest_temperature):
+                result = await llm_call(llm, prompt)
 
             # Parse the output using the associated parser
             result = self.llm_task_manager.parse_task_output(
@@ -346,17 +365,17 @@ class LLMGenerationActions:
                 if next_step.get("execute"):
                     return ActionResult(
                         events=[
-                            {
-                                "type": "start_action",
-                                "action_name": next_step["execute"],
-                            }
+                            new_event_dict(
+                                "StartInternalSystemAction",
+                                action_name=next_step["execute"],
+                            )
                         ]
                     )
                 else:
                     bot_intent = next_step.get("bot")
 
                     return ActionResult(
-                        events=[{"type": "bot_intent", "intent": bot_intent}]
+                        events=[new_event_dict("BotIntent", intent=bot_intent)]
                     )
             else:
                 # Otherwise, we parse the output as a single flow.
@@ -373,7 +392,9 @@ class LLMGenerationActions:
                             log.info("Exception while parsing single line: %s", e)
                             return ActionResult(
                                 events=[
-                                    {"type": "bot_intent", "intent": "general response"}
+                                    new_event_dict(
+                                        "BotIntent", intent="general response"
+                                    )
                                 ]
                             )
 
@@ -382,25 +403,65 @@ class LLMGenerationActions:
 
                 return ActionResult(
                     events=[
-                        {
-                            "type": "start_flow",
-                            # We generate a random UUID as the flow_id
-                            "flow_id": str(uuid.uuid4()),
-                            "flow_body": "\n".join(lines),
-                        }
+                        # We generate a random UUID as the flow_id
+                        new_event_dict(
+                            "start_flow",
+                            flow_id=str(uuid.uuid4()),
+                            flow_body="\n".join(lines),
+                        )
                     ]
                 )
 
         return ActionResult(return_value=None)
 
+    def _render_string(
+        self,
+        template_str: str,
+        context: Optional[dict] = None,
+    ) -> str:
+        """Render a string using the provided context information.
+
+        Args:
+            template_str: The string template to render.
+            context: The context for rendering.
+
+        Returns:
+            The rendered string.
+        """
+        # First, if we have any direct usage of variables in the string,
+        # we replace with correct Jinja syntax.
+        for param in re.findall(r"\$([^ \"'!?\-,;</]*(?:\w|]))", template_str):
+            template_str = template_str.replace(f"${param}", "{{" + param + "}}")
+
+        template = self.env.from_string(template_str)
+
+        # First, we extract all the variables from the template.
+        variables = meta.find_undeclared_variables(self.env.parse(template_str))
+
+        # This is the context that will be passed to the template when rendering.
+        render_context = {}
+
+        # Copy the context variables to the render context.
+        if context:
+            for variable in variables:
+                if variable in context:
+                    render_context[variable] = context[variable]
+
+        return template.render(render_context)
+
     @action(is_system_action=True)
-    async def generate_bot_message(self, events: List[dict], context: dict):
+    async def generate_bot_message(
+        self, events: List[dict], context: dict, llm: Optional[BaseLLM] = None
+    ):
         """Generate a bot message based on the desired bot intent."""
         log.info("Phase 3 :: Generating bot message ...")
 
-        # The last event should be the "start_action" and the one before it the "bot_intent".
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
+        # The last event should be the "StartInternalSystemAction" and the one before it the "BotIntent".
         event = get_last_bot_intent_event(events)
-        assert event["type"] == "bot_intent"
+        assert event["type"] == "BotIntent"
         bot_intent = event["intent"]
         context_updates = {}
 
@@ -414,6 +475,9 @@ class LLMGenerationActions:
 
             log.info("Found existing bot message: " + bot_utterance)
 
+            # We also need to render
+            bot_utterance = self._render_string(bot_utterance, context)
+
         # Check if the output is supposed to be the content of a context variable
         elif bot_intent[0] == "$" and bot_intent[1:] in context:
             bot_utterance = context[bot_intent[1:]]
@@ -421,7 +485,8 @@ class LLMGenerationActions:
         else:
             # We search for the most relevant similar bot utterance
             examples = ""
-            if self.bot_message_index:
+            # NOTE: disabling bot message index when there are no user messages
+            if self.config.user_messages and self.bot_message_index:
                 results = self.bot_message_index.search(
                     text=event["intent"], max_results=5
                 )
@@ -439,7 +504,11 @@ class LLMGenerationActions:
                 context={"examples": examples, "relevant_chunks": relevant_chunks},
             )
 
-            result = await llm_call(self.llm, prompt)
+            t0 = time()
+            result = await llm_call(llm, prompt)
+            log.info(
+                "--- :: LLM Bot Message Generation call took %.2f seconds", time() - t0
+            )
 
             # Parse the output using the associated parser
             result = self.llm_task_manager.parse_task_output(
@@ -460,18 +529,28 @@ class LLMGenerationActions:
 
         if bot_utterance:
             return ActionResult(
-                events=[{"type": "bot_said", "content": bot_utterance}],
+                events=[
+                    new_event_dict("StartUtteranceBotAction", script=bot_utterance)
+                ],
                 context_updates=context_updates,
             )
         else:
             return ActionResult(
-                events=[{"type": "bot_said", "content": "I'm not sure what to say."}],
+                events=[
+                    new_event_dict(
+                        "StartUtteranceBotAction", script="I'm not sure what to say."
+                    )
+                ],
                 context_updates=context_updates,
             )
 
     @action(is_system_action=True)
     async def generate_value(
-        self, instructions: str, events: List[dict], var_name: Optional[str] = None
+        self,
+        instructions: str,
+        events: List[dict],
+        var_name: Optional[str] = None,
+        llm: Optional[BaseLLM] = None,
     ):
         """Generate a value in the context of the conversation.
 
@@ -479,9 +558,13 @@ class LLMGenerationActions:
         :param events: The full stream of events so far.
         :param var_name: The name of the variable to generate. If not specified, it will use
           the `action_result_key` as the name of the variable.
+        :param llm: Custom llm model to generate_value
         """
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
         last_event = events[-1]
-        assert last_event["type"] == "start_action"
+        assert last_event["type"] == "StartInternalSystemAction"
 
         if not var_name:
             var_name = last_event["action_result_key"]
@@ -493,7 +576,10 @@ class LLMGenerationActions:
 
             # We add these in reverse order so the most relevant is towards the end.
             for result in reversed(results):
-                examples += f"{result.text}\n\n"
+                # If the flow includes "= ...", we ignore it as we don't want the LLM
+                # to learn to predict "...".
+                if not re.findall(r"=\s+\.\.\.", result.text):
+                    examples += f"{result.text}\n\n"
 
         prompt = self.llm_task_manager.render_task_prompt(
             task=Task.GENERATE_VALUE,
@@ -505,8 +591,8 @@ class LLMGenerationActions:
             },
         )
 
-        with llm_params(self.llm, temperature=self.config.lowest_temperature):
-            result = await llm_call(self.llm, prompt)
+        with llm_params(llm, temperature=self.config.lowest_temperature):
+            result = await llm_call(llm, prompt)
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(
@@ -516,6 +602,11 @@ class LLMGenerationActions:
         # We only use the first line for now
         # TODO: support multi-line values?
         value = result.strip().split("\n")[0]
+
+        # Because of conventions from other languages, sometimes the LLM might add
+        # a ";" at the end of the line. We remove that
+        if value.endswith(";"):
+            value = value[:-1]
 
         log.info(f"Generated value for ${var_name}: {value}")
 

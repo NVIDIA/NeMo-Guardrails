@@ -66,7 +66,7 @@ async def check_hallucination(
         chain = LLMChain(prompt=last_bot_prompt, llm=llm)
 
         # Generate multiple responses with temperature 1.
-        with llm_params(llm, temperature=1, n=num_responses, best_of=num_responses):
+        with llm_params(llm, temperature=1.0, n=num_responses, best_of=num_responses):
             extra_llm_response = await chain.agenerate(
                 [{"text": last_bot_prompt_string}],
                 run_manager=logging_callback_manager_for_chain,
@@ -108,7 +108,7 @@ async def check_hallucination(
                 },
             )
 
-            with llm_params(llm, temperature=0):
+            with llm_params(llm, temperature=0.0):
                 agreement = await llm_call(llm, prompt)
 
             agreement = agreement.lower().strip()

@@ -75,27 +75,43 @@ def get_colang_history(
     if not events:
         return history
 
+    # We compute the index of the last bot message. We need it so that we include
+    # the bot message instruction only for the last one.
+    last_bot_intent_idx = len(events) - 1
+    while last_bot_intent_idx >= 0:
+        if events[last_bot_intent_idx]["type"] == "BotIntent":
+            break
+        last_bot_intent_idx -= 1
+
     for idx, event in enumerate(events):
-        if event["type"] == "user_said" and include_texts:
-            history += f'user "{event["content"]}"\n'
-        elif event["type"] == "user_intent":
+        if event["type"] == "UtteranceUserActionFinished" and include_texts:
+            history += f'user "{event["final_transcript"]}"\n'
+        elif event["type"] == "UserIntent":
             if include_texts:
                 history += f'  {event["intent"]}\n'
             else:
                 history += f'user {event["intent"]}\n'
-        elif event["type"] == "bot_intent":
+        elif event["type"] == "BotIntent":
+            # If we have instructions, we add them before the bot message.
+            # But we only do that for the last bot message.
+            if "instructions" in event and idx == last_bot_intent_idx:
+                history += f"# {event['instructions']}\n"
             history += f'bot {event["intent"]}\n'
-        elif event["type"] == "bot_said" and include_texts:
-            history += f'  "{event["content"]}"\n'
+        elif event["type"] == "StartUtteranceBotAction" and include_texts:
+            history += f'  "{event["script"]}"\n'
         # We skip system actions from this log
-        elif event["type"] == "start_action" and not event.get("is_system_action"):
+        elif event["type"] == "StartInternalSystemAction" and not event.get(
+            "is_system_action"
+        ):
             if (
                 remove_retrieval_events
                 and event["action_name"] == "retrieve_relevant_chunks"
             ):
                 continue
             history += f'execute {event["action_name"]}\n'
-        elif event["type"] == "action_finished" and not event.get("is_system_action"):
+        elif event["type"] == "InternalSystemActionFinished" and not event.get(
+            "is_system_action"
+        ):
             if (
                 remove_retrieval_events
                 and event["action_name"] == "retrieve_relevant_chunks"
@@ -109,7 +125,7 @@ def get_colang_history(
             utterance_to_replace = get_last_user_utterance(events[:idx])
             # We replace the last user utterance that led to jailbreak rail trigger with a placeholder text
             split_history = history.rsplit(utterance_to_replace, 1)
-            placeholder_text = "unanswerable question"
+            placeholder_text = "<<<This text is hidden because the assistant should not talk about this.>>>"
             history = placeholder_text.join(split_history)
     return history
 
@@ -138,7 +154,7 @@ def flow_to_colang(flow: dict):
     for element in flow["elements"]:
         if "_type" not in element:
             raise Exception("bla")
-        if element["_type"] == "user_intent":
+        if element["_type"] == "UserIntent":
             colang_flow += f'user {element["intent_name"]}\n'
         elif element["_type"] == "run_action" and element["action_name"] == "utter":
             colang_flow += f'bot {element["action_params"]["value"]}\n'
@@ -149,8 +165,8 @@ def flow_to_colang(flow: dict):
 def get_last_user_utterance(events: List[dict]):
     """Returns the last user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "user_said":
-            return event["content"]
+        if event["type"] == "UtteranceUserActionFinished":
+            return event["final_transcript"]
 
     return None
 
@@ -158,9 +174,9 @@ def get_last_user_utterance(events: List[dict]):
 def get_retrieved_relevant_chunks(events: List[dict]):
     """Returns the retrieved chunks for current user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "user_said":
+        if event["type"] == "UtteranceUserActionFinished":
             break
-        if event["type"] == "context_update" and "relevant_chunks" in event.get(
+        if event["type"] == "ContextUpdate" and "relevant_chunks" in event.get(
             "data", {}
         ):
             return event["data"]["relevant_chunks"]
@@ -171,7 +187,7 @@ def get_retrieved_relevant_chunks(events: List[dict]):
 def get_last_user_utterance_event(events: List[dict]):
     """Returns the last user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "user_said":
+        if event["type"] == "UtteranceUserActionFinished":
             return event
 
     return None
@@ -180,7 +196,7 @@ def get_last_user_utterance_event(events: List[dict]):
 def get_last_user_intent_event(events: List[dict]):
     """Returns the last user intent from the events."""
     for event in reversed(events):
-        if event["type"] == "user_intent":
+        if event["type"] == "UserIntent":
             return event
 
     return None
@@ -189,7 +205,7 @@ def get_last_user_intent_event(events: List[dict]):
 def get_last_bot_utterance_event(events: List[dict]):
     """Returns the last bot utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "bot_said":
+        if event["type"] == "StartInternalSystemAction":
             return event
 
     return None
@@ -198,7 +214,7 @@ def get_last_bot_utterance_event(events: List[dict]):
 def get_last_bot_intent_event(events: List[dict]):
     """Returns the last bot intent from the events."""
     for event in reversed(events):
-        if event["type"] == "bot_intent":
+        if event["type"] == "BotIntent":
             return event
 
     return None

@@ -52,7 +52,7 @@ general instructions and model details in a configuration file: `config.yml`.
 ### General Configurations
 
 Let's start with the **configuration file**
-([config.yml](./sample_rails/config.yml)).
+([config.yml](config.yml)).
 At a high level, this configuration file contains 3 key details:
 * **A general instruction**: Users can specify general system-level instructions
 for the bot. In this instance, we are specifying that the bot is responsible for
@@ -99,7 +99,7 @@ the bot is loaded, the files are chunked, indexed and stored in a local vector
 database. When a user asks a question, the most relevant chunks are retrieved and
 added to the context being sent to the Large Language Model.
 ```
-sample_rail
+topical_rail
 ├── kb
 │   └── report.md
 ├── config.yml
@@ -158,7 +158,7 @@ We essentially define the following behavior: When a user query can be "bucketed
 into the type `ask capabilities`, the bot will respond with a message of type
 `inform capabilities`.
 **Note:** Both flows and messages for this example are defined in
-[jobs.co](./sample_rails/jobs.co)
+[jobs.co](jobs.co)
 
 #### Answering Questions from the Knowledge Base
 
@@ -219,78 +219,6 @@ define flow
 responses for each. With enough relevant flows, the LLM can start recognizing
 that any topic other than `jobs report` are not to be answered.
 
-## Walking through conversations!
-
-**Note:** While this section shows the mechanism in which the bot is answering
-a question, it is highly recommended to review the
-[colang runtime guide](../../docs/architecture/README.md#the-guardrails-process) for an in-depth explanation.
-
-**A Brief explanation about how `.co` and `.yml` files are absorbed by the bot:**
-When the bot is launched, all the `user and bot messages` and `flows` are
-indexed and stored in two in-memory vector stores. These vector stores are then
-used to retrieve an exact match or the "top N" most relevant `messages` and
-`flows` at different steps of the bot's process.
-
-### Simple Conversation
-
-Below is an interaction between a user and the bot. There are five points of
-interest in this conversation marked **A, B, C, D, and E**. Let's discuss it in
-some detail.
-![simple conversation](./img/simple_conversation.PNG)
-
-* **A:** The user is asking the bot "How can you help me?"
-* **B:** The bot then searches its vector store for `messages` and finds the
-most relevant `message`, which in this case is "ask capabilities".
-* **C:** Next, the bot searches for a relevant `flow` in the respective vector
-store and identifies the `flow` that it is supposed to execute. In this case,
-the bot intends to inform about its capabilities.
-* **D&E:** Since there is a bot `message` in the vector store, the bot retrieves
-it and sends it to the user. If in case we hadn't defined the `bot message`, the
-canonical form of the flow, the question, and the sample few shot prompts would
-have been used by the LLM to generate a message to be sent to the user. This
-exact mechanism would have been used at steps **B** & **C** as well if a match
-wasn't found.
-
-### Asking a question from Knowledge Base
-Let's move to a more interesting case where the bot needs to look up information
-from the report and answer a question.
-
-![kb conversation](./img/kb.PNG)
-
-* **A:** The user is asking the bot "How many jobs were added in the healthcare
-sector?".
-* **B:** The bot then searches its vector store for `messages` and understands
-that the conversation is about the `establishment survey data` section of the
-report.
-* **C:** Next, the bot searches for a relevant `flow` in the respective vector
-store and identifies the `flow` that it is supposed to execute. In this case,
-the bot intends to answer with the `establishment survey data`.
-* **D:** The bot retrieves the chunk containing the information about medical
-sector and sends the passage as context to the LLM with the question.
-* **E:** The LLM formulates an answer on the basis of the question and shares
-it with the user. In this case, since the default temperature used for the model
-is low, and our system prompt suggests the bot be concise, the LLM responds
-with a very strict extractive Q&A behavior. Developers can adjust this behavior
-per their use case.
-### Asking an off-topic question
-Now, let's ask the bot something off-topic. Since the job report looks positive
-we can ask if we should buy more stocks. Since the goal of the bot is to answer
-questions based on the report and not make recommendations, the expected
-behavior would be the bot saying that it is an off-topic conversation.
-
-![off-topic](./img/off-topic.PNG)
-* **A:** The user is asking the bot "This looks like a positive report, should I
-buy more stocks?".
-* **B:** The bot then searches its vector store for `messages` and understands
-that the conversation is off-topic.
-* **C:** Next, the bot searches for a relevant `flow` in the respective vector
-store and identifies the `flow` that it is supposed to execute. In this case,
-the bot intends to explain that this is an off-topic conversation.
-* **D&E:** Since there is a bot `message` in the vector store, the bot retrieves
-it and sends it to the user.
-
-In summary, developers can create topics the bot should answer, and the bot
-shouldn't answer.
 
 ## Launch the bot!
 

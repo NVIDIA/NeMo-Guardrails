@@ -1,7 +1,7 @@
 define flow generate user intent
   """Turn the raw user utterance into a canonical form."""
 
-  event user_said(content="...")
+  event UtteranceUserActionFinished(final_transcript="...")
   execute generate_user_intent
 
 

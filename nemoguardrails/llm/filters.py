@@ -100,10 +100,10 @@ def user_assistant_sequence(events: List[dict]) -> str:
     """
     history_items = []
     for event in events:
-        if event["type"] == "user_said":
-            history_items.append("User: " + event["content"])
-        elif event["type"] == "bot_said":
-            history_items.append("Assistant: " + event["content"])
+        if event["type"] == "UtteranceUserActionFinished":
+            history_items.append("User: " + event["final_transcript"])
+        elif event["type"] == "StartUtteranceBotAction":
+            history_items.append("Assistant: " + event["script"])
 
     return "\n".join(history_items)
 
@@ -136,3 +136,18 @@ def first_turns(colang_history: str, n: int) -> str:
         i += 1
 
     return "\n".join(lines[0:i])
+
+
+def last_turns(colang_history: str, n: int) -> str:
+    """Returns the last n turns from a given colang history."""
+    lines = colang_history.split("\n")
+    turn_count = 0
+    i = len(lines) - 1
+    while i > 0:
+        if lines[i].startswith('user "'):
+            turn_count += 1
+        if turn_count == n:
+            break
+        i -= 1
+
+    return "\n".join(lines[i:])

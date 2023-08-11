@@ -21,9 +21,11 @@ by the coflows engine.
 This also transpiles correctly to JS to be used on the client side.
 """
 import json
+import re
+from ast import literal_eval
 from typing import List
 
-from .utils import get_stripped_tokens, split_max, word_split
+from .utils import get_stripped_tokens, split_args, split_max, word_split
 
 
 def _to_value(s, remove_quotes: bool = False):
@@ -34,16 +36,14 @@ def _to_value(s, remove_quotes: bool = False):
 
     TODO: other useful value shorthands
     """
-    if s == "None":
-        return None
-
-    if remove_quotes and len(s) > 0 and s[0] == '"' and s[-1] == '"':
-        return s[1:-1]
-
-    if isinstance(s, str) and s.isnumeric():
-        return int(s)
-
-    return s
+    if isinstance(s, str):
+        # If it's a reference to a variable, we leave as is.
+        if re.match(r"\$([a-zA-Z_][a-zA-Z0-9_]*)", s):
+            return s
+        else:
+            return literal_eval(s)
+    else:
+        return s
 
 
 def _extract_inline_params(d_value, d_params):
@@ -54,7 +54,7 @@ def _extract_inline_params(d_value, d_params):
         assert params_str[-1] == ")", f"Incorrect params str: {params_str}"
 
         params_str = params_str[0:-1]
-        param_pairs = get_stripped_tokens(word_split(params_str, ","))
+        param_pairs = get_stripped_tokens(split_args(params_str))
 
         for pair in param_pairs:
             # Skip empty pairs
@@ -127,7 +127,7 @@ def _dict_to_element(d):
                 del d_params[k]
 
         element = {
-            "_type": "user_intent",
+            "_type": "UserIntent",
             # We replace all spaces in intent names with "|"
             "intent_name": d_value,
             "intent_params": {
@@ -157,15 +157,15 @@ def _dict_to_element(d):
                 _pp.append(f"$intent_params.{p if p[0] != '$' else p[1:]} is not None")
             element["_match"] = " and ".join(_pp)
 
-    elif d_type in ["user_said"]:
+    elif d_type in ["UtteranceUserActionFinished"]:
         element = {
-            "_type": "user_said",
-            "content": d_value,
+            "_type": "UtteranceUserActionFinished",
+            "final_transcript": d_value,
         }
 
-    elif d_type in ["bot_said"]:
+    elif d_type in ["StartUtteranceBotAction"]:
         element = {
-            "_type": "bot_said",
+            "_type": "StartUtteranceBotAction",
             "content": d_value,
         }
 

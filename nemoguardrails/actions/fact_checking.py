@@ -45,7 +45,7 @@ async def check_facts(
             },
         )
 
-        with llm_params(llm, temperature=0):
+        with llm_params(llm, temperature=0.0):
             entails = await llm_call(llm, prompt)
 
         entails = entails.lower().strip()

@@ -62,7 +62,11 @@ def verbose_v1_parser(s: str):
     ]
 
     for i in range(len(lines)):
+        # Some LLMs generate a space at the beginning of the first line
+        lines[i] = lines[i].strip()
         for prefix, repl in prefixes:
+            # Also allow prefixes to be in lower-case
             lines[i] = _replace_prefix(lines[i], prefix, repl)
+            lines[i] = _replace_prefix(lines[i], prefix.lower(), repl)
 
     return "\n".join(lines)

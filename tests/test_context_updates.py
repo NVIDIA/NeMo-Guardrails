@@ -17,7 +17,7 @@ import pytest
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.actions.actions import ActionResult
-from tests.utils import FakeLLM
+from tests.utils import FakeLLM, any_event_conforms, event_conforms
 
 
 @pytest.fixture
@@ -66,15 +66,17 @@ async def test_simple_context_update_from_action(rails_config):
     llm_rails = LLMRails(config=rails_config, llm=llm)
     llm_rails.runtime.register_action(increase_counter)
 
-    events = [{"type": "user_said", "content": "Hello!"}]
+    events = [{"type": "UtteranceUserActionFinished", "final_transcript": "Hello!"}]
 
     new_events = await llm_rails.runtime.generate_events(events)
 
     events.extend(new_events)
-    events.append({"type": "user_said", "content": "Hello!"})
+    events.append({"type": "UtteranceUserActionFinished", "final_transcript": "Hello!"})
 
     new_events = await llm_rails.runtime.generate_events(events)
 
     # The last event before listen should be a context update for the counter to "2"
-    assert {"type": "context_update", "data": {"counter": 2}} in new_events
-    assert new_events[-1] == {"type": "listen"}
+    assert any_event_conforms(
+        {"type": "ContextUpdate", "data": {"counter": 2}}, new_events
+    )
+    assert event_conforms({"type": "Listen"}, new_events[-1])

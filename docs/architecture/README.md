@@ -8,7 +8,7 @@ This document provides more details on the architecture and the approach that th
 
 This section explains in detail the process under the hood, from the utterance sent by the user to the bot utterance that is returned.
 
-The guardrails runtime uses an event-driven design (i.e., an event loop that processes events and generates back other events). Whenever the user says something to the bot, a `user_said` event is created and sent to the runtime.
+The guardrails runtime uses an event-driven design (i.e., an event loop that processes events and generates back other events). Whenever the user says something to the bot, a `UtteranceUserActionFinished` event is created and sent to the runtime.
 
 The process has three main stages:
 
@@ -28,7 +28,7 @@ This stage is itself implemented through a colang flow:
 define flow generate user intent
   """Turn the raw user utterance into a canonical form."""
 
-  event user_said(content="...")
+  event UtteranceUserActionFinished(final_transcript="...")
   execute generate_user_intent
 ```
 
@@ -36,11 +36,11 @@ The `generate_user_intent` action will do a vector search on all the canonical f
 
 **Note**: The prompt itself contains other elements, such as the sample conversation and the current history of the conversation.
 
-Once the canonical form is generated, a new `user_intent` event is created.
+Once the canonical form is generated, a new `UserIntent` event is created.
 
 ### Decide Next Steps
 
-Once the `user_intent` event is created, there are two potential paths:
+Once the `UserIntent` event is created, there are two potential paths:
 
 1. There is a pre-defined flow that can decide what should happen next; or
 2. The LLM is used to decide the next step.
@@ -64,10 +64,10 @@ define flow generate next step
 
 Regardless of the path taken, there are two categories of next steps:
 
-1. The bot should say something (`bot_intent` events)
-2. The bot should execute an action (`start_action` events)
+1. The bot should say something (`BotIntent` events)
+2. The bot should execute an action (`StartInternalSystemAction` events)
 
-When an action needs to be executed, the runtime will invoke the action and wait for the result. When the action finishes, an `action_finished` event is created with the result of the action.
+When an action needs to be executed, the runtime will invoke the action and wait for the result. When the action finishes, an `InternalSystemActionFinished` event is created with the result of the action.
 
 **Note**: the default implementation of the runtime is async, so the action execution is only blocking for a specific user.
 
@@ -77,7 +77,7 @@ After an action is executed or a bot message is generated, the runtime will try 
 
 ### Generate Bot Utterances
 
-Once the `bot_intent` event is generated, the `generate_bot_message` action is invoked.
+Once the `BotIntent` event is generated, the `generate_bot_message` action is invoked.
 
 Similar to the previous stages, the `generate_bot_message` action performs a vector search for the most relevant bot utterance examples included in the guardrails configuration. Next, they get included in the prompt, and we ask the LLM to generate the utterance for the current bot intent.
 
@@ -98,7 +98,7 @@ define extension flow generate bot message
   execute generate_bot_message
 ```
 
-Once the bot utterance is generated, a new `bot_said` event is created.
+Once the bot utterance is generated, a new `StartUtteranceBotAction` event is created.
 
 ### Complete Example
 
@@ -116,54 +116,54 @@ bot response about headline numbers
 The stream of events processed by the guardrails runtime (a simplified view with unnecessary properties removed and values truncated for readability):
 
 ```yaml
-- type: user_said
-  content: "how many unemployed people were there in March?"
+- type: UtteranceUserActionFinished
+  final_transcript: "how many unemployed people were there in March?"
 
 # Stage 1: generate canonical form
-- type: start_action
+- type: StartInternalSystemAction
   action_name: generate_user_intent
 
-- type: action_finished
+- type: InternalSystemActionFinished
   action_name: generate_user_intent
   status: success
 
-- type: user_intent
+- type: UserIntent
   intent: ask about headline numbers
 
 # Stage 2: generate next step
-- type: start_action
+- type: StartInternalSystemAction
   action_name: generate_next_step
 
-- type: action_finished
+- type: InternalSystemActionFinished
   action_name: generate_next_step
   status: success
 
-- type: bot_intent
+- type: BotIntent
   intent: response about headline numbers
 
 # Stage 3: generate bot utterance
-- type: start_action
+- type: StartInternalSystemAction
   action_name: retrieve_relevant_chunks
 
-- type: context_update
+- type: ContextUpdate
   data:
     relevant_chunks: "The number of persons not in the labor force who ..."
 
-- type: action_finished
+- type: InternalSystemActionFinished
   action_name: retrieve_relevant_chunks
   status: success
 
-- type: start_action
+- type: StartInternalSystemAction
   action_name: generate_bot_message
 
-- type: action_finished
+- type: InternalSystemActionFinished
   action_name: generate_bot_message
   status: success
 
-- type: bot_said
+- type: StartInternalSystemAction
   content: "According to the US Bureau of Labor Statistics, there were 8.4 million unemployed people in March 2021."
 
-- type: listen
+- type: Listen
 ```
 
 ### Extending the Default Process
@@ -246,11 +246,9 @@ user "how many unemployed people were there in March?"
 
 Notice the various sections included in the prompt: the general instruction, the sample conversation, the most relevant examples of canonical forms and the current conversation.
 
-
 ## Interaction with LLMs
 
 This toolkit relies on LangChain for the interaction with LLMs. Below is a high-level sequence diagram showing the interaction between the user's code (the one using the guardrails), the `LLMRails`, LangChain and the LLM API.
-
 
 ![Sequence Diagram LLMRails](sequence-diagram-llmrails.png)
 

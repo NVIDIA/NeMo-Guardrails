@@ -17,4 +17,5 @@ scratch.py
 firebase.json
 build
 dist
+# Ignoring this for now
 scripts

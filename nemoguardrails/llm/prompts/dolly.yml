@@ -1,3 +1,4 @@
+# Prompts for Databricks Dolly models.
 prompts:
   - task: general
     models:
