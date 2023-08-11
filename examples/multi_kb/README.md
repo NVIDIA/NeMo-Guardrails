@@ -8,7 +8,7 @@ This is an experimental rail which demonstrates the following integration:
 ## Datasets
  Datasets for the vectorDB can be provided in .txt format. To preprocess, provide the path to the folder containing the .txt file in (this line) [./config.py¤146] and provide an (output path in this line)[./config.py#47] to where you would like to stored the vectorized database.
  The titanic.csv file can be found in varying sources, for example : (source 1)[https://github.com/datasciencedojo/datasets/blob/master/titanic.csv] and (source_2)[https://www.kaggle.com/c/titanic/data]
-    
+
 **Important** : This rail is experimental, use it at your own risk.
 
 - **Load a custom LLM from disk and with multiGPU support**

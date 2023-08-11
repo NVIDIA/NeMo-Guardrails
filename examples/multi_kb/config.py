@@ -29,13 +29,12 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
+from examples.multi_kb.tabular_llm import TabularLLM
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
 from nemoguardrails.llm.providers import register_llm_provider
-
-from .tabular_llm import TabularLLM
 
 
 def _get_model_config(config: RailsConfig, type: str):
