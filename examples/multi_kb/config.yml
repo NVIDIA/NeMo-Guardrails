@@ -2,10 +2,10 @@ models:
   - type: main
     engine: hf_pipeline_bloke
     parameters:
-      path: "<PATH TO THE LOCALLY SAVED CHECKPOINT>"
+      path: "/workspace/ckpt/bloke/"
 
       # number of GPUs you have , do nvidia-smi to check
-      num_gpus: 1
+      num_gpus: 2
 
       # This can be: "cpu" or "cuda". "mps" is not supported.
       device: "cuda"
@@ -13,18 +13,18 @@ models:
   - type: tabular
     engine: tabular
     parameters:
-      path: "<PATH_TO_CHECKPOINT>"
+      path: "/workspace/ckpt/gpt4all/ggml-vicuna-13b-4bit-rev1.bin"
 
   - type: embeddings
-    engine: faiss
+    engine: hf_pipeline_bloke
     model: "sentence-transformers/all-mpnet-base-v2"
     parameters:
-      persist_path: "<PATH TO CACHED .PKL>"
+      persist_path: "/workspace/ckpt/data2/"
 
 
 custom_data:
-  tabular_data_path: "<TABULAR DATA PATH>"
-  kb_data_path: "<THE DATA PATH TO TEXT FILES>"
+  tabular_data_path: "/workspace/Experiment/titanic.csv"
+  kb_data_path: "/workspace/ckpt/data/kb/"
 
 prompts:
   - task: generate_bot_message

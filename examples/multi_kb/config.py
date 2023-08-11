@@ -106,6 +106,7 @@ def _make_faiss_gpu(data_path, out_path, embeddings):
 
     # Here we create a vector store from the documents and save it to disk.
     store = FAISS.from_texts(docs, embeddings, metadatas=metadatas)
+    os.makedirs(out_path, exist_ok = True)
     faiss.write_index(store.index, out_path + "docs.index")
     store.index = None
     with open(out_path + "faiss_store.pkl", "wb") as f:
@@ -227,16 +228,20 @@ def init_tabular_llm(config: RailsConfig):
 
     register_llm_provider("tabular", get_llm_instance_wrapper(tabular_llm, "tabular"))
 
-
+vectordb=None
 def init_embeddings_model(config: RailsConfig):
+    global vectordb
     model_config = _get_model_config(config, "embeddings")
+    #import json
+    #print(json.dump(config.custom_data))
     vectordb = _get_vector_db(
         model_name=model_config.model,
         data_path=config.custom_data["kb_data_path"],
         persist_path=model_config.parameters.get("persist_path"),
     )
 
-    register_llm_provider("embeddings", vectordb)
+    register_llm_provider("faiss", vectordb)
+
 
 
 @action(is_system_action=True)
@@ -244,7 +249,6 @@ async def retrieve_relevant_chunks(
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
     tabular_llm: Optional[BaseLLM] = None,
-    embeddings_model: Optional = None,
 ):
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     user_message = context.get("last_user_message")
@@ -255,7 +259,6 @@ async def retrieve_relevant_chunks(
         result, source_ref, citing_text = llm_output.generations[0][0].text.split("###")
     else:
         # using faiss vector database , pip install faiss-gpu if you have gpu, otherwise please use faiss-cpu
-        vectordb = embeddings_model
         retriever = vectordb.as_retriever(
             search_type="similarity", search_kwargs={"k": 3}
         )

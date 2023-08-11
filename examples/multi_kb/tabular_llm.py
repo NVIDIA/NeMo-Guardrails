@@ -30,13 +30,11 @@ def query_tabular_data(usr_query: str, gpt: any, raw_data_frame: any):
     usr_query = usr_query[:cut_idx] + "?"
 
     # TODO: check if there's a way to do this grouping dynamically
-    grouped_by_cols = ["Class"]
+    grouped_by_cols = []
 
-    if any(
-        word in usr_query for word in ["first class", "second class", "third class"]
-    ):
+    if any(word in usr_query for word in ["first class", "second class", "third class"]):
         grouped_by_cols.append("Class")
-    elif "port" in usr_query:
+    elif any(word in usr_query for word in ["port", "Queenstown", "Southampton","Cherbourg"]):
         grouped_by_cols.append("port")
     elif any(
         word in usr_query for word in ["female", "male", "man", "woman", "men", "women"]
@@ -45,7 +43,7 @@ def query_tabular_data(usr_query: str, gpt: any, raw_data_frame: any):
     else:
         pass
 
-    d = raw_data_frame.groupby(grouped_by_cols)["Lived"].value_counts()
+    d = raw_data_frame.groupby(grouped_by_cols,as_index=False)["Lived"].value_counts()
 
     # flatten the grouped by pandas series to flatten dictionary
     d2 = d.reset_index(inplace=False)
