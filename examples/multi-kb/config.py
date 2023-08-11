@@ -12,9 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os.path
 import pickle
-import textwrap
 from pathlib import Path
 from typing import Optional
 
@@ -35,6 +34,8 @@ from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
 from nemoguardrails.llm.providers import register_llm_provider
+
+from .tabular_llm import TabularLLM
 
 
 def _get_model_config(config: RailsConfig, type: str):
@@ -113,7 +114,12 @@ def _make_faiss_gpu(data_path, out_path, embeddings):
     return store
 
 
-def _get_vector_db(model_name: str, persist_path: str):
+def _get_vector_db(model_name: str, data_path: str, persist_path: str):
+    """Creates a vector DB for a given data path.
+
+    If it's the first time, the index will be persisted at the given path.
+    Otherwise, it will be loaded directly (if the `persist_path` exists).
+    """
     # use other embeddings from huggingface
     model_kwargs = {"device": "cuda"}
 
@@ -122,16 +128,14 @@ def _get_vector_db(model_name: str, persist_path: str):
     )
     using_vectorstore = "faiss"
     if using_vectorstore == "faiss":
-        vectorestore_path = persist_path
-        if vectorestore_path is not None:
-            index = faiss.read_index(vectorestore_path + "docs.index")
-            with open(vectorestore_path + "faiss_store.pkl", "rb") as f:
+        if os.path.exists(persist_path):
+            index = faiss.read_index(os.path.join(persist_path, "docs.index"))
+            with open(os.path.join(persist_path, "faiss_store.pkl"), "rb") as f:
                 vectordb = pickle.load(f)
             vectordb.index = index
         else:
-            data_path = "<path to the folder contain xxx.txt files for processing into vectorstores>"
-            out_path = "<path to the folder where you would like to save the processed vectorstores>"
-            vectordb = _make_faiss_gpu(data_path, out_path, hf_embedding)
+            data_path = data_path
+            vectordb = _make_faiss_gpu(data_path, persist_path, hf_embedding)
     return vectordb
 
 
@@ -149,11 +153,10 @@ def init_main_llm(config: RailsConfig):
     # loading custom llm  from disk with multiGPUs support
     # model_name = "< path_to_the_saved_custom_llm_checkpoints >"  # loading model ckpt from disk
     model_config = _get_model_config(config, "main")
-    model_name = model_config.parameters.get("path")
-
-    device = "cuda"
-    num_gpus = 2  # number of GPUs you have , do nvidia-smi to check
-    model, tokenizer = _load_model(model_name, device, num_gpus, debug=False)
+    model_path = model_config.parameters.get("path")
+    device = model_config.parameters.get("device", "cuda")
+    num_gpus = model_config.parameters.get("num_gpus", 1)
+    model, tokenizer = _load_model(model_path, device, num_gpus, debug=False)
 
     # repo_id="TheBloke/Wizard-Vicuna-13B-Uncensored-HF"
     # pipe = pipeline("text-generation", model=repo_id, device_map={"":"cuda:0"}, max_new_tokens=256, temperature=0.1, do_sample=True,use_cache=True)
@@ -173,21 +176,15 @@ def init_main_llm(config: RailsConfig):
     register_llm_provider("hf_pipeline_bloke", provider)
 
 
-def init_tabular_llm(config: RailsConfig):
-    """Initialize the model for searching tabular data."""
-    model_config = _get_model_config(config, "tabular")
-
-    # loading titanic csv file
-    # cut_idx = usr_query.find("based on")
-    # usr_query = usr_query[:cut_idx] + "?"
-    model_path = model_config.parameters.get("path")
-    titanic_csv_path = config.custom_data.get("tabular_data_path")
-    df = pd.read_csv(titanic_csv_path, sep=",")
+def _get_titanic_raw_data_frame(csv_path: str):
+    """Reads the Titanic CSV file and returns a tweaked data frame."""
+    df = pd.read_csv(csv_path, sep=",")
 
     # working on the data
     Embarked_d = {"C": "Cherbourg", "Q": "Queenstown", "S": "Southampton"}
     class_d = {1: "first class", 2: "second class", 3: "third class"}
     df["Class"] = df["Pclass"].apply(lambda x: class_d[x])
+
     # changing the embark port to full name
     n = len(df)
     col_ls = list(df.columns)
@@ -203,52 +200,44 @@ def init_tabular_llm(config: RailsConfig):
 
     df["port"] = ls
     df["Lived"] = df["Survived"].apply(lambda x: "survived" if x == 1 else "died")
+
     # dropping duplicated and re-worked column
     df.drop("Survived", inplace=True, axis=1)
     df.drop("Pclass", inplace=True, axis=1)
     df.drop("Embarked", inplace=True, axis=1)
 
-    # TODO: check if there's a way to do this grouping dynamically
-    grouped_by_cols = ["Class"]
+    return df
 
-    # if any(
-    #         word in usr_query for word in ["first class", "second class", "third class"]
-    # ):
-    #     grouped_by_cols.append("Class")
-    # elif "port" in usr_query:
-    #     grouped_by_cols.append("port")
-    # elif any(
-    #         word in usr_query for word in ["female", "male", "man", "woman", "men", "women"]
-    # ):
-    #     grouped_by_cols.append("Sex")
-    # else:
-    #     pass
 
-    d = df.groupby(grouped_by_cols)["Lived"].value_counts()
-    # flatten the groupedby pandas series to flatten dictionary
-    d2 = d.reset_index(inplace=False)
+def init_tabular_llm(config: RailsConfig):
+    """Initialize the model for searching tabular data."""
+    # We just compute the titanic raw data frame
+    titanic_csv_path = config.custom_data.get("tabular_data_path")
+    raw_data_frame = _get_titanic_raw_data_frame(titanic_csv_path)
 
-    gpt = GPT4Pandas(model_path, d2, verbose=False)
+    model_config = _get_model_config(config, "tabular")
+    model_path = model_config.parameters.get("path")
 
-    register_llm_provider("tabular_llm", gpt)
+    # We just need to provide an empty data frame when initializing the model.
+    empty_data_frame = pd.DataFrame()
+    gpt = GPT4Pandas(model_path, empty_data_frame, verbose=False)
+
+    tabular_llm = TabularLLM(
+        gpt=gpt, raw_data_path=titanic_csv_path, raw_data_frame=raw_data_frame
+    )
+
+    register_llm_provider("tabular", get_llm_instance_wrapper(tabular_llm, "tabular"))
 
 
 def init_embeddings_model(config: RailsConfig):
     model_config = _get_model_config(config, "embeddings")
     vectordb = _get_vector_db(
         model_name=model_config.model,
+        data_path=config.custom_data["kb_data_path"],
         persist_path=model_config.parameters.get("persist_path"),
     )
 
     register_llm_provider("embeddings", vectordb)
-
-
-def tabularQnA_gpt4pandas(usr_query: str, llm: BaseLLM):
-    """Answer a question based on some tabular data"""
-
-    out = llm.ask(usr_query)
-
-    return out, titanic_csv_path, d2.to_string()
 
 
 @action(is_system_action=True)
@@ -263,11 +252,8 @@ async def retrieve_relevant_chunks(
 
     # TODO: do this better using a separate canonical form
     if "csv" in user_message:
-        result, file_loc, flattened2string = tabularQnA_gpt4pandas(
-            user_message, llm=tabular_llm
-        )
-        source_ref = file_loc
-        citing_text = flattened2string
+        llm_output = await tabular_llm.agenerate(prompts=[user_message])
+        result, source_ref, citing_text = llm_output.generations[0][0].text.split("###")
     else:
         # using faiss vector database , pip install faiss-gpu if you have gpu, otherwise please use faiss-cpu
         vectordb = embeddings_model

@@ -4,8 +4,14 @@ models:
     parameters:
       path: "<PATH TO THE LOCALLY SAVED CHECKPOINT>"
 
+      # number of GPUs you have , do nvidia-smi to check
+      num_gpus: 1
+
+      # This can be: "cpu" or "cuda". "mps" is not supported.
+      device: "cuda"
+
   - type: tabular
-    engine: tabular_llm
+    engine: tabular
     parameters:
       path: "<PATH_TO_CHECKPOINT>"
 
@@ -18,6 +24,7 @@ models:
 
 custom_data:
   tabular_data_path: "<TABULAR DATA PATH>"
+  kb_data_path: "<THE DATA PATH TO TEXT FILES>"
 
 prompts:
   - task: generate_bot_message
