@@ -66,6 +66,7 @@ class LLMGenerationActions:
         self.config = config
         self.llm = llm
         self.verbose = verbose
+        self.embedding_search_providers = embedding_search_providers
 
         # If we have a customized embedding model, we'll use it.
         self.embedding_model = "all-MiniLM-L6-v2"
@@ -97,11 +98,11 @@ class LLMGenerationActions:
         self.embedding_search_providers = embedding_search_providers
 
     def _get_embeddings_search_instance(self):
-        if self.config.embedding_search_provider == "default":
+        if self.config.embedding_search_provider.name == "default":
             return BasicEmbeddingsIndex(self.embedding_model)
         else:
             if (
-                self.config.embedding_search_provider
+                self.config.embedding_search_provider.name
                 not in self.embedding_search_providers
             ):
                 raise Exception(
@@ -109,10 +110,9 @@ class LLMGenerationActions:
                     self.config.embedding_search_provider,
                 )
             else:
-                # TODO: add support for parameters
-                kwargs = {}
+                kwargs = self.config.embedding_search_provider.parameters
                 return self.embedding_search_providers[
-                    self.config.embedding_search_provider
+                    self.config.embedding_search_provider.name
                 ](**kwargs)
 
     def _init_user_message_index(self):
@@ -269,7 +269,7 @@ class LLMGenerationActions:
             potential_user_intents = []
 
             if self.user_message_index:
-                results = self.user_message_index.search(
+                results = await self.user_message_index.search(
                     text=event["final_transcript"], max_results=5
                 )
 
@@ -353,7 +353,7 @@ class LLMGenerationActions:
             # We search for the most relevant similar flows
             examples = ""
             if self.flows_index:
-                results = self.flows_index.search(text=user_intent, max_results=5)
+                results = await self.flows_index.search(text=user_intent, max_results=5)
 
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
@@ -509,7 +509,7 @@ class LLMGenerationActions:
             examples = ""
             # NOTE: disabling bot message index when there are no user messages
             if self.config.user_messages and self.bot_message_index:
-                results = self.bot_message_index.search(
+                results = await self.bot_message_index.search(
                     text=event["intent"], max_results=5
                 )
 
@@ -594,7 +594,9 @@ class LLMGenerationActions:
         # We search for the most relevant flows.
         examples = ""
         if self.flows_index:
-            results = self.flows_index.search(text=f"${var_name} = ", max_results=5)
+            results = await self.flows_index.search(
+                text=f"${var_name} = ", max_results=5
+            )
 
             # We add these in reverse order so the most relevant is towards the end.
             for result in reversed(results):

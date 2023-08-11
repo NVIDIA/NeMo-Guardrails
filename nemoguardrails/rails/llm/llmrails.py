@@ -19,13 +19,14 @@ import importlib.util
 import logging
 import os
 import time
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Type, Union
 
 from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
 from nemoguardrails.flows.runtime import Runtime
+from nemoguardrails.kb.index import EmbeddingsIndex
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.stats import llm_stats
@@ -375,14 +376,14 @@ class LLMRails:
         """
         self.runtime.llm_task_manager.register_prompt_context(name, value_or_fn)
 
-    def register_embedding_search_provider(self, name, cls):
+    def register_embedding_search_provider(
+        self, name: str, cls: Type[EmbeddingsIndex]
+    ) -> None:
         """Register a new embedding search provider.
 
         Args:
-            name:
-            cls:
-
-        Returns:
-
+            name: The name of the embedding search provider that will be used.
+            cls: The class that will be used to generate and search embedding
         """
+
         self.runtime.registered_embedding_search_providers[name] = cls

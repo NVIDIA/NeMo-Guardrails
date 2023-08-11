@@ -18,3 +18,8 @@ models:
   - type: main
     engine: openai
     model: text-davinci-003
+
+embedding_search_provider:
+    name: nlp-server
+    parameters:
+      model: simcse-bert-base

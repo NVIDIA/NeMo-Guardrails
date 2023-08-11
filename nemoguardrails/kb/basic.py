@@ -78,7 +78,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
             self._index.add_item(i, self._embeddings[i])
         self._index.build(10)
 
-    def search(self, text: str, max_results: int = 20) -> List[IndexItem]:
+    async def search(self, text: str, max_results: int = 20) -> List[IndexItem]:
         """Search the closest `max_results` items."""
         _embedding = self._get_embeddings([text])[0]
         results = self._index.get_nns_by_vector(

@@ -103,6 +103,16 @@ class TaskPrompt(BaseModel):
         return values
 
 
+class EmbeddingSearchProvider(BaseModel):
+    """Configuration of a embedding search provider."""
+
+    name: str = Field(
+        default="default",
+        description="The name of the embedding search provider. If not specified, default is used.",
+    )
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+
+
 # Load the default config values from the file
 with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
     _default_config = yaml.safe_load(_fc)
@@ -144,6 +154,10 @@ def _join_config(dest_config: dict, additional_config: dict):
     dest_config["actions_server_url"] = dest_config.get(
         "actions_server_url", None
     ) or additional_config.get("actions_server_url", None)
+
+    dest_config["embedding_search_provider"] = dest_config.get(
+        "embedding_search_provider", {}
+    ) or additional_config.get("embedding_search_provider", {})
 
     additional_fields = [
         "sample_conversation",
@@ -229,9 +243,9 @@ class RailsConfig(BaseModel):
         default_factory=dict,
         description="Any custom configuration data that might be needed.",
     )
-    
-    embedding_search_provider: Optional[str] = Field(
-        default="default",
+
+    embedding_search_provider: EmbeddingSearchProvider = Field(
+        default_factory=EmbeddingSearchProvider(),
         description="The engine to use for computing the embeddings and doing the search.",
     )
 
