@@ -82,6 +82,12 @@ class LLMRails:
         # First, we initialize the runtime.
         self.runtime = Runtime(config=config, verbose=verbose)
 
+        # If we have a config_module with an `init` function, we call it.
+        # We need to call this here because the `init` might register additional
+        # LLM providers.
+        if config_module is not None and hasattr(config_module, "init"):
+            config_module.init(self)
+
         # Next, we initialize the LLM engines (main engine and action engines if specified).
         self._init_llms()
         # Next, we initialize the LLM Generate actions and register them.
@@ -94,10 +100,6 @@ class LLMRails:
         self.runtime.register_actions(actions)
         # We also register the kb as a parameter that can be passed to actions.
         self.runtime.register_action_param("kb", actions.kb)
-
-        # If we have a config_module with an `init` function, we call it.
-        if config_module is not None and hasattr(config_module, "init"):
-            config_module.init(self)
 
     def _init_llms(self):
         """
