@@ -9,9 +9,9 @@ flow bot ask confirmation question $utterance $max_repetition=2
       return "confirmed"
     else when user denies
       return "denied"
-    else when user said anything as $user_said
+    else when user said something as $user said
       $repetition_count += 1
-      bot say """Respond to user saying '{$user_said.event.utterance.text}' but remind user to either confirm or deny the question"""
+      bot say """Respond to user saying '{$user said.event.utterance.text}' but remind user to either confirm or deny the question"""
     else when user silent "5s"
       $repetition_count += 1
       bot say "Just say 'yes' to confirm!"
@@ -24,3 +24,6 @@ flow main
     bot say "No problem"
   else # In the case that the question is not answered and failed
     bot say "Never mind"
+
+await -> start & match
+do -> activate & match

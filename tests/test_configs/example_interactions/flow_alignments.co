@@ -1,0 +1,43 @@
+flow start_flows_synchronically_and_wait_for_both_of_them_to_end
+  # Option 1 using flow groups
+  await bot say "Yes, indeed! That is correct!" and bot gesture "nodding"
+  # Option 2 expanding 'await' keyword
+  start bot say "Yes, indeed! That is correct!" as $flow1
+    and bot gesture "nodding" as $flow2
+  # Option 3 using sequential start statements
+  start bot say "Yes, indeed! That is correct!" as $flow1
+  start bot gesture "nodding" as $flow2
+  match $flow1.Finished() and $flow2.Finished()
+
+flow start_flows_synchronically_and_wait_for_first_of_them_to_end
+  # Option 1 using flow groups
+  await bot say "Yes, indeed! That is correct!" or bot gesture "nodding"
+  # Option 2 expanding 'await' keyword
+  start bot say "Yes, indeed! That is correct!" as $flow1
+    and bot gesture "nodding" as $flow2
+  match $flow1.Finished() or $flow2.Finished()
+  # Option 3 using sequential start statements
+  start bot say "Yes, indeed! That is correct!" as $flow1
+  start bot gesture "nodding" as $flow2
+  match $flow1.Finished() or $flow2.Finished()
+
+flow start_flow_sequentially_and_wait_for_last_to_end
+  await bot say "Yes, indeed! That is correct!"
+  await bot gesture "nodding"
+
+flow limit_first_flow_by_end_of_second_flow
+  start bot gesture "nodding"
+  await bot say "Yes, indeed! That is correct!"
+
+flow align_flow_with_action_start_in_flow
+  start bot say "Yes, indeed! That is correct!" as $flow
+  match $flow.action.Started()
+  start bot gesture "nodding"
+  match $flow.Finished()
+
+flow main
+  await start_flows_synchronically_and_wait_for_both_of_them_to_end
+  await start_flows_synchronically_and_wait_for_first_of_them_to_end
+  await start_flow_sequentially_and_wait_for_last_to_end
+  await limit_first_flow_by_end_of_second_flow
+  await align_flow_with_action_start_in_flow

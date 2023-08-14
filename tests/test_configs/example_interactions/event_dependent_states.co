@@ -2,33 +2,26 @@
 
 # State tracking based on events
 flow user ready state tracking
-  await user presents state tracking and user attention state tracking
+  activate user presents state tracking and user attention state tracking
+  # By default we run an activated flow only once if there is no match statement in it
 
 flow user presents state tracking
-  start user appears and user disappears
-  while true
-    when match user appears
-      $user_is_present = true
-      start user appears
-    else when match user disappears
-      $user_is_present = false
-      start user disappears
+  when user appeared # Nothing to be done if 'user appeared' flow is already started
+    $user_is_present = true
+  else match user disappeared # Nothing to be done if 'user disappeared' flow is already started
+    $user_is_present = false
 
 flow user attention state tracking
-  start user becomes attentive and user becomes inattentive
-  while true
-    when match user becomes attentive
-      $user_is_attentive = true
-      start user becomes attentive
-    else when match user becomes inattentive
-      $user_is_attentive = false
-      start user becomes inattentive
+  when match user became attentive # Nothing to be done if 'user became attentive' flow is already started
+    $user_is_attentive = true
+  else when match user became inattentive # Nothing to be done if 'user became inattentive' flow is already started
+    $user_is_attentive = false
 
 # Wait for a combined user state to change
 flow user is ready
   while $user_is_attentive == false or $user_is_present == false
-    await user becomes attentive or user appears
+    await user became attentive or user appeared
 
 flow main
-  start user ready state tracking # This is required since otherwise we won't know the $user_is_present or $user_is_attentive variables, alternatively we introduce a 'required' flow concept, where we would require this flow from the 'user is ready' flow, see event_dependent_states.co
+  activate user ready state tracking # This is required since otherwise we won't know the $user_is_present or $user_is_attentive variables, alternatively we introduce a 'required' flow concept, where we would require this flow from the 'user is ready' flow, see event_dependent_states.co
   await user is ready

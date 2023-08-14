@@ -1,0 +1,47 @@
+# Demonstrates a simple faq handling while having a conversation in the main flow
+# If the user ask an faq the main flow will be interrupted and the faq answered before returning to the main flow
+
+# Open questions:
+# * How can we resume to the main flow and repeating the previous question to give context? 
+
+# user faq intents
+
+flow user ask about service
+  await user said "What are you offering"
+    or user said "What services do you provide"
+
+flow user ask about bot name
+  await user said "what's your name?"
+    or user said "tell me your name"
+
+flow user ask where are the toilettes
+  await user said "I need to go to the toilettes"
+
+# bot faq responses
+
+flow user ask about service response
+  await user ask about service
+  await bot say "I can help you finding the right product"
+
+flow user ask about bot name response
+  await user ask about bot name
+  await bot say "My name is violet"
+
+flow user ask where are the toilettes response
+  await user ask where are the toilettes
+  await bot say "The toilettes are just to your left"
+
+# faq grouping flow
+flow faq question handling
+  activate user ask about service response
+    and user ask about bot name response
+    and user ask where are the toilettes response
+  wait
+
+flow main
+  activate faq question handling
+  await bot say "How are you?"
+  when await user said "good"
+    await bot say "Great! Let's continue"
+  else when await user said "bad"
+    await bot say "Sorry to hear!"

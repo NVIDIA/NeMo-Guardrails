@@ -1,0 +1,37 @@
+# Artificially constructed complex flows to consider edge cases for matching and conflict resolution
+
+@thread("A")
+flow flow1
+ match user said something # Match with event, but no full match score
+ start flow4 # Starts flow4 in thread A that starts flow5 in thread D -> conflict because of same time-id
+ start """awesome flow""" # Exact match with NLD of awesome_flow, this will result in a conflict with action 'start """fast awesome flow"""' in flow2
+ wait
+
+@thread("B")
+flow flow2
+ match user said "Hi" # Match with event, full match score
+ start flow4 # Starts flow4 in thread B that starts flow5 in thread D -> conflict because of same time-id
+ start """fast awesome flow""" # Close match with NLD of awesome_flow, this would result in a conflict with action 'start """awesome flow"""' in flow1
+ wait
+
+@thread("C")
+flow flow3
+ match not user said "How are you?" and user said something # Mismatch with event -> flow3 will be aborted and restarted
+ await bot_say "hi"
+
+flow flow4
+  await flow5
+
+@thread("D")
+flow flow5
+  await bot_say "hi"
+
+flow awesome_flow
+   """awesome flow"""
+   bot_say "awesome"
+
+flow main
+  activate flow1 and flow2 and flow3 and flow4
+  wait
+
+# -> event UtteranceBotAction.Finished("Hi")

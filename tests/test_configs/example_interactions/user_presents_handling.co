@@ -1,0 +1,169 @@
+# Demonstrates how to detect an approaching user guiding her closer in the front of the camera
+
+# Core vision event wrapper flows
+# We want each of them to start in a new thread since otherwise we would make those events dependent on each other (e.g. one will interrupt the wrapper flow of all the others).
+# But this dependency should be the responsibility of the flow that started the wrapper flow
+
+@new_interaction_context
+flow user_entered_active_zone
+  match UserPositionAreaUpdated("active")
+
+@new_interaction_context
+flow user_entered_approach_zone
+  match UserPositionAreaUpdated("approach")
+
+@new_interaction_context
+flow user_entered_passive_zone
+  match UserPositionAreaUpdated("passive")
+
+@new_interaction_context
+flow bot_calling_user_closer
+  await bot gesture "calling user closer"
+
+# Flows that will be active while user is in corresponding zones
+
+@thread(user_presents_handling)
+flow active_zone_handling
+  await user_entered_active_zone # Wait for the user entering the zone
+
+@thread(user_presents_handling)
+flow approach_zone_handling
+  await user_entered_approach_zone # Wait for the user entering the zone
+  while true
+    await bot_calling_user_closer # keep calling user closer until this flow is paused or stopped
+    await bot_idling
+
+@thread(user_presents_handling)
+flow passive_zone_handling
+  await entered_passive_zone
+  while true
+    await bot_idling # keep idling until this flow is paused or stopped
+
+# story flows
+
+flow user_is_present
+  activate active_zone_handling as $active_zone_flow
+    and approach_zone_handling as $approach_zone_flow
+    and passive_zone_handling as $passive_zone_flow
+  match $active_zone_flow.Finished()
+
+flow main
+  await user_is_present
+  await bot_greet_user
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Legacy flows
+
+flow adapt background music volume $parameter $action_id
+  event SystemBackgroundMusicVolumeUpdateAction(action_id, "$parameter")
+
+flow play background music $music $action_id
+  event SystemBackgroundMusicStartAction($action_id, "parameter")
+  match event SystemBackgroundMusicActionFinished($action_id)
+
+flow start approach background music $music $action_id $flow_id
+  await user entered passive zone from outside
+  async $flow_id: play background music $music $action_id
+
+flow stop approach background music $flow_id
+  await user entered active zone
+  stop $flow_id
+
+# We need a flow to manage and keep the background music alive
+flow manage approach background music $music $action_id
+  activate start approach background music $music $action_id "background_music"
+  activate stop approach background music "background_music"
+  wait
+  
+flow user entered active zone
+  match event UserEnteredZone("active")
+
+flow user entered approach zone
+  match event UserEnteredZone("approach")
+
+flow user entered passive zone from outside
+  match event UserEnteredZone("passiv from outside")
+
+flow user entered passive zone
+  match event UserEnteredZone("passiv")
+
+flow user approaches volume adaptation $distance
+  await user moved "by $distance"
+  await adapt background music volume "increase" "casino"
+
+flow user leaves volume adaptation $distance
+  await user moved "by $distance"
+  await adapt background music volume "lower" "casino"
+
+flow volume user distance adaptation $distance
+  activate user leaves volume adaptation $distance
+    and user approaches volume adaptation $distance
+
+flow bot calling user closer
+  bot gesture "calling user closer"
+
+flow bot idling
+  bot gesture "thinking"
+    and bot expression "thinking"
+    and bot vocal "mumbling"
+  or bot gesture "sleeping"
+    and bot expression "sleeping"
+    and bot vocal "snoring"
+  or bot gesture "looking around"
+    and bot expression "dreaming"
+
+flow active zone handling
+  if $user_zone != "active" # We need to check if we are already in the zone
+    await user entered active zone # Wait for the user entering the zone
+  stop approach_sound
+  async system play welcome sound
+  # this is the end of this flow, this will satisfy the matcher in the ‘user approach handling’ flow
+
+flow approach zone handling
+  if $user_zone != "approach" # We need to check if we are already in the zone
+    await user entered approach zone # Wait for the user entering the zone
+  activate volume user distance adaptation 0.3
+  repeat await bot calling user closer # keep calling user closer until this flow is paused or stopped
+
+flow passive zone handling
+  if $user_zone != "passiv" # We need to check if we are already in the zone
+    # Wait for the user entering the zone from outside or the approach zone
+    await entered passive zone
+      async system play goodbye sound
+  activate volume user distance adaptation 0.5
+  repeat await bot idling # keep idling until this flow is paused or stopped
+
+flow user approach handling
+  await active zone handling
+    and approach zone handling
+    and passive zone handling
+    and manage approach background music "looping casino" "casino"
+  match active zone handling # wait until this one is done
+  # Alternatively, one could also await the ‘active zone handling’ flow here and not activate it above
+
+flow main
+  await user approach handling # wait until subflow is done
+  await greet user

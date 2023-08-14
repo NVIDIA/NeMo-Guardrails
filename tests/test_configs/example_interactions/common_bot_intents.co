@@ -1,0 +1,11 @@
+# core_flows.co
+
+flow bot idling
+  await bot gesture "thinking"
+      and bot expression "thinking"
+      #and bot vocal "mumbling"
+    or bot gesture "sleeping"
+      and bot expression "sleeping"
+      #and bot vocal "snoring"
+    or bot gesture "looking around"
+      and bot expression "dreaming"

@@ -5,48 +5,60 @@
 # ----------------------------------
 # Bot event and action wrapper flows
 # -----------------------------------
-@thread("main") # Default interaction thread
+@new_interaction_context
 flow bot say $text
   await UtteranceBotAction(text=$text) as $action
 
-@thread("expression")
+@new_interaction_context
+flow bot started saying $text
+  match UtteranceBotAction(text=$text).Started() as $event
+
+@new_interaction_context
+flow bot said $text
+  match UtteranceBotAction(text=$text).Finished() as $event
+
+@new_interaction_context
+flow bot said something
+  match UtteranceBotAction().Finished() as $event
+
+@new_interaction_context
 flow bot express $expression
   await ExpressionBotAction($expression) as $action
 
-@thread("gesture")
+@new_interaction_context
 flow bot gesture $gesture
   await GestureBotAction($gesture) as $action
 
-@thread("position")
-flow bot move $position
+@new_interaction_context
+flow bot_move $position
   await PositionChangeBotAction($position) as $action
 
 # -----------------------------------
 # User event and action wrapper flows
 # -----------------------------------
 
-@thread("main")
+@new_interaction_context
 flow user said $text
-  match UtteranceUserActionFinished(text=$text) as $event
+  match UtteranceUserAction.Finished(text=$text) as $event
 
-@thread("main")
-flow user said anything
-  match UtteranceUserActionFinished() as $event
+@new_interaction_context
+flow user said something
+  match UtteranceUserAction.Finished() as $event
 
 # Vision related events and actions
 
-@thread("vision")
-flow user appears
+@new_interaction_context
+flow user appeared
   match DetectedUserAction.Finished() as $event
 
-@thread("vision")
-flow user disappears
+@new_interaction_context
+flow user disappeared
   match DetectedUserAction.Finished() as $event
 
-@thread("vision")
-flow user becomes attentive
+@new_interaction_context
+flow user became attentive
   match AttentionUserAction.Finished() as $event
 
-@thread("vision")
-flow user becomes inattentive
+@new_interaction_context
+flow user became inattentive
   match AttentionUserAction.Finished() as $event
