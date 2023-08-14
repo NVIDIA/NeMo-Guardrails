@@ -49,7 +49,7 @@ def _update_action_properties(event_dict: Dict[str, Any]) -> Dict[str, Any]:
             event_dict["is_success"] or "failure_reason" in event_dict
         ), "Unsuccessful ***ActionFinished events need to provide 'failure_reason'."
 
-        if event_dict["is_success"] and event_dict["failure_reason"]:
+        if event_dict["is_success"] and "failure_reason" in event_dict:
             del event_dict["failure_reason"]
 
 
