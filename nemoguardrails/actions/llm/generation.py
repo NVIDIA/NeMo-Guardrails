@@ -69,7 +69,7 @@ class LLMGenerationActions:
         # If we have a customized embedding model, we'll use it.
         self.embedding_model = "all-MiniLM-L6-v2"
         for model in self.config.models:
-            if model.type=="embedding":
+            if model.type == "embedding":
                 self.embedding_model = model.model
                 assert model.engine == "SentenceTransformer"
                 break

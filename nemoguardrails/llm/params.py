@@ -41,11 +41,11 @@ class LLMParams:
             if hasattr(self.llm, param):
                 self.original_params[param] = getattr(self.llm, param)
                 setattr(self.llm, param, value)
-            #elif hasattr(self.llm, "model_kwargs") and param in getattr(
-                #self.llm, "model_kwargs", {}
-            #):
-                #self.original_params[param] = self.llm.model_kwargs[param]
-                #self.llm.model_kwargs[param] = value
+            # TODO: Fix the cases where self.llm.model_kwargs is not iterable
+            #  https://github.com/NVIDIA/NeMo-Guardrails/issues/92.
+            # elif param in getattr(self.llm, "model_kwargs", {}):
+            #     self.original_params[param] = self.llm.model_kwargs[param]
+            #     self.llm.model_kwargs[param] = value
             else:
                 log.warning(
                     "Parameter %s does not exist for %s",
