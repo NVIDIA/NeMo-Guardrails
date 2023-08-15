@@ -106,7 +106,7 @@ def _make_faiss_gpu(data_path, out_path, embeddings):
 
     # Here we create a vector store from the documents and save it to disk.
     store = FAISS.from_texts(docs, embeddings, metadatas=metadatas)
-    os.makedirs(out_path, exist_ok = True)
+    os.makedirs(out_path, exist_ok=True)
     faiss.write_index(store.index, out_path + "docs.index")
     store.index = None
     with open(out_path + "faiss_store.pkl", "wb") as f:
@@ -228,12 +228,13 @@ def init_tabular_llm(config: RailsConfig):
 
     register_llm_provider("tabular", get_llm_instance_wrapper(tabular_llm, "tabular"))
 
-vectordb=None
+
+vectordb = None
+
+
 def init_embeddings_model(config: RailsConfig):
     global vectordb
     model_config = _get_model_config(config, "embeddings")
-    #import json
-    #print(json.dump(config.custom_data))
     vectordb = _get_vector_db(
         model_name=model_config.model,
         data_path=config.custom_data["kb_data_path"],
@@ -241,7 +242,6 @@ def init_embeddings_model(config: RailsConfig):
     )
 
     register_llm_provider("faiss", vectordb)
-
 
 
 @action(is_system_action=True)
