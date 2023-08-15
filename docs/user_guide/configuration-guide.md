@@ -37,6 +37,8 @@ The custom actions can be placed either in an `actions.py` module in the root of
 │   └── config.yml
 ```
 
+## Custom Initialization
+
 If present, the `config.py` module is loaded before initializing the `LLMRails` instance.
 
 If the `config.py` module contains an `init` function, it gets called as part of the initialization of the `LLMRails` instance. For example, you can use the `init` function to initialize the connection to a database and register it as a custom action parameter using the `register_action_param(...)` function:
@@ -204,6 +206,25 @@ This temperature will be used for the tasks that require deterministic behavior 
 ```yaml
 lowest_temperature: 0.1
 ```
+
+### Custom Data
+
+If you need to pass additional configuration data to any custom component for your configuration, you can use the `custom_data` field.
+
+```yaml
+custom_data:
+  custom_config_field: "some_value"
+```
+
+For example, you can access the custom configuration inside the `init` function in your `config.py` (see [Custom Initialization](#custom-initialization)).
+
+```python
+def init(app: LLMRails):
+    config = app.config
+
+    # Do something with config.custom_data
+```
+
 
 ## Guardrails Definitions
 
