@@ -40,3 +40,45 @@ def test_action_event_generation():
     assert e["intensity"] == intensity
     assert e["action_info_modality"] == "bot_speech"
     assert e["action_info_modality_policy"] == "replace"
+
+
+def test_override_default_parameter():
+    event_type = "StartUtteranceBotAction"
+    script = "Hello. Nice to see you!"
+    intensity = 0.5
+    e = new_event_dict(
+        event_type, script=script, intensity=intensity, source_uid="my_uid"
+    )
+
+    assert "event_created_at" in e
+    assert "source_uid" in e
+    assert e["source_uid"] == "my_uid"
+    assert e["type"] == event_type
+    assert e["script"] == script
+    assert e["intensity"] == intensity
+    assert e["action_info_modality"] == "bot_speech"
+    assert e["action_info_modality_policy"] == "replace"
+
+
+def test_action_finished_event():
+    event_type = "UtteranceBotActionFinished"
+    final_script = "Hello. Nice to see you!"
+    e = new_event_dict(
+        event_type,
+        final_script=final_script,
+        is_success=True,
+        failure_reason="Nothing all worked.",
+    )
+
+    assert "action_finished_at" in e
+
+    # Check that failure reason has been removed for a successful action
+    assert "failure_reason" not in e
+
+    # Check basic properties
+    assert "event_created_at" in e
+    assert "source_uid" in e
+    assert e["type"] == event_type
+    assert e["final_script"] == final_script
+    assert e["action_info_modality"] == "bot_speech"
+    assert e["action_info_modality_policy"] == "replace"

@@ -40,8 +40,10 @@ def _add_modality_info(event_dict: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _update_action_properties(event_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """Update action related even properties and ensure UMIM compliance (very basic)"""
+    # TODO add support for additional action events
     if "Finished" in event_dict["type"]:
-        event_dict["event_created_at"] = datetime.now(timezone.utc).isoformat()
+        event_dict["action_finished_at"] = datetime.now(timezone.utc).isoformat()
         assert (
             "is_success" in event_dict
         ), "***ActionFinished events require is_success field"
