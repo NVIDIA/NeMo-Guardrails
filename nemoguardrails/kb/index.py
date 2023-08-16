@@ -26,17 +26,15 @@ class IndexItem:
 class EmbeddingsIndex:
     """The embeddings index is responsible for computing and searching a set of embeddings."""
 
-    # TODO: make this interface async
-
-    def add_item(self, item: IndexItem):
+    async def add_item(self, item: IndexItem):
         """Adds a new item to the index."""
         raise NotImplementedError()
 
-    def add_items(self, item: List[IndexItem]):
+    async def add_items(self, item: List[IndexItem]):
         """Adds multiple items to the index."""
         raise NotImplementedError()
 
-    def build(self):
+    async def build(self):
         """Build the index, after the items are added.
 
         This is optional, might not be needed for all implementations."""

@@ -245,7 +245,7 @@ class RailsConfig(BaseModel):
     )
 
     embedding_search_provider: EmbeddingSearchProvider = Field(
-        default_factory=EmbeddingSearchProvider(),
+        default_factory=EmbeddingSearchProvider,
         description="The engine to use for computing the embeddings and doing the search.",
     )
 

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """A set of actions for generating various types of completions using an LLMs."""
+import asyncio
 import logging
 import random
 import re
@@ -78,13 +79,23 @@ class LLMGenerationActions:
 
         # If we have user messages, we build an index with them
         self.user_message_index = None
-        self._init_user_message_index()
-
         self.bot_message_index = None
-        self._init_bot_message_index()
-
         self.flows_index = None
-        self._init_flows_index()
+
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        except RuntimeError as e:
+            # Acquire event if already exist
+            loop = asyncio.get_event_loop()
+
+        loop.run_until_complete(
+            asyncio.gather(
+                self._init_user_message_index(),
+                self._init_bot_message_index(),
+                self._init_flows_index(),
+            )
+        )
 
         # If we have documents, we'll also initialize a knowledge base.
         self.kb = None
@@ -115,7 +126,7 @@ class LLMGenerationActions:
                     self.config.embedding_search_provider.name
                 ](**kwargs)
 
-    def _init_user_message_index(self):
+    async def _init_user_message_index(self):
         """Initializes the index of user messages."""
 
         if not self.config.user_messages:
@@ -131,12 +142,12 @@ class LLMGenerationActions:
             return
 
         self.user_message_index = self._get_embeddings_search_instance()
-        self.user_message_index.add_items(items)
+        await self.user_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
-        self.user_message_index.build()
+        await self.user_message_index.build()
 
-    def _init_bot_message_index(self):
+    async def _init_bot_message_index(self):
         """Initializes the index of bot messages."""
 
         if not self.config.bot_messages:
@@ -152,12 +163,12 @@ class LLMGenerationActions:
             return
 
         self.bot_message_index = self._get_embeddings_search_instance()
-        self.bot_message_index.add_items(items)
+        await self.bot_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
-        self.bot_message_index.build()
+        await self.bot_message_index.build()
 
-    def _init_flows_index(self):
+    async def _init_flows_index(self):
         """Initializes the index of flows."""
 
         if not self.config.flows:
@@ -186,10 +197,10 @@ class LLMGenerationActions:
             return
 
         self.flows_index = self._get_embeddings_search_instance()
-        self.flows_index.add_items(items)
+        await self.flows_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
-        self.flows_index.build()
+        await self.flows_index.build()
 
     def _init_kb(self):
         """Initializes the knowledge base."""

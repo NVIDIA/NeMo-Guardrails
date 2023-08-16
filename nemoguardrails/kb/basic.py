@@ -28,8 +28,6 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     It uses Annoy to perform the search.
     """
 
-    # TODO: update this interface to async
-
     def __init__(self, embedding_model=None, index=None):
         self._model = None
         self._items = []
@@ -55,7 +53,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embeddings = self._model.encode(texts)
         return [embedding.tolist() for embedding in embeddings]
 
-    def add_item(self, item: IndexItem):
+    async def add_item(self, item: IndexItem):
         """Add a single item to the index."""
         self._items.append(item)
 
@@ -63,7 +61,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         if self._index is None:
             self._embeddings.append(self._get_embeddings([item.text])[0])
 
-    def add_items(self, items: List[IndexItem]):
+    async def add_items(self, items: List[IndexItem]):
         """Add multiple items to the index at once."""
         self._items.extend(items)
 
@@ -71,7 +69,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         if self._index is None:
             self._embeddings.extend(self._get_embeddings([item.text for item in items]))
 
-    def build(self):
+    async def build(self):
         """Builds the Annoy index."""
         self._index = AnnoyIndex(len(self._embeddings[0]), "angular")
         for i in range(len(self._embeddings)):
