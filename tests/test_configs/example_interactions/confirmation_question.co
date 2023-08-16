@@ -24,6 +24,3 @@ flow main
     bot say "No problem"
   else # In the case that the question is not answered and failed
     bot say "Never mind"
-
-await -> start & match
-do -> activate & match

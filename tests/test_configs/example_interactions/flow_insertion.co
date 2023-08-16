@@ -9,9 +9,9 @@ flow user expressed $text
 # Semantic 'bot say' wrapper flows
 
 flow bot ask $question_param
-  $question_param as $question
+  set $question = $question_param
   bot say $question as $say_flow
-  $say_flow.action as $action # Alternatively, as on liner: (bot say $text).action as $action
+  set $action = $say_flow.action # Alternatively, as on liner: (bot say $text).action as $action
 
 flow bot asked $question_param
   match (bot ask $question_param).Finished() as $event
@@ -82,6 +82,8 @@ flow main
     bot say "great!"
   else when user feels bad
     bot say "sorry to hear!"
+  else
+    bot say "Never mind, let's continue"
 
 # Question repetition injection flow
 flow bot question repetition
@@ -96,7 +98,7 @@ flow bot question repetition
 # Flow resume injection flow
 flow flow interruption resume handling
   bot said something as $bot_said
-  $current_flow = $active_flow 
+  set $current_flow = $active_flow 
   match FlowInterruption($current_flow)
   match FlowResume($current_flow)
   bot say $bot_said.event.text

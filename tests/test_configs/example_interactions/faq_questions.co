@@ -2,7 +2,10 @@
 # If the user ask an faq the main flow will be interrupted and the faq answered before returning to the main flow
 
 # Open questions:
-# * How can we resume to the main flow and repeating the previous question to give context? 
+# - How can we resume to the main flow and repeat the previous question to give context?
+# Solutions:
+# - User injection flows (see flow_insertion.co)
+
 
 # user faq intents
 
@@ -36,7 +39,6 @@ flow faq question handling
   activate user ask about service response
     and user ask about bot name response
     and user ask where are the toilettes response
-  wait
 
 flow main
   activate faq question handling

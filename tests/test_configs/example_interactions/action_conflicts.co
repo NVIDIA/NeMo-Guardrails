@@ -1,10 +1,14 @@
 # Example of resolving competing flows
 
+# WORK IN PROGRESS (processing log not matching flows)
+
+# include core_flows.co
+
 flow faq response 1 # like match FlowStartInternalEvent("faq response 1") or FlowActivateInternalEvent("faq response 1")
   start bot print "1"
   start bot print "11"
   await user said something
-  await bot say "Ok" 
+  await bot say "Ok"
 
 flow faq response 2 # like match FlowStartInternalEvent("faq response 2") or FlowActivateInternalEvent("faq response 2")
   start bot print "2"
@@ -14,7 +18,7 @@ flow faq response 2 # like match FlowStartInternalEvent("faq response 2") or Flo
 
 flow faq response 3 # like match FlowStartInternalEvent("faq response 1") or FlowActivateInternalEvent("faq response 1")
   await user said "Ok"
-  await bot say "Ok" 
+  await bot say "Ok"
   await bot say "Ok"
 
 flow faq response 4 # like match FlowStartInternalEvent("faq response 2") or FlowActivateInternalEvent("faq response 2")
@@ -87,8 +91,4 @@ flow main # like match FlowStartInternalEvent("main") or FlowActivateInternalEve
 # They are in the same thread ("main") and therefore conflict
 
 # Resolve conflict based on score:
-# 
-
-
-
-
+#

@@ -1,5 +1,7 @@
 # Demonstrates how to detect an approaching user guiding her closer in the front of the camera
 
+# WORK IN PROGRESS (not working yet)
+
 # Core vision event wrapper flows
 # We want each of them to start in a new thread since otherwise we would make those events dependent on each other (e.g. one will interrupt the wrapper flow of all the others).
 # But this dependency should be the responsibility of the flow that started the wrapper flow
@@ -42,6 +44,9 @@ flow passive_zone_handling
 # story flows
 
 flow user_is_present
+  if $user_is_present
+    return
+
   activate active_zone_handling as $active_zone_flow
     and approach_zone_handling as $approach_zone_flow
     and passive_zone_handling as $passive_zone_flow
@@ -97,7 +102,7 @@ flow manage approach background music $music $action_id
   activate start approach background music $music $action_id "background_music"
   activate stop approach background music "background_music"
   wait
-  
+
 flow user entered active zone
   match event UserEnteredZone("active")
 

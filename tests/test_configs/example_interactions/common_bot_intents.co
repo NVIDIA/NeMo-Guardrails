@@ -1,4 +1,4 @@
-# core_flows.co
+# include core_flows.co
 
 flow bot idling
   await bot gesture "thinking"

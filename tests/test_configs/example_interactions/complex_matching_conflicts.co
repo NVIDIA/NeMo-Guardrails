@@ -1,5 +1,7 @@
 # Artificially constructed complex flows to consider edge cases for matching and conflict resolution
 
+# WORK IN PROGRESS (downstream diamond shape conflict not working as is)
+
 @thread("A")
 flow flow1
  match user said something # Match with event, but no full match score
