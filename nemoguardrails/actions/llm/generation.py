@@ -81,32 +81,24 @@ class LLMGenerationActions:
         self.user_message_index = None
         self.bot_message_index = None
         self.flows_index = None
-
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        except RuntimeError as e:
-            # Acquire event if already exist
-            loop = asyncio.get_event_loop()
-
-        loop.run_until_complete(
-            asyncio.gather(
-                self._init_user_message_index(),
-                self._init_bot_message_index(),
-                self._init_flows_index(),
-            )
-        )
-
         # If we have documents, we'll also initialize a knowledge base.
         self.kb = None
-        self._init_kb()
 
+        self.embedding_search_providers = embedding_search_providers
+
+        asyncio.run(self.init())
         self.llm_task_manager = llm_task_manager
 
         # We also initialize the environment for rendering bot messages
         self.env = Environment()
 
-        self.embedding_search_providers = embedding_search_providers
+    async def init(self):
+        await asyncio.gather(
+            self._init_user_message_index(),
+            self._init_bot_message_index(),
+            self._init_flows_index(),
+            self._init_kb(),
+        )
 
     def _get_embeddings_search_instance(self):
         if self.config.embedding_search_provider.name == "default":
@@ -202,7 +194,7 @@ class LLMGenerationActions:
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
         await self.flows_index.build()
 
-    def _init_kb(self):
+    async def _init_kb(self):
         """Initializes the knowledge base."""
 
         if not self.config.docs:
@@ -210,10 +202,13 @@ class LLMGenerationActions:
 
         documents = [doc.content for doc in self.config.docs]
         self.kb = KnowledgeBase(
-            documents=documents, embedding_model=self.embedding_model
+            documents=documents,
+            embedding_model=self.embedding_model,
+            get_embeddings_search_instance=self._get_embeddings_search_instance,
+            embedding_search_provider=self.config.embedding_search_provider,
         )
         self.kb.init()
-        self.kb.build()
+        await self.kb.build()
 
     def _get_general_instruction(self):
         """Helper to extract the general instruction."""

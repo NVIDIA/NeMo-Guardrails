@@ -16,8 +16,9 @@
 import hashlib
 import logging
 import os
+from collections.abc import Callable
 from time import time
-from typing import List
+from typing import Any, Dict, List
 
 from annoy import AnnoyIndex
 
@@ -33,11 +34,19 @@ CACHE_FOLDER = os.path.join(os.getcwd(), ".cache")
 class KnowledgeBase:
     """Basic implementation of a knowledge base."""
 
-    def __init__(self, documents: List[str], embedding_model: str):
+    def __init__(
+        self,
+        documents: List[str],
+        embedding_model: str,
+        get_embeddings_search_instance: Callable,
+        embedding_search_provider: Dict[str, Any],
+    ):
         self.documents = documents
         self.chunks = []
         self.index = None
         self.embedding_model = embedding_model
+        self._get_embeddings_search_instance = get_embeddings_search_instance
+        self._embedding_search_provider = embedding_search_provider
 
     def init(self):
         """Initialize the knowledge base.
@@ -54,7 +63,7 @@ class KnowledgeBase:
             chunks = split_markdown_in_topic_chunks(doc)
             self.chunks.extend(chunks)
 
-    def build(self):
+    async def build(self):
         """Builds the knowledge base index."""
         t0 = time()
         index_items = []
@@ -74,7 +83,7 @@ class KnowledgeBase:
         cache_file = os.path.join(CACHE_FOLDER, f"{md5_hash}.ann")
 
         # If we have already computed this before, we use it
-        if os.path.exists(cache_file):
+        if self._embedding_search_provider == "default" and os.path.exists(cache_file):
             # TODO: this should not be hardcoded. Currently set for all-MiniLM-L6-v2.
             embedding_size = 384
             ann_index = AnnoyIndex(embedding_size, "angular")
@@ -85,22 +94,23 @@ class KnowledgeBase:
             )
             self.index.add_items(index_items)
         else:
-            self.index = BasicEmbeddingsIndex(self.embedding_model)
-            self.index.add_items(index_items)
-            self.index.build()
+            self.index = self._get_embeddings_search_instance()
+            await self.index.add_items(index_items)
+            await self.index.build()
 
-            # We also save the file for future use
-            os.makedirs(CACHE_FOLDER, exist_ok=True)
-            self.index.embeddings_index.save(cache_file)
+            if self._embedding_search_provider == "default":
+                # We also save the file for future use
+                os.makedirs(CACHE_FOLDER, exist_ok=True)
+                self.index.embeddings_index.save(cache_file)
 
         log.info(f"Building the Knowledge Base index took {time() - t0} seconds.")
 
-    def search_relevant_chunks(self, text, max_results: int = 3):
+    async def search_relevant_chunks(self, text, max_results: int = 3):
         """Search the index for the most relevant chunks."""
         if self.index is None:
             return []
 
-        results = self.index.search(text, max_results=max_results)
+        results = await self.index.search(text, max_results=max_results)
 
         # Return the chunks directly
         return [result.meta for result in results]
