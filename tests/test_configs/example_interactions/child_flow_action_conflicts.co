@@ -1,0 +1,45 @@
+# Shows the interaction pattern matching over multiple levels of flows
+
+flow a
+  await user said something
+  start bot say "Ok"
+  start c
+  start e
+  match c
+
+flow b
+  await user said "Hi"
+  start bot say "Ok"
+  start d
+  start f
+  match d
+
+flow c
+  start bot say "Now"
+  start bot say "1"
+
+flow d
+  start bot say "Now"
+  start bot say "2"
+
+flow e
+  start bot say "Well"
+
+flow f
+  start bot say "Well"
+
+flow main
+  activate a and b
+
+# --> event: UtteranceBotAction.Finished("Hi")
+# Matching statements of flow a and b trigger
+# same statements 'await bot say "Ok"' -> no conflict
+# starting flow c and d is not pattern relevant -> no conflict
+# same statements 'await bot say "Now"' -> no conflict
+# different statements 'await bot say "1"' and 'await bot say "1"' -> conflict
+# statement in flow d wins since initial match in flow b had higher score as it was more specific
+# flow c gets aborted
+# flow e and f get started since flow b and c are still agreeing on the pattern
+# same statements 'start bot say "Well"' -> no conflict
+# 'match c' statement will fail since c failed -> flow a is aborted/failed
+# 'match d' statement will match since d finished in same time processing windows -> flow b finished successfully
