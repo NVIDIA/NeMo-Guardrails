@@ -1,6 +1,7 @@
 # Shows the interaction pattern matching over multiple levels of flows
 
 flow a
+  start bot say "Flow a"
   await user said something
   start bot say "Ok"
   start c
@@ -8,6 +9,7 @@ flow a
   match c
 
 flow b
+  start bot say "Flow b"
   await user said "Hi"
   start bot say "Ok"
   start d
@@ -31,8 +33,17 @@ flow f
 flow main
   activate a and b
 
+# Processing steps log:
+
+# --> event: StartFlowInternalEvent("main")
+# start flow a -> execute 'start bot say "Flow a"' -> start flow 'user said something'
+# start flow b -> execute 'start bot say "Flow b"' -> start flow 'user said "Hi"'
+# Note, that these two action sequences did not create a conflict since they are in a clear sequential order
+# Now we have both heads of flow a and b at the match statement for FlowFinished event of 'user said something' and 'user said "Hi"'
+
 # --> event: UtteranceBotAction.Finished("Hi")
-# Matching statements of flow a and b trigger
+# Will finish both 'user said something' and 'user said "Hi"' flows
+# Matching statements in flow a and b trigger simultaneously
 # same statements 'await bot say "Ok"' -> no conflict
 # starting flow c and d is not pattern relevant -> no conflict
 # same statements 'await bot say "Now"' -> no conflict
