@@ -12,34 +12,49 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
+import importlib
+
 import pytest
 
+import nemoguardrails
 from nemoguardrails import RailsConfig
 from tests.utils import TestChat
 
+config = RailsConfig.from_content(yaml_content="""models: []""")
+
+chat = TestChat(
+    config,
+    llm_completions=[
+        "Hello there!",
+        "Hello there!",
+        "Hello there!",
+    ],
+)
+
+
+def test_sync_api():
+    chat >> "Hi!"
+    chat << "Hello there!"
+
 
 @pytest.mark.asyncio
-async def test_1():
-    """Test that setting variables in context works correctly."""
-    config = RailsConfig.from_content(
-        """
-        define user express greeting
-            "hello"
+async def test_async_api():
+    chat >> "Hi!"
+    chat << "Hello there!"
 
-        define flow
-            user express greeting
-            bot express greeting
-        """
-    )
-    chat = TestChat(
-        config,
-        llm_completions=[
-            "  express greeting",
-            '  "Hello John!"',
-        ],
-    )
+
+@pytest.mark.asyncio
+async def test_async_api_error(monkeypatch):
+    monkeypatch.setenv("DISABLE_NEST_ASYNCIO", "True")
+
+    # Reload the module to re-run its top-level code with the new env var
+    importlib.reload(nemoguardrails)
+    importlib.reload(asyncio)
 
     with pytest.raises(
-        RuntimeError, match="You are using the sync `generate` inside async code."
+        RuntimeError,
+        match=r"asyncio.run\(\) cannot be called from a running event loop",
     ):
-        chat.app.generate(messages=[{"role": "user", "content": "Hello!"}])
+        chat >> "Hi!"
+        chat << "Hello there!"

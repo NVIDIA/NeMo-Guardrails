@@ -33,6 +33,7 @@ from nemoguardrails.llm.providers import (
     get_llm_provider_names,
 )
 from nemoguardrails.logging.stats import llm_stats
+from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 
@@ -293,12 +294,7 @@ class LLMRails:
     ):
         """Synchronous version of generate_async."""
 
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
+        if check_sync_call_from_async_loop():
             raise RuntimeError(
                 "You are using the sync `generate` inside async code. "
                 "You should replace with `await generate_async(...)."
@@ -345,12 +341,7 @@ class LLMRails:
     def generate_events(self, events: List[dict]) -> List[dict]:
         """Synchronous version of `LLMRails.generate_events_async`."""
 
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
+        if check_sync_call_from_async_loop():
             raise RuntimeError(
                 "You are using the sync `generate_events` inside async code. "
                 "You should replace with `await generate_events_async(...)."
