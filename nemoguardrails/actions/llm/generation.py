@@ -44,6 +44,7 @@ from nemoguardrails.kb.index import IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.params import llm_params
+from nemoguardrails.llm.providers import get_embedding_provider_names
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
 from nemoguardrails.rails.llm.config import RailsConfig
@@ -71,7 +72,8 @@ class LLMGenerationActions:
         for model in self.config.models:
             if model.type == "embedding":
                 self.embedding_model = model.model
-                assert model.engine == "SentenceTransformer"
+                assert model.engine in get_embedding_provider_names()
+                self.embedding_engine = model.engine
                 break
 
         # If we have user messages, we build an index with them
@@ -108,7 +110,9 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.user_message_index = BasicEmbeddingsIndex(self.embedding_model)
+        self.user_message_index = BasicEmbeddingsIndex(
+            embedding_model=self.embedding_model, embedding_engine=self.embedding_engine
+        )
         self.user_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -129,7 +133,9 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.bot_message_index = BasicEmbeddingsIndex(self.embedding_model)
+        self.bot_message_index = BasicEmbeddingsIndex(
+            embedding_model=self.embedding_model, embedding_engine=self.embedding_engine
+        )
         self.bot_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -163,7 +169,9 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.flows_index = BasicEmbeddingsIndex(self.embedding_model)
+        self.flows_index = BasicEmbeddingsIndex(
+            embedding_model=self.embedding_model, embedding_engine=self.embedding_engine
+        )
         self.flows_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
