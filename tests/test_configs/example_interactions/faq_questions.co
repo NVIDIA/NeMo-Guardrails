@@ -1,11 +1,10 @@
 # Demonstrates a simple faq handling while having a conversation in the main flow
 # If the user ask an faq the main flow will be interrupted and the faq answered before returning to the main flow
 
-# Open questions:
-# - How can we resume to the main flow and repeat the previous question to give context?
-# Solutions:
+# TODO:
+# Show how after the FAQ the main flow can be resumed at a meaningful position to e.g. give context:
 # - User injection flows (see flow_insertion.co)
-
+# - User resume labels
 
 # user faq intents
 

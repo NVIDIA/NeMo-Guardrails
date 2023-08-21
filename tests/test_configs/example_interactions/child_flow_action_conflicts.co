@@ -1,56 +1,116 @@
 # Shows the interaction pattern matching over multiple levels of flows
 
-flow a
-  start bot say "Flow a"
-  await user said something
-  start bot say "Ok"
-  start c
-  start e
+flow a # event match: 2
+  start bot say "Flow a" # step: 3 / action: 1 / action history: 1
+  # await user said something
+  start user said something # step: 4
+  match user said something # event match: 4a
+  start bot say "Ok" # step: 7 / action: 3a / action history: 1,2,3a => 3a==3b
+  start c # step: 8
+  start e # step: 9
   match c
 
-flow b
-  start bot say "Flow b"
-  await user said "Hi"
-  start bot say "Ok"
-  start d
-  start f
+flow b # event match: 3
+  start bot say "Flow b" # step: 5 / action: 2 / action history: 1,2
+  # await user said "Hi"
+  start user said "Hi" # step: 6
+  match user said "Hi" # event match: 4b
+  start d # step: 10
+  start f # step: 11
   match d
 
 flow c
-  start bot say "Now"
-  start bot say "1"
+  # await bot say "1"
+  start bot say "1" # step: 12 action history: 1,2,3b,4a => 4a!=4b
+  match bot say "1" # event mismatch:
 
 flow d
-  start bot say "Now"
-  start bot say "2"
+  start bot say "Ok" # step: 14 / action: 3b / action history: 1,2,3b => 3a==3b
+  # await bot say "2"
+  start bot say "2" # step: 15 / action: 4b / action history: 1,2,3b,4b => 4a!=4b => abort flow c
+  match bot say "2"
 
 flow e
-  start bot say "Well"
+  start bot say "Well" # step: 13
 
 flow f
-  start bot say "Well"
+  start bot say "Ok" # step: 16
+  start bot say "Well" # step: 17
 
-flow main
-  activate a and b
+#flow g
+#  match c.Started()
+#  start play background music
+#  match c.Finished()
+
+flow main # event match: 1
+  # activate a and b and g
+  start a # step: 1
+  start b # step: 2
+  #start g
+  wait
 
 # Processing steps log:
 
 # --> event: StartFlowInternalEvent("main")
-# start flow a -> execute 'start bot say "Flow a"' -> start flow 'user said something'
-# start flow b -> execute 'start bot say "Flow b"' -> start flow 'user said "Hi"'
-# Note, that these two action sequences did not create a conflict since they are in a clear sequential order
+# start flow a -> generate internal event `StartFlow("a")`
+# start flow b -> generate internal event `StartFlow("b")`
+# start flow g -> generate internal event `StartFlow("g")`
+
+# --> event: StartFlow("a")
+# start flow 'start bot say "Flow a"' -> generate internal event `start bot say "Flow a"`
+# start flow 'user said something' -> generate internal event `StartFlow("user said something")`
+# head: 'match user said something'
+
+# --> event: StartFlow("b")
+# start flow 'start bot say "Flow b"' -> generate internal event `start bot say "Flow b"`
+# start flow 'user said "Hi"' -> generate internal event `StartFlow('user said "Hi"')`
+# head: 'match user said "Hi"'
+
+# --> event: StartFlow("g")
+# head: 'match c.Started()'
+
+# --> event: StartFlow(`start bot say "Flow a"`)
+# send UtteranceBotAction("Flow a").Start
+# head: match UtteranceBotAction("Flow a").Finished
+
+# --> event: StartFlow("user said something")
+# start the 'user said something' flow
+# head: match UtteranceUserAction().Finished
+
+# --> event: StartFlow(`start bot say "Flow b"`)
+# send UtteranceBotAction("Flow b").Start
+# head: match UtteranceBotAction("Flow b").Finished
+
+# --> event: StartFlow('user said "Hi"')
+# start the 'user said "Hi"' flow
+# head: 'match UtteranceUserAction("Hi").Finished'
+
+# Comment: that all these previous actions did not create a conflict since they are in a clear sequential processing order:
+# System action summary based on wrapper flows:
+# - bot say "Flow a"
+# - bot say "Flow b"
 # Now we have both heads of flow a and b at the match statement for FlowFinished event of 'user said something' and 'user said "Hi"'
 
-# --> event: UtteranceBotAction.Finished("Hi")
-# Will finish both 'user said something' and 'user said "Hi"' flows
-# Matching statements in flow a and b trigger simultaneously
-# same statements 'await bot say "Ok"' -> no conflict
-# starting flow c and d is not pattern relevant -> no conflict
-# same statements 'await bot say "Now"' -> no conflict
-# different statements 'await bot say "1"' and 'await bot say "1"' -> conflict
-# statement in flow d wins since initial match in flow b had higher score as it was more specific
-# flow c gets aborted
-# flow e and f get started since flow b and c are still agreeing on the pattern
-# same statements 'start bot say "Well"' -> no conflict
+# --> event: UtteranceUserAction.Finished("Hi")
+# Will finish both 'user said something' / 'user said "Hi"' flows simultaneously (same processing group id)
+# The match statements in flow a / b trigger simultaneously
+# Same statements 'start bot say "Ok"' (no conflict) -> generate one internal event `StartFlow('start bot say "Ok"')`
+# Starting flow c / d is not pattern relevant (no conflict) -> generate both internal 'StartFlow' events
+# Starting flow e / f is not pattern relevant (no conflict) -> generate both internal 'StartFlow' events
+# 'flow a' head: 'match c' / 'flow b' head: 'match d'
+
+# Comment: flow e and f get started since flow a and b are still agreeing on the pattern ('start flow' statements are not pattern relevant, only sending events (actions))
+
+# Same statements: 'start bot say "Now"' -> no conflict
+# Different statements: 'await bot say "1"' / 'await bot say "2"' -> will create a action conflict in the underlying wrapper flows
+# 'flow c' head: match bot say "1" / 'flow d' head: match bot say "2"
+# The action in statement 'await bot say "2"' will win since the initial match in flow b had higher score as it was more specific
+# Flow 'bot say "1"' gets aborted/fails
+# Flow 'bot say "2"' finished successfully
+# Match statement 'match bot say "1"' fails -> flow c fails
+# Match statement 'match bot say "2"' succeeds -> flow d finished
+# 'flow c' gets aborted
 # 'match c' statement will fail since c failed -> flow a is aborted/failed
 # 'match d' statement will match since d finished in same time processing windows -> flow b finished successfully
+
+# Comment: Underlying actions in flow e / f agree and will therefore be executed without a conflict (only once of course)

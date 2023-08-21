@@ -6,19 +6,15 @@
 # We want each of them to start in a new thread since otherwise we would make those events dependent on each other (e.g. one will interrupt the wrapper flow of all the others).
 # But this dependency should be the responsibility of the flow that started the wrapper flow
 
-@new_interaction_context
 flow user_entered_active_zone
   match UserPositionAreaUpdated("active")
 
-@new_interaction_context
 flow user_entered_approach_zone
   match UserPositionAreaUpdated("approach")
 
-@new_interaction_context
 flow user_entered_passive_zone
   match UserPositionAreaUpdated("passive")
 
-@new_interaction_context
 flow bot_calling_user_closer
   await bot gesture "calling user closer"
 
