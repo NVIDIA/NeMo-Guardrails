@@ -21,7 +21,7 @@ from typing import List
 
 from annoy import AnnoyIndex
 
-from nemoguardrails.kb.basic import BasicEmbeddingsIndex
+from nemoguardrails.kb.basic import BasicEmbeddingsIndex, init_embedding_model
 from nemoguardrails.kb.index import IndexItem
 from nemoguardrails.kb.utils import split_markdown_in_topic_chunks
 
@@ -33,11 +33,14 @@ CACHE_FOLDER = os.path.join(os.getcwd(), ".cache")
 class KnowledgeBase:
     """Basic implementation of a knowledge base."""
 
-    def __init__(self, documents: List[str], embedding_model: str):
+    def __init__(
+        self, documents: List[str], embedding_model: str, embedding_engine: str
+    ):
         self.documents = documents
         self.chunks = []
         self.index = None
         self.embedding_model = embedding_model
+        self.embedding_engine = embedding_engine
 
     def init(self):
         """Initialize the knowledge base.
@@ -76,16 +79,26 @@ class KnowledgeBase:
         # If we have already computed this before, we use it
         if os.path.exists(cache_file):
             # TODO: this should not be hardcoded. Currently set for all-MiniLM-L6-v2.
-            embedding_size = 384
+            # Get embedding size from model
+            model = init_embedding_model(
+                embedding_model=self.embedding_model,
+                embedding_engine=self.embedding_engine,
+            )
+            embedding_size = model.embedding_size
             ann_index = AnnoyIndex(embedding_size, "angular")
             ann_index.load(cache_file)
 
             self.index = BasicEmbeddingsIndex(
-                embedding_model=self.embedding_model, index=ann_index
+                embedding_model=self.embedding_model,
+                embedding_engine=self.embedding_engine,
+                index=ann_index,
             )
             self.index.add_items(index_items)
         else:
-            self.index = BasicEmbeddingsIndex(self.embedding_model)
+            self.index = BasicEmbeddingsIndex(
+                embedding_model=self.embedding_model,
+                embedding_engine=self.embedding_engine,
+            )
             self.index.add_items(index_items)
             self.index.build()
 
