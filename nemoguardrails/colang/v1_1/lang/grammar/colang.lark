@@ -1,0 +1,162 @@
+// Lark Grammar for Colang 1.1
+?start: _statements
+
+// General sequences of statements
+_statements: (_NEWLINE | stmt)*
+stmt: (def_stmt | flow_stmt | comment _NEWLINE | expr _NEWLINE | _NEWLINE)
+suite: _NEWLINE _INDENT (stmt+) _DEDENT
+
+// Flow definition and calling
+def_stmt: flow_def
+flow_def: "flow" spec_name [flow_params_def] suite
+flow_params_def: flow_params_def_classic | flow_params_def_simple
+flow_params_def_classic: "(" (var_name ("=" test)? ("," var_name ("=" test)?)*) ")"
+flow_params_def_simple: (var_name ("=" test)?)+
+flow_stmt: simple_stmt | spec_op_stmt | compound_stmt
+
+// Simple statements
+simple_stmt: set_stmt | return_stmt
+set_stmt: var_name set_op test _NEWLINE
+
+// TODO: support more assignment operators?
+set_op: "=" -> set
+      | "+=" -> increment
+      | "-=" -> decrement
+
+return_stmt: "return" [test] _NEWLINE
+
+// A "spec" is a unifying concept for flows, actions, events
+spec_op: "match" -> match_spec
+        | "await" -> await_spec
+        | "start" -> start_spec
+        | "stop" -> stop_spec
+        | "activate" -> activate_spec
+
+spec_operation: [spec_op] spec_expr [capture_ref]
+spec_op_stmt: spec_operation _NEWLINE
+capture_ref: "as" var_name
+
+// Arbitrary expressions with specs including "and" and "or" as operators
+spec_expr: spec_or
+?spec_or: spec_and (_OR spec_and)+
+        | spec_and
+?spec_and: spec_atom (_AND spec_atom)+
+         | spec_atom
+?spec_atom: "(" spec_expr ")"
+         | spec
+
+// A spec includes name, arguments and potentially members acces.
+// Example members: .Finsihed(), .action
+spec: spec_name [classic_arguments | simple_arguments] (spec_member)*
+    | var_name (spec_member)*
+spec_member: "." name [classic_arguments]
+
+// Classic arguments use the syntax from python
+classic_arguments: "(" [argvalues] ")"
+argvalues: argvalue ("," argvalue)*
+?argvalue: expr
+         | name "=" expr
+
+// A simplified version of the arguments without paranthesis and ","
+simple_arguments: simple_argvalue+
+?simple_argvalue: expr
+                | var_name "=" expr
+
+// Compound statements
+?compound_stmt: if_stmt | while_stmt | when_stmt
+if_stmt: "if" test suite elifs ["else" suite]
+elifs: elif_*
+elif_: ("elif" | "else" "if") test suite
+while_stmt: "while" test suite
+when_stmt: "when" spec_operation suite ("else" "when" spec_operation suite)* ("else" suite)?
+
+// Test expression (used both for conditions and assignment)
+?test: or_test
+?or_test: and_test ("or" and_test)*
+?and_test: not_test_ ("and" not_test_)*
+?not_test_: "not" not_test_ -> not_test
+         | comparison
+?comparison: expr (comp_op expr)*
+star_expr: "*" expr
+
+?expr: or_expr
+?or_expr: xor_expr ("|" xor_expr)*
+?xor_expr: and_expr ("^" and_expr)*
+?and_expr: shift_expr ("&" shift_expr)*
+?shift_expr: arith_expr (_shift_op arith_expr)*
+?arith_expr: term (_add_op term)*
+?term: factor (_mul_op factor)*
+?factor: _unary_op factor | power
+
+!_unary_op: "+"|"-"|"~"
+!_add_op: "+"|"-"
+!_shift_op: "<<"|">>"
+!_mul_op: "*"|"@"|"/"|"%"|"//"
+!comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="|"in"|"not" "in"|"is"|"is" "not"
+
+?power: atom_expr ("**" factor)?
+?atom_expr: atom_expr "(" [arguments] ")"      -> funccall
+          | atom_expr "[" subscriptlist "]"  -> getitem
+          | atom_expr "." name               -> getattr
+          | atom
+
+arguments: argvalue ("," argvalue)*  ("," [ starargs | kwargs])?
+         | starargs
+         | kwargs
+
+starargs: stararg ("," stararg)* ("," argvalue)* ["," kwargs]
+stararg: "*" test
+kwargs: "**" test ("," argvalue)*
+
+?subscriptlist: subscript
+              | subscript (("," subscript)+ [","] | ",") -> subscript_tuple
+?subscript: test | ([test] ":" [test] [sliceop]) -> slice
+sliceop: ":" [test]
+
+?atom: var_name -> var
+     | number
+     | string
+     | "None"    -> const_none
+     | "True"    -> const_true
+     | "False"   -> const_false
+
+spec_name: NAME+
+         | "(" NAME+ ")"
+name: NAME
+var_name: VAR_NAME
+comment: COMMENT
+
+// Primitive types
+// TODO: add more primitive types
+
+number: DEC_NUMBER | FLOAT_NUMBER
+string: STRING | LONG_STRING
+
+// LEXER rules below
+
+COMMENT: /#[^\n]*/
+
+_AND.1: /(and|(\r?\n[\t ]*)+and[ \t])/
+_OR.1: /(or|(\r?\n[\t ]*)+or[ \t])/
+
+NAME: /[^\W\d]\w*/
+VAR_NAME: /\$[^\W\d]\w*/
+
+_NEWLINE: (/\r?\n[\t ]*/)+
+
+STRING: /("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
+LONG_STRING: /(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
+
+_SPECIAL_DEC: "0".."9"        ("_"?  "0".."9"                       )*
+DEC_NUMBER:   "1".."9"        ("_"?  "0".."9"                       )*
+          |   "0"             ("_"?  "0"                            )* /(?![1-9])/
+_EXP: ("e"|"E") ["+" | "-"] _SPECIAL_DEC
+DECIMAL: "." _SPECIAL_DEC | _SPECIAL_DEC "." _SPECIAL_DEC?
+FLOAT_NUMBER.2: _SPECIAL_DEC _EXP | DECIMAL _EXP?
+
+
+%declare _INDENT _DEDENT
+%ignore " "
+
+// TODO: come up with a solution to keep the comments for custom instructions
+%ignore COMMENT

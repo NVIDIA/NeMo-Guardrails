@@ -4,30 +4,30 @@
 
 # include core_flows.co
 
-flow faq response 1 # like match FlowStartInternalEvent("faq response 1") or FlowActivateInternalEvent("faq response 1")
+flow faq response_1 # like match FlowStartInternalEvent("faq response 1") or FlowActivateInternalEvent("faq response 1")
   start bot print "1"
   start bot print "11"
   await user said something
   await bot say "Ok"
 
-flow faq response 2 # like match FlowStartInternalEvent("faq response 2") or FlowActivateInternalEvent("faq response 2")
+flow faq response_2 # like match FlowStartInternalEvent("faq response 2") or FlowActivateInternalEvent("faq response 2")
   start bot print "2"
   start bot print "21"
   await user said "How are you"
   await bot say "I'm good!"
 
-flow faq response 3 # like match FlowStartInternalEvent("faq response 1") or FlowActivateInternalEvent("faq response 1")
+flow faq response_3 # like match FlowStartInternalEvent("faq response 1") or FlowActivateInternalEvent("faq response 1")
   await user said "Ok"
   await bot say "Ok"
   await bot say "Ok"
 
-flow faq response 4 # like match FlowStartInternalEvent("faq response 2") or FlowActivateInternalEvent("faq response 2")
+flow faq response_4 # like match FlowStartInternalEvent("faq response 2") or FlowActivateInternalEvent("faq response 2")
   await user said "Ok"
   await bot say "Ok"
   await bot say "I'm good!"
 
 flow main # like match FlowStartInternalEvent("main") or FlowActivateInternalEvent("main")
-  activate faq response 1 and faq response 2
+  activate faq response_1 and faq response_2
   start bot print "3"
   start bot print "31"
   await user said "Hi"
