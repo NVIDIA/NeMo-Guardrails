@@ -21,21 +21,20 @@ from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 log = logging.getLogger(__name__)
 
 
-def slide(state: "State", flow_config: "FlowConfig", head: int) -> Optional[int]:
+def slide(state: "State", flow_config: "FlowConfig", head: "FlowHead") -> Optional[int]:
     """Tries to slide a flow with the provided head.
 
     Sliding is the operation of moving through "non-matching" elements e.g. check,
-    if, jump, expect etc. It also includes calling sub-flows.
+    if, jump, expect etc.
 
     :param state: The current state of the dialog.
     :param flow_config: The config of the flow that should be advanced.
     :param head: The current head.
     :return:
     """
-    context = state.context
+    head_position = head.position
 
-    if head is None:
-        return None
+    context = state.context
 
     # The active label is the label that can be reached going backwards
     # only through sliding elements.
@@ -44,16 +43,20 @@ def slide(state: "State", flow_config: "FlowConfig", head: int) -> Optional[int]
 
     # This might get called directly at the end of a flow, in which case
     # we put the prev_head on the last element.
-    prev_head = head if head < len(flow_config.elements) else head - 1
+    prev_head = (
+        head_position
+        if head_position < len(flow_config.elements)
+        else head_position - 1
+    )
 
     while True:
         # if we reached the end, we stop
-        if head == len(flow_config.elements) or head < 0:
+        if head_position == len(flow_config.elements) or head_position < 0:
             # We make a convention to return the last head, multiplied by -1 when the flow finished
             return -1 * (prev_head + 1)
 
-        prev_head = head
-        pattern_item = flow_config.elements[head]
+        prev_head = head_position
+        pattern_item = flow_config.elements[head_position]
 
         # Updated the active label if needed
         if "_label" in pattern_item:
@@ -78,30 +81,30 @@ def slide(state: "State", flow_config: "FlowConfig", head: int) -> Optional[int]
                     if not check:
                         return None
                     else:
-                        head += int(pattern_item.get("_next", 1))
+                        head_position += int(pattern_item.get("_next", 1))
                 elif p_type == "if":
                     if check:
-                        head += 1
+                        head_position += 1
                     else:
-                        head += int(pattern_item["_next_else"])
+                        head_position += int(pattern_item["_next_else"])
 
             elif p_type == "jump":
                 if not pattern_item.get("_absolute"):
-                    head += int(pattern_item["_next"])
+                    head_position += int(pattern_item["_next"])
                 else:
-                    head = int(pattern_item["_next"])
+                    head_position = int(pattern_item["_next"])
 
         elif p_type in ["while"]:
             expr = pattern_item["expression"]
             check = eval_expression(expr, context)
             if check:
-                head += int(pattern_item.get("_next", 1))
+                head_position += int(pattern_item.get("_next", 1))
             else:
-                head += int(pattern_item["_next_on_break"])
+                head_position += int(pattern_item["_next_on_break"])
 
         # CONTINUE
         elif p_type == "continue":
-            head += int(pattern_item.get("_next_on_continue", 1))
+            head_position += int(pattern_item.get("_next_on_continue", 1))
 
         # STOP
         elif p_type == "stop":
@@ -109,7 +112,7 @@ def slide(state: "State", flow_config: "FlowConfig", head: int) -> Optional[int]
 
         # BREAK
         elif p_type == "break":
-            head += int(pattern_item.get("_next_on_break", 1))
+            head_position += int(pattern_item.get("_next_on_break", 1))
 
         # SET
         elif p_type == "set":
@@ -126,9 +129,22 @@ def slide(state: "State", flow_config: "FlowConfig", head: int) -> Optional[int]
             context.update({key_name: value})
             state.context_updates.update({key_name: value})
 
-            head += int(pattern_item.get("_next", 1))
+            head_position += int(pattern_item.get("_next", 1))
+
+        # SEND INTERNAL EVENT
+        # TODO: Figure out how we can check if it is an internal event or an UMIM Action event from parsing
+        elif p_type == "send_internal_event":
+            # Push internal event
+            state.internal_events.append(
+                {
+                    "type": "InternalEvent",
+                    "event_time_uid": head.event_time_uid,
+                    "event_name": pattern_item["event_name"],
+                    "event_params": pattern_item["event_params"],
+                }
+            )
+            head_position += int(pattern_item.get("_next", 1))
         else:
             break
-
     # If we got this far, it means we had a match and the flow advanced
-    return head
+    return head_position

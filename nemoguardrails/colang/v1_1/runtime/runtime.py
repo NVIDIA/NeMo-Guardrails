@@ -58,10 +58,14 @@ class RuntimeV1_1(Runtime):
             )
 
             # If we need to execute an action, we start doing that.
+            # NOTE (schuellc): What are these system actions? We need to make them non-blocking.
+            # We are going to separate internal form external events in two different queues
             if last_event["type"] == "StartInternalSystemAction":
                 next_events = await self._process_start_action(events)
 
             # If we need to start a flow, we parse the content and register it.
+            # NOTE (schuellc): Is this needed for generated flows only?
+            # NOTE: THis is a hack to be able to process LLM generated flows
             elif last_event["type"] == "start_flow":
                 next_events = await self._process_start_flow(events)
 
@@ -78,6 +82,7 @@ class RuntimeV1_1(Runtime):
             new_events.extend(next_events)
 
             # If the next event is a listen, we stop the processing.
+            # NOTE (schuellc): This will no longer be needed. Can I remove this without side effects?
             if next_events[-1]["type"] == "Listen":
                 break
 
@@ -92,6 +97,7 @@ class RuntimeV1_1(Runtime):
         next_steps = compute_next_steps(events, self.flow_configs)
 
         # If there are any StartInternalSystemAction events, we mark if they are system actions or not
+        # NOTE (schuellc): What's that for?
         for event in next_steps:
             if event["type"] == "StartInternalSystemAction":
                 is_system_action = False
@@ -213,6 +219,7 @@ class RuntimeV1_1(Runtime):
                     kwargs["llm"] = self.registered_action_params[f"{action_name}_llm"]
 
                 log.info("Executing action :: %s", action_name)
+                # NOTE (schuellc): We need to make this non-blocking with internal events
                 result, status = await self.action_dispatcher.execute_action(
                     action_name, kwargs
                 )
