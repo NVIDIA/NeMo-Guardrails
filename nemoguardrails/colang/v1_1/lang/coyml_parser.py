@@ -171,7 +171,7 @@ def _dict_to_element(d):
 
     elif d_type in ["bot", "utter", "ask", "bot_ask"]:
         element = {
-            "_type": "run_action",
+            "_type": "StartAction",
             "action_name": "utter",
             "action_params": {
                 "value": d_value,
@@ -214,7 +214,7 @@ def _dict_to_element(d):
                 action_result_key = action_result_key[1:]
 
         element = {
-            "_type": "run_action",
+            "_type": "StartAction",
             "action_name": action_name,
             "action_params": {
                 # 1) **{k: _to_value(v) for k, v in d.items() if k != d_type and k != "_source_mapping"},
@@ -344,7 +344,7 @@ def _dict_to_element(d):
         # }
 
         element = {
-            "_type": "run_action",
+            "_type": "StartAction",
             "action_name": "create_event",
             "action_params": {
                 "event": {
@@ -628,7 +628,7 @@ def _process_ellipsis(elements):
 
             new_elements.append(
                 {
-                    "_type": "run_action",
+                    "_type": "StartAction",
                     "action_name": "generate_value",
                     "action_params": {
                         "instructions": instructions,
