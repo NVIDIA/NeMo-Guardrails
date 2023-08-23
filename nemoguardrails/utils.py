@@ -102,7 +102,7 @@ _action_to_modality_info: Dict[str, Tuple[str, str]] = {
 }
 
 
-def _add_modality_info(event_dict: Dict[str, Any]) -> Dict[str, Any]:
+def _add_modality_info(event_dict: Dict[str, Any]) -> None:
     """Add modality related information to the action event"""
     for action_name, modality_info in _action_to_modality_info.items():
         modality_name, modality_policy = modality_info
@@ -111,20 +111,21 @@ def _add_modality_info(event_dict: Dict[str, Any]) -> Dict[str, Any]:
             event_dict["action_info_modality_policy"] = modality_policy
 
 
-def _update_action_properties(event_dict: Dict[str, Any]) -> Dict[str, Any]:
+def _update_action_properties(event_dict: Dict[str, Any]) -> None:
     """Update action related even properties and ensure UMIM compliance (very basic)"""
 
     if "Started" in event_dict["type"]:
         event_dict["action_started_at"] = datetime.now(timezone.utc).isoformat()
     elif "Start" in event_dict["type"]:
-        event_dict["action_uid"] = new_uid()
+        if "action_uid" not in event_dict:
+            event_dict["action_uid"] = new_uid()
     elif "Finished" in event_dict["type"]:
         event_dict["action_finished_at"] = datetime.now(timezone.utc).isoformat()
         if event_dict["is_success"] and "failure_reason" in event_dict:
             del event_dict["failure_reason"]
 
 
-def ensure_valid_event(event: Dict[str, Any]) -> bool:
+def ensure_valid_event(event: Dict[str, Any]) -> None:
     """Performs basic event validation and throws an AssertionError if any of the validators fail."""
     for validator in _event_validators:
         assert validator.function(event), validator.description
