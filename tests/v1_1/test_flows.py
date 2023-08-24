@@ -130,5 +130,109 @@ def test_start_a_flow():
     }
 
 
+def test_conflicting_actions():
+    """Test the action conflict resolution"""
+
+    # flow a
+    #   match UtteranceUserAction("Hi").Finished()
+    #   send UtteranceBotAction("Hello").Start()
+    #   send UtteranceBotAction("How are you").Start()
+    #
+    # flow main
+    #   start a
+    #   match UtteranceUserAction("Hi").Finished()
+    #   send UtteranceBotAction("Hello").Start()
+    #   send UtteranceBotAction("Bye").Start()
+
+    config = {
+        "a": FlowConfig(
+            id="a",
+            elements=[
+                {
+                    "_type": "match_event",
+                    "event_name": "StartFlow",
+                    "event_params": {"flow_name": "a"},
+                },
+                {
+                    "_type": "match_event",
+                    "type": "UtteranceUserActionFinished",
+                    "final_transcript": "Hi",
+                },
+                {
+                    "_type": "run_action",
+                    "type": "StartUtteranceBotAction",
+                    "text": "Hello",
+                },
+                {
+                    "_type": "run_action",
+                    "type": "StartUtteranceBotAction",
+                    "text": "How are you",
+                },
+            ],
+        ),
+        "main": FlowConfig(
+            id="main",
+            loop_id="main",
+            elements=[
+                {
+                    "_type": "match_event",
+                    "event_name": "StartFlow",
+                    "event_params": {"flow_name": "main"},
+                },
+                {
+                    "_type": "send_internal_event",
+                    "event_name": "StartFlow",
+                    "event_params": {"flow_name": "a"},
+                },
+                {
+                    "_type": "match_event",
+                    "event_name": "FlowStarted",
+                    "event_params": {"flow_name": "a"},
+                },
+                {
+                    "_type": "match_event",
+                    "type": "UtteranceUserActionFinished",
+                    "final_transcript": "Hi",
+                },
+                {
+                    "_type": "run_action",
+                    "type": "StartUtteranceBotAction",
+                    "text": "Hello",
+                },
+                {
+                    "_type": "run_action",
+                    "type": "StartUtteranceBotAction",
+                    "text": "Bye",
+                },
+            ],
+        ),
+    }
+
+    state = State(context={}, flow_states=[], flow_configs=config)
+    state.initialize()
+
+    state = compute_next_state(
+        state,
+        {
+            "type": "InternalEvent",
+            "event_name": "StartFlow",
+            "event_params": {"flow_name": "main"},
+        },
+    )
+    assert state.next_step is None
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi",
+        },
+    )
+    assert state.next_step == {
+        "_type": "run_action",
+        "type": "StartUtteranceBotAction",
+        "text": "Hello",
+    }
+
+
 if __name__ == "__main__":
-    test_start_a_flow()
+    test_conflicting_actions()
