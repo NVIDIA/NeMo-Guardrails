@@ -31,7 +31,7 @@ flow approach_zone_handling
     await bot_calling_user_closer # keep calling user closer until this flow is paused or stopped
     await bot_idling
 
-@thread(user_presents_handling)
+@interaction_context("user_presents_handling")
 flow passive_zone_handling
   await entered_passive_zone
   while true

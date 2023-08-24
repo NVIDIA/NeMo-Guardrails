@@ -114,3 +114,47 @@ flow main # event match: 1
 # 'match d' statement will match since d finished in same time processing windows -> flow b finished successfully
 
 # Comment: Underlying actions in flow e / f agree and will therefore be executed without a conflict (only once of course)
+
+
+# Flow control statements are blocking!
+
+flow main
+  # match StartFlow("main")
+  #start a:
+  send StartFlow("a")
+  match FlowStarted("a")
+  #start ActionA:
+  send ActionA.Start()
+  #match ActionA.Starting() -> bot needed since sending and action start event is an pattern relevant statement
+  #start b:
+  send StartFlow("b")
+  match FlowStarted("b")
+  start ActionA
+  #start c:
+  send StartFlow("c")
+  match FlowStarted("c")
+  match c.Finished()
+
+flow a
+  # match StartFlow("a")
+  start ActionA
+  start ActionB
+  start ActionC
+  # => Runtime sends FlowStarted("a")
+  match ActionC.Finished()
+
+flow b
+  # match StartFlow("b")
+  start ActionA
+  start ActionB
+  start ActionC
+  # => Runtime sends FlowStarted("b")
+  match ActionC.Finished()
+
+flow c
+  # match StartFlow("c")
+  start ActionA
+  start ActionB
+  start ActionC
+  # => Runtime sends FlowStarted("c")
+  match ActionC.Finished()

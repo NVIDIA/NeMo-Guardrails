@@ -30,7 +30,7 @@ flow bot explain $text
   ...
 
 flow bot inform $text
-  ... 
+  ...
 
 # user intents
 
@@ -82,7 +82,7 @@ flow main
     bot say "great!"
   else when user feels bad
     bot say "sorry to hear!"
-  else
+  else # This is for the case where neither expected answer nor another matcher was triggered and therefore bot cases failed
     bot say "Never mind, let's continue"
 
 # Question repetition injection flow
@@ -98,7 +98,7 @@ flow bot question repetition
 # Flow resume injection flow
 flow flow interruption resume handling
   bot said something as $bot_said
-  set $current_flow = $active_flow 
+  set $current_flow = $active_flow
   match FlowInterruption($current_flow)
   match FlowResume($current_flow)
   bot say $bot_said.event.text
