@@ -1,0 +1,124 @@
+########################################################################################################################
+# DESIGNED FLOWS (USED FOR PROMPTIN THE LLM)
+flow bot waves in direction of user
+    """
+    Bot waves with one of his hands to greet the user
+    """
+    start GestureBotAction(gesture="waving with left hand") or GestureBotAction(gesture="waving with right hand")
+    match GestureBotAction.Finished()
+
+flow bot says $something
+    """
+    Bot says $something to the user where $something is a string parameter of what to say
+    """
+    start UtteranceBotAction(script=$something)
+    match UtteranceBotAction.Finished()
+
+flow bot greets user
+    """
+    Bot happily greets the user
+    """
+    start GestureBotAction(gesture="strech out right hand to user in greeting")
+    start UtteranceBotAction(script="Hi, nice to see you")
+    match UtteranceBotAction.Finished() and GestureBotAction.Finished()
+
+flow user makes a color choice
+    """
+    The user expresses a color choice. The events matched only represent a subset of what the user could say
+    or what colors she could pick.
+    """
+    match UtteranceBotAction.Finished(final_transcript="blue") or
+          UtteranceBotAction.Finished(final_transcript="red") or
+          UtteranceBotAction.Finished(final_transcript="I take the green option") or
+          UtteranceBotAction.Finished(final_transcript="I like black") or
+
+flow bot presents three different options for the car color
+    """
+    Bot presents three different color options for cars. The bot also shows the option using a UI. The bot waits
+    for the user to make a selection. If the use picked a color either by saying the color or by touching the UI options
+    the bot will comment that he likes the color as well. If the user does not select a color the bot will inform the user
+    that it did get the color.
+    """
+    start GestureBotAction(gesture="point to the UI")
+    start UtteranceBotAction(script="We have these four options of car colors. Which one do you like best?")
+    start VisualChoiceSceneAction(  prompt="Pick your favorite color",
+                                    support_prompts=["you can simply say the name of a color", "You can also tap the color on the UI"],
+                                    options=[{id="blue", text="Blue", img="blue car"},{id="blue", text="Green", img="green car"},{id="red", text="Red", img="red car"}])
+
+
+    await VisualChoiceSceneAction.Finished() or UtteranceUserAction.Finished()
+    # Generate the color name from user's input (speech of visual choice). If the color is not specified, return "unknown".
+    $color = ...
+    if $color == "unknown"
+        start UtteranceBotAction(script="Sorry I did not understand what color you meant")
+    else
+        start GestureBotAction(gesture="make high five")
+        start UtteranceBotAction(script="So cool! {{$color}} is also my favorite color")
+
+# END OF DESIGNED FLOWS
+
+########################################################################################################################
+# DRAFT AREA - NOT YET PART OF THE PROMPT
+########################################################################################################################
+flow user is selecting a seat in the theatre
+    """
+    The user is not sure what options to take for the garage and is therefore
+    """
+    await user asks what seats are available
+    await bot lists available seat options
+    await user selects a options
+    await bot confirms choice
+
+flow get user feedback on experience with website
+    """
+    The bot asks the user for feedback on the product by going through some common questsion
+    to asses quality of the the website. The bot presents ratings between 1-5 for each question
+    and provides shows an image.
+    """
+# END DRAFT AREA - NOT YET PART OF THE PROMPT
+
+
+########################################################################################################################
+### GENERATED FLOWS (GPT 3.5)
+########################################################################################################################
+## PROMPT: Can you write me a new flow in which the bot asks the user for feedback on the website eat.ch?
+flow bot asks for website feedback
+    """
+    Bot requests feedback from the user about the eat.ch website.
+    """
+    start UtteranceBotAction(script="Hello! We're always looking to improve your experience on eat.ch. Could you please provide us with some feedback on our website?")
+    start GestureBotAction(gesture="look at the user attentively")
+    await UtteranceUserAction.Finished()
+    # Store user's feedback from speech recognition
+    $feedback = UtteranceUserAction.final_transcript
+    start GestureBotAction(gesture="nod in understanding")
+    start UtteranceBotAction(script="Thank you for sharing your feedback: {{$feedback}}. We truly appreciate it!")
+    match UtteranceBotAction.Finished()
+
+
+## PROMPT: I like the flow a lot. Can you adjust it such that the user can select an overall experience using smileys from the UI (1=Sad Smiley, bad experience up to 5=Very happy smiley, amazing experience)?
+flow bot asks for website feedback with smileys
+    """
+    Bot requests feedback from the user about the eat.ch website using smileys to rate their experience.
+    """
+    start UtteranceBotAction(script="Hello! We're always working to make eat.ch better for you. How would you rate your overall experience on our website? Please select a smiley from 1 to 5, where 1 represents a sad smiley indicating a bad experience, and 5 represents a very happy smiley indicating an amazing experience.")
+    start GestureBotAction(gesture="look at the user attentively")
+    start VisualChoiceSceneAction(  prompt="Please choose a smiley to rate your experience",
+                                    options=[{id="1", img="sad smiley"},
+                                             {id="2", img="neutral smiley"},
+                                             {id="3", img="smiley"},
+                                             {id="4", img="smiley with slightly smiling eyes"},
+                                             {id="5", img="very happy smiley"}])
+    await VisualChoiceSceneAction.Finished() or UtteranceUserAction.Finished()
+    # Generate the smiley rating from user's input (speech or visual choice)
+    $rating = ...
+    start GestureBotAction(gesture="nod in understanding")
+    if $rating == "1"
+        start UtteranceBotAction(script="We're sorry to hear that you had a bad experience. Thank you for letting us know. Your feedback helps us improve.")
+    else if $rating == "5"
+        start UtteranceBotAction(script="We're thrilled to hear that you had an amazing experience! Thank you for your positive feedback.")
+    else
+        start UtteranceBotAction(script="Thank you for sharing your feedback. We'll use it to enhance your future experiences.")
+    match UtteranceBotAction.Finished()
+
+# END OF GENERATED FLOWS
