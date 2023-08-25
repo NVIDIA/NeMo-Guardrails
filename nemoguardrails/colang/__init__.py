@@ -36,6 +36,8 @@ def parse_flow_elements(items, version: str = "1.0"):
     if version == "1.0":
         return parser_v1_0.parse_flow_elements(items)
     elif version == "1.1":
-        return parser_v1_1.parse_flow_elements(items)
+        raise Exception(
+            f"Parsing flow elements not supported for colang version {version}"
+        )
     else:
         raise Exception(f"Unsupported colang version {version}")

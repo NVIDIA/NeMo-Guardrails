@@ -17,6 +17,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
+import yaml
+
 
 def new_uid() -> str:
     """Helper to create a new UID."""
@@ -70,3 +72,11 @@ def new_event_dict(event_type: str, **payload) -> Dict[str, Any]:
         _update_action_properties(event)
 
     return event
+
+
+class CustomDumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        return True
+
+    def increase_indent(self, flow=False, indentless=False):
+        return super(CustomDumper, self).increase_indent(flow, False)

@@ -1,21 +1,21 @@
 // Lark Grammar for Colang 1.1
-?start: _statements
+?start: _statements | suite
 
 // General sequences of statements
 _statements: (_NEWLINE | stmt)*
-stmt: (def_stmt | flow_stmt | comment _NEWLINE | expr _NEWLINE | _NEWLINE)
+?stmt: (def_stmt | flow_stmt | comment _NEWLINE | expr _NEWLINE | _NEWLINE)
 suite: _NEWLINE _INDENT (stmt+) _DEDENT
 
 // Flow definition and calling
-def_stmt: flow_def
+?def_stmt: flow_def
 flow_def: "flow" spec_name [flow_params_def] suite
 flow_params_def: flow_params_def_classic | flow_params_def_simple
 flow_params_def_classic: "(" (var_name ("=" test)? ("," var_name ("=" test)?)*) ")"
 flow_params_def_simple: (var_name ("=" test)?)+
-flow_stmt: simple_stmt | spec_op_stmt | compound_stmt
+?flow_stmt: simple_stmt | spec_op_stmt | compound_stmt
 
 // Simple statements
-simple_stmt: set_stmt | return_stmt
+?simple_stmt: set_stmt | return_stmt
 set_stmt: var_name set_op test _NEWLINE
 
 // TODO: support more assignment operators?
@@ -26,18 +26,19 @@ set_op: "=" -> set
 return_stmt: "return" [test] _NEWLINE
 
 // A "spec" is a unifying concept for flows, actions, events
-spec_op: "match" -> match_spec
-        | "await" -> await_spec
-        | "start" -> start_spec
-        | "stop" -> stop_spec
-        | "activate" -> activate_spec
+spec_operator: "match" -> match_spec
+             | "await" -> await_spec
+             | "start" -> start_spec
+             | "stop" -> stop_spec
+             | "activate" -> activate_spec
+             | "send" -> send_spec
 
-spec_operation: [spec_op] spec_expr [capture_ref]
-spec_op_stmt: spec_operation _NEWLINE
+spec_op: [spec_operator] spec_expr [capture_ref]
+?spec_op_stmt: spec_op _NEWLINE
 capture_ref: "as" var_name
 
 // Arbitrary expressions with specs including "and" and "or" as operators
-spec_expr: spec_or
+?spec_expr: spec_or
 ?spec_or: spec_and (_OR spec_and)+
         | spec_and
 ?spec_and: spec_atom (_AND spec_atom)+
@@ -52,10 +53,10 @@ spec: spec_name [classic_arguments | simple_arguments] (spec_member)*
 spec_member: "." name [classic_arguments]
 
 // Classic arguments use the syntax from python
-classic_arguments: "(" [argvalues] ")"
-argvalues: argvalue ("," argvalue)*
-?argvalue: expr
-         | name "=" expr
+classic_arguments: "(" [_argvalues] ")"
+_argvalues: argvalue ("," argvalue)*
+argvalue: expr
+        | name "=" expr
 
 // A simplified version of the arguments without paranthesis and ","
 simple_arguments: simple_argvalue+
@@ -68,10 +69,10 @@ if_stmt: "if" test suite elifs ["else" suite]
 elifs: elif_*
 elif_: ("elif" | "else" "if") test suite
 while_stmt: "while" test suite
-when_stmt: "when" spec_operation suite ("else" "when" spec_operation suite)* ("else" suite)?
+when_stmt: "when" spec_op suite ("else" "when" spec_op suite)* ("else" suite)?
 
 // Test expression (used both for conditions and assignment)
-?test: or_test
+test: or_test
 ?or_test: and_test ("or" and_test)*
 ?and_test: not_test_ ("and" not_test_)*
 ?not_test_: "not" not_test_ -> not_test
@@ -79,7 +80,7 @@ when_stmt: "when" spec_operation suite ("else" "when" spec_operation suite)* ("e
 ?comparison: expr (comp_op expr)*
 star_expr: "*" expr
 
-?expr: or_expr
+expr: or_expr
 ?or_expr: xor_expr ("|" xor_expr)*
 ?xor_expr: and_expr ("^" and_expr)*
 ?and_expr: shift_expr ("&" shift_expr)*
@@ -120,8 +121,8 @@ sliceop: ":" [test]
      | "True"    -> const_true
      | "False"   -> const_false
 
-spec_name: NAME+
-         | "(" NAME+ ")"
+spec_name: name+
+         | "(" name+ ")"
 name: NAME
 var_name: VAR_NAME
 comment: COMMENT

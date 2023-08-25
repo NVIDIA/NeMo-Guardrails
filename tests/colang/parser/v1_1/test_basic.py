@@ -13,48 +13,427 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
+import yaml
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.lang.colang_parser import parse_coflows_to_yml_flows
+from nemoguardrails.utils import CustomDumper
 
 
 def test_1():
     content = """
-    define flow
-      match UserIntent(intent="dfdf")
+    flow test
+      match UserIntent(intent="express greeting")
       bot express greeting
     """
     result = parse_colang_file(
         filename="", content=content, include_source_mapping=False, version="1.1"
     )
+    flows = [flow.to_dict() for flow in result["flows"]]
 
-    print(json.dumps(result, indent=True))
-
-    assert result["flows"][0]["elements"] == [
-        {"_type": "UserIntent", "intent": "dfdf"},
+    print(yaml.dump(flows, sort_keys=False, Dumper=CustomDumper, width=1000))
+    assert flows == [
         {
-            "_type": "run_action",
-            "action_name": "utter",
-            "action_params": {"value": "express greeting"},
-        },
+            "_source": None,
+            "_type": "flow",
+            "elements": [
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {"flow_name": "test"},
+                        "members": None,
+                        "name": "StartFlow",
+                        "var_name": None,
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {"intent": '"express greeting"'},
+                        "members": None,
+                        "name": "UserIntent",
+                        "var_name": None,
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "await",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {},
+                        "members": None,
+                        "name": "bot express greeting",
+                        "var_name": None,
+                    },
+                },
+            ],
+            "name": "test",
+        }
     ]
 
 
 def test_2():
     content = """
-        define flow
-          match UserSilent(duration="5")
-          bot ask if more time needed
-        """
+    flow test
+      match user express greeting
 
-    result = parse_coflows_to_yml_flows(
-        filename="", content=content, snippets={}, include_source_mapping=False
+      if $current_time < '12:00'
+        bot express good morning
+      else
+        bot express good afternoon
+
+    """
+    result = parse_colang_file(
+        filename="", content=content, include_source_mapping=False, version="1.1"
     )
+    flows = [flow.to_dict() for flow in result["flows"]]
 
-    flow = list(result["flows"].values())[0]
+    print(yaml.dump(flows, sort_keys=False, Dumper=CustomDumper, width=1000))
+    assert flows == [
+        {
+            "_source": None,
+            "_type": "flow",
+            "elements": [
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {"flow_name": "test"},
+                        "members": None,
+                        "name": "StartFlow",
+                        "var_name": None,
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {},
+                        "members": None,
+                        "name": "user express greeting",
+                        "var_name": None,
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "if",
+                    "else_elements": [
+                        {
+                            "_source": None,
+                            "_type": "spec_op",
+                            "op": "await",
+                            "ref": None,
+                            "spec": {
+                                "_source": None,
+                                "_type": "spec",
+                                "arguments": {},
+                                "members": None,
+                                "name": "bot express good " "afternoon",
+                                "var_name": None,
+                            },
+                        }
+                    ],
+                    "expression": "$current_time < '12:00'",
+                    "then_elements": [
+                        {
+                            "_source": None,
+                            "_type": "spec_op",
+                            "op": "await",
+                            "ref": None,
+                            "spec": {
+                                "_source": None,
+                                "_type": "spec",
+                                "arguments": {},
+                                "members": None,
+                                "name": "bot express good morning",
+                                "var_name": None,
+                            },
+                        }
+                    ],
+                },
+            ],
+            "name": "test",
+        }
+    ]
 
-    assert flow == [
-        {"event": 'UserSilent(duration="5")'},
-        {"bot": "ask if more time needed"},
+
+def test_3():
+    content = """
+    flow test
+      user silent $duration="5s" or user agrees
+      user silent "5s"
+      user ask $text="what?" $times=3
+      user ask (text="what?", times=3)
+    """
+    result = parse_colang_file(
+        filename="", content=content, include_source_mapping=False, version="1.1"
+    )
+    flows = [flow.to_dict() for flow in result["flows"]]
+
+    print(yaml.dump(flows, sort_keys=False, Dumper=CustomDumper, width=1000))
+    assert flows == [
+        {
+            "_source": None,
+            "_type": "flow",
+            "elements": [
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {"flow_name": "test"},
+                        "members": None,
+                        "name": "StartFlow",
+                        "var_name": None,
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "await",
+                    "ref": None,
+                    "spec": {
+                        "_type": "spec_or",
+                        "elements": [
+                            {
+                                "_source": None,
+                                "_type": "spec",
+                                "arguments": {"duration": '"5s"'},
+                                "members": None,
+                                "name": "user silent",
+                                "var_name": None,
+                            },
+                            {
+                                "_source": None,
+                                "_type": "spec",
+                                "arguments": {},
+                                "members": None,
+                                "name": "user agrees",
+                                "var_name": None,
+                            },
+                        ],
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "await",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {"$0": '"5s"'},
+                        "members": None,
+                        "name": "user silent",
+                        "var_name": None,
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "await",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {"text": '"what?"', "times": "3"},
+                        "members": None,
+                        "name": "user ask",
+                        "var_name": None,
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "await",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {"text": '"what?"', "times": "3"},
+                        "members": None,
+                        "name": "user ask",
+                        "var_name": None,
+                    },
+                },
+            ],
+            "name": "test",
+        }
+    ]
+
+
+def test_4():
+    content = """
+    flow test
+      match bot express greeting . Finished()
+      match bot express greeting . Finished(status="success")
+      match $action
+      match $action.Finished()
+      match $some_flow.some_action.Finished("success")
+    """
+    result = parse_colang_file(
+        filename="", content=content, include_source_mapping=False, version="1.1"
+    )
+    flows = [flow.to_dict() for flow in result["flows"]]
+
+    print(yaml.dump(flows, sort_keys=False, Dumper=CustomDumper, width=1000))
+    assert flows == [
+        {
+            "_source": None,
+            "_type": "flow",
+            "elements": [
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {"flow_name": "test"},
+                        "members": None,
+                        "name": "StartFlow",
+                        "var_name": None,
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {},
+                        "members": [
+                            {
+                                "_source": None,
+                                "_type": "spec",
+                                "arguments": {},
+                                "members": None,
+                                "name": "Finished",
+                                "var_name": None,
+                            }
+                        ],
+                        "name": "bot express greeting",
+                        "var_name": None,
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": {},
+                        "members": [
+                            {
+                                "_source": None,
+                                "_type": "spec",
+                                "arguments": {"status": '"success"'},
+                                "members": None,
+                                "name": "Finished",
+                                "var_name": None,
+                            }
+                        ],
+                        "name": "bot express greeting",
+                        "var_name": None,
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": None,
+                        "members": None,
+                        "name": None,
+                        "var_name": "action",
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": None,
+                        "members": [
+                            {
+                                "_source": None,
+                                "_type": "spec",
+                                "arguments": {},
+                                "members": None,
+                                "name": "Finished",
+                                "var_name": None,
+                            }
+                        ],
+                        "name": None,
+                        "var_name": "action",
+                    },
+                },
+                {
+                    "_source": None,
+                    "_type": "spec_op",
+                    "op": "match",
+                    "ref": None,
+                    "spec": {
+                        "_source": None,
+                        "_type": "spec",
+                        "arguments": None,
+                        "members": [
+                            {
+                                "_source": None,
+                                "_type": "spec",
+                                "arguments": {},
+                                "members": None,
+                                "name": "some_action",
+                                "var_name": None,
+                            },
+                            {
+                                "_source": None,
+                                "_type": "spec",
+                                "arguments": {"$0": '"success"'},
+                                "members": None,
+                                "name": "Finished",
+                                "var_name": None,
+                            },
+                        ],
+                        "name": None,
+                        "var_name": "some_flow",
+                    },
+                },
+            ],
+            "name": "test",
+        }
     ]

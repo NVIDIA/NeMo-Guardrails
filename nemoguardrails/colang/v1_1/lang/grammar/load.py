@@ -12,26 +12,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from functools import lru_cache
 
-import uuid
-from dataclasses import asdict, is_dataclass
-from typing import Any
+from lark import Lark
+from lark.indenter import PythonIndenter
 
 
-def new_uuid() -> str:
-    """Helper to generate new UUID v4.
+@lru_cache
+def load_lark_parser(grammar_path: str):
+    """Helper to load a Lark parser.
 
-    In testing mode, it will generate a predictable set of UUIDs to help debugging.
+    The result is cached so that it's faster in subsequent times.
+
+    Args:
+        grammar_path: The path to the .lark file with the grammar.
+
+    Returns:
+        A Lark parser instance.
     """
-    return str(uuid.uuid4())
+    with open(grammar_path, "r") as f:
+        grammar = f.read()
 
-
-def dataclass_to_dict(obj: Any) -> Any:
-    if is_dataclass(obj):
-        return {k: dataclass_to_dict(v) for k, v in asdict(obj).items()}
-    elif isinstance(obj, list):
-        return [dataclass_to_dict(v) for v in obj]
-    elif isinstance(obj, dict):
-        return {k: dataclass_to_dict(v) for k, v in obj.items()}
-    else:
-        return obj
+    return Lark(
+        grammar,
+        start="start",
+        parser="earley",
+        lexer="basic",
+        postlex=PythonIndenter(),
+        propagate_positions=True,
+    )

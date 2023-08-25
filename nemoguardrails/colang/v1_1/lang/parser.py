@@ -14,111 +14,119 @@
 # limitations under the License.
 
 import logging
-import textwrap
-from typing import List, Optional
+import os
 
-from nemoguardrails.colang.v1_1.lang.colang_parser import (
-    parse_coflows_to_yml_flows,
-    parse_snippets_and_imports,
-)
-from nemoguardrails.colang.v1_1.lang.comd_parser import parse_md_file
-from nemoguardrails.colang.v1_1.lang.coyml_parser import parse_flow_elements
+import yaml
+
+from nemoguardrails.colang.v1_1.lang.grammar.load import load_lark_parser
+from nemoguardrails.colang.v1_1.lang.transformer import ColangTransformer
+from nemoguardrails.utils import CustomDumper
 
 log = logging.getLogger(__name__)
 
 
-def _extract_flow_code(file_content: str, flow_elements: List[dict]) -> Optional[str]:
-    """Helper to extract the source code for a flow.
+class ColangParser:
+    def __init__(self, include_source_mapping: bool = False):
+        self.include_source_mapping = include_source_mapping
+        self.grammar_path = os.path.join(
+            os.path.dirname(__file__), "grammar", "colang.lark"
+        )
 
-    Currently, it uses a simple heuristic that copies all the lines between the minimum
-    and the maximum lines
-    """
+        # Initialize the Lark Parser
+        self._lark_parser = load_lark_parser(self.grammar_path)
 
-    content_lines = file_content.split("\n")
-    min_line = -1
-    max_line = -1
+    def get_parsing_tree(self, content: str):
+        """Helper to get only the parsing tree.
 
-    for element in flow_elements:
-        if "_source_mapping" not in element:
-            continue
-        line_number = element["_source_mapping"]["line_number"] - 1
-        if min_line == -1 or line_number < min_line:
-            min_line = line_number
-        if max_line == -1 or line_number > max_line:
-            max_line = line_number
+        Args:
+            content: The Colang content.
 
-    # If we have a range, we extract it
-    if min_line >= 0:
-        # Exclude all non-blank lines
-        flow_lines = [
-            _line
-            for _line in content_lines[min_line : max_line + 1]
-            if _line.strip() != ""
-        ]
+        Returns:
+            An instance of a parsing tree as returned by Lark.
+        """
+        return self._lark_parser.parse(content + "\n")
 
-        return textwrap.dedent("\n".join(flow_lines))
+    def parse_content(self, content: str, print_tokens=False):
+        if print_tokens:
+            tokens = list(self._lark_parser.lex(content))
+            for token in tokens:
+                print(token.__repr__())
 
-    return None
+        # NOTE: dealing with EOF is a bit tricky in Lark; the easiest solution
+        # to avoid some issues arising from that is to append a new line at the end
+        tree = self.get_parsing_tree(content)
+
+        transformer = ColangTransformer(
+            source=content, include_source_mapping=self.include_source_mapping
+        )
+        data = transformer.transform(tree)
+
+        result = {"flows": []}
+
+        # We take all the flow elements and return them
+        for element in data["elements"]:
+            if element["_type"] == "flow":
+                result["flows"].append(element)
+
+        return result
 
 
 def parse_colang_file(filename: str, content: str, include_source_mapping: bool = True):
-    """Parse the content of a .co file into the CoYML format."""
-    snippets, imports = parse_snippets_and_imports(filename, content)
-    result = parse_coflows_to_yml_flows(
-        filename,
-        content,
-        snippets=snippets,
-        include_source_mapping=include_source_mapping,
-    )
+    """Parse the content of a .co."""
 
-    flows = []
-    for flow_id, items in result["flows"].items():
-        elements = parse_flow_elements(items)
-        source_code = _extract_flow_code(content, elements)
-        flows.append({"id": flow_id, "elements": elements, "source_code": source_code})
+    colang_parser = ColangParser(include_source_mapping=include_source_mapping)
+    result = colang_parser.parse_content(content, print_tokens=False)
 
-    user_messages = {}
-    bot_messages = {}
-
-    if result.get("markdown"):
-        log.debug(f"Found markdown content in {filename}")
-        md_result = parse_md_file(filename, content=result["markdown"])
-
-        # Record the user messages
-        # The `patterns` result from Markdown parsing contains patterns of the form
-        # {'lang': 'en', 'type': 'PATTERN', 'sym': 'intent:express|greeting', 'body': 'hi', 'params': {}}
-        # We need to convert these to the CoYML format.
-        for pattern in md_result["patterns"]:
-            sym = pattern["sym"]
-
-            # Ignore non-intent symbols
-            if not sym.startswith("intent:"):
-                continue
-
-            # The "|" is an old convention made by the parser, we roll back.
-            intent = sym[7:].replace("|", " ")
-
-            if intent not in user_messages:
-                user_messages[intent] = []
-
-            user_messages[intent].append(pattern["body"])
-
-        # For the bot messages, we just copy them from the `utterances` dict.
-        # The elements have the structure {"text": ..., "_context": ...}
-        for intent, utterances in md_result["utterances"].items():
-            if intent not in bot_messages:
-                bot_messages[intent] = []
-
-            if not isinstance(utterances, list):
-                utterances = [utterances]
-
-            for utterance in utterances:
-                bot_messages[intent].append(utterance["text"])
+    # flows = []
+    # for flow_data in result["flows"]:
+    #     # elements = parse_flow_elements(items)
+    #     # TODO: extract the source code here
+    #     source_code = ""
+    #     flows.append(
+    #         {
+    #             "id": flow_data["name"],
+    #             "elements": flow_data["elements"],
+    #             "source_code": source_code,
+    #         }
+    #     )
 
     data = {
-        "user_messages": user_messages,
-        "bot_messages": bot_messages,
-        "flows": flows,
+        "flows": result["flows"],
     }
 
     return data
+
+
+def main():
+    paths = [
+        "../../../../tests/colang/parser/v1_1/inputs/test6.co",
+    ]
+
+    filenames = []
+    for path in paths:
+        if os.path.isdir(path):
+            for root, dirs, files in os.walk(path):
+                for filename in files:
+                    if filename.endswith(".co"):
+                        filenames.append(os.path.join(root, filename))
+        else:
+            filenames.append(path)
+
+    colang_parser = ColangParser()
+
+    for filename in filenames:
+        log.info("========================================")
+        log.info(f"{filename}")
+        log.info("========================================")
+        with open(filename, "r") as file:
+            content = file.read()
+
+        tree = colang_parser.get_parsing_tree(content)
+        log.info(tree.pretty())
+
+        data = colang_parser.parse_content(content)
+        print(yaml.dump(data, sort_keys=False, Dumper=CustomDumper, width=1000))
+
+
+if __name__ == "__main__":
+    main()

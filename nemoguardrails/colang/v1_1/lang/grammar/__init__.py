@@ -12,26 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import uuid
-from dataclasses import asdict, is_dataclass
-from typing import Any
-
-
-def new_uuid() -> str:
-    """Helper to generate new UUID v4.
-
-    In testing mode, it will generate a predictable set of UUIDs to help debugging.
-    """
-    return str(uuid.uuid4())
-
-
-def dataclass_to_dict(obj: Any) -> Any:
-    if is_dataclass(obj):
-        return {k: dataclass_to_dict(v) for k, v in asdict(obj).items()}
-    elif isinstance(obj, list):
-        return [dataclass_to_dict(v) for v in obj]
-    elif isinstance(obj, dict):
-        return {k: dataclass_to_dict(v) for k, v in obj.items()}
-    else:
-        return obj
