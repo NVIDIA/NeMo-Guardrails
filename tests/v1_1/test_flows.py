@@ -23,7 +23,7 @@ def test_start_main_flow():
     """Test the start of the main flow"""
 
     # flow main
-    #   await bot say "Hello world"
+    #   send UtteranceBotAction("Hello world").Start()
 
     config = {
         "main": FlowConfig(
@@ -55,19 +55,20 @@ def test_start_main_flow():
             "parent_flow_uid": state.main_flow_state.uid,
         },
     )
-    assert state.next_step == {
-        "_type": "run_action",
-        "type": "StartUtteranceBotAction",
-        "text": "Hello world",
-    }
+    assert state.next_steps == [
+        {
+            "_type": "run_action",
+            "type": "StartUtteranceBotAction",
+            "text": "Hello world",
+        }
+    ]
 
 
 def test_start_a_flow():
     """Test the start of a child flow"""
 
-    # TODO: Replace bot say by UMIM action events
     # flow a
-    #   await bot say "Hello world"
+    #   send UtteranceBotAction("Hello world").Start()
     #
     # flow main
     #   start a
@@ -122,11 +123,87 @@ def test_start_a_flow():
             "parent_flow_uid": state.main_flow_state.uid,
         },
     )
-    assert state.next_step == {
-        "_type": "run_action",
-        "type": "StartUtteranceBotAction",
-        "text": "Hello world",
+    assert state.next_steps == [
+        {
+            "_type": "run_action",
+            "type": "StartUtteranceBotAction",
+            "text": "Hello world",
+        }
+    ]
+
+
+def test_await_a_flow():
+    """Test await a child flow"""
+
+    # flow a
+    #   send UtteranceBotAction("Flow a started").Start()
+    #
+    # flow main
+    #   await a
+    #   send UtteranceBotAction("Flow a finished").Start()
+
+    config = {
+        "a": FlowConfig(
+            id="a",
+            elements=[
+                {
+                    "_type": "match_event",
+                    "type": "StartFlow",
+                    "flow_name": "a",
+                },
+                {
+                    "_type": "run_action",
+                    "type": "StartUtteranceBotAction",
+                    "text": "Flow a started",
+                },
+            ],
+        ),
+        "main": FlowConfig(
+            id="main",
+            loop_id="main",
+            elements=[
+                {
+                    "_type": "match_event",
+                    "type": "StartFlow",
+                    "flow_name": "main",
+                },
+                {
+                    "_type": "send_internal_event",
+                    "type": "StartFlow",
+                    "flow_name": "a",
+                },
+                {
+                    "_type": "match_event",
+                    "type": "FlowStarted",
+                    "flow_name": "a",
+                },
+                {
+                    "_type": "match_event",
+                    "type": "FlowFinished",
+                    "flow_name": "a",
+                },
+            ],
+        ),
     }
+
+    state = State(context={}, flow_states=[], flow_configs=config)
+    state.initialize()
+
+    state = compute_next_state(
+        state,
+        {
+            "type": "StartFlow",
+            "flow_name": "main",
+            "parent_flow_uid": state.main_flow_state.uid,
+        },
+    )
+    assert state.next_steps == [
+        {
+            "_type": "run_action",
+            "type": "StartUtteranceBotAction",
+            "text": "Flow a started",
+        }
+    ]
 
 
 def test_conflicting_actions():
@@ -218,7 +295,7 @@ def test_conflicting_actions():
             "parent_flow_uid": state.main_flow_state.uid,
         },
     )
-    assert state.next_step is None
+    assert state.next_steps == []
     state = compute_next_state(
         state,
         {
@@ -226,12 +303,19 @@ def test_conflicting_actions():
             "final_transcript": "Hi",
         },
     )
-    assert state.next_step == {
-        "_type": "run_action",
-        "type": "StartUtteranceBotAction",
-        "text": "Hello",
-    }
+    assert state.next_steps == [
+        {
+            "_type": "run_action",
+            "type": "StartUtteranceBotAction",
+            "text": "Hello",
+        },
+        {
+            "_type": "run_action",
+            "type": "StartUtteranceBotAction",
+            "text": "How are you",
+        },
+    ]
 
 
 if __name__ == "__main__":
-    test_start_a_flow()
+    test_start_main_flow()

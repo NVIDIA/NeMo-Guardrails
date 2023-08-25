@@ -190,12 +190,10 @@ class State:
     main_flow_state: FlowState = None
 
     # The next step of the flow-driven system
-    next_step: Optional[dict] = None
-    next_step_by_flow_uid: Optional[str] = None
-    next_step_priority: float = 0.0
+    next_steps: List[dict] = field(default_factory=list)
 
     # The comment is extract from the source code
-    next_step_comment: Optional[str] = None
+    next_steps_comment: List[str] = field(default_factory=list)
 
     # The updates to the context that should be applied before the next step
     context_updates: dict = field(default_factory=dict)
@@ -329,46 +327,47 @@ def compute_next_state(state: State, external_event: dict) -> State:
 
             # If we have no or only one actionable head there are no conflicts
             heads_advancing = []
-            if len(heads_actionable) <= 1:
+            if len(heads_actionable) == 1:
                 heads_advancing = heads_actionable
-                continue
+                _record_next_step(new_state, heads_actionable[0])
+            else:
+                # Group all actionable heads by their flows interaction loop
+                head_groups: Dict[str, List[FlowHead]] = {}
+                for head in heads_actionable:
+                    flow_state = _get_flow_state_from_head(new_state, head)
+                    if flow_state.loop_id in head_groups:
+                        head_groups[flow_state.loop_id].append(head)
+                    else:
+                        head_groups.update({flow_state.loop_id: [head]})
 
-            # Group all actionable heads by their flows interaction loop
-            head_groups: Dict[str, List[FlowHead]] = {}
-            for head in heads_actionable:
-                flow_state = _get_flow_state_from_head(new_state, head)
-                if flow_state.loop_id in head_groups:
-                    head_groups[flow_state.loop_id].append(head)
-                else:
-                    head_groups.update({flow_state.loop_id: [head]})
+                # Find winning heads for each group
+                for group in head_groups.values():
+                    ordered_heads = _sort_heads_from_matching_scores(group)
+                    winning_action = _get_flow_config_from_head(
+                        new_state, ordered_heads[0]
+                    ).elements[ordered_heads[0].position]
 
-            # Find winning heads for each group
-            for group in head_groups.values():
-                ordered_heads = _sort_heads_from_matching_scores(group)
-                winning_action = _get_flow_config_from_head(
-                    new_state, ordered_heads[0]
-                ).elements[ordered_heads[0].position]
-
-                heads_advancing.append(ordered_heads[0])
-                for head in ordered_heads[1:]:
-                    if (
-                        winning_action
-                        == _get_flow_config_from_head(new_state, head).elements[
-                            head.position
-                        ]
-                    ):
-                        heads_advancing.append(head)
+                    heads_advancing.append(ordered_heads[0])
+                    _record_next_step(new_state, ordered_heads[0])
+                    for head in ordered_heads[1:]:
+                        if (
+                            winning_action
+                            == _get_flow_config_from_head(new_state, head).elements[
+                                head.position
+                            ]
+                        ):
+                            heads_advancing.append(head)
 
         # Now, all heads are on a match-statement, so let's process the next internal event
 
     return new_state
 
 
-def _advance_head_front(new_state: State, heads: List[FlowHead]) -> List[FlowHead]:
+def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
     heads_actionable: List[FlowHead] = []
     for head in heads:
-        flow_state = _get_flow_state_from_head(new_state, head)
-        flow_config = _get_flow_config_from_head(new_state, head)
+        flow_state = _get_flow_state_from_head(state, head)
+        flow_config = _get_flow_config_from_head(state, head)
 
         if flow_state.status == FlowStatus.INACTIVE:
             flow_state.status = FlowStatus.STARTING
@@ -376,21 +375,7 @@ def _advance_head_front(new_state: State, heads: List[FlowHead]) -> List[FlowHea
 
         head.position += 1
 
-        flow_state.head.position = slide(new_state, flow_config, flow_state.head)
-
-        # Check if flow has finished
-        if flow_state.head.position < 0:
-            flow_state.status = FlowStatus.INACTIVE
-            flow_state.head.status = FlowHeadStatus.FINISHED
-            flow_state.head.position = 0
-            event = {
-                "type": "FlowFinished",
-                "matching_scores": head.matching_scores,
-                "flow_name": flow_state.flow_id,
-            }
-            new_state.internal_events.append(event)
-        # TODO: Check if this can be replaced
-        _record_next_step(new_state, flow_state, flow_config)
+        flow_state.head.position = slide(state, flow_config, flow_state.head)
 
         logging.info(
             f"Head in flow {head.flow_state_uid} advanced to element: {flow_config.elements[head.position]}"
@@ -398,18 +383,21 @@ def _advance_head_front(new_state: State, heads: List[FlowHead]) -> List[FlowHea
 
         if (
             _is_match_element(flow_config.elements[head.position])
-            and flow_state.status == FlowStatus.STARTING
+            or flow_state.head.position < 0
         ):
-            flow_state.status = FlowStatus.STARTED
-            event = {
-                "type": "FlowStarted",
-                "matching_scores": head.matching_scores,
-                "flow_name": flow_state.flow_id,
-            }
-            new_state.internal_events.append(event)
+            if flow_state.status == FlowStatus.STARTING:
+                flow_state.status = FlowStatus.STARTED
+                _create_flow_started_internal_event(state, head)
 
         if _is_actionable(flow_config.elements[head.position]):
             heads_actionable.append(head)
+
+        # Check if flow has finished
+        if flow_state.head.position < 0:
+            flow_state.status = FlowStatus.INACTIVE
+            flow_state.head.status = FlowHeadStatus.FINISHED
+            flow_state.head.position = 0
+            _create_flow_finished_internal_event(state, head)
 
         if flow_state.head.status == FlowHeadStatus.FINISHED:
             # If a flow finished, we reset it and create a flow finished event
@@ -545,26 +533,35 @@ def _get_flow_state_from_head(state: State, head: FlowHead) -> FlowState:
 
 
 def _record_next_step(
-    new_state: State,
-    flow_state: FlowState,
-    flow_config: FlowConfig,
-    priority_modifier: float = 1.0,
-):
+    state: State,
+    head: FlowHead,
+) -> None:
     """Helper to record the next step."""
-    if (
-        new_state.next_step is None
-        or new_state.next_step_priority < flow_config.priority
-    ) and _is_actionable(flow_config.elements[flow_state.head.position]):
-        new_state.next_step = flow_config.elements[flow_state.head.position]
-        new_state.next_step_by_flow_uid = flow_state.uid
-        new_state.next_step_priority = flow_config.priority * priority_modifier
+    element = _get_head_element_from_head(state, head)
+    if _is_actionable(element):
+        state.next_steps.append(element)
+        # Extract the comment, if any
+        state.next_steps_comment = element.get("_source_mapping", {}).get("comment")
 
-        # Extract the comment, if any.
-        new_state.next_step_comment = (
-            flow_config.elements[flow_state.head.position]
-            .get("_source_mapping", {})
-            .get("comment")
-        )
+
+def _create_flow_started_internal_event(state: State, head: FlowHead) -> None:
+    flow_state = _get_flow_state_from_head(state, head)
+    event = {
+        "type": "FlowStarted",
+        "matching_scores": head.matching_scores,
+        "flow_name": flow_state.flow_id,
+    }
+    state.internal_events.append(event)
+
+
+def _create_flow_finished_internal_event(state: State, head: FlowHead) -> None:
+    flow_state = _get_flow_state_from_head(state, head)
+    event = {
+        "type": "FlowFinished",
+        "matching_scores": head.matching_scores,
+        "flow_name": flow_state.flow_id,
+    }
+    state.internal_events.append(event)
 
 
 def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState]:
@@ -671,12 +668,8 @@ def compute_next_steps(
         next_steps.append(new_event_dict("ContextUpdate", data=state.context_updates))
 
     # If we have a next step, we make sure to convert it to proper event structure.
-    # NOTE (schuellc): What's the difference between a step and a event?
-    if state.next_step:
-        next_step_event = _step_to_event(state.next_step)
-        if next_step_event["type"] == "bot_intent" and state.next_step_comment:
-            # For bot intents, we use the comment as instructions
-            next_step_event["instructions"] = state.next_step_comment
+    for step in state.next_steps:
+        next_step_event = _step_to_event(step)
 
         next_steps.append(next_step_event)
 
