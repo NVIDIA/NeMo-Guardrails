@@ -18,8 +18,6 @@ from typing import Optional
 
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 
-log = logging.getLogger(__name__)
-
 
 def slide(state: "State", flow_config: "FlowConfig", head: "FlowHead") -> Optional[int]:
     """Tries to slide a flow with the provided head.
@@ -69,6 +67,7 @@ def slide(state: "State", flow_config: "FlowConfig", head: "FlowHead") -> Option
             pattern_item["_active_label_data"] = active_label_data
 
         p_type = pattern_item["_type"]
+        logging.info(f"Sliding step: '{p_type}'")
 
         # CHECK, IF, JUMP
         if p_type in ["check", "if", "jump"]:
@@ -135,14 +134,16 @@ def slide(state: "State", flow_config: "FlowConfig", head: "FlowHead") -> Option
         # TODO: Figure out how we can check if it is an internal event or an UMIM Action event from parsing
         elif p_type == "send_internal_event":
             # Push internal event
-            state.internal_events.append(
-                {
-                    "type": "InternalEvent",
-                    "event_time_uid": head.event_time_uid,
-                    "event_name": pattern_item["event_name"],
-                    "event_params": pattern_item["event_params"],
-                }
-            )
+            # TODO: Create helper function to create internal events
+            event = {
+                "type": "StartFlow",
+                "flow_name": pattern_item["flow_name"],
+                "parent_flow_uid": state.flow_states[head.flow_state_uid].uid,
+                "matching_scores": head.matching_scores,
+                "event_time_uid": head.event_time_uid,
+            }
+            state.internal_events.append(event)
+            logging.info(f"Create internal event: {event}")
             head_position += int(pattern_item.get("_next", 1))
         else:
             break

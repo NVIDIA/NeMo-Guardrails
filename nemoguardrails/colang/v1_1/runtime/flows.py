@@ -14,17 +14,30 @@
 # limitations under the License.
 
 """A simplified modeling of the CoFlows engine."""
+import copy
+import logging
 import uuid
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import cmp_to_key
 from typing import Deque, Dict, List, Optional
 
 from nemoguardrails.colang.v1_1.runtime.sliding import slide
+from nemoguardrails.colang.v1_1.runtime.utils import create_readable_uuid
 from nemoguardrails.utils import new_event_dict
 
+# from rich.logging import RichHandler  # isort:skip
 
-@dataclass
+# FORMAT = "%(message)s"
+# logging.basicConfig(
+#     level=logging.DEBUG,
+#     format=FORMAT,
+#     datefmt="[%X,%f]",
+#     handlers=[RichHandler(markup=True)],
+# )
+
+
 class InteractionLoopType(Enum):
     """The type of the interaction loop."""
 
@@ -90,13 +103,20 @@ class FlowHeadStatus(Enum):
 class FlowHead:
     """The flow head that points to a certain element in the flow"""
 
+    # The unique id of a flow head
+    uid: str
+
     # The position of the flow element the head is pointing to
     position: int
 
     # The flow of the head
     flow_state_uid: str
 
+    # Matching score history of previous matches that resulted in this head to be advanced
+    matching_scores: List[float]
+
     # A unique time id of the most recent event that had an effect on this head
+    # TODO: Let's double check if we really need this
     event_time_uid: str = ""
 
     # The current state of the flow head
@@ -107,6 +127,8 @@ class FlowStatus(Enum):
     """The status of a flow."""
 
     INACTIVE = "inactive"
+    STARTING = "starting"
+    STARTED = "started"
     ACTIVE = "active"
     INTERRUPTED = "interrupted"
     ABORTED = "aborted"
@@ -120,7 +142,7 @@ class FlowState:
     # The unique id of an instance of a flow.
     uid: str
 
-    # The id of the flow.
+    # The name id of the flow.
     flow_id: str
 
     # Interaction loop id
@@ -138,7 +160,7 @@ class FlowState:
     child_uids: List[str] = field(default_factory=list)
 
     # The current state of the flow
-    status: FlowStatus = FlowStatus.ACTIVE
+    status: FlowStatus = FlowStatus.INACTIVE
 
     # The UID of the flows that interrupted this one
     interrupted_by = None
@@ -160,6 +182,9 @@ class State:
     # Queue of internal events
     internal_events: Deque[dict] = deque()
 
+    # The main flow state
+    main_flow_state: FlowState = None
+
     # The next step of the flow-driven system
     next_step: Optional[dict] = None
     next_step_by_flow_uid: Optional[str] = None
@@ -178,66 +203,99 @@ class State:
 
         self.internal_events = deque()
 
+        assert "main" in self.flow_configs, "No main flow found!"
+
         # Create flow states from flow config and start with head at position 0.
         self.flow_states = dict()
         for flow_config in self.flow_configs.values():
-            loop_id: Optional[str] = None
+            loop_uid: Optional[str] = None
             if flow_config.loop_type == InteractionLoopType.NEW:
-                loop_id = str(uuid.uuid4())
+                loop_uid = str(uuid.uuid4())
             elif flow_config.loop_type == InteractionLoopType.NAMED:
-                loop_id = flow_config.loop_id
+                loop_uid = flow_config.loop_id
             # For type InteractionLoopType.PARENT we keep it None to infer loop_id at run_time from parent
 
-            flow_id = str(uuid.uuid4())
+            flow_uid = create_readable_uuid(flow_config.id)
             flow_state = FlowState(
-                uid=flow_id,
+                uid=flow_uid,
                 flow_id=flow_config.id,
-                loop_id=loop_id,
-                head=FlowHead(0, flow_id),
-                status=FlowStatus(FlowStatus.INACTIVE),
+                loop_id=loop_uid,
+                head=FlowHead(
+                    uid=str(uuid.uuid4()),
+                    position=0,
+                    flow_state_uid=flow_uid,
+                    matching_scores=[],
+                ),
             )
-            self.flow_states.update({flow_id: flow_state})
+            self.flow_states.update({flow_uid: flow_state})
+
+            if flow_config.id == "main":
+                if flow_config.loop_id is None:
+                    flow_state.loop_id = create_readable_uuid("main")
+                else:
+                    flow_state.loop_id = flow_config.loop_id
+                self.main_flow_state = flow_state
 
 
 def compute_next_state(state: State, external_event: dict) -> State:
     """
     Computes the next state of the flow-driven system.
     """
+    logging.info(f"Process event: {external_event}")
 
     # Create a unique event time id to identify and track the resulting steps from the current event,
     # potentially leading to conflicts between actions
     external_event["event_time_uid"] = str(uuid.uuid4())
+    external_event["matching_scores"] = []
 
     # Initialize the new state
-    new_state = State(
-        context=state.context,
-        flow_states={},
-        internal_events=deque([external_event]),
-        flow_configs=state.flow_configs,
-    )
+    new_state = copy.copy(state)
+    new_state.internal_events = deque([external_event])
+
+    # Clear all matching scores
+    for flow_state in state.flow_states.values():
+        head = flow_state.head
+        head.matching_scores.clear()
 
     heads_actionable: List[FlowHead] = []
 
     while new_state.internal_events:
         event = new_state.internal_events.popleft()
+        logging.info(f"Process internal event: {event}")
 
         # Find all heads of flows where event is relevant
         # TODO: Create a set to speed this up with all flow head related events
         heads_matching: List[FlowHead] = []
         heads_not_matching: List[FlowHead] = []
+        match_order_score = 1.0
 
         for flow_state in state.flow_states.values():
             flow_config = state.flow_configs[flow_state.flow_id]
             # TODO: Generalize to multiple heads in flow
             head = flow_state.head
             head.event_time_uid = event["event_time_uid"]
-            element = flow_config.elements[head.position]
 
+            element = flow_config.elements[head.position]
             if _is_match_element(element):
                 # TODO: Assign matching score
-                if _is_matching(element, event):
+                matching_score = _is_matching(element, event)
+                if matching_score > 0.0:
                     head.status = FlowHeadStatus.MATCHED
+
+                    # Make sure that we can always resolve conflicts, using the matching score
+                    head.matching_scores = event["matching_scores"].copy()
+                    matching_score *= match_order_score
+                    match_order_score *= 0.99
+                    head.matching_scores.append(matching_score)
+
+                    # Initialize a new flow if flow was started
+                    if event["type"] == "StartFlow":
+                        flow_state.loop_id = state.flow_states[
+                            event["parent_flow_uid"]
+                        ].loop_id
+
                     heads_matching.append(head)
+                    logging.info(f"Matching head (score: {matching_score}): {head}")
                 else:
                     head.status = FlowHeadStatus.PAUSED
                     heads_not_matching.append(head)
@@ -248,44 +306,145 @@ def compute_next_state(state: State, external_event: dict) -> State:
                 head.status = FlowHeadStatus.ABORTED
             # return new_state
 
-        # Advance all matching heads ...
-        for head in heads_matching:
-            head.position += 1
-            _slide(new_state, state.flow_states[head.flow_state_uid])
+        heads_advancing = heads_matching
+        while heads_advancing:
+            # Advance front of all advancing heads ...
+            heads_actionable = _advance_head_front(new_state, heads_advancing)
+            # Now, all heads are either on a matching or an action (start action, send event) statement
 
-            flow_config = state.flow_configs[
-                state.flow_states[head.flow_state_uid].flow_id
-            ]
-            if _is_actionable(flow_config.elements[head.position]):
-                heads_actionable.append(head)
+            # Check for potential conflicts between actionable heads
 
-            if flow_state.head.status == FlowHeadStatus.FINISHED:
-                # If a flow finished, we mark it as completed
-                flow_state.status = FlowStatus.COMPLETED
+            # If we have no or only one actionable head there are no conflicts
+            heads_advancing = []
+            if len(heads_actionable) <= 1:
+                heads_advancing = heads_actionable
+                continue
 
-    # Now, all heads are either on a matching or send_event (start action) statement
+            # Group all actionable heads by their flows interaction loop
+            head_groups: Dict[str, List[FlowHead]] = {}
+            for head in heads_actionable:
+                flow_state = _get_flow_state_from_head(new_state, head)
+                if flow_state.loop_id in head_groups:
+                    head_groups[flow_state.loop_id].append(head)
+                else:
+                    head_groups.update({flow_state.loop_id: [head]})
 
-    # Check for potential conflicts between actionable statements
-    if len(heads_actionable) > 1:
-        for head in heads_actionable:
-            print(head.event_time_uid)
-            pass
+            # Find winning heads for each group
+            for group in head_groups.values():
+                ordered_heads = _sort_heads_from_matching_scores(group)
+                winning_action = _get_flow_config_from_head(
+                    new_state, ordered_heads[0]
+                ).elements[ordered_heads[0].position]
+
+                heads_advancing.append(ordered_heads[0])
+                for head in ordered_heads[1:]:
+                    if (
+                        winning_action
+                        == _get_flow_config_from_head(new_state, head).elements[
+                            head.position
+                        ]
+                    ):
+                        heads_advancing.append(head)
+
+            continue
+
+            action_conflict = False
+            winner_head = None
+            if len(heads_actionable) > 1:
+                # Find winner of all heads based on matching scores
+
+                reference_head = heads_actionable[0]
+                reference_action = _get_flow_config_from_head(
+                    state, reference_head
+                ).elements[reference_head.position]
+                for head in heads_actionable[1:]:
+                    action = _get_flow_config_from_head(state, head).elements[
+                        head.position
+                    ]
+                    if action != reference_action:
+                        action_conflict = True
+                        break
+
+            if action_conflict:
+                heads_advancing = []
+                # Find action branch with highest matching score
+                # Mark corresponding action as winner
+                # Check if any other action is the same and include it in the advancing heads
+                # - Merge matching scores by taking the better one
+                # Abort all other heads/flows
+                pass
+            else:
+                heads_advancing = heads_actionable
+
+        # Now, all heads are on a match-statement
 
     return new_state
 
 
+def _advance_head_front(new_state: State, heads: List[FlowHead]) -> List[FlowHead]:
+    heads_actionable: List[FlowHead] = []
+    for head in heads:
+        flow_state = _get_flow_state_from_head(new_state, head)
+        flow_config = _get_flow_config_from_head(new_state, head)
+
+        if flow_state.status == FlowStatus.INACTIVE:
+            flow_state.status = FlowStatus.STARTING
+            # TODO: Create an new instance of the flow that can be started
+
+        head.position += 1
+        _slide(new_state, flow_state)
+
+        logging.info(
+            f"Head in flow {head.flow_state_uid} advanced to element: {flow_config.elements[head.position]}"
+        )
+
+        if (
+            _is_match_element(flow_config.elements[head.position])
+            and flow_state.status == FlowStatus.STARTING
+        ):
+            flow_state.status = FlowStatus.STARTED
+            event = {
+                "type": "FlowStarted",
+                "event_time_uid": head.event_time_uid,
+                "matching_scores": head.matching_scores,
+                "flow_name": flow_state.flow_id,
+            }
+            new_state.internal_events.append(event)
+
+        if _is_actionable(flow_config.elements[head.position]):
+            heads_actionable.append(head)
+
+        if flow_state.head.status == FlowHeadStatus.FINISHED:
+            # If a flow finished, we reset it and create a flow finished event
+            # flow_state.status = FlowStatus.COMPLETED
+            pass
+
+    return heads_actionable
+
+
+def _sort_heads_from_matching_scores(heads: List[FlowHead]) -> List[FlowHead]:
+    score_lists = [(head.matching_scores, head) for head in heads]
+    sorted_lists = sorted(score_lists, key=custom_sort_key, reverse=True)
+    return [e[1] for e in sorted_lists]
+
+
+# def _compare_machting_scores(list1: List[float], list2: List[float]) -> int:
+#     for elem1, elem2 in zip(list1, list2):
+#         if elem1 < elem2:
+#             return -1
+#         elif elem1 > elem2:
+#             return 1
+#     return 0  # Lists are equal up to this point
+
+
+# Define a custom sorting key function for pairwise comparisons
+def custom_sort_key(input_list):
+    return tuple(input_list)
+
+
 def _is_actionable(element: dict) -> bool:
     """Checks if the given element is actionable."""
-    if element["_type"] == "run_action":
-        if (
-            element["action_name"] == "utter"
-            and element["action_params"]["value"] == "..."
-        ):
-            return False
-
-        return True
-
-    return False
+    return element["_type"] == "run_action"
 
 
 def _is_match_element(element: dict) -> bool:
@@ -293,29 +452,41 @@ def _is_match_element(element: dict) -> bool:
 
 
 # TODO: Refactor this
-def _is_matching(element: dict, event: dict) -> bool:
+def _is_matching(element: dict, event: dict) -> float:
     """Checks if the given element matches the given event."""
+
+    FUZZY_MATCH_FACTOR = 0.5
 
     # The element type is the first key in the element dictionary
     element_type = element["_type"]
 
-    if event["type"] == "InternalEvent":
-        return (
+    if event["type"] == "StartFlow":
+        return float(
             element_type == "match_event"
-            and element["event_name"] == "StartFlow"
-            and element["event_params"] == event["event_params"]
+            and element["type"] == "StartFlow"
+            and element["flow_name"] == event["flow_name"]
         )
-    elif event["type"] == "UserIntent":
-        return element_type == "UserIntent" and (
-            element["intent_name"] == "..." or element["intent_name"] == event["intent"]
+    if event["type"] == "FlowStarted":
+        return float(
+            element_type == "match_event"
+            and element["type"] == "FlowStarted"
+            and element["flow_name"] == event["flow_name"]
+        )
+    elif element["_type"] == "UserIntent":
+        return float(
+            element_type == "UserIntent"
+            and (
+                element["intent_name"] == "..." * FUZZY_MATCH_FACTOR
+                or element["intent_name"] == event["intent"]
+            )
         )
 
     elif event["type"] == "BotIntent":
-        return (
+        return float(
             element_type == "start_action"
             and element["action_name"] == "utter"
             and (
-                element["action_params"]["value"] == "..."
+                element["action_params"]["value"] == "..." * FUZZY_MATCH_FACTOR
                 or element["action_params"]["value"] == event["intent"]
             )
         )
@@ -330,34 +501,50 @@ def _is_matching(element: dict, event: dict) -> bool:
             and element["action_name"] == event["action_name"]
         )
 
-    elif event["type"] == "UtteranceUserActionFinished":
-        return element_type == "UtteranceUserActionFinished" and (
-            element["final_transcript"] == "..."
-            or element["final_transcript"] == event["final_transcript"]
-        )
-
     elif event["type"] == "StartUtteranceBotAction":
-        return element_type == "StartUtteranceBotAction" and (
-            element["script"] == "..." or element["script"] == event["script"]
+        return float(
+            element_type == "StartUtteranceBotAction"
+            and (
+                element["script"] == "..." * FUZZY_MATCH_FACTOR
+                or element["script"] == event["script"]
+            )
         )
 
     else:
-        # In this case, we try to match the event by type explicitly, and all the properties.
-        if event["type"] != element_type:
-            return False
+        # Its an UMIM event
+        if element_type != "match_event":
+            return float(False)
+
+        # Match the event by type explicitly, and all the properties.
+        if event["type"] != element["type"]:
+            return float(False)
 
         # We need to match all properties used in the element. We also use the "..." wildcard
         # to mach anything.
+
+        score = 1.0
         for key, value in element.items():
             # Skip potentially private keys.
             if key.startswith("_"):
                 continue
             if value == "...":
-                continue
+                score *= FUZZY_MATCH_FACTOR
             if event.get(key) != value:
-                return False
+                return float(False)
 
-        return True
+        return score
+
+
+def _get_head_element_from_head(state: State, head: FlowHead) -> dict:
+    return _get_flow_config_from_head(state, head).elements[head.position]
+
+
+def _get_flow_config_from_head(state: State, head: FlowHead) -> FlowConfig:
+    return state.flow_configs[_get_flow_state_from_head(state, head).flow_id]
+
+
+def _get_flow_state_from_head(state: State, head: FlowHead) -> FlowState:
+    return state.flow_states[head.flow_state_uid]
 
 
 def _record_next_step(

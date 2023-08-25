@@ -51,9 +51,8 @@ def test_start_main_flow():
     state = compute_next_state(
         state,
         {
-            "type": "InternalEvent",
-            "event_name": "StartFlow",
-            "event_params": {"flow_name": "main"},
+            "type": "StartFlow",
+            "flow_name": "main",
         },
     )
     assert state.next_step == {
@@ -118,9 +117,8 @@ def test_start_a_flow():
     state = compute_next_state(
         state,
         {
-            "type": "InternalEvent",
-            "event_name": "StartFlow",
-            "event_params": {"flow_name": "main"},
+            "type": "StartFlow",
+            "flow_name": "main",
         },
     )
     assert state.next_step == {
@@ -150,8 +148,8 @@ def test_conflicting_actions():
             elements=[
                 {
                     "_type": "match_event",
-                    "event_name": "StartFlow",
-                    "event_params": {"flow_name": "a"},
+                    "type": "StartFlow",
+                    "flow_name": "a",
                 },
                 {
                     "_type": "match_event",
@@ -176,18 +174,18 @@ def test_conflicting_actions():
             elements=[
                 {
                     "_type": "match_event",
-                    "event_name": "StartFlow",
-                    "event_params": {"flow_name": "main"},
+                    "type": "StartFlow",
+                    "flow_name": "main",
                 },
                 {
                     "_type": "send_internal_event",
-                    "event_name": "StartFlow",
-                    "event_params": {"flow_name": "a"},
+                    "type": "StartFlow",
+                    "flow_name": "a",
                 },
                 {
                     "_type": "match_event",
-                    "event_name": "FlowStarted",
-                    "event_params": {"flow_name": "a"},
+                    "type": "FlowStarted",
+                    "flow_name": "a",
                 },
                 {
                     "_type": "match_event",
@@ -214,9 +212,9 @@ def test_conflicting_actions():
     state = compute_next_state(
         state,
         {
-            "type": "InternalEvent",
-            "event_name": "StartFlow",
-            "event_params": {"flow_name": "main"},
+            "type": "StartFlow",
+            "flow_name": "main",
+            "parent_flow_uid": state.main_flow_state.uid,
         },
     )
     assert state.next_step is None

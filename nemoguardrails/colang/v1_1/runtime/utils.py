@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import uuid
+
 
 class AttributeDict(dict):
     """Simple utility to allow accessing dict members as attributes."""
@@ -28,3 +30,8 @@ class AttributeDict(dict):
 
     def __setattr__(self, attr, value):
         self[attr] = value
+
+
+def create_readable_uuid(name: str) -> str:
+    """Creates a new uuid with a human readable prefix."""
+    return f"'{name}'_{str(uuid.uuid4())}"
