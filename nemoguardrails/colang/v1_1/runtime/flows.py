@@ -37,6 +37,14 @@ from nemoguardrails.utils import new_event_dict
 #     handlers=[RichHandler(markup=True)],
 # )
 
+"""
+Questions:
+* What's the plan with the state
+  - Creating a new state for each new external event?
+  - Location of internal events
+  - What about helper dictionaries to map from flow_id to all available flow_states
+"""
+
 
 class InteractionLoopType(Enum):
     """The type of the interaction loop."""
@@ -115,10 +123,6 @@ class FlowHead:
     # Matching score history of previous matches that resulted in this head to be advanced
     matching_scores: List[float]
 
-    # A unique time id of the most recent event that had an effect on this head
-    # TODO: Let's double check if we really need this
-    event_time_uid: str = ""
-
     # The current state of the flow head
     status: FlowHeadStatus = FlowHeadStatus.ACTIVE
 
@@ -173,7 +177,7 @@ class State:
     # The current set of variables in the state.
     context: dict
 
-    # The current set of flows in the state.
+    # The current set of flows in the state with their uid as key.
     flow_states: Dict[str, FlowState]
 
     # The configuration of all the flows that are available.
@@ -195,6 +199,13 @@ class State:
 
     # The updates to the context that should be applied before the next step
     context_updates: dict = field(default_factory=dict)
+
+    ########################
+    # Helper data structures
+    ########################
+
+    # dictionary that maps from flow_id (name) to all available flow states
+    flow_id_states: Dict[str, List[FlowState]] = field(default_factory=dict)
 
     def initialize(self) -> None:
         """
@@ -228,6 +239,10 @@ class State:
                 ),
             )
             self.flow_states.update({flow_uid: flow_state})
+            if flow_config.id in self.flow_id_states:
+                self.flow_id_states[flow_config.id].append(flow_state)
+            else:
+                self.flow_id_states.update({flow_config.id: [flow_state]})
 
             if flow_config.id == "main":
                 if flow_config.loop_id is None:
@@ -245,7 +260,6 @@ def compute_next_state(state: State, external_event: dict) -> State:
 
     # Create a unique event time id to identify and track the resulting steps from the current event,
     # potentially leading to conflicts between actions
-    external_event["event_time_uid"] = str(uuid.uuid4())
     external_event["matching_scores"] = []
 
     # Initialize the new state
@@ -273,7 +287,6 @@ def compute_next_state(state: State, external_event: dict) -> State:
             flow_config = state.flow_configs[flow_state.flow_id]
             # TODO: Generalize to multiple heads in flow
             head = flow_state.head
-            head.event_time_uid = event["event_time_uid"]
 
             element = flow_config.elements[head.position]
             if _is_match_element(element):
@@ -288,7 +301,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
                     match_order_score *= 0.99
                     head.matching_scores.append(matching_score)
 
-                    # Initialize a new flow if flow was started
+                    # Start and initialize flow
                     if event["type"] == "StartFlow":
                         flow_state.loop_id = state.flow_states[
                             event["parent_flow_uid"]
@@ -346,37 +359,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
                     ):
                         heads_advancing.append(head)
 
-            continue
-
-            action_conflict = False
-            winner_head = None
-            if len(heads_actionable) > 1:
-                # Find winner of all heads based on matching scores
-
-                reference_head = heads_actionable[0]
-                reference_action = _get_flow_config_from_head(
-                    state, reference_head
-                ).elements[reference_head.position]
-                for head in heads_actionable[1:]:
-                    action = _get_flow_config_from_head(state, head).elements[
-                        head.position
-                    ]
-                    if action != reference_action:
-                        action_conflict = True
-                        break
-
-            if action_conflict:
-                heads_advancing = []
-                # Find action branch with highest matching score
-                # Mark corresponding action as winner
-                # Check if any other action is the same and include it in the advancing heads
-                # - Merge matching scores by taking the better one
-                # Abort all other heads/flows
-                pass
-            else:
-                heads_advancing = heads_actionable
-
-        # Now, all heads are on a match-statement
+        # Now, all heads are on a match-statement, so let's process the next internal event
 
     return new_state
 
@@ -389,10 +372,25 @@ def _advance_head_front(new_state: State, heads: List[FlowHead]) -> List[FlowHea
 
         if flow_state.status == FlowStatus.INACTIVE:
             flow_state.status = FlowStatus.STARTING
-            # TODO: Create an new instance of the flow that can be started
+            # TODO: Create an new instance of the flow that can be started again
 
         head.position += 1
-        _slide(new_state, flow_state)
+
+        flow_state.head.position = slide(new_state, flow_config, flow_state.head)
+
+        # Check if flow has finished
+        if flow_state.head.position < 0:
+            flow_state.status = FlowStatus.INACTIVE
+            flow_state.head.status = FlowHeadStatus.FINISHED
+            flow_state.head.position = 0
+            event = {
+                "type": "FlowFinished",
+                "matching_scores": head.matching_scores,
+                "flow_name": flow_state.flow_id,
+            }
+            new_state.internal_events.append(event)
+        # TODO: Check if this can be replaced
+        _record_next_step(new_state, flow_state, flow_config)
 
         logging.info(
             f"Head in flow {head.flow_state_uid} advanced to element: {flow_config.elements[head.position]}"
@@ -405,7 +403,6 @@ def _advance_head_front(new_state: State, heads: List[FlowHead]) -> List[FlowHea
             flow_state.status = FlowStatus.STARTED
             event = {
                 "type": "FlowStarted",
-                "event_time_uid": head.event_time_uid,
                 "matching_scores": head.matching_scores,
                 "flow_name": flow_state.flow_id,
             }
@@ -607,17 +604,6 @@ def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState
     _record_next_step(new_state, subflow_state, subflow_config)
 
     return subflow_state
-
-
-def _slide(state: State, flow_state: FlowState) -> Optional[int]:
-    """Slides the provided flow, if applicable."""
-    flow_config = state.flow_configs[flow_state.flow_id]
-    # TODO: Fix negative flow head positions for 'Finished' flows
-    flow_state.head.position = slide(state, flow_config, flow_state.head)
-    if flow_state.head.position < 0:
-        flow_state.head.status = FlowHeadStatus.FINISHED
-        flow_state.head.position = 0
-    _record_next_step(state, flow_state, flow_config)
 
 
 def _step_to_event(step: dict) -> dict:

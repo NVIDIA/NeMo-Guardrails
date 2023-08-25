@@ -22,7 +22,6 @@ logging.basicConfig(
 def test_start_main_flow():
     """Test the start of the main flow"""
 
-    # TODO: Replace bot say by UMIM action events
     # flow main
     #   await bot say "Hello world"
 
@@ -33,13 +32,13 @@ def test_start_main_flow():
             elements=[
                 {
                     "_type": "match_event",
-                    "event_name": "StartFlow",
-                    "event_params": {"flow_name": "main"},
+                    "type": "StartFlow",
+                    "flow_name": "main",
                 },
                 {
-                    "_type": "start_action",
-                    "action_name": "utter",
-                    "action_params": {"value": "'Hello world'"},
+                    "_type": "run_action",
+                    "type": "StartUtteranceBotAction",
+                    "text": "Hello world",
                 },
             ],
         ),
@@ -53,17 +52,18 @@ def test_start_main_flow():
         {
             "type": "StartFlow",
             "flow_name": "main",
+            "parent_flow_uid": state.main_flow_state.uid,
         },
     )
     assert state.next_step == {
-        "_type": "start_action",
-        "action_name": "utter",
-        "action_params": {"value": "'Hello world'"},
+        "_type": "run_action",
+        "type": "StartUtteranceBotAction",
+        "text": "Hello world",
     }
 
 
 def test_start_a_flow():
-    """Test the start of a child flow from the main flow"""
+    """Test the start of a child flow"""
 
     # TODO: Replace bot say by UMIM action events
     # flow a
@@ -78,13 +78,13 @@ def test_start_a_flow():
             elements=[
                 {
                     "_type": "match_event",
-                    "event_name": "StartFlow",
-                    "event_params": {"flow_name": "a"},
+                    "type": "StartFlow",
+                    "flow_name": "a",
                 },
                 {
                     "_type": "run_action",
-                    "action_name": "utter",
-                    "action_params": {"value": "'Hello world'"},
+                    "type": "StartUtteranceBotAction",
+                    "text": "Hello world",
                 },
             ],
         ),
@@ -94,18 +94,18 @@ def test_start_a_flow():
             elements=[
                 {
                     "_type": "match_event",
-                    "event_name": "StartFlow",
-                    "event_params": {"flow_name": "main"},
+                    "type": "StartFlow",
+                    "flow_name": "main",
                 },
                 {
                     "_type": "send_internal_event",
-                    "event_name": "StartFlow",
-                    "event_params": {"flow_name": "a"},
+                    "type": "StartFlow",
+                    "flow_name": "a",
                 },
                 {
                     "_type": "match_event",
-                    "event_name": "FlowStarted",
-                    "event_params": {"flow_name": "a"},
+                    "type": "FlowStarted",
+                    "flow_name": "a",
                 },
             ],
         ),
@@ -119,12 +119,13 @@ def test_start_a_flow():
         {
             "type": "StartFlow",
             "flow_name": "main",
+            "parent_flow_uid": state.main_flow_state.uid,
         },
     )
     assert state.next_step == {
         "_type": "run_action",
-        "action_name": "utter",
-        "action_params": {"value": "'Hello world'"},
+        "type": "StartUtteranceBotAction",
+        "text": "Hello world",
     }
 
 
@@ -233,4 +234,4 @@ def test_conflicting_actions():
 
 
 if __name__ == "__main__":
-    test_conflicting_actions()
+    test_start_a_flow()

@@ -140,7 +140,6 @@ def slide(state: "State", flow_config: "FlowConfig", head: "FlowHead") -> Option
                 "flow_name": pattern_item["flow_name"],
                 "parent_flow_uid": state.flow_states[head.flow_state_uid].uid,
                 "matching_scores": head.matching_scores,
-                "event_time_uid": head.event_time_uid,
             }
             state.internal_events.append(event)
             logging.info(f"Create internal event: {event}")
