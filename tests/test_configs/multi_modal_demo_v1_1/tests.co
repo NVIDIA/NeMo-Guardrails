@@ -3,6 +3,9 @@
 # - Let's use 'await' keyword that is a shortcut for 'send'/'match'/'match' ultimately
 # - Let's use action/flow references in wrapper flows for more specific matches
 # - Let's use UserIntents in corresponding 'user said' wrapper flows
+# Create additional use cases
+# Prompot for hierarchical flows
+# Generate a flow with name X to do Y (and all referenced subflows if they are not already present).
 ########################################################################################################################
 # DESIGNED FLOWS (USED FOR PROMPTIN THE LLM)
 flow bot waves in direction of user
@@ -16,8 +19,14 @@ flow bot says $something
     """
     Bot says $something to the user where $something is a string parameter of what to say
     """
-    start UtteranceBotAction(script=$something)
-    match UtteranceBotAction.Finished()
+    await UtteranceBotAction(script=$something)
+
+    # start UtteranceBotAction(script=$something) as $action_ref
+    # match $action_ref.Finished()
+
+    # send UtteranceBotAction(script=$something).Start() as $event_ref
+    # match $action_ref.action.Started()
+    # match $action_ref.action.Finished()
 
 flow bot greets user
     """
@@ -26,6 +35,15 @@ flow bot greets user
     start GestureBotAction(gesture="strech out right hand to user in greeting")
     start UtteranceBotAction(script="Hi, nice to see you")
     match UtteranceBotAction.Finished() and GestureBotAction.Finished()
+
+flow user confirms
+  user said "Sure" or user said "Yes, I agree"
+    or GestureUserAction("thumbs up")
+    or UserIntent("user confirms")
+
+flow user intent generation
+  match UtteranceUserAction().Finished() as $action_ref
+  start generate_user_intent(text=$action_ref.final_transcript)
 
 flow user makes a color choice
     """
