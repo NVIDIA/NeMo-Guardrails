@@ -14,25 +14,33 @@
 # limitations under the License.
 
 import logging
-from typing import Optional
+from collections import deque
+from typing import Deque
 
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
+from nemoguardrails.colang.v1_1.runtime.events import create_start_flow_internal_event
 
 
-def slide(state: "State", flow_config: "FlowConfig", head: "FlowHead") -> Optional[int]:
+def slide(
+    flow_state: "FlowState", flow_config: "FlowConfig", head: "FlowHead"
+) -> Deque[dict]:
     """Tries to slide a flow with the provided head.
 
     Sliding is the operation of moving through "non-matching" elements e.g. check,
     if, jump, expect etc.
 
-    :param state: The current state of the dialog.
+    :param flow_state: The current flow state of the flow that should be advanced.
     :param flow_config: The config of the flow that should be advanced.
-    :param head: The current head.
-    :return:
+    :param head: The current flow head.
+    :return: All internal events that resulted from the sliding
     """
     head_position = head.position
 
-    context = state.context
+    internal_events: Deque[dict] = deque()
+
+    # TODO: Implement global/local flow context handling
+    # context = state.context
+    context = flow_state.context
 
     # The active label is the label that can be reached going backwards
     # only through sliding elements.
@@ -41,19 +49,18 @@ def slide(state: "State", flow_config: "FlowConfig", head: "FlowHead") -> Option
 
     # This might get called directly at the end of a flow, in which case
     # we put the prev_head on the last element.
-    prev_head = (
-        head_position
-        if head_position < len(flow_config.elements)
-        else head_position - 1
-    )
+    # prev_head = (
+    #     head_position
+    #     if head_position < len(flow_config.elements)
+    #     else head_position - 1
+    # )
 
     while True:
         # if we reached the end, we stop
         if head_position == len(flow_config.elements) or head_position < 0:
-            # We make a convention to return the last head, multiplied by -1 when the flow finished
-            return -1 * (prev_head + 1)
+            return internal_events
 
-        prev_head = head_position
+        # prev_head = head_position
         pattern_item = flow_config.elements[head_position]
 
         # Updated the active label if needed
@@ -107,7 +114,8 @@ def slide(state: "State", flow_config: "FlowConfig", head: "FlowHead") -> Option
 
         # STOP
         elif p_type == "stop":
-            return None
+            # TODO: Do we need to set the flow state to ABORTED?
+            return internal_events
 
         # BREAK
         elif p_type == "break":
@@ -123,10 +131,8 @@ def slide(state: "State", flow_config: "FlowConfig", head: "FlowHead") -> Option
 
             key_name = pattern_item["key"]
 
-            # Update the context with the result of the expression and also record
-            # the explicit update.
+            # Update the context with the result of the expression
             context.update({key_name: value})
-            state.context_updates.update({key_name: value})
 
             head_position += int(pattern_item.get("_next", 1))
 
@@ -134,17 +140,15 @@ def slide(state: "State", flow_config: "FlowConfig", head: "FlowHead") -> Option
         # TODO: Figure out how we can check if it is an internal event or an UMIM Action event from parsing
         elif p_type == "send_internal_event":
             # Push internal event
-            # TODO: Create helper function to create internal events
-            event = {
-                "type": "StartFlow",
-                "flow_name": pattern_item["flow_name"],
-                "parent_flow_uid": state.flow_states[head.flow_state_uid].uid,
-                "matching_scores": head.matching_scores,
-            }
-            state.internal_events.append(event)
+            event = create_start_flow_internal_event(
+                pattern_item["flow_id"], head.flow_state_uid, head.matching_scores
+            )
+            internal_events.append(event)
             logging.info(f"Create internal event: {event}")
             head_position += int(pattern_item.get("_next", 1))
         else:
             break
+
     # If we got this far, it means we had a match and the flow advanced
-    return head_position
+    head.position = head_position
+    return internal_events

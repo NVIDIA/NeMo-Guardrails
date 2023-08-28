@@ -33,7 +33,7 @@ def test_start_main_flow():
                 {
                     "_type": "match_event",
                     "type": "StartFlow",
-                    "flow_name": "main",
+                    "flow_id": "main",
                 },
                 {
                     "_type": "run_action",
@@ -51,7 +51,7 @@ def test_start_main_flow():
         state,
         {
             "type": "StartFlow",
-            "flow_name": "main",
+            "flow_id": "main",
             "parent_flow_uid": state.main_flow_state.uid,
         },
     )
@@ -80,7 +80,7 @@ def test_start_a_flow():
                 {
                     "_type": "match_event",
                     "type": "StartFlow",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "run_action",
@@ -96,17 +96,17 @@ def test_start_a_flow():
                 {
                     "_type": "match_event",
                     "type": "StartFlow",
-                    "flow_name": "main",
+                    "flow_id": "main",
                 },
                 {
                     "_type": "send_internal_event",
                     "type": "StartFlow",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "match_event",
                     "type": "FlowStarted",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
             ],
         ),
@@ -119,7 +119,7 @@ def test_start_a_flow():
         state,
         {
             "type": "StartFlow",
-            "flow_name": "main",
+            "flow_id": "main",
             "parent_flow_uid": state.main_flow_state.uid,
         },
     )
@@ -149,7 +149,7 @@ def test_await_a_flow():
                 {
                     "_type": "match_event",
                     "type": "StartFlow",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "run_action",
@@ -165,22 +165,22 @@ def test_await_a_flow():
                 {
                     "_type": "match_event",
                     "type": "StartFlow",
-                    "flow_name": "main",
+                    "flow_id": "main",
                 },
                 {
                     "_type": "send_internal_event",
                     "type": "StartFlow",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "match_event",
                     "type": "FlowStarted",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "match_event",
                     "type": "FlowFinished",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
             ],
         ),
@@ -193,7 +193,7 @@ def test_await_a_flow():
         state,
         {
             "type": "StartFlow",
-            "flow_name": "main",
+            "flow_id": "main",
             "parent_flow_uid": state.main_flow_state.uid,
         },
     )
@@ -224,7 +224,7 @@ def test_start_child_flow_two_times():
                 {
                     "_type": "match_event",
                     "type": "StartFlow",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "run_action",
@@ -245,32 +245,32 @@ def test_start_child_flow_two_times():
                 {
                     "_type": "match_event",
                     "type": "StartFlow",
-                    "flow_name": "main",
+                    "flow_id": "main",
                 },
                 {
                     "_type": "send_internal_event",
                     "type": "StartFlow",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "match_event",
                     "type": "FlowStarted",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "send_internal_event",
                     "type": "StartFlow",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "match_event",
                     "type": "FlowStarted",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "match_event",
                     "type": "FlowFinished",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
             ],
         ),
@@ -283,7 +283,7 @@ def test_start_child_flow_two_times():
         state,
         {
             "type": "StartFlow",
-            "flow_name": "main",
+            "flow_id": "main",
             "parent_flow_uid": state.main_flow_state.uid,
         },
     )
@@ -322,7 +322,7 @@ def test_conflicting_actions():
                 {
                     "_type": "match_event",
                     "type": "StartFlow",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "match_event",
@@ -348,17 +348,17 @@ def test_conflicting_actions():
                 {
                     "_type": "match_event",
                     "type": "StartFlow",
-                    "flow_name": "main",
+                    "flow_id": "main",
                 },
                 {
                     "_type": "send_internal_event",
                     "type": "StartFlow",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "match_event",
                     "type": "FlowStarted",
-                    "flow_name": "a",
+                    "flow_id": "a",
                 },
                 {
                     "_type": "match_event",
@@ -386,7 +386,7 @@ def test_conflicting_actions():
         state,
         {
             "type": "StartFlow",
-            "flow_name": "main",
+            "flow_id": "main",
             "parent_flow_uid": state.main_flow_state.uid,
         },
     )
@@ -413,4 +413,4 @@ def test_conflicting_actions():
 
 
 if __name__ == "__main__":
-    test_start_child_flow_two_times()
+    test_start_main_flow()
