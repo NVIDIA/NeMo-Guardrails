@@ -1,3 +1,8 @@
+# TODO:
+# - Let's use wrapper flows
+# - Let's use 'await' keyword that is a shortcut for 'send'/'match'/'match' ultimately
+# - Let's use action/flow references in wrapper flows for more specific matches
+# - Let's use UserIntents in corresponding 'user said' wrapper flows
 ########################################################################################################################
 # DESIGNED FLOWS (USED FOR PROMPTIN THE LLM)
 flow bot waves in direction of user
@@ -37,7 +42,7 @@ flow bot presents three different options for the car color
     Bot presents three different color options for cars. The bot also shows the option using a UI. The bot waits
     for the user to make a selection. If the use picked a color either by saying the color or by touching the UI options
     the bot will comment that he likes the color as well. If the user does not select a color the bot will inform the user
-    that it did get the color.
+    that it did not get the color.
     """
     start GestureBotAction(gesture="point to the UI")
     start UtteranceBotAction(script="We have these four options of car colors. Which one do you like best?")
