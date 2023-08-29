@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
+import json
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+from enum import Enum
+from typing import Any, Dict, NamedTuple, Optional, Tuple
 
 import yaml
 
@@ -80,3 +83,14 @@ class CustomDumper(yaml.SafeDumper):
 
     def increase_indent(self, flow=False, indentless=False):
         return super(CustomDumper, self).increase_indent(flow, False)
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    """Custom json encoder to handler dataclass and enum types"""
+
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        if isinstance(o, Enum):
+            return o.value
+        return super().default(o)

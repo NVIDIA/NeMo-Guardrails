@@ -25,7 +25,10 @@ from langchain.chains.base import Chain
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
-from nemoguardrails.colang.v1_1.runtime.flows import compute_context, compute_next_steps
+from nemoguardrails.colang.v1_1.runtime.flows import (
+    compute_context,
+    compute_next_events,
+)
 from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
@@ -65,7 +68,7 @@ class RuntimeV1_1(Runtime):
 
             # If we need to start a flow, we parse the content and register it.
             # NOTE (schuellc): Is this needed for generated flows only?
-            # NOTE: THis is a hack to be able to process LLM generated flows
+            # NOTE: This is a hack to be able to process LLM generated flows
             elif last_event["type"] == "start_flow":
                 next_events = await self._process_start_flow(events)
 
@@ -94,7 +97,7 @@ class RuntimeV1_1(Runtime):
 
     async def _compute_next_steps(self, events: List[dict]) -> List[dict]:
         """Computes the next step based on the current flow."""
-        next_steps = compute_next_steps(events, self.flow_configs)
+        next_steps = compute_next_events(events, self.flow_configs)
 
         # If there are any StartInternalSystemAction events, we mark if they are system actions or not
         # NOTE (schuellc): What's that for?

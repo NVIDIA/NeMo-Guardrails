@@ -154,3 +154,18 @@ def any_event_conforms(
 ) -> bool:
     """Returns true iff one of the events in the list conform to the event_subset provided."""
     return any([event_conforms(event_subset, e) for e in event_list])
+
+
+def is_data_in_events(
+    events: List[Dict[str, Any]], event_data: List[Dict[str, Any]]
+) -> bool:
+    """Returns 'True' if provided data is contained in event."""
+    if len(events) != len(event_data):
+        return False
+
+    for event, data in zip(events, event_data):
+        if not all(key in event for key in data) and all(
+            data[key] == event[key] for key in data
+        ):
+            return False
+    return True

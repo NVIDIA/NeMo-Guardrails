@@ -34,4 +34,4 @@ class AttributeDict(dict):
 
 def create_readable_uuid(name: str) -> str:
     """Creates a new uuid with a human readable prefix."""
-    return f"'{name}'_{str(uuid.uuid4())}"
+    return f"({name}){str(uuid.uuid4())}"
