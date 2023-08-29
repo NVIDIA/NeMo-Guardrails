@@ -44,7 +44,7 @@ def test_1():
                     "spec": {
                         "_source": None,
                         "_type": "spec",
-                        "arguments": {"flow_name": "test"},
+                        "arguments": {"flow_id": "test"},
                         "members": None,
                         "name": "StartFlow",
                         "var_name": None,
@@ -114,7 +114,7 @@ def test_2():
                     "spec": {
                         "_source": None,
                         "_type": "spec",
-                        "arguments": {"flow_name": "test"},
+                        "arguments": {"flow_id": "test"},
                         "members": None,
                         "name": "StartFlow",
                         "var_name": None,
@@ -204,7 +204,7 @@ def test_3():
                     "spec": {
                         "_source": None,
                         "_type": "spec",
-                        "arguments": {"flow_name": "test"},
+                        "arguments": {"flow_id": "test"},
                         "members": None,
                         "name": "StartFlow",
                         "var_name": None,
@@ -313,7 +313,7 @@ def test_4():
                     "spec": {
                         "_source": None,
                         "_type": "spec",
-                        "arguments": {"flow_name": "test"},
+                        "arguments": {"flow_id": "test"},
                         "members": None,
                         "name": "StartFlow",
                         "var_name": None,

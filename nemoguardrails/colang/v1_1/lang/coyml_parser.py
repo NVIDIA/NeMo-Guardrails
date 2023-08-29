@@ -312,7 +312,7 @@ def _dict_to_element(d):
 
         element = {
             "_type": "flow",
-            "flow_name": d_value,
+            "flow_id": d_value,
             # The parameters are not used for now, but we pass them anyway
             "flow_parameters": {
                 # 1) **{k: _to_value(v) for k, v in d.items() if k != d_type and k != "_source_mapping"

@@ -107,7 +107,8 @@ class ColangTransformer(Transformer):
 
         elements[0:0] = [
             SpecOp(
-                op="match", spec=Spec(name="StartFlow", arguments={"flow_name": name})
+                op="match",
+                spec=Spec(name="StartFlow", arguments={"flow_id": name}),
             )
         ]
 
