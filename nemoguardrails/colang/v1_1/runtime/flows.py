@@ -208,17 +208,21 @@ class State:
 
         assert "main" in self.flow_configs, "No main flow found!"
 
-        # Create flow states from flow config and start with head at position 0.
         self.flow_states = dict()
-        for flow_config in self.flow_configs.values():
-            flow_state = _create_new_flow_instance(self, flow_config)
 
-            if flow_config.id == "main":
-                if flow_config.loop_id is None:
-                    flow_state.loop_id = create_readable_uuid("main")
-                else:
-                    flow_state.loop_id = flow_config.loop_id
-                self.main_flow_state = flow_state
+        # Create main flow state first
+        main_flow_config = self.flow_configs["main"]
+        main_flow = _create_new_flow_instance(self, main_flow_config)
+        if main_flow_config.loop_id is None:
+            main_flow.loop_id = create_readable_uuid("main")
+        else:
+            main_flow.loop_id = main_flow_config.loop_id
+        self.main_flow_state = main_flow
+
+        # Create flow states for all other flows and start with head at position 0.
+        for flow_config in self.flow_configs.values():
+            if flow_config.id != "main":
+                _create_new_flow_instance(self, flow_config)
 
 
 def _create_new_flow_instance(state: State, flow_config: FlowConfig) -> FlowState:
@@ -243,6 +247,7 @@ def _create_new_flow_instance(state: State, flow_config: FlowConfig) -> FlowStat
         ),
     )
 
+    # Update state structures
     state.flow_states.update({flow_state.uid: flow_state})
     if flow_state.flow_id in state.flow_id_states:
         state.flow_id_states[flow_state.flow_id].append(flow_state)
@@ -287,12 +292,16 @@ def compute_next_state(state: State, external_event: dict) -> State:
         #     pass
 
         # Find all heads of flows where event is relevant
-        # TODO: Create a set to speed this up with all flow head related events
         heads_matching: List[FlowHead] = []
         heads_not_matching: List[FlowHead] = []
         match_order_score = 1.0
 
+        # TODO: Create a head map for all active flows to speed this up
         for flow_state in state.flow_states.values():
+            if _is_inactive_flow(flow_state):
+                # Don't process flows that are no longer active
+                continue
+
             flow_config = state.flow_configs[flow_state.flow_id]
             # TODO: Generalize to multiple heads in flow
             head = flow_state.head
@@ -302,8 +311,8 @@ def compute_next_state(state: State, external_event: dict) -> State:
                 # TODO: Assign matching score
                 matching_score = _is_matching(new_state, element, event)
                 if matching_score > 0.0:
-                    # Make sure that we can always resolve conflicts, using the matching score
                     head.matching_scores = event["matching_scores"].copy()
+                    # Make sure that we can always resolve conflicts, using the matching score
                     matching_score *= match_order_score
                     match_order_score *= 0.99
                     head.matching_scores.append(matching_score)
@@ -318,8 +327,13 @@ def compute_next_state(state: State, external_event: dict) -> State:
             if event["type"] == "StartFlow":
                 flow_state = _get_flow_state_from_head(state, head)
                 flow_config = _get_flow_config_from_head(state, head)
-                # Start flow
-                flow_state.loop_id = state.flow_states[event["parent_flow_uid"]].loop_id
+                # Start flow and link to parent flow
+                if flow_state != state.main_flow_state:
+                    parent_flow_uid = event["parent_flow_uid"]
+                    parent_flow = state.flow_states[parent_flow_uid]
+                    flow_state.parent_uid = parent_flow_uid
+                    flow_state.loop_id = parent_flow.loop_id
+                    parent_flow.child_uids.append(flow_state.uid)
                 # Initialize new flow instance of flow
                 _create_new_flow_instance(new_state, flow_config)
             # TODO: Introduce default matching statements with heads for all flows
@@ -379,6 +393,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
                             heads_advancing.append(head)
                         else:
                             flow_state = _get_flow_state_from_head(state, head)
+                            logging.info(f"Conflicting action at head: {head}")
                             _abort_flow(new_state, flow_state, head.matching_scores)
 
         # Now, all heads are on a match-statement, so let's process the next internal event
@@ -447,10 +462,16 @@ def _abort_flow(
     # abort all running child flows
     for child_flow_uid in flow_state.child_uids:
         child_flow_state = state.flow_states[child_flow_uid]
-        event = create_abort_flow_internal_event(child_flow_state.uid, matching_scores)
-        state.internal_events.append(event)
+        if not _is_inactive_flow(child_flow_state):
+            event = create_abort_flow_internal_event(
+                child_flow_state.uid, matching_scores
+            )
+            state.internal_events.append(event)
+            logging.info(f"Create internal event: {event}")
 
     flow_state.status = FlowStatus.ABORTED
+
+    logging.info(f"Flow '{flow_state.flow_id}' aborted/failed")
 
 
 def _finish_flow(state: State, head: FlowHead) -> None:
@@ -464,12 +485,24 @@ def _finish_flow(state: State, head: FlowHead) -> None:
     # Abort all running child flows
     for child_flow_uid in flow_state.child_uids:
         child_flow_state = state.flow_states[child_flow_uid]
-        event = create_abort_flow_internal_event(
-            child_flow_state.uid, head.matching_scores
-        )
-        state.internal_events.append(event)
+        if not _is_inactive_flow(child_flow_state):
+            event = create_abort_flow_internal_event(
+                child_flow_state.uid, head.matching_scores
+            )
+            state.internal_events.append(event)
+            logging.info(f"Create internal event: {event}")
 
     flow_state.status = FlowStatus.COMPLETED
+
+    logging.info(f"Flow '{flow_state.flow_id}' finished")
+
+
+def _is_inactive_flow(flow_state: FlowState) -> bool:
+    return (
+        flow_state.status == FlowStatus.ABORTED
+        or flow_state.status == FlowStatus.COMPLETED
+        or flow_state.status == FlowStatus.INTERRUPTED
+    )
 
 
 def _get_head_element_from_head(state: State, head: FlowHead) -> dict:
@@ -516,10 +549,22 @@ def _is_matching(state: State, element: dict, event: dict) -> float:
             and element["type"] == "StartFlow"
             and element["flow_id"] == event["flow_id"]
         )
+    if event["type"] == "AbortFlow":
+        return float(
+            element_type == "match_event"
+            and element["type"] == "AbortFlow"
+            and element["flow_id"] == state.flow_states[event["flow_state_uid"]].flow_id
+        )
     if event["type"] == "FlowStarted":
         return float(
             element_type == "match_event"
             and element["type"] == "FlowStarted"
+            and element["flow_id"] == state.flow_states[event["flow_state_uid"]].flow_id
+        )
+    if event["type"] == "FlowFinished":
+        return float(
+            element_type == "match_event"
+            and element["type"] == "FlowFinished"
             and element["flow_id"] == state.flow_states[event["flow_state_uid"]].flow_id
         )
     elif element["_type"] == "UserIntent":
