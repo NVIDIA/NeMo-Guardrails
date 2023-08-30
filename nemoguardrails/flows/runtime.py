@@ -36,6 +36,8 @@ from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
+from nemoguardrails.recognizers.pii_recognizer import PIIRecognizer
+
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +61,9 @@ class Runtime:
 
         # Register the actions with the dispatcher.
         self.action_dispatcher = ActionDispatcher(config_path=config.config_path)
+        self.pii_recognizer = PIIRecognizer(config_path = config.config_path, load_predefined=True, redact=True)
+        self.registered_actions["retrieve_relevant_chunks"] = self.pii_recognizer.anonymize_fn(self.registered_actions["retrieve_relevant_chunks"])()
+        
         for action_name, action_fn in self.registered_actions.items():
             self.action_dispatcher.register_action(action_fn, action_name)
 
