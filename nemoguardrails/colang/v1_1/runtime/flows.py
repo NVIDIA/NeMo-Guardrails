@@ -20,7 +20,7 @@ import uuid
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Deque, Dict, List, Optional, Union
+from typing import Any, Deque, Dict, List, Optional, Union
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import Spec, SpecOp
 from nemoguardrails.colang.v1_1.runtime.events import (
@@ -48,6 +48,12 @@ from nemoguardrails.utils import new_event_dict
 Questions:
 * What's the plan with the state
   - Distribution of helper functions? E.g. internal event creation?
+* Should we have only 'send', 'match' and assignment at the basis of the language, everything else can be expended to that
+  - Assignment of actions
+* Where should this extension be done? Since we need the context of the flows and actions
+* Not everything is a SpecOp in ast, e.g. comments
+* Handling of double quotation
+* Transformer must extract flow parameters
 """
 
 
@@ -264,12 +270,15 @@ class State:
                     elif element.op == "start":
                         if element.spec.name in self.flow_configs:
                             # It's a flow
+                            element.spec.arguments.update(
+                                {"flow_id": element.spec.name}
+                            )
                             new_elements.append(
                                 SpecOp(
                                     op="send",
                                     spec=Spec(
                                         name="StartFlow",
-                                        arguments={"flow_id": element.spec.name},
+                                        arguments=element.spec.arguments,
                                     ),
                                 )
                             )
@@ -278,7 +287,7 @@ class State:
                                     op="match",
                                     spec=Spec(
                                         name="FlowStarted",
-                                        arguments={"flow_id": element.spec.name},
+                                        arguments=element.spec.arguments,
                                     ),
                                 )
                             )
@@ -426,7 +435,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
             if _is_match_op_element(element):
                 # TODO: Assign matching score
                 matching_score = _compute_event_matching_score(
-                    new_state, element, event
+                    new_state, flow_state, element, event
                 )
                 if matching_score > 0.0:
                     head.matching_scores = event["matching_scores"].copy()
@@ -451,6 +460,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
                     parent_flow = state.flow_states[parent_flow_uid]
                     flow_state.parent_uid = parent_flow_uid
                     flow_state.loop_id = parent_flow.loop_id
+                    flow_state.context = _extract_variables(event)
                     parent_flow.child_uids.append(flow_state.uid)
                 # Initialize new flow instance of flow
                 _create_new_flow_instance(new_state, flow_config)
@@ -613,7 +623,7 @@ def slide(
             # Evaluate expressions (eliminate all double quotes)
             event_arguments = dict(
                 [
-                    (key, _eval_expression(element.spec.arguments[key]))
+                    (key, _eval_expression(flow_state, element.spec.arguments[key]))
                     for key in element.spec.arguments
                 ]
             )
@@ -706,23 +716,37 @@ def _get_flow_state_from_head(state: State, head: FlowHead) -> FlowState:
 
 def _is_action_op_element(element: SpecOp) -> bool:
     """Checks if the given element is actionable."""
-    return element.op == "send" and element.spec.name not in INTERNAL_EVENTS
+    return (
+        isinstance(element, SpecOp)
+        and element.op == "send"
+        and element.spec.name not in INTERNAL_EVENTS
+    )
 
 
 def _is_match_op_element(element: SpecOp) -> bool:
-    return element.op == "match"
+    return isinstance(element, SpecOp) and element.op == "match"
 
 
-def _eval_expression(expression: str) -> str:
-    stripped_expression = expression.strip("\"'")
-    if stripped_expression != expression:
-        return stripped_expression
-    else:
-        # Try to evaluate expression
+def _eval_expression(flow_state: FlowState, expression: Any) -> Any:
+    if not isinstance(expression, str):
         return expression
 
+    stripped_expression = expression.strip("\"'")
 
-def _compute_event_matching_score(state: State, element: SpecOp, event: dict) -> float:
+    # Try to evaluate expression using context
+    value = stripped_expression
+    while value.startswith("$") and value in flow_state.context:
+        value = flow_state.context[value]
+    return value
+
+
+def _extract_variables(data: Dict[str, Any]) -> dict:
+    return dict([(key, data[key]) for key in data if key.startswith("$")])
+
+
+def _compute_event_matching_score(
+    state: State, flow_state: FlowState, element: SpecOp, event: dict
+) -> float:
     """Checks if the given element matches the given event."""
 
     assert _is_match_op_element(element), f"Element '{element}' is not a match element!"
@@ -730,18 +754,32 @@ def _compute_event_matching_score(state: State, element: SpecOp, event: dict) ->
 
     element_spec = element["spec"]
     element_spec_args = element["spec"]["arguments"]
+    element_spec_args_evaluated = dict(
+        [
+            (key, _eval_expression(flow_state, element_spec_args[key]))
+            for key in element_spec_args
+        ]
+    )
 
     FUZZY_MATCH_FACTOR = 0.5
 
     if event["type"] == "StartFlow":
+        vars = _extract_variables(event)
+        for var in vars:
+            if (
+                var in element_spec_args
+                and event[var] != element_spec_args_evaluated[var]
+            ):
+                return 0.0
+
         return float(
             element_spec["name"] == "StartFlow"
-            and _eval_expression(element_spec_args["flow_id"]) == event["flow_id"]
+            and element_spec_args_evaluated["flow_id"] == event["flow_id"]
         )
     elif event["type"] in INTERNAL_EVENTS:
         return float(
             element_spec["name"] == event["type"]
-            and _eval_expression(element_spec_args["flow_id"])
+            and element_spec_args_evaluated["flow_id"]
             == state.flow_states[event["source_flow_instance_uid"]].flow_id
         )
     else:
@@ -753,7 +791,7 @@ def _compute_event_matching_score(state: State, element: SpecOp, event: dict) ->
         score = 1.0
         for arg in element_spec_args:
             if arg in event:
-                if _eval_expression(element_spec_args[arg]) == event[arg]:
+                if element_spec_args_evaluated[arg] == event[arg]:
                     continue
                 else:
                     return 0.0
@@ -776,6 +814,7 @@ def _create_outgoing_event(
     head: FlowHead,
 ) -> None:
     """Helper to create an outgoing event from the flow head element."""
+    flow_state = _get_flow_state_from_head(state, head)
     element = _get_head_element_from_head(state, head)
     assert _is_action_op_element(
         element
@@ -784,7 +823,7 @@ def _create_outgoing_event(
     # Evaluate expressions (eliminate all double quotes)
     event_arguments = dict(
         [
-            (key, _eval_expression(element.spec.arguments[key]))
+            (key, _eval_expression(flow_state, element.spec.arguments[key]))
             for key in element.spec.arguments
         ]
     )
