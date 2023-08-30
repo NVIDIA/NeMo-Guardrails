@@ -28,7 +28,7 @@ def test_start_main_flow():
 
     content = """
     flow main
-      send StartUtteranceBotAction(text="Hello world")
+      send StartUtteranceBotAction(script="Hello world")
     """
     result = parse_colang_file(
         filename="", content=content, include_source_mapping=False, version="1.1"
@@ -61,9 +61,9 @@ def test_start_main_flow():
     #                 "flow_id": "main",
     #             },
     #             {
-    #                 "_type": "run_action",
+    #
     #                 "type": "StartUtteranceBotAction",
-    #                 "text": "Hello world",
+    #                 "script": "Hello world",
     #             },
     #         ],
     #     ),
@@ -84,7 +84,7 @@ def test_start_main_flow():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "text": '"Hello world"',
+                "script": "Hello world",
             }
         ],
     )
@@ -93,50 +93,74 @@ def test_start_main_flow():
 def test_start_a_flow():
     """Test the start of a child flow"""
 
-    # flow a
-    #   send UtteranceBotAction("Hello world").Start()
-    #
-    # flow main
-    #   start a
+    content = """
+    flow a
+      send UtteranceBotAction("Hello world").Start()
 
-    config = {
-        "a": FlowConfig(
-            id="a",
-            elements=[
-                {
-                    "_type": "match_event",
-                    "type": "StartFlow",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "run_action",
-                    "type": "StartUtteranceBotAction",
-                    "text": "Hello world",
-                },
-            ],
-        ),
-        "main": FlowConfig(
-            id="main",
-            loop_id="main",
-            elements=[
-                {
-                    "_type": "match_event",
-                    "type": "StartFlow",
-                    "flow_id": "main",
-                },
-                {
-                    "_type": "send_internal_event",
-                    "type": "StartFlow",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "match_event",
-                    "type": "FlowStarted",
-                    "flow_id": "a",
-                },
-            ],
-        ),
-    }
+    flow main
+      # start a
+      send StartFlow(flow_id="a")
+      match FlowStarted(flow_id="a")
+    """
+
+    result = parse_colang_file(
+        filename="", content=content, include_source_mapping=False, version="1.1"
+    )
+
+    config = dict(
+        [
+            (
+                flow["name"],
+                FlowConfig(
+                    id=flow["name"],
+                    loop_id=None,
+                    elements=flow["elements"],
+                ),
+            )
+            for flow in result["flows"]
+        ]
+    )
+
+    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    # config = {
+    #     "a": FlowConfig(
+    #         id="a",
+    #         elements=[
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #
+    #                 "type": "StartUtteranceBotAction",
+    #                 "script": "Hello world",
+    #             },
+    #         ],
+    #     ),
+    #     "main": FlowConfig(
+    #         id="main",
+    #         loop_id="main",
+    #         elements=[
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "main",
+    #             },
+    #             {
+    #                 "_type": "send_internal_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "FlowStarted",
+    #                 "flow_id": "a",
+    #             },
+    #         ],
+    #     ),
+    # }
 
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
@@ -148,68 +172,94 @@ def test_start_a_flow():
             "flow_id": "main",
         },
     )
-    assert state.outgoing_events == [
-        {
-            "_type": "run_action",
-            "type": "StartUtteranceBotAction",
-            "text": "Hello world",
-        }
-    ]
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
 
 
 def test_await_a_flow():
     """Test await a child flow"""
 
-    # flow a
-    #   send UtteranceBotAction("Flow a started").Start()
-    #
-    # flow main
-    #   await a
-    #   send UtteranceBotAction("Flow a finished").Start()
+    content = """
+    flow a
+      send StartUtteranceBotAction(script="Flow a started")
 
-    config = {
-        "a": FlowConfig(
-            id="a",
-            elements=[
-                {
-                    "_type": "match_event",
-                    "type": "StartFlow",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "run_action",
-                    "type": "StartUtteranceBotAction",
-                    "text": "Flow a started",
-                },
-            ],
-        ),
-        "main": FlowConfig(
-            id="main",
-            loop_id="main",
-            elements=[
-                {
-                    "_type": "match_event",
-                    "type": "StartFlow",
-                    "flow_id": "main",
-                },
-                {
-                    "_type": "send_internal_event",
-                    "type": "StartFlow",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "match_event",
-                    "type": "FlowStarted",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "match_event",
-                    "type": "FlowFinished",
-                    "flow_id": "a",
-                },
-            ],
-        ),
-    }
+    flow main
+      # await a
+      send StartFlow(flow_id="a")
+      match FlowStarted(flow_id="a")
+      match FlowFinished(flow_id="a")
+      send StartUtteranceBotAction(script="Flow a finished")
+    """
+
+    result = parse_colang_file(
+        filename="", content=content, include_source_mapping=False, version="1.1"
+    )
+
+    config = dict(
+        [
+            (
+                flow["name"],
+                FlowConfig(
+                    id=flow["name"],
+                    loop_id=None,
+                    elements=flow["elements"],
+                ),
+            )
+            for flow in result["flows"]
+        ]
+    )
+
+    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    # config = {
+    #     "a": FlowConfig(
+    #         id="a",
+    #         elements=[
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "type": "StartUtteranceBotAction",
+    #                 "script": "Flow a started",
+    #             },
+    #         ],
+    #     ),
+    #     "main": FlowConfig(
+    #         id="main",
+    #         loop_id="main",
+    #         elements=[
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "main",
+    #             },
+    #             {
+    #                 "_type": "send_internal_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "FlowStarted",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "FlowFinished",
+    #                 "flow_id": "a",
+    #             },
+    #         ],
+    #     ),
+    # }
 
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
@@ -221,84 +271,115 @@ def test_await_a_flow():
             "flow_id": "main",
         },
     )
-    assert state.outgoing_events == [
-        {
-            "_type": "run_action",
-            "type": "StartUtteranceBotAction",
-            "text": "Flow a started",
-        }
-    ]
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Flow a started",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Flow a finished",
+            },
+        ],
+    )
 
 
 def test_start_child_flow_two_times():
     """Test start a child flow two times"""
 
-    # flow a
-    #   send UtteranceBotAction("Hi").Start()
-    #   match UtteranceBotAction("Hi").Finished()
-    #
-    # flow main
-    #   start a
-    #   await a
+    content = """
+    flow a
+      send StartUtteranceBotAction(script="Hi")
+      match UtteranceBotActionFinished(script="Hi")
 
-    config = {
-        "a": FlowConfig(
-            id="a",
-            elements=[
-                {
-                    "_type": "match_event",
-                    "type": "StartFlow",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "run_action",
-                    "type": "StartUtteranceBotAction",
-                    "text": "Hi",
-                },
-                {
-                    "_type": "match_event",
-                    "type": "UtteranceBotFinished",
-                    "text": "Hi",
-                },
-            ],
-        ),
-        "main": FlowConfig(
-            id="main",
-            loop_id="main",
-            elements=[
-                {
-                    "_type": "match_event",
-                    "type": "StartFlow",
-                    "flow_id": "main",
-                },
-                {
-                    "_type": "send_internal_event",
-                    "type": "StartFlow",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "match_event",
-                    "type": "FlowStarted",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "send_internal_event",
-                    "type": "StartFlow",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "match_event",
-                    "type": "FlowStarted",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "match_event",
-                    "type": "FlowFinished",
-                    "flow_id": "a",
-                },
-            ],
-        ),
-    }
+    flow main
+      # start a
+      send StartFlow(flow_id="a")
+      match FlowStarted(flow_id="a")
+      # await a
+      send StartFlow(flow_id="a")
+      match FlowStarted(flow_id="a")
+    """
+
+    result = parse_colang_file(
+        filename="", content=content, include_source_mapping=False, version="1.1"
+    )
+
+    config = dict(
+        [
+            (
+                flow["name"],
+                FlowConfig(
+                    id=flow["name"],
+                    loop_id=None,
+                    elements=flow["elements"],
+                ),
+            )
+            for flow in result["flows"]
+        ]
+    )
+
+    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    # config = {
+    #     "a": FlowConfig(
+    #         id="a",
+    #         elements=[
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "type": "StartUtteranceBotAction",
+    #                 "script": "Hi",
+    #             },
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "UtteranceBotFinished",
+    #                 "script": "Hi",
+    #             },
+    #         ],
+    #     ),
+    #     "main": FlowConfig(
+    #         id="main",
+    #         loop_id="main",
+    #         elements=[
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "main",
+    #             },
+    #             {
+    #                 "_type": "send_internal_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "FlowStarted",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "_type": "send_internal_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "FlowStarted",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "FlowFinished",
+    #                 "flow_id": "a",
+    #             },
+    #         ],
+    #     ),
+    # }
 
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
@@ -310,18 +391,19 @@ def test_start_child_flow_two_times():
             "flow_id": "main",
         },
     )
-    assert state.outgoing_events == [
-        {
-            "_type": "run_action",
-            "type": "StartUtteranceBotAction",
-            "text": "Hi",
-        },
-        {
-            "_type": "run_action",
-            "type": "StartUtteranceBotAction",
-            "text": "Hi",
-        },
-    ]
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            },
+        ],
+    )
 
 
 def test_child_flow_abort():
@@ -334,9 +416,9 @@ def test_child_flow_abort():
       match FlowStarted(flow_id="b")
 
     flow b
-      # await UtteranceBotAction(text="Hi")
-      send StartUtteranceBotAction(text="Hi")
-      match UtteranceBotActionFinished(text="Hi")
+      # await UtteranceBotAction(script="Hi")
+      send StartUtteranceBotAction(script="Hi")
+      match UtteranceBotActionFinished(script="Hi")
 
     flow main
       # start a
@@ -344,8 +426,8 @@ def test_child_flow_abort():
       match FlowStarted(flow_id="a")
       # match b.Failed()
       match FlowFailed(flow_id="b")
-      # start UtteranceBotAction(text="Done")
-      send StartUtteranceBotAction(text="Done")
+      # start UtteranceBotAction(script="Done")
+      send StartUtteranceBotAction(script="Done")
     """
     result = parse_colang_file(
         filename="", content=content, include_source_mapping=False, version="1.1"
@@ -397,14 +479,14 @@ def test_child_flow_abort():
     #                 "flow_id": "b",
     #             },
     #             {
-    #                 "_type": "run_action",
+    #
     #                 "type": "StartUtteranceBotAction",
-    #                 "text": "Hi",
+    #                 "script": "Hi",
     #             },
     #             {
     #                 "_type": "match_event",
     #                 "type": "UtteranceBotFinished",
-    #                 "text": "Hi",
+    #                 "script": "Hi",
     #             },
     #         ],
     #     ),
@@ -433,9 +515,9 @@ def test_child_flow_abort():
     #                 "flow_id": "b",
     #             },
     #             {
-    #                 "_type": "run_action",
+    #
     #                 "type": "StartUtteranceBotAction",
-    #                 "text": "Done",
+    #                 "script": "Done",
     #             },
     #         ],
     #     ),
@@ -456,11 +538,11 @@ def test_child_flow_abort():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "text": "Hi",
+                "script": "Hi",
             },
             {
                 "type": "StartUtteranceBotAction",
-                "text": "Done",
+                "script": "Done",
             },
         ],
     )
@@ -469,80 +551,100 @@ def test_child_flow_abort():
 def test_conflicting_actions():
     """Test the action conflict resolution"""
 
-    # flow a
-    #   match UtteranceUserAction("Hi").Finished()
-    #   send UtteranceBotAction("Hello").Start()
-    #   send UtteranceBotAction("How are you").Start()
-    #
-    # flow main
-    #   start a
-    #   match UtteranceUserAction("Hi").Finished()
-    #   send UtteranceBotAction("Hello").Start()
-    #   send UtteranceBotAction("Bye").Start()
+    content = """
+    flow a
+      match UtteranceUserActionFinished(final_transcript="Hi")
+      send StartUtteranceBotAction(script="Hello")
+      send StartUtteranceBotAction(script="How are you")
 
-    config = {
-        "a": FlowConfig(
-            id="a",
-            elements=[
-                {
-                    "_type": "match_event",
-                    "type": "StartFlow",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "match_event",
-                    "type": "UtteranceUserActionFinished",
-                    "final_transcript": "Hi",
-                },
-                {
-                    "_type": "run_action",
-                    "type": "StartUtteranceBotAction",
-                    "text": "Hello",
-                },
-                {
-                    "_type": "run_action",
-                    "type": "StartUtteranceBotAction",
-                    "text": "How are you",
-                },
-            ],
-        ),
-        "main": FlowConfig(
-            id="main",
-            loop_id="main",
-            elements=[
-                {
-                    "_type": "match_event",
-                    "type": "StartFlow",
-                    "flow_id": "main",
-                },
-                {
-                    "_type": "send_internal_event",
-                    "type": "StartFlow",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "match_event",
-                    "type": "FlowStarted",
-                    "flow_id": "a",
-                },
-                {
-                    "_type": "match_event",
-                    "type": "UtteranceUserActionFinished",
-                    "final_transcript": "Hi",
-                },
-                {
-                    "_type": "run_action",
-                    "type": "StartUtteranceBotAction",
-                    "text": "Hello",
-                },
-                {
-                    "_type": "run_action",
-                    "type": "StartUtteranceBotAction",
-                    "text": "Bye",
-                },
-            ],
-        ),
-    }
+    flow main
+      # start a
+      send StartFlow(flow_id="a")
+      match FlowStarted(flow_id="a")
+      match UtteranceUserActionFinished(final_transcript="Hi")
+      send StartUtteranceBotAction(script="Hello")
+      send StartUtteranceBotAction(script="Bye")
+    """
+
+    result = parse_colang_file(
+        filename="", content=content, include_source_mapping=False, version="1.1"
+    )
+
+    config = dict(
+        [
+            (
+                flow["name"],
+                FlowConfig(
+                    id=flow["name"],
+                    loop_id=None,
+                    elements=flow["elements"],
+                ),
+            )
+            for flow in result["flows"]
+        ]
+    )
+
+    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    # config = {
+    #     "a": FlowConfig(
+    #         id="a",
+    #         elements=[
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "UtteranceUserActionFinished",
+    #                 "final_transcript": "Hi",
+    #             },
+    #             {
+    #                 "type": "StartUtteranceBotAction",
+    #                 "script": "Hello",
+    #             },
+    #             {
+    #                 "type": "StartUtteranceBotAction",
+    #                 "script": "How are you",
+    #             },
+    #         ],
+    #     ),
+    #     "main": FlowConfig(
+    #         id="main",
+    #         loop_id="main",
+    #         elements=[
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "main",
+    #             },
+    #             {
+    #                 "_type": "send_internal_event",
+    #                 "type": "StartFlow",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "FlowStarted",
+    #                 "flow_id": "a",
+    #             },
+    #             {
+    #                 "_type": "match_event",
+    #                 "type": "UtteranceUserActionFinished",
+    #                 "final_transcript": "Hi",
+    #             },
+    #             {
+    #                 "type": "StartUtteranceBotAction",
+    #                 "script": "Hello",
+    #             },
+    #             {
+    #                 "type": "StartUtteranceBotAction",
+    #                 "script": "Bye",
+    #             },
+    #         ],
+    #     ),
+    # }
 
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
@@ -562,19 +664,20 @@ def test_conflicting_actions():
             "final_transcript": "Hi",
         },
     )
-    assert state.outgoing_events == [
-        {
-            "_type": "run_action",
-            "type": "StartUtteranceBotAction",
-            "text": "Hello",
-        },
-        {
-            "_type": "run_action",
-            "type": "StartUtteranceBotAction",
-            "text": "Bye",
-        },
-    ]
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Bye",
+            },
+        ],
+    )
 
 
 if __name__ == "__main__":
-    test_child_flow_abort()
+    test_start_main_flow()

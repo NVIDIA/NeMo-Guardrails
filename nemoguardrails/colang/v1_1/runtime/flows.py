@@ -503,8 +503,14 @@ def slide(
             element.spec.arguments.update(
                 {"source_flow_instance_uid": head.flow_state_uid}
             )
+            event_arguments = {}
+            for key in element.spec.arguments:
+                val = element.spec.arguments[key]
+                if isinstance(val, str):
+                    val = _eval_expression(val)
+                event_arguments.update({key: val})
             event = create_internal_event(
-                element.spec.name, element.spec.arguments, head.matching_scores
+                element.spec.name, event_arguments, head.matching_scores
             )
             internal_events.append(event)
             head_position += 1
@@ -636,16 +642,23 @@ def _compute_event_matching_score(state: State, element: SpecOp, event: dict) ->
             return 0.0
 
         # We need to match all arguments used in the element
-
         score = 1.0
-        for key, value in element.items():
-            # Skip potentially private keys.
-            if key.startswith("_"):
-                continue
-            if value == "...":
-                score *= FUZZY_MATCH_FACTOR
-            if event.get(key) != value:
-                return float(False)
+        for arg in element_spec_args:
+            if arg in event:
+                if _eval_expression(element_spec_args[arg]) == event[arg]:
+                    continue
+                else:
+                    return 0.0
+
+        # score = 1.0
+        # for key, value in element.items():
+        #     # Skip potentially private keys.
+        #     if key.startswith("_"):
+        #         continue
+        #     if value == "...":
+        #         score *= FUZZY_MATCH_FACTOR
+        #     if event.get(key) != value:
+        #         return float(False)
 
         return score
 

@@ -87,12 +87,6 @@ def create_internal_event(
 ) -> Dict[str, Any]:
     """Returns an internal event for the provided event data"""
     event: Dict[str, Any] = {"type": event_type, "matching_scores": matching_scores}
-    # TODO: Find a better way of handling double quotation marks than just stripping them
-    # Will probably want to evaluate expressions at some point
-    for key in event_args:
-        val = event_args[key]
-        if isinstance(val, str):
-            event_args[key] = val.strip("\"'")
     event = {**event, **event_args}
     return event
 
