@@ -20,7 +20,6 @@ import uuid
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import cmp_to_key
 from typing import Deque, Dict, List, Optional, Union
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import SpecOp
@@ -503,12 +502,13 @@ def slide(
             element.spec.arguments.update(
                 {"source_flow_instance_uid": head.flow_state_uid}
             )
-            event_arguments = {}
-            for key in element.spec.arguments:
-                val = element.spec.arguments[key]
-                if isinstance(val, str):
-                    val = _eval_expression(val)
-                event_arguments.update({key: val})
+            # Evaluate expressions (eliminate all double quotes)
+            event_arguments = dict(
+                [
+                    (key, _eval_expression(element.spec.arguments[key]))
+                    for key in element.spec.arguments
+                ]
+            )
             event = create_internal_event(
                 element.spec.name, event_arguments, head.matching_scores
             )
@@ -673,8 +673,14 @@ def _create_outgoing_event(
         element
     ), f"Cannot create an event from a non actionable flow element {element}!"
 
-    # TODO: Support events from actions
-    event = create_umim_action_event(element.spec.name, element.spec.arguments)
+    # Evaluate expressions (eliminate all double quotes)
+    event_arguments = dict(
+        [
+            (key, _eval_expression(element.spec.arguments[key]))
+            for key in element.spec.arguments
+        ]
+    )
+    event = create_umim_action_event(element.spec.name, event_arguments)
     state.outgoing_events.append(event)
 
     # Extract the comment, if any

@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
@@ -19,6 +20,7 @@ from langchain.llms.base import LLM
 from pydantic import BaseModel
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.colang.v1_1.runtime.flows import FlowConfig
 
 
 class FakeLLM(LLM, BaseModel):
@@ -164,8 +166,28 @@ def is_data_in_events(
         return False
 
     for event, data in zip(events, event_data):
-        if not all(key in event for key in data) and all(
-            data[key] == event[key] for key in data
+        if not (
+            all(key in event for key in data)
+            and all(data[key] == event[key] for key in data)
         ):
             return False
     return True
+
+
+def convert_parsed_colang_to_flow_config(
+    parsed_colang: Dict[str, Any]
+) -> Dict[str, FlowConfig]:
+    """Converts the parsed colang to a flow configuration."""
+    return dict(
+        [
+            (
+                flow["name"],
+                FlowConfig(
+                    id=flow["name"],
+                    loop_id=None,
+                    elements=flow["elements"],
+                ),
+            )
+            for flow in parsed_colang["flows"]
+        ]
+    )
