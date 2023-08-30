@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Deque, Dict, List, Optional, Union
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import SpecOp
+from nemoguardrails.colang.v1_1.lang.colang_ast import Spec, SpecOp
 from nemoguardrails.colang.v1_1.runtime.events import (
     create_abort_flow_internal_event,
     create_flow_failed_internal_event,
@@ -206,6 +206,114 @@ class State:
         assert "main" in self.flow_configs, "No main flow found!"
 
         self.flow_states = dict()
+
+        # TODO: Think about where to put this
+        # Transform and resolve flow configuration element notation (actions, flows, ...)
+        config_changed = True
+        while config_changed:
+            config_changed = False
+            for flow_config in self.flow_configs.values():
+                new_elements: List[Union[SpecOp, dict]] = []
+                for element in flow_config.elements:
+                    if not isinstance(element, SpecOp):
+                        # It's a comment
+                        new_elements.append(element)
+                    elif element.op == "await":
+                        if element.spec.name in self.flow_configs:
+                            # It's a flow
+                            new_elements.append(
+                                SpecOp(
+                                    op="start",
+                                    spec=Spec(
+                                        name=element.spec.name,
+                                        arguments=element.spec.arguments,
+                                    ),
+                                )
+                            )
+                            new_elements.append(
+                                SpecOp(
+                                    op="match",
+                                    spec=Spec(
+                                        name=element.spec.name,
+                                        arguments=element.spec.arguments,
+                                    ),
+                                )
+                            )
+                            config_changed = True
+                        else:
+                            # It's an UMIM action
+                            new_elements.append(
+                                SpecOp(
+                                    op="send",
+                                    spec=Spec(
+                                        name=f"Start{element.spec.name}",
+                                        arguments=element.spec.arguments,
+                                    ),
+                                )
+                            )
+                            new_elements.append(
+                                SpecOp(
+                                    op="match",
+                                    spec=Spec(
+                                        name=f"{element.spec.name}Finished",
+                                        arguments=element.spec.arguments,
+                                    ),
+                                )
+                            )
+                            config_changed = True
+                    elif element.op == "start":
+                        if element.spec.name in self.flow_configs:
+                            # It's a flow
+                            new_elements.append(
+                                SpecOp(
+                                    op="send",
+                                    spec=Spec(
+                                        name="StartFlow",
+                                        arguments={"flow_id": element.spec.name},
+                                    ),
+                                )
+                            )
+                            new_elements.append(
+                                SpecOp(
+                                    op="match",
+                                    spec=Spec(
+                                        name="FlowStarted",
+                                        arguments={"flow_id": element.spec.name},
+                                    ),
+                                )
+                            )
+                            config_changed = True
+                        else:
+                            # It's an UMIM action
+                            # TODO: Implement proper action concept
+                            new_elements.append(
+                                SpecOp(
+                                    op="send",
+                                    spec=Spec(
+                                        name=f"Start{element.spec.name}",
+                                        arguments=element.spec.arguments,
+                                    ),
+                                )
+                            )
+                    elif element.op == "match":
+                        if element.spec.name in self.flow_configs:
+                            # It's a flow
+                            new_elements.append(
+                                SpecOp(
+                                    op="match",
+                                    spec=Spec(
+                                        name="FlowFinished",
+                                        arguments={"flow_id": element.spec.name},
+                                    ),
+                                )
+                            )
+                            config_changed = True
+                        else:
+                            # It's an UMIM event
+                            new_elements.append(element)
+                    else:
+                        new_elements.append(element)
+                flow_config.elements = new_elements
 
         # Create main flow state first
         main_flow_config = self.flow_configs["main"]

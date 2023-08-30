@@ -23,8 +23,8 @@ logging.basicConfig(
 )
 
 
-def test_start_main_flow():
-    """Test the start of the main flow"""
+def test_start_action():
+    """Test to start a UMIM action"""
 
     content = """
     flow main
@@ -35,10 +35,10 @@ def test_start_main_flow():
             filename="", content=content, include_source_mapping=False, version="1.1"
         )
     )
-    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = compute_next_state(
         state,
@@ -53,6 +53,148 @@ def test_start_main_flow():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello world",
+            }
+        ],
+    )
+
+
+def test_start_action_compact_notation():
+    """Test to start an UMIM action with the compact notation"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello world")
+    """
+    config = convert_parsed_colang_to_flow_config(
+        parse_colang_file(
+            filename="", content=content, include_source_mapping=False, version="1.1"
+        )
+    )
+
+    state = State(context={}, flow_states=[], flow_configs=config)
+    state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    state = compute_next_state(
+        state,
+        {
+            "type": "StartFlow",
+            "flow_id": "main",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+
+
+def test_await_action():
+    """Test to await an UMIM action"""
+
+    content = """
+    flow main
+      send StartUtteranceBotAction(script="Hello world")
+      match UtteranceBotActionFinished(script="Hello world")
+      send StartUtteranceBotAction(script="Done")
+    """
+    config = convert_parsed_colang_to_flow_config(
+        parse_colang_file(
+            filename="", content=content, include_source_mapping=False, version="1.1"
+        )
+    )
+
+    state = State(context={}, flow_states=[], flow_configs=config)
+    state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    state = compute_next_state(
+        state,
+        {
+            "type": "StartFlow",
+            "flow_id": "main",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+    state.outgoing_events.clear()
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "script": "Hello world",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            }
+        ],
+    )
+
+
+def test_await_action_compact_notation():
+    """Test to await an UMIM action with compact notation"""
+
+    content = """
+    flow main
+      await UtteranceBotAction(script="Hello world")
+      send StartUtteranceBotAction(script="Done")
+    """
+    config = convert_parsed_colang_to_flow_config(
+        parse_colang_file(
+            filename="", content=content, include_source_mapping=False, version="1.1"
+        )
+    )
+
+    state = State(context={}, flow_states=[], flow_configs=config)
+    state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    state = compute_next_state(
+        state,
+        {
+            "type": "StartFlow",
+            "flow_id": "main",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+    state.outgoing_events.clear()
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "script": "Hello world",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
             }
         ],
     )
@@ -76,10 +218,49 @@ def test_start_a_flow():
             filename="", content=content, include_source_mapping=False, version="1.1"
         )
     )
-    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    state = compute_next_state(
+        state,
+        {
+            "type": "StartFlow",
+            "flow_id": "main",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+
+
+def test_start_a_flow_compact_notation():
+    """Test the start of a child flow using 'start' notation"""
+
+    content = """
+    flow a
+      send StartUtteranceBotAction(script="Hello world")
+
+    flow main
+      start a
+    """
+
+    config = convert_parsed_colang_to_flow_config(
+        parse_colang_file(
+            filename="", content=content, include_source_mapping=False, version="1.1"
+        )
+    )
+
+    state = State(context={}, flow_states=[], flow_configs=config)
+    state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = compute_next_state(
         state,
@@ -119,10 +300,54 @@ def test_await_a_flow():
             filename="", content=content, include_source_mapping=False, version="1.1"
         )
     )
-    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    state = compute_next_state(
+        state,
+        {
+            "type": "StartFlow",
+            "flow_id": "main",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Flow a started",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Flow a finished",
+            },
+        ],
+    )
+
+
+def test_await_a_flow_compact_notation():
+    """Test await a child flow with compact notation 'await'"""
+
+    content = """
+    flow a
+      send StartUtteranceBotAction(script="Flow a started")
+
+    flow main
+      await a
+      send StartUtteranceBotAction(script="Flow a finished")
+    """
+
+    config = convert_parsed_colang_to_flow_config(
+        parse_colang_file(
+            filename="", content=content, include_source_mapping=False, version="1.1"
+        )
+    )
+
+    state = State(context={}, flow_states=[], flow_configs=config)
+    state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = compute_next_state(
         state,
@@ -168,10 +393,10 @@ def test_start_child_flow_two_times():
             filename="", content=content, include_source_mapping=False, version="1.1"
         )
     )
-    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = compute_next_state(
         state,
@@ -223,10 +448,10 @@ def test_child_flow_abort():
             filename="", content=content, include_source_mapping=False, version="1.1"
         )
     )
-    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = compute_next_state(
         state,
@@ -273,10 +498,10 @@ def test_conflicting_actions():
             filename="", content=content, include_source_mapping=False, version="1.1"
         )
     )
-    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     state = compute_next_state(
         state,
