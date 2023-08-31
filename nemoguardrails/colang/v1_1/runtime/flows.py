@@ -295,6 +295,29 @@ class State:
                         else:
                             # It's an UMIM action
                             # TODO: Implement proper action concept
+                            # if (
+                            #     len(element.ref) > 0
+                            #     and element.ref["_type"] == "capture_ref"
+                            # ):
+                            #     new_elements.append(
+                            #         SpecOp(
+                            #             op="_new_instance",
+                            #             spec=Spec(
+                            #                 name=element.spec.name,
+                            #                 arguments=element.spec.arguments,
+                            #             ),
+                            #             ref=element.ref,
+                            #         )
+                            #     )
+                            # new_elements.append(
+                            #     SpecOp(
+                            #         op="send",
+                            #         spec=Spec(
+                            #             name="Start",
+                            #         ),
+                            #         ref=element.ref,
+                            #     )
+                            # )
                             new_elements.append(
                                 SpecOp(
                                     op="send",
@@ -865,7 +888,7 @@ def compute_next_events(
     history: List[dict], flow_configs: Dict[str, FlowConfig]
 ) -> List[dict]:
     """Computes the next step in a flow-driven system given a history of events."""
-    state = State(context={}, flow_states=[], flow_configs=flow_configs)
+    state = State(context={}, flow_states={}, flow_configs=flow_configs)
 
     # First, we process the history and apply any alterations e.g. 'hide_prev_turn'
     actual_history = []
@@ -890,7 +913,7 @@ def compute_next_events(
         # NOTE (Jul 24, Razvan): this is a quick fix. Will debug further.
         if event["type"] == "bot_intent" and event["intent"] == "stop":
             # Reset all flows
-            state.flow_states = []
+            state.flow_states = {}
 
     next_events = []
 
