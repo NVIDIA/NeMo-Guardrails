@@ -130,7 +130,7 @@ class PIIRecognizer:
                     action_result = await fn(*args, **kwargs)
                     context_updates = action_result.context_updates
                     context_updates_anonymized["relevant_chunks"] = self._anonymize_text(context_updates["relevant_chunks"])
-                    async def anonymized_fn():
+                    def anonymized_fn():
                         return ActionResult(
                             return_value=context_updates_anonymized["relevant_chunks"],
                             context_updates=context_updates_anonymized,
