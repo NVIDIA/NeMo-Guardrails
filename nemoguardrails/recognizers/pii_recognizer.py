@@ -43,17 +43,18 @@ class PIIRecognizer:
         if self.load_predefined:
             self.registry.load_predefined_recognizers()
 
-        # load ad-hoc recognizers 
-        if os.path.exists(config_path):
-            recognizer_path = os.path.join(config_path, "recognizers.yaml")
-            if os.path.exists(recognizer_path):
-                self.recognizer_path = recognizer_path
-                self.registry.add_recognizers_from_yaml(self.recognizer_path)
-                self._add_custom_entities_from_yaml()
+        if config_path: 
+            if os.path.exists(config_path):
+                # load ad-hoc recognizers
+                recognizer_path = os.path.join(config_path, "recognizers.yaml")
+                if os.path.exists(recognizer_path):
+                    self.recognizer_path = recognizer_path
+                    self.registry.add_recognizers_from_yaml(self.recognizer_path)
+                    self._add_custom_entities_from_yaml()
 
-        # load additional recognizers:
-        #  1. cloud hosted PII recognizers, 2. custom recognizers
-        self.load_recognizers_from_path(config_path)
+                # load additional recognizers:
+                #  1. cloud hosted PII recognizers, 2. custom recognizers
+                self.load_recognizers_from_path(config_path)
         
         # Analyzer object 
         self.analyzer = AnalyzerEngine(registry=self.registry)
