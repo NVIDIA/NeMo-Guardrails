@@ -13,13 +13,15 @@ import inspect
 
 
 class PIIRecognizer:
+    """Main class that enables integration of third party
+       PII recognizers"""
     
-    def __init__(self, config_path: str, load_predefined: bool = True, redact: bool = True):
+    def __init__(self, config_path: str, load_predefined: bool = True, redact: bool = False):
         
-
         self.redact = redact
         self.load_predefined = load_predefined
         
+        #TODO make the decorator generic 
         self.allowed_actions = ["retrieve_relevant_chunks"]
         
         #TODO read config.yml to find out required entities to be redacted
@@ -31,27 +33,33 @@ class PIIRecognizer:
                             "EMAIL_ADDRESS",
                             "US_DRIVER_LICENSE"]
 
+        # load predefined recognizers in registry
         self.registry = RecognizerRegistry()
         if self.load_predefined:
             self.registry.load_predefined_recognizers()
 
-        #ad-hoc recognizers
+        # load ad-hoc recognizers 
         if os.path.exists(config_path):
             recognizer_path = os.path.join(config_path, "recognizers.yaml")
-            if recognizer_path:
+            if os.path.exists(recognizer_path):
                 self.recognizer_path = recognizer_path
                 self.registry.add_recognizers_from_yaml(self.recognizer_path)
                 self._add_custom_entities_from_yaml()
 
-        self.load_actions_from_path(config_path)
+        # load additional recognizers:
+        #  1. cloud hosted PII recognizers, 2. custom recognizers
+        self.load_recognizers_from_path(config_path)
         
+        # Analyzer object 
         self.analyzer = AnalyzerEngine(registry=self.registry)
+
+        # Anonymizer object
         self.anonymizer = AnonymizerEngine()
         
-    
-     
-    def _add_custom_entities_from_yaml(self):
         
+    def _add_custom_entities_from_yaml(self):
+        """Discovers entities supported by ad-hoc PII recogniers"""
+
         with open(self.recognizer_path, "r") as stream:
             contents = yaml.safe_load(stream)
             for recognizer in contents["recognizers"]:
@@ -60,8 +68,10 @@ class PIIRecognizer:
                     self.pii_entities.append(custom_entity)
 
 
-    def load_actions_from_path(self, path: str):
-
+    def load_recognizers_from_path(self, path: str):
+        """helper function that loads custom recognizers
+           recognizers that wrap cloud hosted PII recognizers"""
+        
         recognizers_py_path = os.path.join(path, "recognizers.py")
         if os.path.exists(recognizers_py_path):
             file_name = os.path.basename(recognizers_py_path)
@@ -69,27 +79,30 @@ class PIIRecognizer:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             
+            # custom recognizers need to be decorated with @recognizer
             for name, obj in inspect.getmembers(module):
                 if inspect.isclass(obj) and hasattr(obj, "recognizer_meta"):
                     try:
                         recognizer = obj()
                         self.registry.add_recognizer(recognizer)
                     except Exception as e:
+                        #TODO need to log
                         print("failed to add recognizer to registry of analyzer engine")
 
     
-    
     def _anonymize_text(self, text: str) -> str:
-        
+        """function to recognize PII entities and redact"""
+
+        # analyzer tags entities with labels
         analyzer_results = self.analyzer.analyze(text=text, language='en', entities=self.pii_entities)
     
-        #find length of characters to anonymize
+        # config for anonymization
         operators = {}
-   
         for entity in analyzer_results:
             if entity.entity_type in self.pii_entities:
                 operators[entity.entity_type] = OperatorConfig("replace", {"new_value": "<ANONYMIZED>"})
       
+        # redact or anonymize
         anonymized_results = self.anonymizer.anonymize(
             text=text,
             analyzer_results=analyzer_results,    
@@ -97,15 +110,18 @@ class PIIRecognizer:
         
         return anonymized_results.text
     
+
     def anonymize_fn(self, fn):
-        
+        """decorator that anonymizes
+           output from retrieve_relevant_chunks action"""        
+
         async def decorator(*args, **kwargs):
             context_updates_anonymized = {}
             context_updates_anonymized["relevant_chunks"] = "" 
             
+            # check for actions
             if inspect.isfunction(fn) and hasattr(fn, "action_meta"): 
                 if fn.action_meta["name"] in self.allowed_actions and self.redact:
-                    print ('anonymizing relevant chunks...')
                     action_result = await fn(*args, **kwargs)
                     context_updates = action_result.context_updates
                     context_updates_anonymized["relevant_chunks"] = self._anonymize_text(context_updates["relevant_chunks"])
