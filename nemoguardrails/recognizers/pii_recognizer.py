@@ -10,6 +10,7 @@ from nemoguardrails.actions.actions import ActionResult, action
 import inspect
 import importlib
 import inspect
+import spacy
 
 
 class PIIRecognizer:
@@ -20,6 +21,10 @@ class PIIRecognizer:
         
         self.redact = redact
         self.load_predefined = load_predefined
+
+        # predefined recognizers use spacy module 
+        if not spacy.util.is_package('en_core_web_lg'):
+            spacy.cli.download('en_core_web_lg')
         
         #TODO make the decorator generic 
         self.allowed_actions = ["retrieve_relevant_chunks"]
