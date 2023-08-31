@@ -6,11 +6,7 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (
-    FlowConfig,
-    State,
-    compute_next_state,
-)
+from nemoguardrails.colang.v1_1.runtime.flows import State, compute_next_state
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -110,6 +106,60 @@ def test_await_action():
         )
     )
 
+    state = State(context={}, flow_states=[], flow_configs=config)
+    state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    state = compute_next_state(
+        state,
+        {
+            "type": "StartFlow",
+            "flow_id": "main",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+    state.outgoing_events.clear()
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "script": "Hello world",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            }
+        ],
+    )
+
+
+def test_await_action_with_reference():
+    """Test to await an UMIM action"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello world") as $action_ref
+      match $action_ref.Finished()
+    """
+    config = convert_parsed_colang_to_flow_config(
+        parse_colang_file(
+            filename="", content=content, include_source_mapping=False, version="1.1"
+        )
+    )
+
+    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
     json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
@@ -587,4 +637,4 @@ def test_flow_parameters():
 
 
 if __name__ == "__main__":
-    test_flow_parameters()
+    test_await_action_with_reference()
