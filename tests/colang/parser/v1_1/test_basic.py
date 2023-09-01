@@ -19,18 +19,26 @@ from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.utils import CustomDumper
 
 
-def test_1():
-    content = """
-    flow test
-      match UserIntent(intent="express greeting")
-      bot express greeting
-    """
+def _flows(content):
+    """Quick helper."""
     result = parse_colang_file(
         filename="", content=content, include_source_mapping=False, version="1.1"
     )
     flows = [flow.to_dict() for flow in result["flows"]]
 
     print(yaml.dump(flows, sort_keys=False, Dumper=CustomDumper, width=1000))
+    return flows
+
+
+def test_1():
+    flows = _flows(
+        """
+        flow test
+          match UserIntent(intent="express greeting")
+          bot express greeting
+        """
+    )
+
     assert flows == [
         {
             "_source": None,
@@ -80,27 +88,23 @@ def test_1():
                 },
             ],
             "name": "test",
+            "parameters": [],
         }
     ]
 
 
 def test_2():
-    content = """
-    flow test
-      match user express greeting
+    flows = _flows(
+        """
+        flow test
+          match user express greeting
 
-      if $current_time < '12:00'
-        bot express good morning
-      else
-        bot express good afternoon
-
-    """
-    result = parse_colang_file(
-        filename="", content=content, include_source_mapping=False, version="1.1"
+          if $current_time < '12:00'
+            bot express good morning
+          else
+            bot express good afternoon
+        """
     )
-    flows = [flow.to_dict() for flow in result["flows"]]
-
-    print(yaml.dump(flows, sort_keys=False, Dumper=CustomDumper, width=1000))
     assert flows == [
         {
             "_source": None,
@@ -173,24 +177,21 @@ def test_2():
                 },
             ],
             "name": "test",
+            "parameters": [],
         }
     ]
 
 
 def test_3():
-    content = """
-    flow test
-      user silent $duration="5s" or user agrees
-      user silent "5s"
-      user ask $text="what?" $times=3
-      user ask (text="what?", times=3)
-    """
-    result = parse_colang_file(
-        filename="", content=content, include_source_mapping=False, version="1.1"
+    flows = _flows(
+        """
+        flow test
+          user silent $duration="5s" or user agrees
+          user silent "5s"
+          user ask $text="what?" $times=3
+          user ask (text="what?", times=3)
+        """
     )
-    flows = [flow.to_dict() for flow in result["flows"]]
-
-    print(yaml.dump(flows, sort_keys=False, Dumper=CustomDumper, width=1000))
     assert flows == [
         {
             "_source": None,
@@ -281,25 +282,22 @@ def test_3():
                 },
             ],
             "name": "test",
+            "parameters": [],
         }
     ]
 
 
 def test_4():
-    content = """
-    flow test
-      match bot express greeting . Finished()
-      match bot express greeting . Finished(status="success")
-      match $action
-      match $action.Finished()
-      match $some_flow.some_action.Finished("success")
-    """
-    result = parse_colang_file(
-        filename="", content=content, include_source_mapping=False, version="1.1"
+    flows = _flows(
+        """
+        flow test
+          match bot express greeting . Finished()
+          match bot express greeting . Finished(status="success")
+          match $action
+          match $action.Finished()
+          match $some_flow.some_action.Finished("success")
+        """
     )
-    flows = [flow.to_dict() for flow in result["flows"]]
-
-    print(yaml.dump(flows, sort_keys=False, Dumper=CustomDumper, width=1000))
     assert flows == [
         {
             "_source": None,
@@ -435,5 +433,58 @@ def test_4():
                 },
             ],
             "name": "test",
+            "parameters": [],
         }
     ]
+
+
+def test_flow_param_defs():
+    assert (
+        _flows(
+            """
+            flow test $name $price=2
+                user express greeting
+            """
+        )[0]["parameters"]
+        == [
+            {"default_value_expr": None, "name": "name"},
+            {"default_value_expr": "2", "name": "price"},
+        ]
+    )
+
+    assert (
+        _flows(
+            """
+            flow test $name
+                user express greeting
+            """
+        )[0]["parameters"]
+        == [
+            {"default_value_expr": None, "name": "name"},
+        ]
+    )
+
+    assert (
+        _flows(
+            """
+            flow test($name)
+                user express greeting
+            """
+        )[0]["parameters"]
+        == [
+            {"default_value_expr": None, "name": "name"},
+        ]
+    )
+
+    assert (
+        _flows(
+            """
+            flow test($name="John", $age)
+                user express greeting
+            """
+        )[0]["parameters"]
+        == [
+            {"default_value_expr": '"John"', "name": "name"},
+            {"default_value_expr": None, "name": "age"},
+        ]
+    )

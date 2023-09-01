@@ -20,6 +20,7 @@ from lark.tree import Meta
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Flow,
+    FlowParamDef,
     If,
     Set,
     Source,
@@ -103,7 +104,26 @@ class ColangTransformer(Transformer):
         assert children[2]["_type"] == "suite"
 
         name = children[0]["elements"][0]
+        parameters = children[1]
         elements = children[2]["elements"]
+
+        param_defs = []
+        if parameters:
+            for flow_param_def in parameters["elements"]:
+                assert flow_param_def["_type"] == "flow_param_def"
+                param_name_el = flow_param_def["elements"][0]
+
+                assert param_name_el["_type"] == "var_name"
+                param_name = param_name_el["elements"][0][1:]
+                param_def = FlowParamDef(name=param_name)
+
+                # If we have a default value, we also use that
+                if len(flow_param_def["elements"]) == 2:
+                    default_value_el = flow_param_def["elements"][1]
+                    assert default_value_el["_type"] == "expr"
+                    param_def.default_value_expr = default_value_el["elements"][0]
+
+                param_defs.append(param_def)
 
         elements[0:0] = [
             SpecOp(
@@ -112,7 +132,12 @@ class ColangTransformer(Transformer):
             )
         ]
 
-        return Flow(name=name, elements=elements, _source=self.__source(meta))
+        return Flow(
+            name=name,
+            elements=elements,
+            parameters=param_defs,
+            _source=self.__source(meta),
+        )
 
     def _spec_op(self, children, meta):
         """Processing for `spec_op` tree nodes.
@@ -208,7 +233,8 @@ class ColangTransformer(Transformer):
             if child["elements"][1]:
                 arg_elements = child["elements"][1]["elements"]
                 arguments = self.__parse_classical_arguments(arg_elements)
-            members.append(Spec(name=name, arguments=arguments))
+            member_spec = Spec(name=name, arguments=arguments)
+            members.append(member_spec)
 
         if members:
             spec.members = members

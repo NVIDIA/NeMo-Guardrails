@@ -9,9 +9,10 @@ suite: _NEWLINE _INDENT (stmt+) _DEDENT
 // Flow definition and calling
 ?def_stmt: flow_def
 flow_def: "flow" spec_name [flow_params_def] suite
-flow_params_def: flow_params_def_classic | flow_params_def_simple
-flow_params_def_classic: "(" (var_name ("=" test)? ("," var_name ("=" test)?)*) ")"
-flow_params_def_simple: (var_name ("=" test)?)+
+?flow_params_def: flow_params_def_classic | flow_params_def_simple
+flow_params_def_classic: "(" (flow_param_def ("," flow_param_def)*) ")"
+flow_params_def_simple: (flow_param_def)+
+flow_param_def: var_name ("=" test)?
 ?flow_stmt: simple_stmt | spec_op_stmt | compound_stmt
 
 // Simple statements

@@ -44,6 +44,8 @@ class ColangParser:
         Returns:
             An instance of a parsing tree as returned by Lark.
         """
+        # NOTE: dealing with EOF is a bit tricky in Lark; the easiest solution
+        # to avoid some issues arising from that is to append a new line at the end
         return self._lark_parser.parse(content + "\n")
 
     def parse_content(self, content: str, print_tokens=False):
@@ -52,8 +54,6 @@ class ColangParser:
             for token in tokens:
                 print(token.__repr__())
 
-        # NOTE: dealing with EOF is a bit tricky in Lark; the easiest solution
-        # to avoid some issues arising from that is to append a new line at the end
         tree = self.get_parsing_tree(content)
 
         transformer = ColangTransformer(

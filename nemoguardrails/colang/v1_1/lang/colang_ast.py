@@ -34,6 +34,18 @@ class Source:
 
 @dataclass_json
 @dataclass
+class FlowParamDef:
+    """The definition for a flow parameter.
+
+    Explicit typing is not yet supported.
+    """
+
+    name: str
+    default_value_expr: Optional[str] = None
+
+
+@dataclass_json
+@dataclass
 class Element:
     """Base class for all elements in the AST."""
 
@@ -68,6 +80,7 @@ class Flow(Element):
     """Element that represents a flow."""
 
     name: str = field(kw_only=True)
+    parameters: List[FlowParamDef] = field(default_factory=list)
     elements: List[Element] = field(kw_only=True)
     _type: str = "flow"
 
