@@ -488,3 +488,17 @@ def test_flow_param_defs():
             {"default_value_expr": None, "name": "age"},
         ]
     )
+
+
+def test_flow_def():
+    assert (
+        len(
+            _flows(
+                """
+flow main
+  match UtteranceUserActionFinished()
+  await UtteranceBotAction(script="Hello world!")"""
+            )
+        )
+        > 0
+    )

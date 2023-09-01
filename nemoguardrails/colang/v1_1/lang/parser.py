@@ -18,6 +18,7 @@ import os
 
 import yaml
 
+from nemoguardrails.colang.v1_1.lang.colang_ast import Flow
 from nemoguardrails.colang.v1_1.lang.grammar.load import load_lark_parser
 from nemoguardrails.colang.v1_1.lang.transformer import ColangTransformer
 from nemoguardrails.utils import CustomDumper
@@ -63,10 +64,14 @@ class ColangParser:
 
         result = {"flows": []}
 
-        # We take all the flow elements and return them
-        for element in data["elements"]:
-            if element["_type"] == "flow":
-                result["flows"].append(element)
+        # For the special case when we only have on flow in the colang file
+        if isinstance(data, Flow):
+            result["flows"].append(data)
+        else:
+            # Otherwise, it's a sequence and we take all the flow elements and return them
+            for element in data["elements"]:
+                if element["_type"] == "flow":
+                    result["flows"].append(element)
 
         return result
 
