@@ -67,10 +67,13 @@ class LLMGenerationActions:
         self.llm = llm
         self.verbose = verbose
 
-        # If we have a customized embedding model, we'll use it.
+        # The default embeddings model is using SentenceTransformers
         self.embedding_model = "all-MiniLM-L6-v2"
+        self.embedding_engine = "SentenceTransformers"
+
+        # If we have a customized embedding model, we'll use it.
         for model in self.config.models:
-            if model.type == "embedding":
+            if model.type == "embeddings":
                 self.embedding_model = model.model
                 assert model.engine in get_embedding_provider_names()
                 self.embedding_engine = model.engine

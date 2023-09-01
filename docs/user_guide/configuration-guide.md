@@ -111,6 +111,28 @@ models:
 ```
 
 
+### The Embeddings Model
+
+To configure the embeddings model that is used for the various steps in the [guardrails process](../architecture/README.md) (e.g., canonical form generation, next step generation) you can add a model configuration in the `models` key as shown below:
+
+```yaml
+models:
+  - ...
+  - type: embedding
+    engine: SentenceTransformers
+    model: all-MiniLM-L6-v2
+```
+
+The `SentenceTransformers` engine is the default one and uses the `all-MiniLM-L6-v2` model. NeMo Guardrails also supports using OpenAI models for computing the embeddings, e.g.:
+
+```yaml
+models:
+  - ...
+  - type: embedding
+    engine: openai
+    model: text-embedding-ada-002
+```
+
 ### General Instruction
 
 The general instruction (similar to a system prompt) gets appended at the beginning of every prompt, and you can configure it as shown below:

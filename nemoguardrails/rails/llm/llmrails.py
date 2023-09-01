@@ -124,7 +124,7 @@ class LLMRails:
         #  to search for the main model config.
 
         for llm_config in self.config.models:
-            if llm_config.type == "embedding":
+            if llm_config.type == "embeddings":
                 if llm_config.engine not in get_embedding_provider_names():
                     raise Exception(f"Unknown embedding engine: {llm_config.engine}")
             else:
