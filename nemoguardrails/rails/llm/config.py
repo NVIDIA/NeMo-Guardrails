@@ -354,10 +354,15 @@ class RailsConfig(BaseModel):
     @classmethod
     def parse_object(cls, obj):
         """Parses a configuration object from a given dictionary."""
-        # If we have flows, we need to process them further from CoYML to CIL.
-        for flow_data in obj.get("flows", []):
-            # If the first element in the flow does not have a "_type", we need to convert
-            if flow_data.get("elements") and not flow_data["elements"][0].get("_type"):
-                flow_data["elements"] = parse_flow_elements(flow_data["elements"])
+        # If we have flows, we need to process them further from CoYML to CIL, but only for
+        # version 1.0.
+
+        if obj.get("colang_version") != "1.0":
+            for flow_data in obj.get("flows", []):
+                # If the first element in the flow does not have a "_type", we need to convert
+                if flow_data.get("elements") and not flow_data["elements"][0].get(
+                    "_type"
+                ):
+                    flow_data["elements"] = parse_flow_elements(flow_data["elements"])
 
         return RailsConfig.parse_obj(obj)
