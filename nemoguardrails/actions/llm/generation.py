@@ -188,7 +188,9 @@ class LLMGenerationActions:
 
         documents = [doc.content for doc in self.config.docs]
         self.kb = KnowledgeBase(
-            documents=documents, embedding_model=self.embedding_model
+            documents=documents,
+            embedding_model=self.embedding_model,
+            embedding_engine=self.embedding_engine,
         )
         self.kb.init()
         self.kb.build()
