@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
+
 from nemoguardrails.utils import new_event_dict
 
 
@@ -68,6 +70,7 @@ def test_action_finished_event():
         final_script=final_script,
         is_success=True,
         failure_reason="Nothing all worked.",
+        action_uid="1234",
     )
 
     assert "action_finished_at" in e
@@ -82,3 +85,37 @@ def test_action_finished_event():
     assert e["final_script"] == final_script
     assert e["action_info_modality"] == "bot_speech"
     assert e["action_info_modality_policy"] == "replace"
+
+
+def test_start_action_event():
+    event_type = "StartUtteranceBotAction"
+    script = "Hello. Nice to see you!"
+    e = new_event_dict(
+        event_type,
+        script=script,
+    )
+
+    assert "action_uid" in e
+    assert e["script"] == script
+    assert e["action_info_modality"] == "bot_speech"
+    assert e["action_info_modality_policy"] == "replace"
+
+
+def test_action_events_require_action_id():
+    with pytest.raises(AssertionError, match=r".*action_uid.*"):
+        event_type = "StopUtteranceBotAction"
+        script = "Hello. Nice to see you!"
+        e = new_event_dict(
+            event_type,
+            script=script,
+        )
+
+
+def test_wrong_property_type():
+    with pytest.raises(AssertionError, match=r".*script.*"):
+        event_type = "StartUtteranceBotAction"
+        script = 1
+        e = new_event_dict(
+            event_type,
+            script=script,
+        )

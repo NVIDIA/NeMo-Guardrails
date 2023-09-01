@@ -231,6 +231,7 @@ class Runtime:
         action_name = event["action_name"]
         action_params = event["action_params"]
         action_result_key = event["action_result_key"]
+        action_uid = event["action_uid"]
 
         context = {}
         action_meta = {}
@@ -355,6 +356,7 @@ class Runtime:
         next_steps.append(
             new_event_dict(
                 "InternalSystemActionFinished",
+                action_uid=action_uid,
                 action_name=action_name,
                 action_params=action_params,
                 action_result_key=action_result_key,
