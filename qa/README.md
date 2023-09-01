@@ -41,8 +41,16 @@ Please refer to the [installation guide](installation-guide.md) for instructions
 2. Change the directory to `nemoguardrails/qa` folder, and then run all the automated tests
 
  ```bash
- > python -m pytest test_*.py
+ > QA=True python -m pytest test_*.py
  ```
+
+NOTE: The QA tests are skipped by default as they are expensive (i.e., they make live call to OpenAI and other services). To enable them, you have to set the `QA` environment variable.
+
+Alternatively, you can also run the tests from the root of the project:
+
+```bash
+> QA=True pytest qa
+```
 
 3. If there are any failure(s), analyze the corresponding example test log.
 

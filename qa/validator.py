@@ -16,6 +16,7 @@
 import nltk
 from nltk.corpus import wordnet
 
+
 def are_strings_semantically_same(string1, string2):
     # Tokenize the strings into words
     tokens1 = nltk.word_tokenize(string1)
@@ -27,8 +28,14 @@ def are_strings_semantically_same(string1, string2):
 
     # Lemmatize the words using WordNet
     lemmatizer = nltk.WordNetLemmatizer()
-    lemmas1 = [lemmatizer.lemmatize(token[0].lower(), get_wordnet_pos(token[1])) for token in pos1]
-    lemmas2 = [lemmatizer.lemmatize(token[0].lower(), get_wordnet_pos(token[1])) for token in pos2]
+    lemmas1 = [
+        lemmatizer.lemmatize(token[0].lower(), get_wordnet_pos(token[1]))
+        for token in pos1
+    ]
+    lemmas2 = [
+        lemmatizer.lemmatize(token[0].lower(), get_wordnet_pos(token[1]))
+        for token in pos2
+    ]
 
     # Calculate semantic similarity using Wu-Palmer Similarity
     similarity = semantic_similarity(lemmas1, lemmas2)
@@ -39,18 +46,20 @@ def are_strings_semantically_same(string1, string2):
     else:
         return False
 
+
 def get_wordnet_pos(tag):
     """Map POS tags to WordNet POS tags"""
-    if tag.startswith('J'):
+    if tag.startswith("J"):
         return wordnet.ADJ
-    elif tag.startswith('V'):
+    elif tag.startswith("V"):
         return wordnet.VERB
-    elif tag.startswith('N'):
+    elif tag.startswith("N"):
         return wordnet.NOUN
-    elif tag.startswith('R'):
+    elif tag.startswith("R"):
         return wordnet.ADV
     else:
         return wordnet.NOUN  # default to noun
+
 
 def semantic_similarity(words1, words2):
     """Calculate the maximum Wu-Palmer Similarity between any pair of words"""
@@ -65,6 +74,7 @@ def semantic_similarity(words1, words2):
                     if similarity is not None and similarity > max_similarity:
                         max_similarity = similarity
     return max_similarity
+
 
 if __name__ == "__main__":
     # Example usage

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example for using [custom LLM and multiple KBs](./examples/multi_kb/README.md)
 - Support for [`PROMPTS_DIR`](./docs/user_guide/advanced/prompt-customization.md#prompt-configuration).
 - [#101](https://github.com/NVIDIA/NeMo-Guardrails/pull/101) Support for [using OpenAI embeddings](./docs/user_guide/configuration-guide.md#the-embeddings-model) models in addition to SentenceTransformers.
+- First set of end-to-end QA tests for the example configurations.
 
 ### Changed
 

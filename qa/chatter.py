@@ -18,7 +18,6 @@ import os
 import subprocess
 import traceback
 
-
 EXAMPLES_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), "examples")
 
 
@@ -30,7 +29,14 @@ def create_chatter(name, configname, logger):
     logger.info(f"config: {config}")
     try:
         command = ["nemoguardrails", "chat", f"--config={config}"]
-        chatter = subprocess.Popen(command, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        chatter = subprocess.Popen(
+            command,
+            cwd=cwd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
         if chatter is not None:
             output = chatter.stdout.readline().strip()
             logger.info(f"output: {output}")
@@ -42,6 +48,7 @@ def create_chatter(name, configname, logger):
         logger.error(traceback.format_exc())
 
     return chatter
+
 
 def close_chatter(chatter):
     """Close the given chatter"""
