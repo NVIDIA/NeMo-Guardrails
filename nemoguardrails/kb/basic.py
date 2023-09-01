@@ -15,7 +15,6 @@
 
 from typing import List
 
-import openai
 from annoy import AnnoyIndex
 from sentence_transformers import SentenceTransformer
 from torch import cuda
@@ -114,6 +113,7 @@ class OpenAIEmbeddingModel(EmbeddingModel):
 
     def encode(self, documents: List[str]) -> List[List[float]]:
         """Encode a list of documents into embeddings."""
+        import openai
 
         # Make embedding request to OpenAI API
         res = openai.Embedding.create(input=documents, engine=self.model)
