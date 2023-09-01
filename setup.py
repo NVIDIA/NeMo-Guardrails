@@ -53,6 +53,7 @@ setup(
             "**/*.co",
             "**/*.txt",
             "**/*.json",
+            "**/*.lark",
             "../examples/**/*",
             "../chat-ui/**/*",
             "eval/data/**/*",
