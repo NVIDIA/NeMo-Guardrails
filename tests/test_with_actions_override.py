@@ -15,26 +15,24 @@
 
 import os
 
-import pytest
-
-from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails import RailsConfig
+from tests.utils import TestChat
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "test_configs")
 
 
-@pytest.fixture
-def app():
+def test_1():
     config = RailsConfig.from_path(
         os.path.join(CONFIGS_FOLDER, "with_actions_override")
     )
 
-    return LLMRails(config)
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "  express greeting",
+            '  "Hello John!"',
+        ],
+    )
 
-
-def test_live_query(app):
-    result = app.generate(messages=[{"role": "user", "content": "hello!"}])
-
-    assert result == {
-        "content": "How are you doing?",
-        "role": "assistant",
-    }
+    chat >> "hello!"
+    chat << "How are you doing?"
