@@ -232,9 +232,9 @@ def init_tabular_llm(config: RailsConfig):
 vectordb = None
 
 
-def init_embeddings_model(config: RailsConfig):
+def init_vectordb_model(config: RailsConfig):
     global vectordb
-    model_config = _get_model_config(config, "embeddings")
+    model_config = _get_model_config(config, "vectordb")
     vectordb = _get_vector_db(
         model_name=model_config.model,
         data_path=config.custom_data["kb_data_path"],
@@ -295,7 +295,7 @@ def init(llm_rails: LLMRails):
 
     # Initialize the various models
     init_main_llm(config)
-    init_embeddings_model(config)
+    init_vectordb_model(config)
     init_tabular_llm(config)
 
     # Register the custom `retrieve_relevant_chunks` for custom retrieval

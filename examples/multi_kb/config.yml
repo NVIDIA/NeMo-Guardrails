@@ -15,7 +15,7 @@ models:
     parameters:
       path: "<PATH_TO_DOWNLOADED_CHECKPOINT_FOLDER>/ggml-vicuna-13b-4bit-rev1.bin"
 
-  - type: embeddings
+  - type: vectordb
     engine: hf_pipeline_bloke
     model: "sentence-transformers/all-mpnet-base-v2"
     parameters:
