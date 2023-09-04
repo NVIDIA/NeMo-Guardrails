@@ -28,8 +28,13 @@ from nemoguardrails.actions.llm.utils import get_colang_history
 from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.kb.index import EmbeddingsIndex
 from nemoguardrails.language.parser import parse_colang_file
-from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
+from nemoguardrails.llm.providers import (
+    get_embedding_provider_names,
+    get_llm_provider,
+    get_llm_provider_names,
+)
 from nemoguardrails.logging.stats import llm_stats
+from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 
@@ -122,39 +127,43 @@ class LLMRails:
         #  to search for the main model config.
 
         for llm_config in self.config.models:
-            if llm_config.engine not in get_llm_provider_names():
-                raise Exception(f"Unknown LLM engine: {llm_config.engine}")
-
-            provider_cls = get_llm_provider(llm_config)
-            # We need to compute the kwargs for initializing the LLM
-            kwargs = llm_config.parameters
-
-            # We also need to pass the model, if specified
-            if llm_config.model:
-                # Some LLM providers use `model_name` instead of model. For backward compatibility
-                # we keep this hard-coded mapping.
-                if llm_config.engine in [
-                    "azure",
-                    "openai",
-                    "gooseai",
-                    "nlpcloud",
-                    "petals",
-                ]:
-                    kwargs["model_name"] = llm_config.model
-                else:
-                    # The `__fields__` attribute is computed dynamically by pydantic.
-                    if "model" in provider_cls.__fields__:
-                        kwargs["model"] = llm_config.model
-
-            if llm_config.type == "main" or len(self.config.models) == 1:
-                self.llm = provider_cls(**kwargs)
-                self.runtime.register_action_param("llm", self.llm)
+            if llm_config.type == "embeddings":
+                if llm_config.engine not in get_embedding_provider_names():
+                    raise Exception(f"Unknown embedding engine: {llm_config.engine}")
             else:
-                model_name = f"{llm_config.type}_llm"
-                setattr(self, model_name, provider_cls(**kwargs))
-                self.runtime.register_action_param(
-                    model_name, getattr(self, model_name)
-                )
+                if llm_config.engine not in get_llm_provider_names():
+                    raise Exception(f"Unknown LLM engine: {llm_config.engine}")
+
+                provider_cls = get_llm_provider(llm_config)
+                # We need to compute the kwargs for initializing the LLM
+                kwargs = llm_config.parameters
+
+                # We also need to pass the model, if specified
+                if llm_config.model:
+                    # Some LLM providers use `model_name` instead of model. For backward compatibility
+                    # we keep this hard-coded mapping.
+                    if llm_config.engine in [
+                        "azure",
+                        "openai",
+                        "gooseai",
+                        "nlpcloud",
+                        "petals",
+                    ]:
+                        kwargs["model_name"] = llm_config.model
+                    else:
+                        # The `__fields__` attribute is computed dynamically by pydantic.
+                        if "model" in provider_cls.__fields__:
+                            kwargs["model"] = llm_config.model
+
+                if llm_config.type == "main" or len(self.config.models) == 1:
+                    self.llm = provider_cls(**kwargs)
+                    self.runtime.register_action_param("llm", self.llm)
+                else:
+                    model_name = f"{llm_config.type}_llm"
+                    setattr(self, model_name, provider_cls(**kwargs))
+                    self.runtime.register_action_param(
+                        model_name, getattr(self, model_name)
+                    )
 
     def _get_events_for_messages(self, messages: List[dict]):
         """Return the list of events corresponding to the provided messages.
@@ -287,12 +296,7 @@ class LLMRails:
     ):
         """Synchronous version of generate_async."""
 
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
+        if check_sync_call_from_async_loop():
             raise RuntimeError(
                 "You are using the sync `generate` inside async code. "
                 "You should replace with `await generate_async(...)."
@@ -339,12 +343,7 @@ class LLMRails:
     def generate_events(self, events: List[dict]) -> List[dict]:
         """Synchronous version of `LLMRails.generate_events_async`."""
 
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
+        if check_sync_call_from_async_loop():
             raise RuntimeError(
                 "You are using the sync `generate_events` inside async code. "
                 "You should replace with `await generate_events_async(...)."

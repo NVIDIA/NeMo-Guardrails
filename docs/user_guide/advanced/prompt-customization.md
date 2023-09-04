@@ -16,6 +16,8 @@ Check out the [Task type](../../../nemoguardrails/llm/types.py) for the complete
 
 The toolkit provides predefined prompts for each task and for certain LLM models. They are located in the [nemoguardrails/llm/prompts](../../../nemoguardrails/llm/prompts) folder. You can customize the prompts further by including a `prompts.yml` file in a guardrails configuration (technically, the file name is not essential, and you can also include the `prompts` key in the general `config.yml` file).
 
+Additionally, if the environment variable `PROMPTS_DIR` is set, the toolkit will also load any prompts defined in the specified directory. The loading is performed once, when the python module is loaded. The folder must contain one or more `.yml` files which contain prompt definitions (inside the `prompts` key).
+
 To override the prompt for a specific model, you need to specify the `models` key:
 
 ```yaml

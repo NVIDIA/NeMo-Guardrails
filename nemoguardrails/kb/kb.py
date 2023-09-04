@@ -22,7 +22,7 @@ from typing import Any, Dict, List
 
 from annoy import AnnoyIndex
 
-from nemoguardrails.kb.basic import BasicEmbeddingsIndex
+from nemoguardrails.kb.basic import BasicEmbeddingsIndex, init_embedding_model
 from nemoguardrails.kb.index import IndexItem
 from nemoguardrails.kb.utils import split_markdown_in_topic_chunks
 
@@ -85,14 +85,21 @@ class KnowledgeBase:
         # If we have already computed this before, we use it
         if self._embedding_search_provider == "default" and os.path.exists(cache_file):
             # TODO: this should not be hardcoded. Currently set for all-MiniLM-L6-v2.
-            embedding_size = 384
+            # Get embedding size from model
+            model = init_embedding_model(
+                embedding_model=self.embedding_model,
+                embedding_engine=self.embedding_engine,
+            )
+            embedding_size = model.embedding_size
             ann_index = AnnoyIndex(embedding_size, "angular")
             ann_index.load(cache_file)
 
             self.index = BasicEmbeddingsIndex(
-                embedding_model=self.embedding_model, index=ann_index
+                embedding_model=self.embedding_model,
+                embedding_engine=self.embedding_engine,
+                index=ann_index,
             )
-            self.index.add_items(index_items)
+            await self.index.add_items(index_items)
         else:
             self.index = self._get_embeddings_search_instance()
             await self.index.add_items(index_items)

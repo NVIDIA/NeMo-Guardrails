@@ -17,8 +17,9 @@ from typing import List
 
 from annoy import AnnoyIndex
 from sentence_transformers import SentenceTransformer
+from torch import cuda
 
-from nemoguardrails.kb.index import EmbeddingsIndex, IndexItem
+from nemoguardrails.kb.index import EmbeddingModel, EmbeddingsIndex, IndexItem
 
 
 class BasicEmbeddingsIndex(EmbeddingsIndex):
@@ -28,11 +29,12 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     It uses Annoy to perform the search.
     """
 
-    def __init__(self, embedding_model=None, index=None):
+    def __init__(self, embedding_model=None, embedding_engine=None, index=None):
         self._model = None
         self._items = []
         self._embeddings = []
         self.embedding_model = embedding_model
+        self.embedding_engine = embedding_engine
 
         # When the index is provided, it means it's from the cache.
         self._index = index
@@ -43,7 +45,9 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
 
     def _init_model(self):
         """Initialize the model used for computing the embeddings."""
-        self._model = SentenceTransformer(self.embedding_model)
+        self._model = init_embedding_model(
+            embedding_model=self.embedding_model, embedding_engine=self.embedding_engine
+        )
 
     def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Compute embeddings for a list of texts."""
@@ -51,7 +55,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
             self._init_model()
 
         embeddings = self._model.encode(texts)
-        return [embedding.tolist() for embedding in embeddings]
+        return embeddings
 
     async def add_item(self, item: IndexItem):
         """Add a single item to the index."""
@@ -85,3 +89,43 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         )
 
         return [self._items[i] for i in results]
+
+
+class SentenceTransformerEmbeddingModel(EmbeddingModel):
+    """Embedding model using sentence-transformers."""
+
+    def __init__(self, embedding_model: str):
+        device = "cuda" if cuda.is_available() else "cpu"
+        self.model = SentenceTransformer(embedding_model, device=device)
+        # Get the embedding dimension of the model
+        self.embedding_size = self.model.get_sentence_embedding_dimension()
+
+    def encode(self, documents: List[str]) -> List[List[float]]:
+        return self.model.encode(documents)
+
+
+class OpenAIEmbeddingModel(EmbeddingModel):
+    """Embedding model using OpenAI API."""
+
+    def __init__(self, embedding_model: str):
+        self.model = embedding_model
+        self.embedding_size = len(self.encode(["test"])[0])
+
+    def encode(self, documents: List[str]) -> List[List[float]]:
+        """Encode a list of documents into embeddings."""
+        import openai
+
+        # Make embedding request to OpenAI API
+        res = openai.Embedding.create(input=documents, engine=self.model)
+        embeddings = [record["embedding"] for record in res["data"]]
+        return embeddings
+
+
+def init_embedding_model(embedding_model: str, embedding_engine: str) -> EmbeddingModel:
+    """Initialize the embedding model."""
+    if embedding_engine == "SentenceTransformers":
+        return SentenceTransformerEmbeddingModel(embedding_model)
+    elif embedding_engine == "openai":
+        return OpenAIEmbeddingModel(embedding_model)
+    else:
+        raise ValueError(f"Invalid embedding engine: {embedding_engine}")

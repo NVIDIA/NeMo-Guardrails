@@ -70,7 +70,7 @@ async def run_action(body: RequestBody):
     "/v1/actions/list",
     summary="List available actions",
 )
-def get_actions_list():
+async def get_actions_list():
     """Returns the list of available actions."""
 
     return app.action_dispatcher.get_registered_actions()

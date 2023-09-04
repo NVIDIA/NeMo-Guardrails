@@ -88,7 +88,7 @@ class ResponseBody(BaseModel):
     "/v1/rails/configs",
     summary="Get List of available rails configurations.",
 )
-def get_rails_configs():
+async def get_rails_configs():
     """Returns the list of available rails configurations."""
 
     # We extract all folder names as config names
@@ -183,7 +183,7 @@ def register_challenges(additional_challenges: List[dict]):
     "/v1/challenges",
     summary="Get list of available challenges.",
 )
-def get_challenges():
+async def get_challenges():
     """Returns the list of available challenges for red teaming."""
 
     return challenges

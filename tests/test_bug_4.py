@@ -12,34 +12,54 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
 
 from nemoguardrails import RailsConfig
 from tests.utils import TestChat
 
+config = RailsConfig.from_content(
+    """
+define user express greeting
+    "hello"
+    "hi"
+    "how are you"
 
-@pytest.mark.asyncio
-async def test_1():
-    """Test that setting variables in context works correctly."""
-    config = RailsConfig.from_content(
-        """
-        define user express greeting
-            "hello"
+define user give name
+    "James"
+    "Julio"
+    "Mary"
+    "Putu"
 
-        define flow
-            user express greeting
-            bot express greeting
-        """
-    )
+define bot name greeting
+    "Hey $name!"
+
+define flow greeting
+    user express greeting
+    if $name
+        bot name greeting
+    else
+        bot express greeting
+        bot ask name
+
+define flow give name
+    user give name
+    $name = $last_user_message
+    bot name greeting
+    """
+)
+
+
+def test_1():
     chat = TestChat(
         config,
         llm_completions=[
             "  express greeting",
-            '  "Hello John!"',
+            '  "Hello there!"',
+            '  "What is your name?"',
+            "  give name",
         ],
     )
 
-    with pytest.raises(
-        RuntimeError, match="You are using the sync `generate` inside async code."
-    ):
-        chat.app.generate(messages=[{"role": "user", "content": "Hello!"}])
+    chat >> "Hi"
+    chat << "Hello there!\nWhat is your name?"
+    chat >> "James"
+    chat << "Hey James!"

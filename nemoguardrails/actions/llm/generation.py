@@ -45,6 +45,7 @@ from nemoguardrails.kb.index import IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.params import llm_params
+from nemoguardrails.llm.providers import get_embedding_provider_names
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
 from nemoguardrails.rails.llm.config import RailsConfig
@@ -69,12 +70,16 @@ class LLMGenerationActions:
         self.verbose = verbose
         self.embedding_search_providers = embedding_search_providers
 
-        # If we have a customized embedding model, we'll use it.
+        # The default embeddings model is using SentenceTransformers
         self.embedding_model = "all-MiniLM-L6-v2"
+        self.embedding_engine = "SentenceTransformers"
+
+        # If we have a customized embedding model, we'll use it.
         for model in self.config.models:
-            if model.type == "embedding":
+            if model.type == "embeddings":
                 self.embedding_model = model.model
-                assert model.engine == "SentenceTransformer"
+                assert model.engine in get_embedding_provider_names()
+                self.embedding_engine = model.engine
                 break
 
         # If we have user messages, we build an index with them
@@ -207,7 +212,6 @@ class LLMGenerationActions:
             get_embeddings_search_instance=self._get_embeddings_search_instance,
             embedding_search_provider=self.config.embedding_search_provider,
         )
-        self.kb.init()
         await self.kb.build()
 
     def _get_general_instruction(self):
