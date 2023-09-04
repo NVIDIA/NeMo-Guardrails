@@ -62,7 +62,7 @@ Important lessons to be learned from the evaluation results:
 - Each step in the three-step approach (user intent, next step / bot intent, bot message) used by Guardrails offers an improvement in performance.
 - It is important to have at least k=3 samples in the vector database for each user intent (canonical form) for achieving good performance.
 - Some models (e.g., gpt-3.5-turbo) produce a wider variety of canonical forms, even with the few-shot prompting used by Guardrails. In these cases, it is useful to add a similarity match instead of exact match for user intents. In this case, the similarity threshold becomes an important inference parameter.
-- Initial results show that even small models, e.g. [dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b), [vicuna-7b-v1.3](https://huggingface.co/lmsys/vicuna-7b-v1.3), [mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct), have good performance for topical rails.
+- Initial results show that even small models, e.g. [dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b), [vicuna-7b-v1.3](https://huggingface.co/lmsys/vicuna-7b-v1.3), [mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct), [falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct), have good performance for topical rails. Out of these, Falcon 7B Instruct seems to be the best performing model.
 
 Evaluation Date - June 21, 2023. Updated July 24, 2023 for Dolly, Vicuna and Mosaic MPT models.
 
@@ -74,29 +74,31 @@ Evaluation Date - June 21, 2023. Updated July 24, 2023 for Dolly, Vicuna and Mos
 Results on _chit-chat_ dataset, metric used is accuracy.
 
 
-| Model                     | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
-|---------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
-| `text-davinci-003, k=all` | 0.89                   | 0.89                   | 0.90                  | 0.90                  | 0.91                   | 0.91                   |
-| `text-davinci-003, k=3`   | 0.82                   | N/A                    | 0.85                  | N/A                   | N/A                    | N/A                    |
-| `text-davinci-003, k=1`   | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
-| `gpt-3.5-turbo, k=all`    | 0.44                   | 0.56                   | 0.50                  | 0.61                  | 0.54                   | 0.65                   |
-| `dolly-v2-3b, k=all`      | 0.80                   | 0.82                   | 0.81                  | 0.83                  | 0.81                   | 0.83                   |
-| `vicuna-7b-v1.3, k=all`   | 0.62                   | 0.75                   | 0.69                  | 0.77                  | 0.71                   | 0.79                   |
-| `mpt-7b-instruct, k=all`  | 0.73                   | 0.81                   | 0.78                  | 0.82                  | 0.80                   | 0.82                   |
+| Model                       | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
+|-----------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
+| `text-davinci-003, k=all`   | 0.89                   | 0.89                   | 0.90                  | 0.90                  | 0.91                   | 0.91                   |
+| `text-davinci-003, k=3`     | 0.82                   | N/A                    | 0.85                  | N/A                   | N/A                    | N/A                    |
+| `text-davinci-003, k=1`     | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo, k=all`      | 0.44                   | 0.56                   | 0.50                  | 0.61                  | 0.54                   | 0.65                   |
+| `dolly-v2-3b, k=all`        | 0.80                   | 0.82                   | 0.81                  | 0.83                  | 0.81                   | 0.83                   |
+| `vicuna-7b-v1.3, k=all`     | 0.62                   | 0.75                   | 0.69                  | 0.77                  | 0.71                   | 0.79                   |
+| `mpt-7b-instruct, k=all`    | 0.73                   | 0.81                   | 0.78                  | 0.82                  | 0.80                   | 0.82                   |
+| `falcon-7b-instruct, k=all` | 0.81                   | 0.81                   | 0.81                  | 0.82                  | 0.82                   | 0.82                   |
 
 
 Results on _banking_ dataset, metric used is accuracy.
 
 
-| Model                      | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
-|----------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
-| `text-davinci-003, k=all`  | 0.77                   | 0.82                   | 0.83                  | 0.84                  | N/A                    | N/A                    |
-| `text-davinci-003, k=3`    | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
-| `text-davinci-003, k=1`    | 0.50                   | N/A                    | 0.63                  | N/A                   | N/A                    | N/A                    |
-| `gpt-3.5-turbo, k=all`     | 0.38                   | 0.73                   | 0.45                  | 0.73                  | N/A                    | N/A                    |
-| `dolly-v2-3b, k=all`       | 0.32                   | 0.62                   | 0.40                  | 0.64                  | N/A                    | N/A                    |
-| `vicuna-7b-v1.3, k=all`    | 0.39                   | 0.62                   | 0.54                  | 0.65                  | N/A                    | N/A                    |
-| `mpt-7b-instruct, k=all`   | 0.45                   | 0.58                   | 0.50                  | 0.60                  | N/A                    | N/A                    |
+| Model                       | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
+|-----------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
+| `text-davinci-003, k=all`   | 0.77                   | 0.82                   | 0.83                  | 0.84                  | N/A                    | N/A                    |
+| `text-davinci-003, k=3`     | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
+| `text-davinci-003, k=1`     | 0.50                   | N/A                    | 0.63                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo, k=all`      | 0.38                   | 0.73                   | 0.45                  | 0.73                  | N/A                    | N/A                    |
+| `dolly-v2-3b, k=all`        | 0.32                   | 0.62                   | 0.40                  | 0.64                  | N/A                    | N/A                    |
+| `vicuna-7b-v1.3, k=all`     | 0.39                   | 0.62                   | 0.54                  | 0.65                  | N/A                    | N/A                    |
+| `mpt-7b-instruct, k=all`    | 0.45                   | 0.58                   | 0.50                  | 0.60                  | N/A                    | N/A                    |
+| `falcon-7b-instruct, k=all` | 0.70                   | 0.75                   | 0.76                  | 0.78                  | N/A                    | N/A                    |
 
 
 ## Execution Rails
