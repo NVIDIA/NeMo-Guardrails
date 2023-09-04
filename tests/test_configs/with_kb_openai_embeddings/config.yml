@@ -1,0 +1,12 @@
+# Config where only the KB uses OpenAI embeddings and the core uses SentenceTransformers
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003
+
+knowledge_base:
+  embedding_search_provider:
+    name: default
+    parameters:
+      embedding_engine: openai
+      embedding_model: text-embedding-ada-002

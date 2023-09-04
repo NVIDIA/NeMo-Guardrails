@@ -1,0 +1,8 @@
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003
+
+  - type: embeddings
+    engine: openai
+    model: text-embedding-ada-002
