@@ -19,7 +19,7 @@ from annoy import AnnoyIndex
 from sentence_transformers import SentenceTransformer
 from torch import cuda
 
-from nemoguardrails.kb.index import EmbeddingModel, EmbeddingsIndex, IndexItem
+from nemoguardrails.embeddings.index import EmbeddingModel, EmbeddingsIndex, IndexItem
 
 
 class BasicEmbeddingsIndex(EmbeddingsIndex):
@@ -35,6 +35,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         self._embeddings = []
         self.embedding_model = embedding_model
         self.embedding_engine = embedding_engine
+        self._embedding_size = 0
 
         # When the index is provided, it means it's from the cache.
         self._index = index
@@ -42,6 +43,19 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     @property
     def embeddings_index(self):
         return self._index
+
+    @property
+    def embedding_size(self):
+        return self._embedding_size
+
+    @property
+    def embeddings(self):
+        return self._embeddings
+
+    @embeddings_index.setter
+    def embeddings_index(self, index):
+        """Setter to allow replacing the index dynamically."""
+        self._index = index
 
     def _init_model(self):
         """Initialize the model used for computing the embeddings."""
@@ -65,6 +79,9 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         if self._index is None:
             self._embeddings.append(self._get_embeddings([item.text])[0])
 
+            # Update the embedding if it was not computed up to this point
+            self._embedding_size = len(self._embeddings[0])
+
     async def add_items(self, items: List[IndexItem]):
         """Add multiple items to the index at once."""
         self._items.extend(items)
@@ -72,6 +89,9 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         # If the index is already built, we skip this
         if self._index is None:
             self._embeddings.extend(self._get_embeddings([item.text for item in items]))
+
+            # Update the embedding if it was not computed up to this point
+            self._embedding_size = len(self._embeddings[0])
 
     async def build(self):
         """Builds the Annoy index."""

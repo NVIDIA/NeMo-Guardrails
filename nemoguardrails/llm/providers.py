@@ -80,8 +80,3 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
 def get_llm_provider_names() -> List[str]:
     """Returns the list of supported LLM providers."""
     return list(sorted(list(_providers.keys())))
-
-
-def get_embedding_provider_names() -> List[str]:
-    """Returns the list of supported embedding providers."""
-    return ["openai", "SentenceTransformers"]

@@ -23,19 +23,23 @@ from typing import Any, List, Optional, Type, Union
 
 from langchain.llms.base import BaseLLM
 
+from nemoguardrails.actions.fact_checking import check_facts
+from nemoguardrails.actions.hallucination import check_hallucination
+from nemoguardrails.actions.jailbreak_check import check_jailbreak
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
+from nemoguardrails.actions.math import wolfram_alpha_request
+from nemoguardrails.actions.output_moderation import output_moderation
+from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
+from nemoguardrails.embeddings.basic import BasicEmbeddingsIndex
+from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.flows.runtime import Runtime
-from nemoguardrails.kb.index import EmbeddingsIndex
+from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
-from nemoguardrails.llm.providers import (
-    get_embedding_provider_names,
-    get_llm_provider,
-    get_llm_provider_names,
-)
+from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
-from nemoguardrails.rails.llm.config import RailsConfig
+from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 
 log = logging.getLogger(__name__)
@@ -57,6 +61,14 @@ class LLMRails:
         self.config = config
         self.llm = llm
         self.verbose = verbose
+
+        # We allow the user to register additional embedding search providers, so we keep
+        # an index of them.
+        self.embedding_search_providers = {}
+
+        # The default embeddings model is using SentenceTransformers
+        self.default_embedding_model = "all-MiniLM-L6-v2"
+        self.default_embedding_engine = "SentenceTransformers"
 
         # We keep a cache of the events history associated with a sequence of user messages.
         # TODO: when we update the interface to allow to return a "state object", this
@@ -94,19 +106,63 @@ class LLMRails:
         if config_module is not None and hasattr(config_module, "init"):
             config_module.init(self)
 
+        # Register any default actions that have not yet been registered in the custom
+        # init function from config.py.
+        default_actions = {
+            "wolfram alpha request": wolfram_alpha_request,
+            "check_facts": check_facts,
+            "check_jailbreak": check_jailbreak,
+            "output_moderation": output_moderation,
+            "check_hallucination": check_hallucination,
+            "retrieve_relevant_chunks": retrieve_relevant_chunks,
+        }
+
+        for action_name, action_fn in default_actions.items():
+            self.runtime.register_action(action_fn, action_name, override=False)
+
+        # If we have a customized embedding model, we'll use it.
+        for model in self.config.models:
+            if model.type == "embeddings":
+                self.default_embedding_model = model.model
+                self.default_embedding_engine = model.engine
+                break
+
         # Next, we initialize the LLM engines (main engine and action engines if specified).
         self._init_llms()
+
         # Next, we initialize the LLM Generate actions and register them.
-        actions = LLMGenerationActions(
+        self.llm_generation_actions = LLMGenerationActions(
             config=config,
             llm=self.llm,
             llm_task_manager=self.runtime.llm_task_manager,
-            embedding_search_providers=self.runtime.registered_embedding_search_providers,
+            get_embedding_search_provider_instance=self._get_embeddings_search_provider_instance,
             verbose=verbose,
         )
-        self.runtime.register_actions(actions)
+
+        # If there's already an action registered, we don't override.
+        self.runtime.register_actions(self.llm_generation_actions, override=False)
+
+        # Next, we initialize the Knowledge Base
+        asyncio.run(self._init_kb())
+
         # We also register the kb as a parameter that can be passed to actions.
-        self.runtime.register_action_param("kb", actions.kb)
+        self.runtime.register_action_param("kb", self.kb)
+
+    async def _init_kb(self):
+        """Initializes the knowledge base."""
+        self.kb = None
+
+        if not self.config.docs:
+            return
+
+        documents = [doc.content for doc in self.config.docs]
+        self.kb = KnowledgeBase(
+            documents=documents,
+            config=self.config.knowledge_base,
+            get_embedding_search_provider_instance=self._get_embeddings_search_provider_instance,
+        )
+        self.kb.init()
+        await self.kb.build()
 
     def _init_llms(self):
         """
@@ -128,8 +184,7 @@ class LLMRails:
 
         for llm_config in self.config.models:
             if llm_config.type == "embeddings":
-                if llm_config.engine not in get_embedding_provider_names():
-                    raise Exception(f"Unknown embedding engine: {llm_config.engine}")
+                pass
             else:
                 if llm_config.engine not in get_llm_provider_names():
                     raise Exception(f"Unknown LLM engine: {llm_config.engine}")
@@ -164,6 +219,28 @@ class LLMRails:
                     self.runtime.register_action_param(
                         model_name, getattr(self, model_name)
                     )
+
+    def _get_embeddings_search_provider_instance(
+        self, esp_config: Optional[EmbeddingSearchProvider] = None
+    ) -> EmbeddingsIndex:
+        if esp_config is None:
+            esp_config = EmbeddingSearchProvider()
+
+        if esp_config.name == "default":
+            return BasicEmbeddingsIndex(
+                embedding_model=esp_config.parameters.get(
+                    "embedding_model", self.default_embedding_model
+                ),
+                embedding_engine=esp_config.parameters.get(
+                    "embedding_engine", self.default_embedding_engine
+                ),
+            )
+        else:
+            if esp_config.name not in self.embedding_search_providers:
+                raise Exception(f"Unknown embedding search provider: {esp_config.name}")
+            else:
+                kwargs = esp_config.parameters
+                return self.embedding_search_providers[esp_config.name](**kwargs)
 
     def _get_events_for_messages(self, messages: List[dict]):
         """Return the list of events corresponding to the provided messages.
@@ -385,4 +462,4 @@ class LLMRails:
             cls: The class that will be used to generate and search embedding
         """
 
-        self.runtime.registered_embedding_search_providers[name] = cls
+        self.embedding_search_providers[name] = cls

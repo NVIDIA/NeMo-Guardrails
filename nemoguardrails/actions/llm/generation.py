@@ -23,7 +23,7 @@ import uuid
 from ast import literal_eval
 from functools import lru_cache
 from time import time
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from jinja2 import Environment, meta
 from langchain.llms import BaseLLM
@@ -40,15 +40,12 @@ from nemoguardrails.actions.llm.utils import (
     llm_call,
     strip_quotes,
 )
-from nemoguardrails.kb.basic import BasicEmbeddingsIndex
-from nemoguardrails.kb.index import IndexItem
-from nemoguardrails.kb.kb import KnowledgeBase
+from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.params import llm_params
-from nemoguardrails.llm.providers import get_embedding_provider_names
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
-from nemoguardrails.rails.llm.config import RailsConfig
+from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
@@ -62,34 +59,23 @@ class LLMGenerationActions:
         config: RailsConfig,
         llm: BaseLLM,
         llm_task_manager: LLMTaskManager,
-        embedding_search_providers: Optional[dict] = None,
+        get_embedding_search_provider_instance: Callable[
+            [Optional[EmbeddingSearchProvider]], EmbeddingsIndex
+        ],
         verbose: bool = False,
     ):
         self.config = config
         self.llm = llm
         self.verbose = verbose
-        self.embedding_search_providers = embedding_search_providers
-
-        # The default embeddings model is using SentenceTransformers
-        self.embedding_model = "all-MiniLM-L6-v2"
-        self.embedding_engine = "SentenceTransformers"
-
-        # If we have a customized embedding model, we'll use it.
-        for model in self.config.models:
-            if model.type == "embeddings":
-                self.embedding_model = model.model
-                assert model.engine in get_embedding_provider_names()
-                self.embedding_engine = model.engine
-                break
 
         # If we have user messages, we build an index with them
         self.user_message_index = None
         self.bot_message_index = None
         self.flows_index = None
-        # If we have documents, we'll also initialize a knowledge base.
-        self.kb = None
 
-        self.embedding_search_providers = embedding_search_providers
+        self.get_embedding_search_provider_instance = (
+            get_embedding_search_provider_instance
+        )
 
         asyncio.run(self.init())
         self.llm_task_manager = llm_task_manager
@@ -102,26 +88,7 @@ class LLMGenerationActions:
             self._init_user_message_index(),
             self._init_bot_message_index(),
             self._init_flows_index(),
-            self._init_kb(),
         )
-
-    def _get_embeddings_search_instance(self):
-        if self.config.embedding_search_provider.name == "default":
-            return BasicEmbeddingsIndex(self.embedding_model)
-        else:
-            if (
-                self.config.embedding_search_provider.name
-                not in self.embedding_search_providers
-            ):
-                raise Exception(
-                    "Unknown embedding search provider: ",
-                    self.config.embedding_search_provider,
-                )
-            else:
-                kwargs = self.config.embedding_search_provider.parameters
-                return self.embedding_search_providers[
-                    self.config.embedding_search_provider.name
-                ](**kwargs)
 
     async def _init_user_message_index(self):
         """Initializes the index of user messages."""
@@ -138,7 +105,9 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.user_message_index = self._get_embeddings_search_instance()
+        self.user_message_index = self.get_embedding_search_provider_instance(
+            self.config.core.embedding_search_provider
+        )
         await self.user_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -159,7 +128,9 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.bot_message_index = self._get_embeddings_search_instance()
+        self.bot_message_index = self.get_embedding_search_provider_instance(
+            self.config.core.embedding_search_provider
+        )
         await self.bot_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -193,26 +164,13 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.flows_index = self._get_embeddings_search_instance()
+        self.flows_index = self.get_embedding_search_provider_instance(
+            self.config.core.embedding_search_provider
+        )
         await self.flows_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
         await self.flows_index.build()
-
-    async def _init_kb(self):
-        """Initializes the knowledge base."""
-
-        if not self.config.docs:
-            return
-
-        documents = [doc.content for doc in self.config.docs]
-        self.kb = KnowledgeBase(
-            documents=documents,
-            embedding_model=self.embedding_model,
-            get_embeddings_search_instance=self._get_embeddings_search_instance,
-            embedding_search_provider=self.config.embedding_search_provider,
-        )
-        await self.kb.build()
 
     def _get_general_instruction(self):
         """Helper to extract the general instruction."""

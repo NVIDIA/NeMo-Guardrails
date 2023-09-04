@@ -26,11 +26,15 @@ class IndexItem:
 class EmbeddingsIndex:
     """The embeddings index is responsible for computing and searching a set of embeddings."""
 
+    @property
+    def embedding_size(self):
+        raise NotImplementedError
+
     async def add_item(self, item: IndexItem):
         """Adds a new item to the index."""
         raise NotImplementedError()
 
-    async def add_items(self, item: List[IndexItem]):
+    async def add_items(self, items: List[IndexItem]):
         """Adds multiple items to the index."""
         raise NotImplementedError()
 
