@@ -21,7 +21,6 @@ from typing import Callable, List, Optional, cast
 
 from annoy import AnnoyIndex
 
-from nemoguardrails.embeddings.basic import BasicEmbeddingsIndex
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.kb.utils import split_markdown_in_topic_chunks
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, KnowledgeBaseConfig
@@ -89,6 +88,8 @@ class KnowledgeBase:
             and os.path.exists(cache_file)
             and os.path.exists(embedding_size_file)
         ):
+            from nemoguardrails.embeddings.basic import BasicEmbeddingsIndex
+
             log.info(cache_file)
             self.index = cast(
                 BasicEmbeddingsIndex,
@@ -116,6 +117,8 @@ class KnowledgeBase:
             # For the default Embedding Search provider, which uses annoy, we also
             # persist the index after it's computed.
             if self.config.embedding_search_provider.name == "default":
+                from nemoguardrails.embeddings.basic import BasicEmbeddingsIndex
+
                 # We also save the file for future use
                 os.makedirs(CACHE_FOLDER, exist_ok=True)
                 basic_index = cast(BasicEmbeddingsIndex, self.index)

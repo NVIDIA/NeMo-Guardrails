@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Moved to using `nest_asyncio` for [implementing the blocking API](./docs/user_guide/advanced/nested-async-loop.md). Fixes [#3](https://github.com/NVIDIA/NeMo-Guardrails/issues/3) and [#32](https://github.com/NVIDIA/NeMo-Guardrails/issues/32).
 - Improved event property validation in `new_event_dict`.
+- Refactored imports to allow installing from source without Annoy/SentenceTransformers (would need a custom embedding search provider to work).
 
 ### Fixed
 

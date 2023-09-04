@@ -16,7 +16,6 @@
 from typing import List
 
 from annoy import AnnoyIndex
-from sentence_transformers import SentenceTransformer
 from torch import cuda
 
 from nemoguardrails.embeddings.index import EmbeddingModel, EmbeddingsIndex, IndexItem
@@ -115,6 +114,8 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
     """Embedding model using sentence-transformers."""
 
     def __init__(self, embedding_model: str):
+        from sentence_transformers import SentenceTransformer
+
         device = "cuda" if cuda.is_available() else "cpu"
         self.model = SentenceTransformer(embedding_model, device=device)
         # Get the embedding dimension of the model

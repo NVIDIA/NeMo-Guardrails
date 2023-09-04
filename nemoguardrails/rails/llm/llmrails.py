@@ -31,7 +31,6 @@ from nemoguardrails.actions.llm.utils import get_colang_history
 from nemoguardrails.actions.math import wolfram_alpha_request
 from nemoguardrails.actions.output_moderation import output_moderation
 from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
-from nemoguardrails.embeddings.basic import BasicEmbeddingsIndex
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.kb.kb import KnowledgeBase
@@ -227,6 +226,8 @@ class LLMRails:
             esp_config = EmbeddingSearchProvider()
 
         if esp_config.name == "default":
+            from nemoguardrails.embeddings.basic import BasicEmbeddingsIndex
+
             return BasicEmbeddingsIndex(
                 embedding_model=esp_config.parameters.get(
                     "embedding_model", self.default_embedding_model
