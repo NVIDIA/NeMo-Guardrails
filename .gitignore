@@ -12,7 +12,6 @@ coverage.xml
 .eggs
 mellon.egg-info
 scratch.py
-.vscode
 *.egg-info
 firebase.json
 build
