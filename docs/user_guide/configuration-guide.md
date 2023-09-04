@@ -118,7 +118,7 @@ To configure the embeddings model that is used for the various steps in the [gua
 ```yaml
 models:
   - ...
-  - type: embedding
+  - type: embeddings
     engine: SentenceTransformers
     model: all-MiniLM-L6-v2
 ```
@@ -128,10 +128,19 @@ The `SentenceTransformers` engine is the default one and uses the `all-MiniLM-L6
 ```yaml
 models:
   - ...
-  - type: embedding
+  - type: embeddings
     engine: openai
     model: text-embedding-ada-002
 ```
+
+### Embedding Search Provider
+
+NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../../architecture/README.md#the-guardrails-process) and for the [knowledge base](../configuration-guide.md#knowledge-base-documents) functionality.
+
+The default embedding search uses SentenceTransformers for computing the embeddings (the `all-MiniLM-L6-v2` model) and Annoy for performing the search. As show in the previous section, the embeddings model supports both SentenceTransformers and OpenAI.
+
+For advanced use cases or for integrations with existing knowledge bases, you can [provide a custom embedding search provider](./advanced/embedding-search-providers.md).
+
 
 ### General Instruction
 
