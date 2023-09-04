@@ -7,4 +7,5 @@ There are examples on how to use the models with a HF repo id or from a local pa
 
 In this folder, the guardrails application is very basic, but anyone can change it with any other more complex configuration.
 
-**Disclaimer**: The `dolly-v2-3b` LLM model has only been tested on basic use cases, e.g., greetings and recognizing specific questions. On more complex queries, this model may not work correctly. Thorough testing and optimizations are needed before considering a production deployment.
+**Disclaimer**: The current results of using `vicuna-7b-v1.3` LLM are promising, but still incipient.
+On more complex guardrails apps, this model may not work correctly. Thorough testing and optimizations, including for the prompts, are needed before considering a production deployment.
