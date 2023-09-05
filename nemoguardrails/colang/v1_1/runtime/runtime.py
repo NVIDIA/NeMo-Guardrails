@@ -26,6 +26,7 @@ from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v1_1.runtime.flows import (
+    FlowConfig,
     compute_context,
     compute_next_events,
 )
@@ -36,6 +37,14 @@ log = logging.getLogger(__name__)
 
 class RuntimeV1_1(Runtime):
     """Runtime for executing the guardrails."""
+
+    def _init_flow_configs(self):
+        """Initializes the flow configs based on the config."""
+        self.flow_configs = {}
+
+        for flow in self.config.flows:
+            flow_id = flow.name
+            self.flow_configs[flow_id] = FlowConfig(id=flow_id, elements=flow.elements)
 
     async def generate_events(self, events: List[dict]) -> List[dict]:
         """Generates the next events based on the provided history.
