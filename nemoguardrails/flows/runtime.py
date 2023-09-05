@@ -61,9 +61,7 @@ class Runtime:
 
         # Register the actions with the dispatcher.
         self.action_dispatcher = ActionDispatcher(config_path=config.config_path)
-        self.pii_recognizer = PIIRecognizer(config_path = config.config_path, 
-                                            load_predefined=True,
-                                            redact=False)
+        self.pii_recognizer = PIIRecognizer(config = config)
         self.registered_actions["retrieve_relevant_chunks"] = self.pii_recognizer.anonymize_fn(self.registered_actions["retrieve_relevant_chunks"])()
         
         for action_name, action_fn in self.registered_actions.items():

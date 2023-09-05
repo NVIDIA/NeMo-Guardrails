@@ -27,7 +27,7 @@ class PIIRecognizer:
     """Main class that enables integration of third party
        PII recognizers"""
     
-    def __init__(self, config : RailsConfig, load_predefined: bool = True, redact: bool = False):
+    def __init__(self, config : RailsConfig, load_predefined: bool = False, redact: bool = False):
         
         self.config_path = config.config_path
         if config.redact_pii:
@@ -47,8 +47,6 @@ class PIIRecognizer:
         #TODO make the decorator generic 
         self.allowed_actions = ["retrieve_relevant_chunks"]
         
-   
-
         # load predefined recognizers in registry
         self.registry = RecognizerRegistry()
         if self.load_predefined:
