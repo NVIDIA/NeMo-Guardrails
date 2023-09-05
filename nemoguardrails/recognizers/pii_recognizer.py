@@ -128,15 +128,14 @@ class PIIRecognizer:
             # check for actions
             if inspect.isfunction(fn) and hasattr(fn, "action_meta"): 
                 if fn.action_meta["name"] in self.allowed_actions and self.redact:
-                    action_result = fn(*args, **kwargs)
-                    context_updates = action_result.context_updates
-                    context_updates_anonymized["relevant_chunks"] = self._anonymize_text(context_updates["relevant_chunks"])
                     async def anonymized_fn():
+                        action_result = fn(*args, **kwargs)
+                        context_updates = action_result.context_updates
+                        context_updates_anonymized["relevant_chunks"] = self._anonymize_text(context_updates["relevant_chunks"])
                         return ActionResult(
                             return_value=context_updates_anonymized["relevant_chunks"],
                             context_updates=context_updates_anonymized,
                         )
-                    
                     return anonymized_fn
                 else:
                     return fn
