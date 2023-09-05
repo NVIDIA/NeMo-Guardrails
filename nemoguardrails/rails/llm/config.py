@@ -62,8 +62,8 @@ class Document(BaseModel):
 
 class RedactPII(BaseModel):
 
-    enable_pii_redaction : bool 
-    load_predefined : bool
+    enable_pii_redaction : Optional[bool] 
+    load_predefined : Optional[bool]
     entities : Optional[List[str]] = Field(
         default = None,
         description = "List of entities to be redacted"

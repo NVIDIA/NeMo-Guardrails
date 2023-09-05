@@ -33,6 +33,12 @@ class PIIRecognizer:
         if config.redact_pii:
             self.redact = config.redact_pii.enable_pii_redaction
             self.load_predefined = config.redact_pii.load_predefined
+             #required entities to be redacted from config.yml file
+            self._map_pii_entities_from_config(config.redact_pii.entities)
+        else:
+            self.redact = redact
+            self.load_predefined = load_predefined
+            self.pii_entities = []
        
         # predefined recognizers use spacy module 
         if not spacy.util.is_package('en_core_web_lg'):
@@ -41,8 +47,7 @@ class PIIRecognizer:
         #TODO make the decorator generic 
         self.allowed_actions = ["retrieve_relevant_chunks"]
         
-        #required entities to be redacted from config.yml file
-        self._map_pii_entities_from_config(config.redact_pii.entities)
+   
 
         # load predefined recognizers in registry
         self.registry = RecognizerRegistry()
