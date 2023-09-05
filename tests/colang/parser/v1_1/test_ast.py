@@ -51,7 +51,7 @@ def test_basic():
                 "spec": {
                     "_source": None,
                     "_type": "spec",
-                    "arguments": None,
+                    "arguments": {},
                     "members": None,
                     "name": "user express greeting",
                     "var_name": None,
@@ -71,7 +71,7 @@ def test_basic():
                         "spec": {
                             "_source": None,
                             "_type": "spec",
-                            "arguments": None,
+                            "arguments": {},
                             "members": None,
                             "name": "bot express greeting",
                             "var_name": None,

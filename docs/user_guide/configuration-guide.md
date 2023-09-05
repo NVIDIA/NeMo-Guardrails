@@ -37,6 +37,8 @@ The custom actions can be placed either in an `actions.py` module in the root of
 │   └── config.yml
 ```
 
+## Custom Initialization
+
 If present, the `config.py` module is loaded before initializing the `LLMRails` instance.
 
 If the `config.py` module contains an `init` function, it gets called as part of the initialization of the `LLMRails` instance. For example, you can use the `init` function to initialize the connection to a database and register it as a custom action parameter using the `register_action_param(...)` function:
@@ -107,6 +109,37 @@ models:
   - type: main
     engine: custom_llm
 ```
+
+
+### The Embeddings Model
+
+To configure the embeddings model that is used for the various steps in the [guardrails process](../architecture/README.md) (e.g., canonical form generation, next step generation) you can add a model configuration in the `models` key as shown below:
+
+```yaml
+models:
+  - ...
+  - type: embeddings
+    engine: SentenceTransformers
+    model: all-MiniLM-L6-v2
+```
+
+The `SentenceTransformers` engine is the default one and uses the `all-MiniLM-L6-v2` model. NeMo Guardrails also supports using OpenAI models for computing the embeddings, e.g.:
+
+```yaml
+models:
+  - ...
+  - type: embeddings
+    engine: openai
+    model: text-embedding-ada-002
+```
+
+### Embedding Search Provider
+
+NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../../architecture/README.md#the-guardrails-process) and for the [knowledge base](../configuration-guide.md#knowledge-base-documents) functionality.
+
+The default embedding search uses SentenceTransformers for computing the embeddings (the `all-MiniLM-L6-v2` model) and Annoy for performing the search. As show in the previous section, the embeddings model supports both SentenceTransformers and OpenAI.
+
+For advanced use cases or for integrations with existing knowledge bases, you can [provide a custom embedding search provider](./advanced/embedding-search-providers.md).
 
 
 ### General Instruction
@@ -204,6 +237,25 @@ This temperature will be used for the tasks that require deterministic behavior 
 ```yaml
 lowest_temperature: 0.1
 ```
+
+### Custom Data
+
+If you need to pass additional configuration data to any custom component for your configuration, you can use the `custom_data` field.
+
+```yaml
+custom_data:
+  custom_config_field: "some_value"
+```
+
+For example, you can access the custom configuration inside the `init` function in your `config.py` (see [Custom Initialization](#custom-initialization)).
+
+```python
+def init(app: LLMRails):
+    config = app.config
+
+    # Do something with config.custom_data
+```
+
 
 ## Guardrails Definitions
 

@@ -371,7 +371,7 @@ def test_4():
                     "spec": {
                         "_source": None,
                         "_type": "spec",
-                        "arguments": None,
+                        "arguments": {},
                         "members": None,
                         "name": None,
                         "var_name": "action",
@@ -385,7 +385,7 @@ def test_4():
                     "spec": {
                         "_source": None,
                         "_type": "spec",
-                        "arguments": None,
+                        "arguments": {},
                         "members": [
                             {
                                 "_source": None,
@@ -408,7 +408,7 @@ def test_4():
                     "spec": {
                         "_source": None,
                         "_type": "spec",
-                        "arguments": None,
+                        "arguments": {},
                         "members": [
                             {
                                 "_source": None,

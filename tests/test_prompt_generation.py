@@ -51,7 +51,7 @@ def rails_config():
 
 
 @pytest.mark.asyncio
-async def test_1(rails_config):
+def test_1(rails_config):
     llm = FakeLLM(
         responses=[
             "  express greeting",
@@ -60,6 +60,6 @@ async def test_1(rails_config):
 
     llm_rails = LLMRails(config=rails_config, llm=llm)
 
-    response = await llm_rails.generate_async(prompt="Hello there!")
+    response = llm_rails.generate(prompt="Hello there!")
 
     assert response == "Hello! How are you?"

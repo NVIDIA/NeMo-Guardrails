@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """A set of actions for generating various types of completions using an LLMs."""
+import asyncio
 import logging
 import random
 import re
@@ -22,7 +23,7 @@ import uuid
 from ast import literal_eval
 from functools import lru_cache
 from time import time
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from jinja2 import Environment, meta
 from langchain.llms import BaseLLM
@@ -40,13 +41,11 @@ from nemoguardrails.actions.llm.utils import (
     strip_quotes,
 )
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.kb.basic import BasicEmbeddingsIndex
-from nemoguardrails.kb.index import IndexItem
-from nemoguardrails.kb.kb import KnowledgeBase
+from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
-from nemoguardrails.rails.llm.config import RailsConfig
+from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
@@ -60,40 +59,38 @@ class LLMGenerationActions:
         config: RailsConfig,
         llm: BaseLLM,
         llm_task_manager: LLMTaskManager,
+        get_embedding_search_provider_instance: Callable[
+            [Optional[EmbeddingSearchProvider]], EmbeddingsIndex
+        ],
         verbose: bool = False,
     ):
         self.config = config
         self.llm = llm
         self.verbose = verbose
 
-        # If we have a customized embedding model, we'll use it.
-        self.embedding_model = "all-MiniLM-L6-v2"
-        for model in self.config.models:
-            if "embedding" in model.type:
-                self.embedding_model = model.model
-                assert model.engine == "SentenceTransformer"
-                break
-
         # If we have user messages, we build an index with them
         self.user_message_index = None
-        self._init_user_message_index()
-
         self.bot_message_index = None
-        self._init_bot_message_index()
-
         self.flows_index = None
-        self._init_flows_index()
 
-        # If we have documents, we'll also initialize a knowledge base.
-        self.kb = None
-        self._init_kb()
+        self.get_embedding_search_provider_instance = (
+            get_embedding_search_provider_instance
+        )
 
+        asyncio.run(self.init())
         self.llm_task_manager = llm_task_manager
 
         # We also initialize the environment for rendering bot messages
         self.env = Environment()
 
-    def _init_user_message_index(self):
+    async def init(self):
+        await asyncio.gather(
+            self._init_user_message_index(),
+            self._init_bot_message_index(),
+            self._init_flows_index(),
+        )
+
+    async def _init_user_message_index(self):
         """Initializes the index of user messages."""
 
         if not self.config.user_messages:
@@ -108,13 +105,15 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.user_message_index = BasicEmbeddingsIndex(self.embedding_model)
-        self.user_message_index.add_items(items)
+        self.user_message_index = self.get_embedding_search_provider_instance(
+            self.config.core.embedding_search_provider
+        )
+        await self.user_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
-        self.user_message_index.build()
+        await self.user_message_index.build()
 
-    def _init_bot_message_index(self):
+    async def _init_bot_message_index(self):
         """Initializes the index of bot messages."""
 
         if not self.config.bot_messages:
@@ -129,13 +128,15 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.bot_message_index = BasicEmbeddingsIndex(self.embedding_model)
-        self.bot_message_index.add_items(items)
+        self.bot_message_index = self.get_embedding_search_provider_instance(
+            self.config.core.embedding_search_provider
+        )
+        await self.bot_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
-        self.bot_message_index.build()
+        await self.bot_message_index.build()
 
-    def _init_flows_index(self):
+    async def _init_flows_index(self):
         """Initializes the index of flows."""
 
         if not self.config.flows:
@@ -163,24 +164,13 @@ class LLMGenerationActions:
         if len(items) == 0:
             return
 
-        self.flows_index = BasicEmbeddingsIndex(self.embedding_model)
-        self.flows_index.add_items(items)
+        self.flows_index = self.get_embedding_search_provider_instance(
+            self.config.core.embedding_search_provider
+        )
+        await self.flows_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
-        self.flows_index.build()
-
-    def _init_kb(self):
-        """Initializes the knowledge base."""
-
-        if not self.config.docs:
-            return
-
-        documents = [doc.content for doc in self.config.docs]
-        self.kb = KnowledgeBase(
-            documents=documents, embedding_model=self.embedding_model
-        )
-        self.kb.init()
-        self.kb.build()
+        await self.flows_index.build()
 
     def _get_general_instruction(self):
         """Helper to extract the general instruction."""
@@ -247,7 +237,7 @@ class LLMGenerationActions:
             potential_user_intents = []
 
             if self.user_message_index:
-                results = self.user_message_index.search(
+                results = await self.user_message_index.search(
                     text=event["final_transcript"], max_results=5
                 )
 
@@ -331,7 +321,7 @@ class LLMGenerationActions:
             # We search for the most relevant similar flows
             examples = ""
             if self.flows_index:
-                results = self.flows_index.search(text=user_intent, max_results=5)
+                results = await self.flows_index.search(text=user_intent, max_results=5)
 
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
@@ -487,7 +477,7 @@ class LLMGenerationActions:
             examples = ""
             # NOTE: disabling bot message index when there are no user messages
             if self.config.user_messages and self.bot_message_index:
-                results = self.bot_message_index.search(
+                results = await self.bot_message_index.search(
                     text=event["intent"], max_results=5
                 )
 
@@ -572,7 +562,9 @@ class LLMGenerationActions:
         # We search for the most relevant flows.
         examples = ""
         if self.flows_index:
-            results = self.flows_index.search(text=f"${var_name} = ", max_results=5)
+            results = await self.flows_index.search(
+                text=f"${var_name} = ", max_results=5
+            )
 
             # We add these in reverse order so the most relevant is towards the end.
             for result in reversed(results):

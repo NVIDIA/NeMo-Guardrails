@@ -4,19 +4,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.5.0] - 2023-09-04
+
+### Added
+
+- Support for [custom configuration data](./docs/user_guide/configuration-guide.md#custom-data).
+- Example for using [custom LLM and multiple KBs](./examples/multi_kb/README.md)
+- Support for [`PROMPTS_DIR`](./docs/user_guide/advanced/prompt-customization.md#prompt-configuration).
+- [#101](https://github.com/NVIDIA/NeMo-Guardrails/pull/101) Support for [using OpenAI embeddings](./docs/user_guide/configuration-guide.md#the-embeddings-model) models in addition to SentenceTransformers.
+- First set of end-to-end QA tests for the example configurations.
+- Support for configurable [embedding search providers](./docs/user_guide/advanced/embedding-search-providers.md)
+
+### Changed
+
+- Moved to using `nest_asyncio` for [implementing the blocking API](./docs/user_guide/advanced/nested-async-loop.md). Fixes [#3](https://github.com/NVIDIA/NeMo-Guardrails/issues/3) and [#32](https://github.com/NVIDIA/NeMo-Guardrails/issues/32).
+- Improved event property validation in `new_event_dict`.
+- Refactored imports to allow installing from source without Annoy/SentenceTransformers (would need a custom embedding search provider to work).
+
+### Fixed
+
+- Fixed when the `init` function from `config.py` is called to allow custom LLM providers to be registered inside.
+- [#93](https://github.com/NVIDIA/NeMo-Guardrails/pull/93): Removed redundant `hasattr` check in `nemoguardrails/llm/params.py`.
+- [#91](https://github.com/NVIDIA/NeMo-Guardrails/issues/91): Fixed how default context variables are initialized.
+
+## [0.4.0] - 2023-08-03
 
 ### Added
 
 - [Event-based API](./docs/user_guide/advanced/event-based-api.md) for guardrails.
 - Support for message with type "event" in [`LLMRails.generate_async`](./docs/api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async).
 - Support for [bot message instructions](docs/user_guide/advanced/bot-message-instructions.md).
+- Support for [using variables inside bot message definitions](./docs/user_guide/colang-language-syntax-guide.md#bot-messages-with-variables).
+- Support for `vicuna-7b-v1.3` and `mpt-7b-instruct`.
+- Topical evaluation results for `vicuna-7b-v1.3` and `mpt-7b-instruct`.
+- Support to use different models for different LLM tasks.
+- Support for [red-teaming](docs/user_guide/advanced/red-teaming.md) using challenges.
+- Support to disable the Chat UI when running the server using `--disable-chat-ui`.
+- Support for accessing the API request headers in server mode.
+- Support to [enable CORS settings](docs/user_guide/server-guide.md#cors) for the guardrails server.
 
 ### Changed
 
 - Changed the naming of the internal events to align to the upcoming UMIM spec (Unified Multimodal Interaction Management).
-comments.)
-- Add support for [using variables inside bot message definitions](./docs/user_guide/colang-language-syntax-guide.md#bot-messages-with-variables).
+- If there are no user message examples, the bot messages examples lookup is disabled as well.
 
 ### Fixed
 
@@ -27,6 +57,9 @@ comments.)
 - [#55](https://github.com/NVIDIA/NeMo-Guardrails/issues/83): Fix bug related to LangChain callbacks initialization.
 - Fixed generation of "..." on value generation.
 - Fixed the parameters type conversion when invoking actions from colang (previously everything was string).
+- Fixed `model_kwargs` property for the `WrapperLLM`.
+- Fixed bug when `stop` was used inside flows.
+- Fixed Chat UI bug when an invalid guardrails configuration was used.
 
 ## [0.3.0] - 2023-06-30
 

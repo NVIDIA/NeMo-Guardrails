@@ -102,6 +102,36 @@ class TaskPrompt(BaseModel):
         return values
 
 
+class EmbeddingSearchProvider(BaseModel):
+    """Configuration of a embedding search provider."""
+
+    name: str = Field(
+        default="default",
+        description="The name of the embedding search provider. If not specified, default is used.",
+    )
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+
+
+class KnowledgeBaseConfig(BaseModel):
+    folder: str = Field(
+        default="kb",
+        description="The folder from which the documents should be loaded.",
+    )
+    embedding_search_provider: EmbeddingSearchProvider = Field(
+        default_factory=EmbeddingSearchProvider,
+        description="The search provider used to search the knowledge base.",
+    )
+
+
+class CoreConfig(BaseModel):
+    """Settings for core internal mechanics."""
+
+    embedding_search_provider: EmbeddingSearchProvider = Field(
+        default_factory=EmbeddingSearchProvider,
+        description="The search provider used to search the most similar canonical forms/flows.",
+    )
+
+
 # Load the default config values from the file
 with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
     _default_config = yaml.safe_load(_fc)
@@ -144,11 +174,18 @@ def _join_config(dest_config: dict, additional_config: dict):
         "actions_server_url", None
     ) or additional_config.get("actions_server_url", None)
 
+    dest_config["embedding_search_provider"] = dest_config.get(
+        "embedding_search_provider", {}
+    ) or additional_config.get("embedding_search_provider", {})
+
     additional_fields = [
         "sample_conversation",
         "lowest_temperature",
         "enable_multi_step_generation",
         "colang_version",
+        "custom_data",
+        "knowledge_base",
+        "core",
     ]
 
     for field in additional_fields:
@@ -225,6 +262,21 @@ class RailsConfig(BaseModel):
     )
 
     colang_version: str = Field(default="1.0", description="The Colang version to use.")
+
+    custom_data: Dict = Field(
+        default_factory=dict,
+        description="Any custom configuration data that might be needed.",
+    )
+
+    knowledge_base: KnowledgeBaseConfig = Field(
+        default_factory=KnowledgeBaseConfig,
+        description="Configuration for the built-in knowledge base support.",
+    )
+
+    core: CoreConfig = Field(
+        default_factory=CoreConfig,
+        description="Configuration for core internal mechanics.",
+    )
 
     @staticmethod
     def from_path(

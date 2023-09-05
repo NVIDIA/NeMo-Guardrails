@@ -32,13 +32,8 @@ class Runtime:
         self.config = config
         self.verbose = verbose
 
-        # The dictionary of registered actions, initialized with default ones.
-        self.registered_actions = {}
-
         # Register the actions with the dispatcher.
         self.action_dispatcher = ActionDispatcher(config_path=config.config_path)
-        for action_name, action_fn in self.registered_actions.items():
-            self.action_dispatcher.register_action(action_fn, action_name)
 
         # The list of additional parameters that can be passed to the actions.
         self.registered_action_params = {}
@@ -94,17 +89,24 @@ class Runtime:
         for flow in self.config.flows:
             self._load_flow_config(flow)
 
-    def register_action(self, action: callable, name: Optional[str] = None):
+    def register_action(
+        self, action: callable, name: Optional[str] = None, override: bool = True
+    ):
         """Registers an action with the given name.
 
         :param name: The name of the action.
         :param action: The action function.
+        :param override: If an action already exists, whether it should be overriden or not.
         """
-        self.action_dispatcher.register_action(action, name)
+        self.action_dispatcher.register_action(action, name, override=override)
 
-    def register_actions(self, actions_obj: any):
+    def register_actions(self, actions_obj: any, override: bool = True):
         """Registers all the actions from the given object."""
-        self.action_dispatcher.register_actions(actions_obj)
+        self.action_dispatcher.register_actions(actions_obj, override=override)
+
+    @property
+    def registered_actions(self):
+        return self.action_dispatcher.registered_actions
 
     def register_action_param(self, name: str, value: any):
         """Registers an additional parameter that can be passed to the actions.

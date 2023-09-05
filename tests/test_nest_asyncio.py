@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import asyncio
+import importlib
+
+import pytest
+
+import nemoguardrails
+from nemoguardrails import RailsConfig
+from tests.utils import TestChat
+
+config = RailsConfig.from_content(yaml_content="""models: []""")
+
+chat = TestChat(
+    config,
+    llm_completions=[
+        "Hello there!",
+        "Hello there!",
+        "Hello there!",
+    ],
+)
+
+
+def test_sync_api():
+    chat >> "Hi!"
+    chat << "Hello there!"
+
+
+@pytest.mark.asyncio
+async def test_async_api():
+    chat >> "Hi!"
+    chat << "Hello there!"
+
+
+@pytest.mark.asyncio
+async def test_async_api_error(monkeypatch):
+    monkeypatch.setenv("DISABLE_NEST_ASYNCIO", "True")
+
+    # Reload the module to re-run its top-level code with the new env var
+    importlib.reload(nemoguardrails)
+    importlib.reload(asyncio)
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"asyncio.run\(\) cannot be called from a running event loop",
+    ):
+        chat >> "Hi!"
+        chat << "Hello there!"

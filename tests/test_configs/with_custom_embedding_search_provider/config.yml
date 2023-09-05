@@ -1,0 +1,14 @@
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003
+
+# Use the simple embedding search provider for the core logic.
+core:
+  embedding_search_provider:
+    name: simple
+
+# And for the knowledge base.
+knowledge_base:
+  embedding_search_provider:
+    name: simple

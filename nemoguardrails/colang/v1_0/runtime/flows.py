@@ -294,6 +294,14 @@ def compute_next_state(state: State, event: dict) -> State:
         state.next_step = None
         return state
 
+    # Update the default context variables
+    # TODO: refactor this logic in a single lace
+    if event["type"] == "UtteranceUserActionFinished":
+        state.context["last_user_message"] = event["final_transcript"]
+
+    elif event["type"] == "StartUtteranceBotAction":
+        state.context["last_bot_message"] = event["script"]
+
     # Initialize the new state
     new_state = State(
         context=state.context, flow_states=[], flow_configs=state.flow_configs
@@ -516,7 +524,7 @@ def compute_next_steps(
         state = compute_next_state(state, event)
 
         # NOTE (Jul 24, Razvan): this is a quick fix. Will debug further.
-        if event["type"] == "bot_intent" and event["intent"] == "stop":
+        if event["type"] == "BotIntent" and event["intent"] == "stop":
             # Reset all flows
             state.flow_states = []
 
@@ -529,7 +537,7 @@ def compute_next_steps(
     # If we have a next step, we make sure to convert it to proper event structure.
     if state.next_step:
         next_step_event = _step_to_event(state.next_step)
-        if next_step_event["type"] == "bot_intent" and state.next_step_comment:
+        if next_step_event["type"] == "BotIntent" and state.next_step_comment:
             # For bot intents, we use the comment as instructions
             next_step_event["instructions"] = state.next_step_comment
 

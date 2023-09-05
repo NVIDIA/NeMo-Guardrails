@@ -20,7 +20,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="nemoguardrails",
-    version="0.3.0",
+    version="0.5.0",
     packages=find_packages(),
     author="NVIDIA",
     author_email="nemoguardrails@nvidia.com",
@@ -39,7 +39,6 @@ setup(
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
@@ -61,8 +60,8 @@ setup(
     },
     install_requires=[
         "pydantic~=1.10.6",
-        "aiohttp==3.8.4",
-        "langchain==0.0.239",
+        "aiohttp==3.8.5",
+        "langchain==0.0.251",
         "requests>=2.31.0",
         "typer==0.7.0",
         "PyYAML~=6.0",
@@ -77,6 +76,7 @@ setup(
         "typing-extensions==4.5.0",
         "Jinja2==3.1.2",
         "lark~=1.1.7",
+        "nest-asyncio==1.5.6",
     ],
     extras_require={
         "eval": ["tqdm~=4.65", "numpy~=1.24"],

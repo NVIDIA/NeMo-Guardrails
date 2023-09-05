@@ -79,7 +79,7 @@ def get_colang_history(
     # the bot message instruction only for the last one.
     last_bot_intent_idx = len(events) - 1
     while last_bot_intent_idx >= 0:
-        if events[last_bot_intent_idx]["type"] == "bot_intent":
+        if events[last_bot_intent_idx]["type"] == "BotIntent":
             break
         last_bot_intent_idx -= 1
 

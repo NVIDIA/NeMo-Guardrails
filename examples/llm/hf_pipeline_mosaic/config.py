@@ -34,7 +34,7 @@ def get_mpt_7b_instruct_llm():
     config.init_device = device
     config.max_seq_len = 450
 
-    params = {"temperature": 0, "max_new_tokens": 100, "max_length": 450}
+    params = {"temperature": 0.01, "max_new_tokens": 100, "max_length": 450}
 
     model = AutoModelForCausalLM.from_pretrained(
         name,
@@ -49,9 +49,9 @@ def get_mpt_7b_instruct_llm():
         task="text-generation",
         tokenizer=tokenizer,
         device=device,
-        max_new_tokens=100,
         do_sample=True,
         use_cache=True,
+        **params,
     )
 
     llm = HuggingFacePipeline(pipeline=pipe, model_kwargs=params)

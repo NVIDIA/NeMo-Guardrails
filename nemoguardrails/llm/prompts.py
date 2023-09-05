@@ -27,15 +27,25 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def _load_prompts() -> List[TaskPrompt]:
     """Load the predefined prompts from the `prompts` directory."""
+
+    # List of directory containing prompts
+    prompts_dirs = [os.path.join(CURRENT_DIR, "prompts")]
+
+    # Fetch prompt directory from env var this should be either abs path or relative to cwd
+    prompts_dir = os.getenv("PROMPTS_DIR", None)
+    if prompts_dir and os.path.exists(prompts_dir):
+        prompts_dirs.append(prompts_dir)
+
     prompts = []
 
-    for root, dirs, files in os.walk(os.path.join(CURRENT_DIR, "prompts")):
-        for filename in files:
-            if filename.endswith(".yml"):
-                with open(
-                    os.path.join(root, filename), encoding="utf-8"
-                ) as prompts_file:
-                    prompts.extend(yaml.safe_load(prompts_file.read())["prompts"])
+    for path in prompts_dirs:
+        for root, dirs, files in os.walk(path):
+            for filename in files:
+                if filename.endswith(".yml") or filename.endswith(".yaml"):
+                    with open(
+                        os.path.join(root, filename), encoding="utf-8"
+                    ) as prompts_file:
+                        prompts.extend(yaml.safe_load(prompts_file.read())["prompts"])
 
     return [TaskPrompt(**prompt) for prompt in prompts]
 
