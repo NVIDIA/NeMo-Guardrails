@@ -287,7 +287,7 @@ class TopicalRailsEvaluation:
                         )
 
                     generated_bot_utterance = get_last_bot_utterance_event(new_events)[
-                        "content"
+                        "script"
                     ]
                     prediction["generated_bot_said"] = generated_bot_utterance
                     found_utterance = False
