@@ -55,6 +55,18 @@ class RuntimeV1_1(Runtime):
         :return: The list of events.
         """
         events = events.copy()
+
+        # TODO: figure out a better way to do this
+        # If the first event is not a StartFlow for the main flow, we need to add it.
+        if events[0]["type"] != "StartFlow":
+            events.insert(
+                0,
+                {
+                    "type": "StartFlow",
+                    "flow_id": "main",
+                },
+            )
+
         new_events = []
 
         while True:
