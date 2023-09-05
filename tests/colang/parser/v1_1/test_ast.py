@@ -82,4 +82,5 @@ def test_basic():
             {"_source": None, "_type": "return"},
         ],
         "name": "test",
+        "parameters": [],
     }
