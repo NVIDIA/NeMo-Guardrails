@@ -131,9 +131,9 @@ class Action:
             "Start": self.start,
             "Change": self.change,
             "Stop": self.stop,
-            "Started": self.started,
-            "Updated": self.updated,
-            "Finished": self.finished,
+            "Started": self.started_event,
+            "Updated": self.updated_event,
+            "Finished": self.finished_event,
         }
 
     # Process an event
@@ -158,35 +158,35 @@ class Action:
         """Returns the corresponding action event."""
         return self._event_name_map[name](arguments)
 
-    # Outgoing action events
-    def start(self, **args: Any) -> Event:
+    # Action events to send
+    def start(self, args: dict) -> Event:
         """Starts the action. Takes no arguments."""
         self.status = ActionStatus.STARTING
         return Event(f"Start{self.name}", self._start_event_arguments, self.uid)
 
-    def change(self, **args: Any) -> Event:
-        """Change a parameter of a started action."""
+    def change(self, args: dict) -> Event:
+        """Changes a parameter of a started action."""
         return Event(f"Change{self.name}", args["arguments"], self.uid)
 
-    def stop(self, **args: Any) -> Event:
-        """Stop a started action. Takes no arguments."""
+    def stop(self, args: dict) -> Event:
+        """Stops a started action. Takes no arguments."""
         self.status = ActionStatus.STOPPING
         return Event(f"Stop{self.name}", {}, self.uid)
 
-    # Incoming action events
-    def started(self, **args: Any) -> Event:
-        """Return the Started() action event."""
-        return Event(f"{self.name}Started", args["arguments"], self.uid)
+    # Action events to match
+    def started_event(self, args: dict) -> Event:
+        """Returns the Started action event."""
+        return Event(f"{self.name}Started", args, self.uid)
 
-    def updated(self, **args: Any) -> Event:
-        """Return the Updated() parameter action event."""
+    def updated_event(self, args: dict) -> Event:
+        """Returns the Updated parameter action event."""
         return Event(
             f"{self.name}{args['parameter_name']}Updated", args["arguments"], self.uid
         )
 
-    def finished(self, **args: Any) -> Event:
-        """Return the Finished() action event."""
-        return Event(f"{self.name}Finished", args["arguments"], self.uid)
+    def finished_event(self, args: dict) -> Event:
+        """Returns the Finished action event."""
+        return Event(f"{self.name}Finished", args, self.uid)
 
 
 class InteractionLoopType(Enum):
@@ -302,19 +302,68 @@ class FlowState:
     # The UID of the flows that interrupted this one
     # interrupted_by = None
 
-    # The action event name mapping
-    self._event_name_map = {
-        "StartFlow": Event,
-        "Change": self.change,
-        "Stop": self.stop,
-        "Started": self.started,
-        "Updated": self.updated,
-        "Finished": self.finished,
-    }
+    # The flow event name mapping
+    _event_name_map: dict = field(init=False)
+
+    def __post_init__(self) -> None:
+        self._event_name_map = {
+            "Start": self.start,
+            "Stop": self.stop,
+            "Pause": self.pause,
+            "Resume": self.resume,
+            "Started": self.started_event,
+            "Paused": self.paused_event,
+            "Resumed": self.resumed_event,
+            "Finished": self.finished_event,
+            "Failed": self.failed_event,
+        }
 
     def get_event(self, name: str, arguments: dict) -> Callable[[], Event]:
         """Returns the corresponding action event."""
         return self._event_name_map[name](arguments)
+
+    # Flow events to send
+    def start(self, **args: Any) -> Event:
+        """Starts the flow. Takes no arguments."""
+        return Event("StartFlow", {"flow_id": self.flow_id})
+
+    def stop(self, **args: Any) -> Event:
+        """Stops the flow. Takes no arguments."""
+        return Event("StopFlow", {"flow_id": self.flow_id})
+
+    def pause(self, **args: Any) -> Event:
+        """Pauses the flow. Takes no arguments."""
+        return Event("PauseFlow", {"flow_id": self.flow_id})
+
+    def resume(self, **args: Any) -> Event:
+        """Resumes the flow. Takes no arguments."""
+        return Event("ResumeFlow", {"flow_id": self.flow_id})
+
+    # Flow events to match
+    def started_event(self, **args: Any) -> Event:
+        """Returns the flow Started event."""
+        args["flow_id"] = self.flow_id
+        return Event("FlowStarted", args)
+
+    def paused_event(self, **args: Any) -> Event:
+        """Returns the flow Pause event."""
+        args["flow_id"] = self.flow_id
+        return Event("FlowPaused", args)
+
+    def resumed_event(self, **args: Any) -> Event:
+        """Returns the flow Resumed event."""
+        args["flow_id"] = self.flow_id
+        return Event("FlowResumed", args)
+
+    def finished_event(self, **args: Any) -> Event:
+        """Returns the flow Finished event."""
+        args["flow_id"] = self.flow_id
+        return Event("FlowFinished", args)
+
+    def failed_event(self, **args: Any) -> Event:
+        """Returns the flow Failed event."""
+        args["flow_id"] = self.flow_id
+        return Event("FlowFailed", args)
 
 
 @dataclass
@@ -392,14 +441,12 @@ class State:
                             config_changed = True
                         else:
                             # It's an UMIM action
-                            action_ref_uid = new_uid()
+                            action_ref_uid = f"_action_ref_{new_uid()}"
                             new_elements.append(
                                 SpecOp(
                                     op="start",
                                     spec=element.spec,
-                                    ref=_create_ref_ast_dict_helper(
-                                        f"_action_ref_{action_ref_uid}"
-                                    ),
+                                    ref=_create_ref_ast_dict_helper(action_ref_uid),
                                 )
                             )
                             new_elements.append(
@@ -441,26 +488,25 @@ class State:
                             config_changed = True
                         else:
                             # It's an UMIM action
-                            if (
-                                element.ref is not None
-                                and element.ref["ref"]["_type"] == "capture_ref"
-                            ):
-                                new_elements.append(
-                                    SpecOp(
-                                        op="_new_instance",
-                                        spec=element.spec,
-                                        ref=element.ref,
-                                    )
+                            element_ref = element.ref
+                            if element_ref is None:
+                                action_ref_uid = f"_action_ref_{new_uid()}"
+                                element_ref = _create_ref_ast_dict_helper(
+                                    action_ref_uid
                                 )
-                            spec = element.spec
-                            spec.members = _create_member_ast_dict_helper("Start", {})
                             new_elements.append(
                                 SpecOp(
-                                    op="send",
-                                    spec=spec,
-                                    ref=element.ref,
+                                    op="_new_instance",
+                                    spec=element.spec,
+                                    ref=element_ref,
                                 )
                             )
+                            spec = element.spec
+                            spec.members = _create_member_ast_dict_helper("Start", {})
+                            spec.var_name = element_ref["elements"][0]["elements"][
+                                0
+                            ].lstrip("$")
+                            new_elements.append(SpecOp(op="send", spec=spec))
                     elif element.op == "match":
                         if element.spec.name in self.flow_configs:
                             # It's a flow
@@ -498,10 +544,8 @@ class State:
 
 def _create_ref_ast_dict_helper(ref_name: str) -> dict:
     return {
-        "ref": {
-            "_type": "capture_ref",
-            "elements": [{"_type": "var_name", "elements": [f"{ref_name}"]}],
-        }
+        "_type": "capture_ref",
+        "elements": [{"_type": "var_name", "elements": [f"{ref_name}"]}],
     }
 
 
@@ -1032,7 +1076,7 @@ def _compute_event_matching_score(
         # We need to match all arguments used in the element
         score = 1.0
         for arg in element_spec_args:
-            if arg in event:
+            if arg in event.arguments:
                 if ref_event.arguments[arg] == event.arguments[arg]:
                     continue
                 else:
@@ -1065,17 +1109,16 @@ def _get_event_from_element(
 
     element_spec: Spec = element.spec
 
-    object: Optional[Union[FlowState, Action, Event]]
+    action: Action
     if element_spec["var_name"] is not None:
-        # Event is based on a reference
+        # Case 3)
         variable_name = element_spec["var_name"]
         if variable_name not in flow_state.context:
-            logging.warning(f"Unkown variable: '{variable_name}'!")
-            return 0.0
+            raise Exception((f"Unkown variable: '{variable_name}'!"))
 
         # Resolve variable
         context_variable = flow_state.context[variable_name]
-        if reference["type"] == ContextVariableType.EVENT_REFERENCE:
+        if context_variable["type"] == ContextVariableType.EVENT_REFERENCE:
             raise NotImplementedError
         elif context_variable["type"] == ContextVariableType.ACTION_REFERENCE:
             action = flow_state.actions[context_variable["value"]]
@@ -1084,59 +1127,72 @@ def _get_event_from_element(
             action_event_arguments = _evaluate_arguments(
                 action_event_arguments, flow_state.context
             )
-            action_event: Event = object.get_event_function_by_name(
+            action_event: Event = action.get_event(
                 action_event_name, action_event_arguments
             )
-        elif reference["type"] == ContextVariableType.FLOW_REFERENCE:
+            return action_event
+        elif context_variable["type"] == ContextVariableType.FLOW_REFERENCE:
             raise NotImplementedError
 
-    if reference is None and element_spec.members is not None:
-        # Event is based on a flow or action definition directly
+    if element_spec.members is not None:
+        # Case 2)
         if element_spec.name in state.flow_configs:
             # Flow object
             flow = state.flow_configs[element_spec.name]
+            raise NotImplementedError
         else:
             action_arguments = _evaluate_arguments(
                 element_spec.arguments, flow_state.context
             )
             action = Action(element_spec.name, action_arguments, flow_state.flow_id)
-            # action_event_name = element_spec.members[0]["name"]
-            # action_event_arguments = element_spec.members[0]["arguments"]
-            # action_event_arguments = _evaluate_arguments(
-            #     action_event_arguments, flow_state.context
-            # )
-            # action_event: Event = object.get_event_function_by_name(
-            #     action_event_name, action_event_arguments
-            # )
-
-        event_name = element_spec.members[0]["name"]
-
+            # TODO: refactor the following repetition of code (see above)
+            action_event_name = element_spec.members[0]["name"]
+            action_event_arguments = element_spec.members[0]["arguments"]
+            action_event_arguments = _evaluate_arguments(
+                action_event_arguments, flow_state.context
+            )
+            action_event: Event = action.get_event(
+                action_event_name, action_event_arguments
+            )
+            return action_event
     else:
-        # Element refers to an event
-        ref_event = Event(element_spec["name"], event.arguments)
-
-    if element.ref is not None and element.ref["_type"] == "capture_ref":
-        ref_name = element.ref["elements"][0]["elements"][0].lstrip("$")
-        reference = flow_state.context[ref_name]
-        if reference["type"] == ContextVariableType.EVENT_REFERENCE:
+        # Case 1)
+        if element_spec.name in state.flow_configs:
+            # Flow object
             raise NotImplementedError
-        elif reference["type"] == ContextVariableType.ACTION_REFERENCE:
-            action = flow_state.actions[reference["value"]]
-        elif reference["type"] == ContextVariableType.FLOW_REFERENCE:
-            raise NotImplementedError
-    elif element_spec.members is not None:
-        action_event_name = element_spec.members[0]["name"]
+        else:
+            event_arguments = _evaluate_arguments(
+                element_spec.arguments, flow_state.context
+            )
+            action_event = Event(element_spec.name, event_arguments)
+            return action_event
 
-    else:
-        pass
+    # else:
+    #     # Element refers to an event
+    #     ref_event = Event(element_spec["name"], event.arguments)
 
-    action_event_name = element_spec.members[0]["name"]
-    event: Event = action.get_event(action_event_name, evaluated_event_arguments)
-    event_name = event.name
-    evaluated_event_arguments = event.arguments
+    # if element.ref is not None and element.ref["_type"] == "capture_ref":
+    #     ref_name = element.ref["elements"][0]["elements"][0].lstrip("$")
+    #     reference = flow_state.context[ref_name]
+    #     if reference["type"] == ContextVariableType.EVENT_REFERENCE:
+    #         raise NotImplementedError
+    #     elif reference["type"] == ContextVariableType.ACTION_REFERENCE:
+    #         action = flow_state.actions[reference["value"]]
+    #     elif reference["type"] == ContextVariableType.FLOW_REFERENCE:
+    #         raise NotImplementedError
+    # elif element_spec.members is not None:
+    #     action_event_name = element_spec.members[0]["name"]
 
-    action_event_name = element.spec.members[0]["name"]
-    ref_event: Event = action.get_event(action_event_name, element_spec_args)
+    # else:
+    #     pass
+
+    # action_event_name = element_spec.members[0]["name"]
+    # event: Event = action.get_event(action_event_name, evaluated_event_arguments)
+    # event_name = event.name
+    # evaluated_event_arguments = event.arguments
+
+    # action_event_name = element.spec.members[0]["name"]
+    # ref_event: Event = action.get_event(action_event_name, element_spec_args)
 
 
 def _create_outgoing_event_from_actionable_element(
@@ -1151,34 +1207,36 @@ def _create_outgoing_event_from_actionable_element(
     ), f"Cannot create an event from a non actionable flow element {element}!"
 
     # Evaluate expressions (eliminate all double quotes)
-    evaluated_event_arguments = _evaluate_arguments(
-        element.spec.arguments, flow_state.context
-    )
+    # evaluated_event_arguments = _evaluate_arguments(
+    #     element.spec.arguments, flow_state.context
+    # )
 
     if element.op == "send":
-        event_name: str
-        if element.ref is not None and element.ref["_type"] == "capture_ref":
-            ref_name = element.ref["elements"][0]["elements"][0].lstrip("$")
-            reference = flow_state.context[ref_name]
-            if reference["type"] == ContextVariableType.EVENT_REFERENCE:
-                raise NotImplementedError
-            elif reference["type"] == ContextVariableType.ACTION_REFERENCE:
-                action = flow_state.actions[reference["value"]]
-                action_event_name = element.spec.members[0]["name"]
-                event: Event = action.get_event(
-                    action_event_name, evaluated_event_arguments
-                )
-                event_name = event.name
-                evaluated_event_arguments = event.arguments
-                evaluated_event_arguments["action_uid"] = action.uid
-            elif reference["type"] == ContextVariableType.FLOW_REFERENCE:
-                raise NotImplementedError
-        else:
-            event_name = element.spec.name
-            evaluated_event_arguments["action_uid"] = new_uid()
+        # event_name: str
+        # if element.ref is not None and element.ref["_type"] == "capture_ref":
+        #     ref_name = element.ref["elements"][0]["elements"][0].lstrip("$")
+        #     reference = flow_state.context[ref_name]
+        #     if reference["type"] == ContextVariableType.EVENT_REFERENCE:
+        #         raise NotImplementedError
+        #     elif reference["type"] == ContextVariableType.ACTION_REFERENCE:
+        #         action = flow_state.actions[reference["value"]]
+        #         action_event_name = element.spec.members[0]["name"]
+        #         event: Event = action.get_event(
+        #             action_event_name, evaluated_event_arguments
+        #         )
+        #         event_name = event.name
+        #         evaluated_event_arguments = event.arguments
+        #         evaluated_event_arguments["action_uid"] = action.uid
+        #     elif reference["type"] == ContextVariableType.FLOW_REFERENCE:
+        #         raise NotImplementedError
+        # else:
+        #     event_name = element.spec.name
+        #     evaluated_event_arguments["action_uid"] = new_uid()
 
-        event = create_umim_action_event(event_name, evaluated_event_arguments)
-        state.outgoing_events.append(event)
+        event = _get_event_from_element(state, flow_state, element)
+        umim_event = create_umim_action_event(event.name, event.arguments)
+
+        state.outgoing_events.append(umim_event)
 
     # Extract the comment, if any
     # state.next_steps_comment = element.get("_source_mapping", {}).get("comment")

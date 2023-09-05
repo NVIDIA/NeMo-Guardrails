@@ -206,7 +206,7 @@ def test_await_action_with_reference():
     flow main
       start UtteranceBotAction(script="Hello world") as $action_ref
       match $action_ref.Finished()
-      start StartUtteranceBotAction(script="Done")
+      start UtteranceBotAction(script="Done")
     """
     config = convert_parsed_colang_to_flow_config(
         parse_colang_file(
@@ -677,4 +677,4 @@ def test_flow_parameters():
 
 
 if __name__ == "__main__":
-    test_start_action()
+    test_await_action_with_reference()
