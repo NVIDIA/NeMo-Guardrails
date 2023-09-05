@@ -369,6 +369,7 @@ class LLMRails:
 
         # Extract and join all the messages from StartUtteranceBotAction events as the response.
         responses = []
+        new_extra_events = []
         for event in new_events:
             if event["type"] == "StartUtteranceBotAction":
                 # Check if we need to remove a message
@@ -377,10 +378,17 @@ class LLMRails:
                 else:
                     responses.append(event["script"])
 
+                # For the messages interface, we need to consider the UtteranceBotAction finished
+                # as soon as we return the message, hence we add the finished event to the new events.
+                new_extra_events.append(
+                    {"type": "UtteranceBotActionFinished", "script": event["script"]}
+                )
+
         new_message = {"role": "assistant", "content": "\n".join(responses)}
 
         # Save the new events in the history and update the cache
         events.extend(new_events)
+        events.extend(new_extra_events)
         cache_key = get_history_cache_key(messages + [new_message])
         self.events_history_cache[cache_key] = events
 
