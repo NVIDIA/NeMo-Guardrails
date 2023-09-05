@@ -90,8 +90,11 @@ class PIIRecognizer:
             contents = yaml.safe_load(stream)
             for recognizer in contents["recognizers"]:
                 custom_entity = recognizer["supported_entity"]
-                if custom_entity not in self.pii_entities:
-                    self.pii_entities.append(custom_entity)
+                if self.pii_entities:
+                    if custom_entity in self.pii_entities:
+                        pass
+                self.pii_entities.append(custom_entity)
+
 
 
     def load_recognizers_from_path(self, path: str):
