@@ -14,11 +14,10 @@
 # limitations under the License.
 
 import logging
-import uuid
+from abc import abstractmethod
 from typing import List, Optional
 
 from nemoguardrails.actions.action_dispatcher import ActionDispatcher
-from nemoguardrails.colang.v1_0.runtime.flows import FlowConfig
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.rails.llm.config import RailsConfig
 
