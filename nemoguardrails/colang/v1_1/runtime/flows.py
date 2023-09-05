@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Deque, Dict, List, Optional, Union
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import Spec, SpecOp
+from nemoguardrails.colang.v1_1.lang.colang_ast import Element, Spec, SpecOp
 from nemoguardrails.colang.v1_1.runtime.events import (
     create_abort_flow_internal_event,
     create_flow_failed_internal_event,
@@ -73,7 +73,7 @@ class FlowConfig:
     id: str
 
     # The sequence of elements that compose the flow.
-    elements: List[Union[SpecOp, dict]]
+    elements: List[Union[Element, SpecOp, dict]]
 
     # Interaction loop
     loop_id: Optional[str] = None
@@ -418,6 +418,8 @@ def compute_next_state(state: State, external_event: dict) -> State:
     # Initialize the new state
     new_state = copy.copy(state)
     new_state.internal_events = deque([external_event])
+    # We need to reset the outgoing events as well
+    new_state.outgoing_events = []
 
     # Clear all matching scores
     for flow_state in state.flow_states.values():
@@ -857,38 +859,13 @@ def _create_outgoing_event(
     # state.next_steps_comment = element.get("_source_mapping", {}).get("comment")
 
 
-def _step_to_event(step: dict) -> dict:
-    """Helper to convert a next step coming from a flow element into the actual event."""
-    step_type = step["_type"]
-
-    if step_type == "StartAction":
-        if step["action_name"] == "utter":
-            return {
-                "type": "BotIntent",
-                "intent": step["action_params"]["value"],
-            }
-
-        else:
-            action_name = step["action_name"]
-            action_params = step.get("action_params", {})
-            action_result_key = step.get("action_result_key")
-
-            return new_event_dict(
-                "StartInternalSystemAction",
-                action_name=action_name,
-                action_params=action_params,
-                action_result_key=action_result_key,
-            )
-    else:
-        raise ValueError(f"Unknown next step type: {step_type}")
-
-
 # NOTE (schuellc): Are we going to replace this with a stateful approach
 def compute_next_events(
     history: List[dict], flow_configs: Dict[str, FlowConfig]
 ) -> List[dict]:
     """Computes the next step in a flow-driven system given a history of events."""
     state = State(context={}, flow_states={}, flow_configs=flow_configs)
+    state.initialize()
 
     # First, we process the history and apply any alterations e.g. 'hide_prev_turn'
     actual_history = []
@@ -922,9 +899,7 @@ def compute_next_events(
         next_events.append(new_event_dict("ContextUpdate", data=state.context_updates))
 
     # If we have a next step, we make sure to convert it to proper event structure.
-    for step in state.outgoing_events:
-        next_step_event = _step_to_event(step)
-
+    for next_step_event in state.outgoing_events:
         next_events.append(next_step_event)
 
     # Finally, we check if there was an explicit "stop" request
