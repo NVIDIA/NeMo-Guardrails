@@ -34,7 +34,8 @@ class PIIRecognizer:
             self.redact = config.redact_pii.enable_pii_redaction
             self.load_predefined = config.redact_pii.load_predefined
              #required entities to be redacted from config.yml file
-            self._map_pii_entities_from_config(config.redact_pii.entities)
+            if config.redact_pii.entities:
+                self._map_pii_entities_from_config(config.redact_pii.entities)
         else:
             self.redact = redact
             self.load_predefined = load_predefined
