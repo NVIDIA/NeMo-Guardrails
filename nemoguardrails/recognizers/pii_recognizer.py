@@ -11,17 +11,29 @@ import inspect
 import importlib
 import inspect
 import spacy
+from nemoguardrails.rails.llm.config import RailsConfig
 
+#TODO remove this and infer from recognizers' supported entities
+pii_entities_dict = {
+    "name" : "PERSON",
+    "ssn" : "US_SSN",
+    "credit_card" : "CREDIT_CARD",
+    "phone_number" : "PHONE_NUMBER",
+    "email": "EMAIL_ADDRESS",
+    "driver_license": "US_DRIVER_LICENSE"
+}
 
 class PIIRecognizer:
     """Main class that enables integration of third party
        PII recognizers"""
     
-    def __init__(self, config_path: str, load_predefined: bool = True, redact: bool = False):
+    def __init__(self, config : RailsConfig, load_predefined: bool = True, redact: bool = False):
         
-        self.redact = redact
-        self.load_predefined = load_predefined
-
+        self.config_path = config.config_path
+        if config.redact_pii:
+            self.redact = config.redact_pii.enable_pii_redaction
+            self.load_predefined = config.redact_pii.load_predefined
+       
         # predefined recognizers use spacy module 
         if not spacy.util.is_package('en_core_web_lg'):
             spacy.cli.download('en_core_web_lg')
@@ -29,24 +41,18 @@ class PIIRecognizer:
         #TODO make the decorator generic 
         self.allowed_actions = ["retrieve_relevant_chunks"]
         
-        #TODO read config.yml to find out required entities to be redacted
-        self.pii_entities = ["CREDIT_CARD",
-                            "PHONE_NUMBER",
-                            "US_SSN",
-                            "US_PASSPORT",
-                            "LOCATION",
-                            "EMAIL_ADDRESS",
-                            "US_DRIVER_LICENSE"]
+        #required entities to be redacted from config.yml file
+        self._map_pii_entities_from_config(config.redact_pii.entities)
 
         # load predefined recognizers in registry
         self.registry = RecognizerRegistry()
         if self.load_predefined:
             self.registry.load_predefined_recognizers()
 
-        if config_path: 
-            if os.path.exists(config_path):
+        if self.config_path: 
+            if os.path.exists(self.config_path):
                 # load ad-hoc recognizers
-                recognizer_path = os.path.join(config_path, "recognizers.yaml")
+                recognizer_path = os.path.join(self.config_path, "recognizers.yaml")
                 if os.path.exists(recognizer_path):
                     self.recognizer_path = recognizer_path
                     self.registry.add_recognizers_from_yaml(self.recognizer_path)
@@ -54,7 +60,7 @@ class PIIRecognizer:
 
                 # load additional recognizers:
                 #  1. cloud hosted PII recognizers, 2. custom recognizers
-                self.load_recognizers_from_path(config_path)
+                self.load_recognizers_from_path(self.config_path)
         
         # Analyzer object 
         self.analyzer = AnalyzerEngine(registry=self.registry)
@@ -63,6 +69,17 @@ class PIIRecognizer:
         self.anonymizer = AnonymizerEngine()
         
         
+    def _map_pii_entities_from_config(self, config_entities):
+        """Mapping entities mentioned config file to the ones accepted
+           by the reconigzers"""
+        #TODO change the hardcoded mapping to match recognizer supported entities 
+        # with config ones
+        self.pii_entities = []
+        for entity in config_entities:
+            if entity in pii_entities_dict:
+                self.pii_entities.append(pii_entities_dict[entity])
+
+
     def _add_custom_entities_from_yaml(self):
         """Discovers entities supported by ad-hoc PII recogniers"""
 

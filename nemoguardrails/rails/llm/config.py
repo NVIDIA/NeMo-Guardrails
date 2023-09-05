@@ -60,6 +60,16 @@ class Document(BaseModel):
     content: str
 
 
+class RedactPII(BaseModel):
+
+    enable_pii_redaction : bool 
+    load_predefined : bool
+    entities : Optional[List[str]] = Field(
+        default = None,
+        description = "List of entities to be redacted"
+    )
+
+
 class MessageTemplate(BaseModel):
     """Template for a message structure."""
 
@@ -145,6 +155,10 @@ def _join_config(dest_config: dict, additional_config: dict):
         "actions_server_url", None
     ) or additional_config.get("actions_server_url", None)
 
+    dest_config["redact_pii"] = {**dest_config.get("redact_pii", {}),
+                                 **additional_config.get("redact_pii", {})
+                                }
+    
     additional_fields = [
         "sample_conversation",
         "lowest_temperature",
@@ -223,6 +237,11 @@ class RailsConfig(BaseModel):
     enable_multi_step_generation: Optional[bool] = Field(
         default=False,
         description="Whether to enable multi-step generation for the LLM.",
+    )
+
+    redact_pii: Optional[RedactPII] = Field(
+        default = None,
+        description = "Enabling PII redaction from LLM responses"
     )
 
     custom_data: Dict = Field(
