@@ -50,10 +50,42 @@ def test_send_umim_event():
 
     content = """
     flow main
-      start UtteranceBotAction(script="Hello world")
+      send StartUtteranceBotAction(script="Hello world")
     """
 
     state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+
+
+def test_match_umim_event():
+    """Test to match an UMIM event"""
+
+    content = """
+    flow main
+      match UtteranceUserAction.Finished(final_transcript="Hi")
+      send StartUtteranceBotAction(script="Hello world")
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi",
+        },
+    )
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -71,9 +103,6 @@ def test_start_action():
     content = """
     flow main
       start UtteranceBotAction(script="Hello world")
-      #start UtteranceBotAction(script="Hello world") as $action_ref
-      #$action_ref = UtteranceBotAction(script="Hello world")
-      #send $action_ref.Start() # start UtteranceBotAction(script="Hello world")
     """
     state = compute_next_state(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
@@ -87,13 +116,13 @@ def test_start_action():
     )
 
 
-def test_await_action():
-    """Test to await an UMIM action"""
+def test_start_match_action_on_action_parameter():
+    """Test to start and match an UMIM action based on action parameters"""
 
     content = """
     flow main
       start UtteranceBotAction(script="Hello world")
-      match UtteranceBotActionFinished(final_script="Hello world")
+      match UtteranceBotAction(script="Hello world").Finished()
       start UtteranceBotAction(script="Done")
     """
     state = compute_next_state(_init_state(content), start_main_flow_event)
@@ -106,12 +135,12 @@ def test_await_action():
             }
         ],
     )
-    state.outgoing_events.clear()
     state = compute_next_state(
         state,
         {
             "type": "UtteranceBotActionFinished",
             "final_script": "Hello world",
+            "action_uid": state.outgoing_events[0]["action_uid"],
         },
     )
     assert is_data_in_events(
@@ -125,12 +154,13 @@ def test_await_action():
     )
 
 
-def test_await_action_compact_notation():
-    """Test to await an UMIM action with compact notation"""
+def test_start_mismatch_action_on_action_parameter():
+    """Test to start and match an UMIM action based on action parameters"""
 
     content = """
     flow main
-      await UtteranceBotAction(script="Hello world")
+      start UtteranceBotAction(script="Hello world")
+      match UtteranceBotAction(script="Hello").Finished()
       start UtteranceBotAction(script="Done")
     """
     state = compute_next_state(_init_state(content), start_main_flow_event)
@@ -143,14 +173,45 @@ def test_await_action_compact_notation():
             }
         ],
     )
-    action_uid = state.outgoing_events[0]["action_uid"]
-    state.outgoing_events.clear()
     state = compute_next_state(
         state,
         {
             "type": "UtteranceBotActionFinished",
             "final_script": "Hello world",
-            "action_uid": action_uid,
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+
+
+def test_start_match_action_on_event_parameter():
+    """Test to start and match an UMIM action based on action parameters"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello world")
+      match UtteranceBotAction.Finished(final_script="Hello world")
+      start UtteranceBotAction(script="Done")
+    """
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello world",
+            "action_uid": state.outgoing_events[0]["action_uid"],
         },
     )
     assert is_data_in_events(
@@ -164,8 +225,41 @@ def test_await_action_compact_notation():
     )
 
 
-def test_await_action_with_reference():
-    """Test to await an UMIM action"""
+def test_start_mismatch_action_on_event_parameter():
+    """Test to start and match an UMIM action based on action parameters"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello world")
+      match UtteranceBotAction.Finished(final_script="Hello")
+      start UtteranceBotAction(script="Done")
+    """
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello world",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+
+
+def test_start_match_action_with_reference():
+    """Test to start and match an UMIM action based on action parameters"""
 
     content = """
     flow main
@@ -183,14 +277,12 @@ def test_await_action_with_reference():
             }
         ],
     )
-    action_uid = state.outgoing_events[0]["action_uid"]
-    state.outgoing_events.clear()
     state = compute_next_state(
         state,
         {
             "type": "UtteranceBotActionFinished",
             "final_script": "Hello world",
-            "action_uid": action_uid,
+            "action_uid": state.outgoing_events[0]["action_uid"],
         },
     )
     assert is_data_in_events(
@@ -204,7 +296,44 @@ def test_await_action_with_reference():
     )
 
 
-def test_action_state_update():
+def test_await_action():
+    """Test to await an UMIM action"""
+
+    content = """
+    flow main
+      await UtteranceBotAction(script="Hello world")
+      start UtteranceBotAction(script="Done")
+    """
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello world",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            }
+        ],
+    )
+
+
+def test_implicit_action_state_update():
     """Test the action state update"""
 
     content = """
@@ -227,9 +356,7 @@ def test_action_state_update():
             },
         ],
     )
-    state.outgoing_events.clear()
-    action_ref2 = state.main_flow_state.context["action_ref2"]
-    action_uid = action_ref2["value"]
+    action_uid = state.outgoing_events[1]["action_uid"]
     state = compute_next_state(
         state,
         {
@@ -354,7 +481,7 @@ def test_start_child_flow_two_times():
     content = """
     flow a
       start UtteranceBotAction(script="Hi")
-      match UtteranceBotActionFinished(final_script="Hi")
+      match UtteranceBotAction.Finished(final_script="Hi")
 
     flow main
       # start a
@@ -393,7 +520,7 @@ def test_child_flow_abort():
     flow b
       # await UtteranceBotAction(script="Hi")
       start UtteranceBotAction(script="Hi")
-      match UtteranceBotActionFinished(final_script="Hi")
+      match UtteranceBotAction.Finished(final_script="Hi")
 
     flow main
       # start a
@@ -498,4 +625,4 @@ def test_flow_parameters():
 
 
 if __name__ == "__main__":
-    test_send_umim_event()
+    test_match_umim_event()

@@ -126,7 +126,7 @@ class Action:
         self.context: dict = {}
 
         # The arguments that will be used for the start event
-        self._start_event_arguments = arguments
+        self.start_event_arguments = arguments
 
         # The action event name mapping
         self._event_name_map = {
@@ -159,7 +159,7 @@ class Action:
     def start(self, args: dict) -> Event:
         """Starts the action. Takes no arguments."""
         self.status = ActionStatus.STARTING
-        return Event(f"Start{self.name}", self._start_event_arguments, self.uid)
+        return Event(f"Start{self.name}", self.start_event_arguments, self.uid)
 
     def change(self, args: dict) -> Event:
         """Changes a parameter of a started action."""
@@ -173,17 +173,21 @@ class Action:
     # Action events to match
     def started_event(self, args: dict) -> Event:
         """Returns the Started action event."""
-        return Event(f"{self.name}Started", args, self.uid)
+        arguments = args.copy()
+        arguments["action_arguments"] = self.start_event_arguments
+        return Event(f"{self.name}Started", arguments, self.uid)
 
     def updated_event(self, args: dict) -> Event:
         """Returns the Updated parameter action event."""
-        return Event(
-            f"{self.name}{args['parameter_name']}Updated", args["arguments"], self.uid
-        )
+        arguments = args.copy()
+        arguments["action_arguments"] = self.start_event_arguments
+        return Event(f"{self.name}{args['parameter_name']}Updated", arguments, self.uid)
 
     def finished_event(self, args: dict) -> Event:
         """Returns the Finished action event."""
-        return Event(f"{self.name}Finished", args, self.uid)
+        arguments = args.copy()
+        arguments["action_arguments"] = self.start_event_arguments
+        return Event(f"{self.name}Finished", arguments, self.uid)
 
 
 class InteractionLoopType(Enum):
@@ -614,6 +618,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
     # Initialize the new state
     new_state = copy.copy(state)
     new_state.internal_events = deque([converted_external_event])
+    new_state.outgoing_events.clear()
 
     # Clear all matching scores
     for flow_state in state.flow_states.values():
@@ -1050,14 +1055,9 @@ def _compute_event_matching_score(
         if ref_event.action is not None and ref_event.action != event.action:
             return 0.0
 
-        # We need to match all arguments used in the element
-        score = 1.0
-        for arg in ref_event.arguments:
-            if arg in event.arguments:
-                if ref_event.arguments[arg] == event.arguments[arg]:
-                    continue
-                else:
-                    return 0.0
+        if event.action is not None:
+            action_arguments = flow_state.actions[event.action].start_event_arguments
+            event.arguments["action_arguments"] = action_arguments
 
         # score = 1.0
         # for key, value in element.items():
@@ -1069,7 +1069,28 @@ def _compute_event_matching_score(
         #     if event.get(key) != value:
         #         return float(False)
 
-        return score
+        return _compute_arguments_dict_matching_score(
+            event.arguments, ref_event.arguments
+        )
+
+
+def _compute_arguments_dict_matching_score(args: dict, ref_args: dict) -> float:
+    score = 1.0
+    for key in args.keys():
+        if key in ref_args:
+            if isinstance(args[key], dict) and isinstance(ref_args[key], dict):
+                # If both values are dictionaries, recursively compare them
+                score *= _compute_arguments_dict_matching_score(
+                    args[key], ref_args[key]
+                )
+            elif args[key] == ref_args[key]:
+                continue
+            else:
+                return 0.0
+        else:
+            # This is a fuzzy match since the argument is missing
+            score *= 0.9
+    return score
 
 
 def _get_event_from_element(
@@ -1132,6 +1153,9 @@ def _get_event_from_element(
             action_event: Event = action.get_event(
                 action_event_name, action_event_arguments
             )
+            if element["op"] == "match":
+                # Delete action_uid from event since the action is only a helper object
+                action_event.action = None
             return action_event
     else:
         # Case 1)
