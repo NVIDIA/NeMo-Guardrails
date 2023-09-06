@@ -1,0 +1,63 @@
+{
+    // GENERAL
+    "editor.rulers": [120],
+    "editor.formatOnSave": true,
+    "files.trimTrailingWhitespace": true,
+    "files.trimFinalNewlines": true,
+    "prettier.tabWidth": 4,
+
+    // MARKDOWN
+    "[markdown]": {
+        "editor.wordWrap": "bounded",
+        "editor.wordWrapColumn": 120,
+        "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+    },
+
+    // JSONC
+    "[jsonc]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+
+    // JSON
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+
+    // YAML
+    "[yaml]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+
+    // YAML
+    "[yml]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+
+    // PYTHON
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        }
+    },
+    "python.envFile": "${workspaceFolder}/.venv",
+    "python.languageServer": "Pylance",
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": ["${workspaceFolder}/tests"],
+    "python.testing.unittestEnabled": false,
+    //"python.envFile": "${workspaceFolder}/python_release.env",
+
+    // CSPELL
+    "cSpell.words": [
+        "colang",
+        "elif",
+        "interruptible",
+        "nemoguardrails",
+        "popleft",
+        "subflow",
+        "UMIM"
+    ],
+    "cSpell.enableFiletypes": ["co", "colang"],
+
+    // FLAKE8
+    "flake8.args": ["--max-line-length=120"]
+}

@@ -1,0 +1,17 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.isort",
+        "ms-python.mypy-type-checker",
+        "ms-python.pylint",
+        "ms-python.flake8",
+        "ms-python.autopep8",
+        "ms-python.black-formatter",
+        "mhutchie.git-graph",
+        "streetsidesoftware.code-spell-checker",
+        "esbenp.prettier-vscode",
+        "davidanson.vscode-markdownlint",
+        "tamasfe.even-better-toml"
+    ]
+}
