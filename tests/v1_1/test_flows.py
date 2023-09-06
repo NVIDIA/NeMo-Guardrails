@@ -6,7 +6,11 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import State, compute_next_state
+from nemoguardrails.colang.v1_1.runtime.flows import (
+    ActionStatus,
+    State,
+    compute_next_state,
+)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -18,6 +22,28 @@ logging.basicConfig(
     handlers=[RichHandler(markup=True)],
 )
 
+start_main_flow_event = {
+    "type": "StartFlow",
+    "flow_id": "main",
+}
+
+
+def _init_state(colang_content) -> State:
+    config = convert_parsed_colang_to_flow_config(
+        parse_colang_file(
+            filename="",
+            content=colang_content,
+            include_source_mapping=False,
+            version="1.1",
+        )
+    )
+
+    state = State(context={}, flow_states=[], flow_configs=config)
+    state.initialize()
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    return state
+
 
 def test_send_umim_event():
     """Test to start an UMIM event"""
@@ -26,21 +52,38 @@ def test_send_umim_event():
     flow main
       send StartUtteranceBotAction(script="Hello world")
     """
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
     )
 
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
+def test_match_umim_event():
+    """Test to match an UMIM event"""
+
+    content = """
+    flow main
+      match UtteranceUserAction.Finished(final_transcript="Hi")
+      send StartUtteranceBotAction(script="Hello world")
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
     state = compute_next_state(
         state,
         {
-            "type": "StartFlow",
-            "flow_id": "main",
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi",
         },
     )
     assert is_data_in_events(
@@ -60,24 +103,44 @@ def test_start_action():
     content = """
     flow main
       start UtteranceBotAction(script="Hello world")
-      #start UtteranceBotAction(script="Hello world") as $action_ref
-      #$action_ref = UtteranceBotAction(script="Hello world")
-      #send $action_ref.Start() # send StartUtteranceBotAction(script="Hello world")
     """
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
     )
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
+
+def test_start_match_action_on_action_parameter():
+    """Test to start and match an UMIM action based on action parameters"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello world")
+      match UtteranceBotAction(script="Hello world").Finished()
+      start UtteranceBotAction(script="Done")
+    """
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
     state = compute_next_state(
         state,
         {
-            "type": "StartFlow",
-            "flow_id": "main",
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello world",
+            "action_uid": state.outgoing_events[0]["action_uid"],
         },
     )
     assert is_data_in_events(
@@ -85,7 +148,149 @@ def test_start_action():
         [
             {
                 "type": "StartUtteranceBotAction",
+                "script": "Done",
+            }
+        ],
+    )
+
+
+def test_start_mismatch_action_on_action_parameter():
+    """Test to start and match an UMIM action based on action parameters"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello world")
+      match UtteranceBotAction(script="Hello").Finished()
+      start UtteranceBotAction(script="Done")
+    """
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
                 "script": "Hello world",
+            }
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello world",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+
+
+def test_start_match_action_on_event_parameter():
+    """Test to start and match an UMIM action based on action parameters"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello world")
+      match UtteranceBotAction.Finished(final_script="Hello world")
+      start UtteranceBotAction(script="Done")
+    """
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello world",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            }
+        ],
+    )
+
+
+def test_start_mismatch_action_on_event_parameter():
+    """Test to start and match an UMIM action based on action parameters"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello world")
+      match UtteranceBotAction.Finished(final_script="Hello")
+      start UtteranceBotAction(script="Done")
+    """
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello world",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+
+
+def test_start_match_action_with_reference():
+    """Test to start and match an UMIM action based on action parameters"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello world") as $action_ref
+      match $action_ref.Finished()
+      start UtteranceBotAction(script="Done")
+    """
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello world",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
             }
         ],
     )
@@ -96,134 +301,10 @@ def test_await_action():
 
     content = """
     flow main
-      send StartUtteranceBotAction(script="Hello world")
-      match UtteranceBotActionFinished(script="Hello world")
-      send StartUtteranceBotAction(script="Done")
-    """
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
-    )
-
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Hello world",
-            }
-        ],
-    )
-    state.outgoing_events.clear()
-    state = compute_next_state(
-        state,
-        {
-            "type": "UtteranceBotActionFinished",
-            "script": "Hello world",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Done",
-            }
-        ],
-    )
-
-
-def test_await_action_with_reference():
-    """Test to await an UMIM action"""
-
-    content = """
-    flow main
-      start UtteranceBotAction(script="Hello world") as $action_ref
-      match $action_ref.Finished()
-    """
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
-    )
-
-    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Hello world",
-            }
-        ],
-    )
-    state.outgoing_events.clear()
-    state = compute_next_state(
-        state,
-        {
-            "type": "UtteranceBotActionFinished",
-            "script": "Hello world",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Done",
-            }
-        ],
-    )
-
-
-def test_await_action_compact_notation():
-    """Test to await an UMIM action with compact notation"""
-
-    content = """
-    flow main
       await UtteranceBotAction(script="Hello world")
-      send StartUtteranceBotAction(script="Done")
+      start UtteranceBotAction(script="Done")
     """
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
-    )
-
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -233,12 +314,12 @@ def test_await_action_compact_notation():
             }
         ],
     )
-    state.outgoing_events.clear()
     state = compute_next_state(
         state,
         {
             "type": "UtteranceBotActionFinished",
-            "script": "Hello world",
+            "final_script": "Hello world",
+            "action_uid": state.outgoing_events[0]["action_uid"],
         },
     )
     assert is_data_in_events(
@@ -250,6 +331,41 @@ def test_await_action_compact_notation():
             }
         ],
     )
+
+
+def test_implicit_action_state_update():
+    """Test the action state update"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello world") as $action_ref1
+      start UtteranceBotAction(script="Hi") as $action_ref2
+      match $action_ref1.Finished()
+    """
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            },
+        ],
+    )
+    action_uid = state.outgoing_events[1]["action_uid"]
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hi",
+            "action_uid": action_uid,
+        },
+    )
+    assert state.main_flow_state.actions[action_uid].status == ActionStatus.FINISHED
 
 
 def test_start_a_flow():
@@ -257,7 +373,7 @@ def test_start_a_flow():
 
     content = """
     flow a
-      send StartUtteranceBotAction(script="Hello world")
+      start UtteranceBotAction(script="Hello world")
 
     flow main
       # start a
@@ -265,23 +381,7 @@ def test_start_a_flow():
       match FlowStarted(flow_id="a")
     """
 
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
-    )
-
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -298,29 +398,13 @@ def test_start_a_flow_compact_notation():
 
     content = """
     flow a
-      send StartUtteranceBotAction(script="Hello world")
+      start UtteranceBotAction(script="Hello world")
 
     flow main
       start a
     """
 
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
-    )
-
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -337,33 +421,17 @@ def test_await_a_flow():
 
     content = """
     flow a
-      send StartUtteranceBotAction(script="Flow a started")
+      start UtteranceBotAction(script="Flow a started")
 
     flow main
       # await a
       send StartFlow(flow_id="a")
       match FlowStarted(flow_id="a")
       match FlowFinished(flow_id="a")
-      send StartUtteranceBotAction(script="Flow a finished")
+      start UtteranceBotAction(script="Flow a finished")
     """
 
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
-    )
-
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -384,30 +452,14 @@ def test_await_a_flow_compact_notation():
 
     content = """
     flow a
-      send StartUtteranceBotAction(script="Flow a started")
+      start UtteranceBotAction(script="Flow a started")
 
     flow main
       await a
-      send StartUtteranceBotAction(script="Flow a finished")
+      start UtteranceBotAction(script="Flow a finished")
     """
 
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
-    )
-
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -428,8 +480,8 @@ def test_start_child_flow_two_times():
 
     content = """
     flow a
-      send StartUtteranceBotAction(script="Hi")
-      match UtteranceBotActionFinished(script="Hi")
+      start UtteranceBotAction(script="Hi")
+      match UtteranceBotAction.Finished(final_script="Hi")
 
     flow main
       # start a
@@ -440,23 +492,7 @@ def test_start_child_flow_two_times():
       match FlowStarted(flow_id="a")
     """
 
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
-    )
-
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -483,8 +519,8 @@ def test_child_flow_abort():
 
     flow b
       # await UtteranceBotAction(script="Hi")
-      send StartUtteranceBotAction(script="Hi")
-      match UtteranceBotActionFinished(script="Hi")
+      start UtteranceBotAction(script="Hi")
+      match UtteranceBotAction.Finished(final_script="Hi")
 
     flow main
       # start a
@@ -493,25 +529,9 @@ def test_child_flow_abort():
       # match b.Failed()
       match FlowFailed(flow_id="b")
       # start UtteranceBotAction(script="Done")
-      send StartUtteranceBotAction(script="Done")
+      start UtteranceBotAction(script="Done")
     """
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
-    )
-
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -533,35 +553,19 @@ def test_conflicting_actions():
     content = """
     flow a
       match UtteranceUserActionFinished(final_transcript="Hi")
-      send StartUtteranceBotAction(script="Hello")
-      send StartUtteranceBotAction(script="How are you")
+      start UtteranceBotAction(script="Hello")
+      start UtteranceBotAction(script="How are you")
 
     flow main
       # start a
       send StartFlow(flow_id="a")
       match FlowStarted(flow_id="a")
       match UtteranceUserActionFinished(final_transcript="Hi")
-      send StartUtteranceBotAction(script="Hello")
-      send StartUtteranceBotAction(script="Bye")
+      start UtteranceBotAction(script="Hello")
+      start UtteranceBotAction(script="Bye")
     """
 
-    config = convert_parsed_colang_to_flow_config(
-        parse_colang_file(
-            filename="", content=content, include_source_mapping=False, version="1.1"
-        )
-    )
-
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
     assert state.outgoing_events == []
     state = compute_next_state(
         state,
@@ -596,23 +600,7 @@ def test_flow_parameters():
       await bot say $script="Hi"
     """
 
-    result = parse_colang_file(
-        filename="", content=content, include_source_mapping=False, version="1.1"
-    )
-    config = convert_parsed_colang_to_flow_config(result)
-
-    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-    state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
-
-    state = compute_next_state(
-        state,
-        {
-            "type": "StartFlow",
-            "flow_id": "main",
-        },
-    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
     assert state.outgoing_events == []
     state = compute_next_state(
         state,
@@ -637,4 +625,4 @@ def test_flow_parameters():
 
 
 if __name__ == "__main__":
-    test_await_action_with_reference()
+    test_match_umim_event()
