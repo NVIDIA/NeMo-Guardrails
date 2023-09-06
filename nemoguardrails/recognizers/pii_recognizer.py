@@ -146,22 +146,23 @@ class PIIRecognizer:
            output from retrieve_relevant_chunks action"""        
 
         def decorator(*args, **kwargs):
-            context_updates_anonymized = {}
-            context_updates_anonymized["relevant_chunks"] = "" 
-            
             # check for actions
             if inspect.isfunction(fn) and hasattr(fn, "action_meta"): 
                 if fn.action_meta["name"] in self.allowed_actions and self.redact:
                     async def anonymized_fn():
-                        action_result = fn(*args, **kwargs)
-                        context_updates = action_result.context_updates
-                        context_updates_anonymized["relevant_chunks"] = self._anonymize_text(context_updates["relevant_chunks"])
-                        return ActionResult(
-                            return_value=context_updates_anonymized["relevant_chunks"],
-                            context_updates=context_updates_anonymized,
-                        )
+                        context_updates_anonymized = {}
+                        context_updates_anonymized["relevant_chunks"] = "" 
+                        result = fn(*args, **kwargs)
+                        if isinstance(result, ActionResult):
+                            context_updates = result.context_updates
+                            if context_updates and "relevant_chunks" in context_updates:
+                                context_updates_anonymized["relevant_chunks"] = self._anonymize_text(context_updates["relevant_chunks"])
+                                return ActionResult(
+                                    return_value=context_updates_anonymized["relevant_chunks"],
+                                    context_updates=context_updates_anonymized,
+                                )
+                        return result
                     return anonymized_fn
-                else:
-                    return fn
+            return fn
             
         return decorator
