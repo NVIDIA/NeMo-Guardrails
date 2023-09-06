@@ -385,14 +385,14 @@ class LLMRails:
 
                 # For the messages interface, we need to consider the UtteranceBotAction finished
                 # as soon as we return the message, hence we add the finished event to the new events.
-                new_extra_events.append(
-                    new_event_dict(
-                        "UtteranceBotActionFinished",
-                        action_uid=event["action_uid"],
-                        is_success=True,
-                        final_script=event["script"],
-                    )
-                )
+                # new_extra_events.append(
+                #     new_event_dict(
+                #         "UtteranceBotActionFinished",
+                #         action_uid=event["action_uid"],
+                #         is_success=True,
+                #         final_script=event["script"],
+                #     )
+                # )
 
         new_message = {"role": "assistant", "content": "\n".join(responses)}
 
