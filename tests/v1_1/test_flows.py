@@ -517,7 +517,8 @@ def test_child_flow_abort():
 
     flow main
       start a
-      match b.Failed()
+      # b.Failed()
+      match FlowFailed(flow_id="b")
       start UtteranceBotAction(script="Done")
     """
     state = compute_next_state(_init_state(content), start_main_flow_event)
@@ -621,7 +622,7 @@ def test_conflicting_actions_branching_length():
 
     content = """
     flow a
-      match UtteranceUserAction.Finished(final_transcript="Hi")
+      match UtteranceUserAction.Finished()
       start b
 
     flow b
@@ -630,7 +631,7 @@ def test_conflicting_actions_branching_length():
 
     flow main
       start a
-      match UtteranceUserAction.Finished()
+      match UtteranceUserAction.Finished(final_transcript="Hi")
       start UtteranceBotAction(script="Hello")
       start UtteranceBotAction(script="Bye")
     """
@@ -653,8 +654,87 @@ def test_conflicting_actions_branching_length():
             },
             {
                 "type": "StartUtteranceBotAction",
+                "script": "Bye",
+            },
+        ],
+    )
+
+
+def test_conflicting_actions_reference_sharing():
+    """Test the action conflict resolution"""
+
+    content = """
+    flow a
+      match UtteranceUserAction.Finished()
+      start UtteranceBotAction(script="Hello") as $ref
+      match $ref.Finished()
+      start UtteranceBotAction(script="How are you")
+      match UtteranceUserAction.Finished()
+      start UtteranceBotAction(script="Perfect")
+
+    flow main
+      start a
+      match UtteranceUserAction.Finished(final_transcript="Hi")
+      start UtteranceBotAction(script="Hello") as $ref
+      match $ref.Finished()
+      start UtteranceBotAction(script="How are you")
+      start UtteranceBotAction(script="Great")
+      match UtteranceUserAction.Finished()
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert state.outgoing_events == []
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            }
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "blabla",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
                 "script": "How are you",
             },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Great",
+            },
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Test",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Perfect",
+            }
         ],
     )
 
@@ -695,4 +775,4 @@ def test_flow_parameters():
 
 
 if __name__ == "__main__":
-    test_await_a_flow_compact_notation()
+    test_conflicting_actions_reference_sharing()
