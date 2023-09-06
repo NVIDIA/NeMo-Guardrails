@@ -367,7 +367,7 @@ def test_implicit_action_state_update():
             "action_uid": action_uid,
         },
     )
-    assert state.main_flow_state.actions[action_uid].status == ActionStatus.FINISHED
+    assert state.actions[action_uid].status == ActionStatus.FINISHED
 
 
 def test_start_a_flow():

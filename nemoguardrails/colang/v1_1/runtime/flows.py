@@ -95,7 +95,7 @@ class ActionEvent(Event):
             [(key, event[key]) for key in event if key not in ["type", "action_uid"]]
         )
         if "action_uid" in event:
-            new_event.action = event["action_uid"]
+            new_event.action_uid = event["action_uid"]
         return new_event
 
 
@@ -154,7 +154,7 @@ class Action:
     # Process an event
     def process_event(self, event: Event) -> None:
         """Processes event and updates action accordingly."""
-        if "Action" in event.name and event.action == self.uid:
+        if "Action" in event.name and event.action_uid == self.uid:
             if "ActionStarted" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.STARTED
@@ -300,7 +300,7 @@ class FlowState:
     head: FlowHead
 
     # All actions that were instantiated since the beginning of the flow
-    actions: Dict[str, Action]
+    action_uids: List[str]
 
     # The current set of variables in the flow state.
     context: dict
@@ -407,6 +407,9 @@ class State:
 
     # The configuration of all the flows that are available.
     flow_configs: Dict[str, FlowConfig]
+
+    # All actions that were instantiated in a flow that is still referenced somewhere
+    actions: Dict[str, Action] = field(default_factory=dict)
 
     # Queue of internal events
     internal_events: Deque[Event] = field(default_factory=deque)
@@ -612,9 +615,9 @@ def _create_flow_instance(
     flow_uid = create_readable_uuid(flow_config.id)
     flow_state = FlowState(
         uid=flow_uid,
-        actions={},
         context={},
         parent_uid=parent_uid,
+        action_uids=[],
         flow_id=flow_config.id,
         loop_id=loop_uid,
         head=FlowHead(
@@ -804,7 +807,8 @@ def compute_next_state(state: State, external_event: dict) -> State:
             # Don't process flows that are no longer active
             continue
 
-        for action in flow_state.actions.values():
+        for action_uid in flow_state.action_uids:
+            action = new_state.actions[action_uid]
             if (
                 action.status == ActionStatus.INITIALIZED
                 or action.status == ActionStatus.FINISHED
@@ -936,7 +940,8 @@ def slide(
                     arguments=evaluated_arguments,
                     flow_uid=head.flow_state_uid,
                 )
-                flow_state.actions.update({action.uid: action})
+                state.actions.update({action.uid: action})
+                flow_state.action_uids.append(action.uid)
                 reference_name = element.ref["elements"][0]["elements"][0].lstrip("$")
                 flow_state.context.update(
                     {
@@ -1110,11 +1115,14 @@ def _compute_event_matching_score(
         if ref_event.name != event.name:
             return 0.0
 
-        if ref_event.action is not None and ref_event.action != event.action:
+        if (
+            ref_event.action_uid is not None
+            and ref_event.action_uid != event.action_uid
+        ):
             return 0.0
 
-        if event.action is not None:
-            action_arguments = flow_state.actions[event.action].start_event_arguments
+        if event.action_uid is not None:
+            action_arguments = state.actions[event.action_uid].start_event_arguments
             event.arguments["action_arguments"] = action_arguments
 
         # score = 1.0
@@ -1177,7 +1185,7 @@ def _get_event_from_element(
         if context_variable["type"] == ContextVariableType.EVENT_REFERENCE:
             raise NotImplementedError
         elif context_variable["type"] == ContextVariableType.ACTION_REFERENCE:
-            action = flow_state.actions[context_variable["value"]]
+            action = state.actions[context_variable["value"]]
             action_event_name = element_spec.members[0]["name"]
             action_event_arguments = element_spec.members[0]["arguments"]
             action_event_arguments = _evaluate_arguments(
@@ -1186,7 +1194,7 @@ def _get_event_from_element(
             action_event: Event = action.get_event(
                 action_event_name, action_event_arguments
             )
-            action_event.action = action.uid
+            action_event.action_uid = action.uid
             return action_event
         elif context_variable["type"] == ContextVariableType.FLOW_REFERENCE:
             raise NotImplementedError
@@ -1226,7 +1234,7 @@ def _get_event_from_element(
             )
             if element["op"] == "match":
                 # Delete action_uid from event since the action is only a helper object
-                action_event.action = None
+                action_event.action_uid = None
             return action_event
     else:
         # Case 1)
@@ -1452,7 +1460,7 @@ def create_internal_event(
 
 def create_umim_action_event(event: Event, event_args: dict) -> Dict[str, Any]:
     """Returns an outgoing UMIM event for the provided action data"""
-    if event.action is not None:
-        return new_event_dict(event.name, action_uid=event.action, **event_args)
+    if event.action_uid is not None:
+        return new_event_dict(event.name, action_uid=event.action_uid, **event_args)
     else:
         return new_event_dict(event.name, **event_args)
