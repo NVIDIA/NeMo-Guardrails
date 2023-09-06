@@ -26,7 +26,12 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Set, Union
 
 from dataclasses_json import dataclass_json
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import Element, Spec, SpecOp
+from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    Element,
+    FlowParamDef,
+    Spec,
+    SpecOp,
+)
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 from nemoguardrails.colang.v1_1.runtime.utils import create_readable_uuid
 from nemoguardrails.utils import new_event_dict, new_uid
@@ -225,6 +230,9 @@ class FlowConfig:
 
     # The sequence of elements that compose the flow.
     elements: List[Union[Element, SpecOp, dict]]
+
+    # The flow parameters
+    parameters: List[FlowParamDef]
 
     # Interaction loop
     loop_id: Optional[str] = None
@@ -614,6 +622,7 @@ def _create_flow_instance(
     # For type InteractionLoopType.PARENT we keep it None to infer loop_id at run_time from parent
 
     flow_uid = create_readable_uuid(flow_config.id)
+
     flow_state = FlowState(
         uid=flow_uid,
         context={},
@@ -628,6 +637,11 @@ def _create_flow_instance(
             matching_scores=[],
         ),
     )
+
+    for idx, param in enumerate(flow_config.parameters):
+        flow_state.context.update(
+            {param.name: f"${idx}", f"${idx}": param.default_value_expr}
+        )
 
     return flow_state
 
@@ -733,7 +747,7 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                         parent_flow = state.flow_states[parent_flow_uid]
                         flow_state.parent_uid = parent_flow_uid
                         flow_state.loop_id = parent_flow.loop_id
-                        flow_state.context = event.arguments
+                        flow_state.context.update(event.arguments)
                         parent_flow.child_flow_uids.append(flow_state.uid)
                     # Initialize new flow instance of flow
                     _add_new_flow_instance(
