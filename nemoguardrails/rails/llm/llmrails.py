@@ -80,16 +80,19 @@ class LLMRails:
         self.events_history_cache = {}
 
         # We also load the default flows from the `default_flows.yml` file in the current folder.
-        current_folder = os.path.dirname(__file__)
-        default_flows_path = os.path.join(current_folder, "llm_flows.co")
-        with open(default_flows_path, "r") as f:
-            default_flows_content = f.read()
-            default_flows = parse_colang_file("llm_flows.co", default_flows_content)[
-                "flows"
-            ]
+        # But only for version 1.0.
+        # TODO: decide on the default flows for 1.1.
+        if config.colang_version == "1.0":
+            current_folder = os.path.dirname(__file__)
+            default_flows_path = os.path.join(current_folder, "llm_flows.co")
+            with open(default_flows_path, "r") as f:
+                default_flows_content = f.read()
+                default_flows = parse_colang_file(
+                    "llm_flows.co", default_flows_content
+                )["flows"]
 
-        # We add the default flows to the config.
-        self.config.flows.extend(default_flows)
+            # We add the default flows to the config.
+            self.config.flows.extend(default_flows)
 
         # We check if the configuration has a config.py module associated with it.
         config_module = None
@@ -366,6 +369,7 @@ class LLMRails:
 
         # Extract and join all the messages from StartUtteranceBotAction events as the response.
         responses = []
+        new_extra_events = []
         for event in new_events:
             if event["type"] == "StartUtteranceBotAction":
                 # Check if we need to remove a message
@@ -374,10 +378,17 @@ class LLMRails:
                 else:
                     responses.append(event["script"])
 
+                # For the messages interface, we need to consider the UtteranceBotAction finished
+                # as soon as we return the message, hence we add the finished event to the new events.
+                new_extra_events.append(
+                    {"type": "UtteranceBotActionFinished", "script": event["script"]}
+                )
+
         new_message = {"role": "assistant", "content": "\n".join(responses)}
 
         # Save the new events in the history and update the cache
         events.extend(new_events)
+        events.extend(new_extra_events)
         cache_key = get_history_cache_key(messages + [new_message])
         self.events_history_cache[cache_key] = events
 

@@ -23,6 +23,7 @@ from pydantic import BaseModel, ValidationError, root_validator
 from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
+from nemoguardrails.colang.v1_1.lang.colang_ast import Flow
 
 
 class Model(BaseModel):
@@ -213,7 +214,7 @@ class RailsConfig(BaseModel):
         description="The list of bot messages that should be used for the rails.",
     )
 
-    flows: List[Dict] = Field(
+    flows: List[Union[Dict, Flow]] = Field(
         default_factory=list,
         description="The list of flows that should be used for the rails.",
     )
@@ -409,7 +410,7 @@ class RailsConfig(BaseModel):
         # If we have flows, we need to process them further from CoYML to CIL, but only for
         # version 1.0.
 
-        if obj.get("colang_version") != "1.0":
+        if obj.get("colang_version", "1.0") == "1.0":
             for flow_data in obj.get("flows", []):
                 # If the first element in the flow does not have a "_type", we need to convert
                 if flow_data.get("elements") and not flow_data["elements"][0].get(

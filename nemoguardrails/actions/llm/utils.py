@@ -21,6 +21,7 @@ from langchain.prompts.base import StringPromptValue
 from langchain.prompts.chat import ChatPromptValue
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
 
+from nemoguardrails.colang.v1_1.lang.colang_ast import Flow
 from nemoguardrails.logging.callbacks import logging_callbacks
 
 
@@ -130,7 +131,7 @@ def get_colang_history(
     return history
 
 
-def flow_to_colang(flow: dict):
+def flow_to_colang(flow: Union[dict, Flow]):
     """Converts a flow to colang format.
 
     Example flow:
@@ -151,13 +152,17 @@ def flow_to_colang(flow: dict):
     # TODO: use the source code lines if available.
 
     colang_flow = ""
-    for element in flow["elements"]:
-        if "_type" not in element:
-            raise Exception("bla")
-        if element["_type"] == "UserIntent":
-            colang_flow += f'user {element["intent_name"]}\n'
-        elif element["_type"] == "run_action" and element["action_name"] == "utter":
-            colang_flow += f'bot {element["action_params"]["value"]}\n'
+    if isinstance(flow, Flow):
+        # TODO: generate the flow code from the flow.elements array
+        pass
+    else:
+        for element in flow["elements"]:
+            if "_type" not in element:
+                raise Exception("bla")
+            if element["_type"] == "UserIntent":
+                colang_flow += f'user {element["intent_name"]}\n'
+            elif element["_type"] == "run_action" and element["action_name"] == "utter":
+                colang_flow += f'bot {element["action_params"]["value"]}\n'
 
     return colang_flow
 

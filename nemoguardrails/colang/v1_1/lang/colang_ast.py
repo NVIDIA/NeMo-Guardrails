@@ -53,7 +53,14 @@ class Element:
     _source: Optional[Source] = None
 
     def __getitem__(self, key):
-        return getattr(self, key)
+        return getattr(self, key, None)
+
+    def get(self, key, default_value=None):
+        """Getter for backward compatibility with dict elements.
+
+        TODO: to remove at some point.
+        """
+        return self[key] or default_value
 
 
 @dataclass_json

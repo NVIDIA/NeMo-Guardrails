@@ -15,6 +15,7 @@
 
 import inspect
 import logging
+import uuid
 from textwrap import indent
 from typing import Any, Dict, List, Tuple
 from urllib.parse import urljoin
@@ -25,7 +26,11 @@ from langchain.chains.base import Chain
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
-from nemoguardrails.colang.v1_0.runtime.flows import compute_context, compute_next_steps
+from nemoguardrails.colang.v1_0.runtime.flows import (
+    FlowConfig,
+    compute_context,
+    compute_next_steps,
+)
 from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
@@ -33,6 +38,52 @@ log = logging.getLogger(__name__)
 
 class RuntimeV1_0(Runtime):
     """Runtime for executing the guardrails."""
+
+    def _load_flow_config(self, flow: dict):
+        """Loads a flow into the list of flow configurations."""
+        elements = flow["elements"]
+
+        # If we have an element with meta information, we move the relevant properties
+        # to top level.
+        if elements and elements[0].get("_type") == "meta":
+            meta_data = elements[0]["meta"]
+
+            if "priority" in meta_data:
+                flow["priority"] = meta_data["priority"]
+            if "is_extension" in meta_data:
+                flow["is_extension"] = meta_data["is_extension"]
+            if "interruptable" in meta_data:
+                flow["is_interruptible"] = meta_data["interruptable"]
+
+            # Finally, remove the meta element
+            elements = elements[1:]
+
+        # If we don't have an id, we generate a random UID.
+        flow_id = flow.get("id") or str(uuid.uuid4())
+
+        self.flow_configs[flow_id] = FlowConfig(
+            id=flow_id,
+            elements=elements,
+            priority=flow.get("priority", 1.0),
+            is_extension=flow.get("is_extension", False),
+            is_interruptible=flow.get("is_interruptible", True),
+            source_code=flow.get("source_code"),
+        )
+
+        # We also compute what types of events can trigger this flow, in addition
+        # to the default ones.
+        for element in elements:
+            if element.get("UtteranceUserActionFinished"):
+                self.flow_configs[flow_id].trigger_event_types.append(
+                    "UtteranceUserActionFinished"
+                )
+
+    def _init_flow_configs(self):
+        """Initializes the flow configs based on the config."""
+        self.flow_configs = {}
+
+        for flow in self.config.flows:
+            self._load_flow_config(flow)
 
     async def generate_events(self, events: List[dict]) -> List[dict]:
         """Generates the next events based on the provided history.

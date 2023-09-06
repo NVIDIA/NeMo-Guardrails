@@ -26,6 +26,7 @@ from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v1_1.runtime.flows import (
+    FlowConfig,
     compute_context,
     compute_next_events,
 )
@@ -37,6 +38,14 @@ log = logging.getLogger(__name__)
 class RuntimeV1_1(Runtime):
     """Runtime for executing the guardrails."""
 
+    def _init_flow_configs(self):
+        """Initializes the flow configs based on the config."""
+        self.flow_configs = {}
+
+        for flow in self.config.flows:
+            flow_id = flow.name
+            self.flow_configs[flow_id] = FlowConfig(id=flow_id, elements=flow.elements)
+
     async def generate_events(self, events: List[dict]) -> List[dict]:
         """Generates the next events based on the provided history.
 
@@ -46,6 +55,18 @@ class RuntimeV1_1(Runtime):
         :return: The list of events.
         """
         events = events.copy()
+
+        # TODO: figure out a better way to do this
+        # If the first event is not a StartFlow for the main flow, we need to add it.
+        if events[0]["type"] != "StartFlow":
+            events.insert(
+                0,
+                {
+                    "type": "StartFlow",
+                    "flow_id": "main",
+                },
+            )
+
         new_events = []
 
         while True:

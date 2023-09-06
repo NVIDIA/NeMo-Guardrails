@@ -206,7 +206,7 @@ class FlowConfig:
     id: str
 
     # The sequence of elements that compose the flow.
-    elements: List[Union[SpecOp, dict]]
+    elements: List[Union[Element, SpecOp, dict]]
 
     # Interaction loop
     loop_id: Optional[str] = None
@@ -1244,32 +1244,6 @@ def _create_outgoing_event_from_actionable_element(
     # state.next_steps_comment = element.get("_source_mapping", {}).get("comment")
 
 
-def _step_to_event(step: dict) -> dict:
-    """Helper to convert a next step coming from a flow element into the actual event."""
-    step_type = step["_type"]
-
-    if step_type == "StartAction":
-        if step["action_name"] == "utter":
-            return {
-                "type": "BotIntent",
-                "intent": step["action_params"]["value"],
-            }
-
-        else:
-            action_name = step["action_name"]
-            action_params = step.get("action_params", {})
-            action_result_key = step.get("action_result_key")
-
-            return new_event_dict(
-                "StartInternalSystemAction",
-                action_name=action_name,
-                action_params=action_params,
-                action_result_key=action_result_key,
-            )
-    else:
-        raise ValueError(f"Unknown next step type: {step_type}")
-
-
 # NOTE (schuellc): Are we going to replace this with a stateful approach
 def compute_next_events(
     history: List[dict], flow_configs: Dict[str, FlowConfig]
@@ -1310,9 +1284,7 @@ def compute_next_events(
         next_events.append(new_event_dict("ContextUpdate", data=state.context_updates))
 
     # If we have a next step, we make sure to convert it to proper event structure.
-    for step in state.outgoing_events:
-        next_step_event = _step_to_event(step)
-
+    for next_step_event in state.outgoing_events:
         next_events.append(next_step_event)
 
     # Finally, we check if there was an explicit "stop" request
