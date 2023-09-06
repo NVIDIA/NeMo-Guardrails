@@ -38,8 +38,10 @@ def _init_state(colang_content) -> State:
         )
     )
 
+    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
     state = State(context={}, flow_states=[], flow_configs=config)
     state.initialize()
+    print("---------------------------------")
     json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
     return state
@@ -480,16 +482,11 @@ def test_start_child_flow_two_times():
 
     content = """
     flow a
-      start UtteranceBotAction(script="Hi")
-      match UtteranceBotAction.Finished(final_script="Hi")
+      await UtteranceBotAction(script="Hi")
 
     flow main
-      # start a
-      send StartFlow(flow_id="a")
-      match FlowStarted(flow_id="a")
-      # await a
-      send StartFlow(flow_id="a")
-      match FlowStarted(flow_id="a")
+      start a
+      await a
     """
 
     state = compute_next_state(_init_state(content), start_main_flow_event)
@@ -513,22 +510,14 @@ def test_child_flow_abort():
 
     content = """
     flow a
-      # start b
-      send StartFlow(flow_id="b")
-      match FlowStarted(flow_id="b")
+      start b
 
     flow b
-      # await UtteranceBotAction(script="Hi")
-      start UtteranceBotAction(script="Hi")
-      match UtteranceBotAction.Finished(final_script="Hi")
+      await UtteranceBotAction(script="Hi")
 
     flow main
-      # start a
-      send StartFlow(flow_id="a")
-      match FlowStarted(flow_id="a")
-      # match b.Failed()
-      match FlowFailed(flow_id="b")
-      # start UtteranceBotAction(script="Done")
+      start a
+      match b.Failed()
       start UtteranceBotAction(script="Done")
     """
     state = compute_next_state(_init_state(content), start_main_flow_event)
@@ -547,20 +536,18 @@ def test_child_flow_abort():
     )
 
 
-def test_conflicting_actions():
+def test_conflicting_actions_v_a():
     """Test the action conflict resolution"""
 
     content = """
     flow a
-      match UtteranceUserActionFinished(final_transcript="Hi")
+      match UtteranceUserAction.Finished()
       start UtteranceBotAction(script="Hello")
       start UtteranceBotAction(script="How are you")
 
     flow main
-      # start a
-      send StartFlow(flow_id="a")
-      match FlowStarted(flow_id="a")
-      match UtteranceUserActionFinished(final_transcript="Hi")
+      start a
+      match UtteranceUserAction.Finished(final_transcript="Hi")
       start UtteranceBotAction(script="Hello")
       start UtteranceBotAction(script="Bye")
     """
@@ -584,6 +571,89 @@ def test_conflicting_actions():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Bye",
+            },
+        ],
+    )
+
+
+def test_conflicting_actions_v_b():
+    """Test the action conflict resolution"""
+
+    content = """
+    flow a
+      match UtteranceUserAction.Finished(final_transcript="Hi")
+      start UtteranceBotAction(script="Hello")
+      start UtteranceBotAction(script="How are you")
+
+    flow main
+      start a
+      match UtteranceUserAction.Finished()
+      start UtteranceBotAction(script="Hello")
+      start UtteranceBotAction(script="Bye")
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert state.outgoing_events == []
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "How are you",
+            },
+        ],
+    )
+
+
+def test_conflicting_actions_branching_length():
+    """Test the action conflict resolution"""
+
+    content = """
+    flow a
+      match UtteranceUserAction.Finished(final_transcript="Hi")
+      start b
+
+    flow b
+      start UtteranceBotAction(script="Hello")
+      start UtteranceBotAction(script="How are you")
+
+    flow main
+      start a
+      match UtteranceUserAction.Finished()
+      start UtteranceBotAction(script="Hello")
+      start UtteranceBotAction(script="Bye")
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert state.outgoing_events == []
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "How are you",
             },
         ],
     )
@@ -625,4 +695,4 @@ def test_flow_parameters():
 
 
 if __name__ == "__main__":
-    test_match_umim_event()
+    test_await_a_flow_compact_notation()

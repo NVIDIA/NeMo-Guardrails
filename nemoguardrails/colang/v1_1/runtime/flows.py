@@ -26,7 +26,7 @@ from enum import Enum
 from functools import partial
 from typing import Any, Callable, Deque, Dict, List, Optional, Union
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import Spec, SpecOp
+from nemoguardrails.colang.v1_1.lang.colang_ast import Element, Spec, SpecOp
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 from nemoguardrails.colang.v1_1.runtime.utils import create_readable_uuid
 from nemoguardrails.utils import new_event_dict, new_uid
@@ -65,7 +65,7 @@ class ContextVariableType(Enum):
 
 @dataclass
 class Event:
-    """The event class represents an."""
+    """The base event class."""
 
     # The unique id of the event
     # uid: str
@@ -76,22 +76,35 @@ class Event:
     # Context that contains all relevant event arguments
     arguments: dict
 
-    # An event can belong to an action
-    action: Optional[str] = None
-
     # A list of matching scores from the event sequence triggered by external event
     matching_scores: List[float] = field(default_factory=list)
 
+
+@dataclass
+class ActionEvent(Event):
+    """The action event class."""
+
+    # An event can belong to an action
+    action: Optional[str] = None
+
     @classmethod
-    def from_umim_event(cls, event: dict) -> Event:
+    def from_umim_event(cls, event: dict) -> ActionEvent:
         """Creates an event from a flat dictionary."""
-        new_event = Event(event["type"], {})
+        new_event = ActionEvent(event["type"], {})
         new_event.arguments = dict(
             [(key, event[key]) for key in event if key not in ["type", "action_uid"]]
         )
         if "action_uid" in event:
             new_event.action = event["action_uid"]
         return new_event
+
+
+@dataclass
+class FlowEvent(Event):
+    """The flow event class."""
+
+    # An event can belong to a flow
+    flow: Optional[str] = None
 
 
 class ActionStatus(Enum):
@@ -151,43 +164,45 @@ class Action:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.FINISHED
 
-    def get_event(self, name: str, arguments: dict) -> Callable[[], Event]:
+    def get_event(self, name: str, arguments: dict) -> Callable[[], ActionEvent]:
         """Returns the corresponding action event."""
         return self._event_name_map[name](arguments)
 
     # Action events to send
-    def start(self, args: dict) -> Event:
+    def start(self, args: dict) -> ActionEvent:
         """Starts the action. Takes no arguments."""
         self.status = ActionStatus.STARTING
-        return Event(f"Start{self.name}", self.start_event_arguments, self.uid)
+        return ActionEvent(f"Start{self.name}", self.start_event_arguments, self.uid)
 
-    def change(self, args: dict) -> Event:
+    def change(self, args: dict) -> ActionEvent:
         """Changes a parameter of a started action."""
-        return Event(f"Change{self.name}", args["arguments"], self.uid)
+        return ActionEvent(f"Change{self.name}", args["arguments"], self.uid)
 
-    def stop(self, args: dict) -> Event:
+    def stop(self, args: dict) -> ActionEvent:
         """Stops a started action. Takes no arguments."""
         self.status = ActionStatus.STOPPING
-        return Event(f"Stop{self.name}", {}, self.uid)
+        return ActionEvent(f"Stop{self.name}", {}, self.uid)
 
     # Action events to match
-    def started_event(self, args: dict) -> Event:
+    def started_event(self, args: dict) -> ActionEvent:
         """Returns the Started action event."""
         arguments = args.copy()
         arguments["action_arguments"] = self.start_event_arguments
-        return Event(f"{self.name}Started", arguments, self.uid)
+        return ActionEvent(f"{self.name}Started", arguments, self.uid)
 
-    def updated_event(self, args: dict) -> Event:
+    def updated_event(self, args: dict) -> ActionEvent:
         """Returns the Updated parameter action event."""
         arguments = args.copy()
         arguments["action_arguments"] = self.start_event_arguments
-        return Event(f"{self.name}{args['parameter_name']}Updated", arguments, self.uid)
+        return ActionEvent(
+            f"{self.name}{args['parameter_name']}Updated", arguments, self.uid
+        )
 
-    def finished_event(self, args: dict) -> Event:
+    def finished_event(self, args: dict) -> ActionEvent:
         """Returns the Finished action event."""
         arguments = args.copy()
         arguments["action_arguments"] = self.start_event_arguments
-        return Event(f"{self.name}Finished", arguments, self.uid)
+        return ActionEvent(f"{self.name}Finished", arguments, self.uid)
 
 
 class InteractionLoopType(Enum):
@@ -290,6 +305,9 @@ class FlowState:
     # The current set of variables in the flow state.
     context: dict
 
+    # Child flow ids
+    arguments: dict = field(default_factory=dict)
+
     # Parent flow id
     # TODO: Implement proper parenting
     parent_uid: Optional[str] = None
@@ -319,52 +337,62 @@ class FlowState:
             "Failed": self.failed_event,
         }
 
-    def get_event(self, name: str, arguments: dict) -> Callable[[], Event]:
+    def get_event(self, name: str, arguments: dict) -> Callable[[], FlowEvent]:
         """Returns the corresponding action event."""
         return self._event_name_map[name](arguments)
 
     # Flow events to send
-    def start(self, **args: Any) -> Event:
+    def start(self, args: dict) -> FlowEvent:
         """Starts the flow. Takes no arguments."""
-        return Event("StartFlow", {"flow_id": self.flow_id})
+        return FlowEvent("StartFlow", {"flow_id": self.flow_id})
 
-    def stop(self, **args: Any) -> Event:
+    def stop(self, args: dict) -> FlowEvent:
         """Stops the flow. Takes no arguments."""
-        return Event("StopFlow", {"flow_id": self.flow_id})
+        return FlowEvent("StopFlow", {"flow_id": self.flow_id})
 
-    def pause(self, **args: Any) -> Event:
+    def pause(self, args: dict) -> FlowEvent:
         """Pauses the flow. Takes no arguments."""
-        return Event("PauseFlow", {"flow_id": self.flow_id})
+        return FlowEvent("PauseFlow", {"flow_id": self.flow_id})
 
-    def resume(self, **args: Any) -> Event:
+    def resume(self, args: dict) -> FlowEvent:
         """Resumes the flow. Takes no arguments."""
-        return Event("ResumeFlow", {"flow_id": self.flow_id})
+        return FlowEvent("ResumeFlow", {"flow_id": self.flow_id})
 
     # Flow events to match
-    def started_event(self, **args: Any) -> Event:
+    def started_event(self, args: dict) -> FlowEvent:
         """Returns the flow Started event."""
-        args["flow_id"] = self.flow_id
-        return Event("FlowStarted", args)
+        arguments = args.copy()
+        arguments["flow_id"] = self.flow_id
+        arguments["flow_arguments"] = self.arguments
+        return FlowEvent("FlowStarted", arguments)
 
-    def paused_event(self, **args: Any) -> Event:
+    def paused_event(self, args: dict) -> FlowEvent:
         """Returns the flow Pause event."""
-        args["flow_id"] = self.flow_id
-        return Event("FlowPaused", args)
+        arguments = args.copy()
+        arguments["flow_id"] = self.flow_id
+        arguments["flow_arguments"] = self.arguments
+        return FlowEvent("FlowPaused", arguments)
 
-    def resumed_event(self, **args: Any) -> Event:
+    def resumed_event(self, args: dict) -> FlowEvent:
         """Returns the flow Resumed event."""
-        args["flow_id"] = self.flow_id
-        return Event("FlowResumed", args)
+        arguments = args.copy()
+        arguments["flow_id"] = self.flow_id
+        arguments["flow_arguments"] = self.arguments
+        return FlowEvent("FlowResumed", arguments)
 
-    def finished_event(self, **args: Any) -> Event:
+    def finished_event(self, args: dict) -> FlowEvent:
         """Returns the flow Finished event."""
-        args["flow_id"] = self.flow_id
-        return Event("FlowFinished", args)
+        arguments = args.copy()
+        arguments["flow_id"] = self.flow_id
+        arguments["flow_arguments"] = self.arguments
+        return FlowEvent("FlowFinished", arguments)
 
-    def failed_event(self, **args: Any) -> Event:
+    def failed_event(self, args: dict) -> FlowEvent:
         """Returns the flow Failed event."""
-        args["flow_id"] = self.flow_id
-        return Event("FlowFailed", args)
+        arguments = args.copy()
+        arguments["flow_id"] = self.flow_id
+        arguments["flow_arguments"] = self.arguments
+        return FlowEvent("FlowFailed", arguments)
 
 
 @dataclass
@@ -427,16 +455,23 @@ class State:
                     elif element.op == "await":
                         if element.spec.name in self.flow_configs:
                             # It's a flow
+                            flow_ref_uid = f"_flow_ref_{new_uid()}"
                             new_elements.append(
                                 SpecOp(
                                     op="start",
                                     spec=element.spec,
+                                    ref=_create_ref_ast_dict_helper(flow_ref_uid),
                                 )
                             )
                             new_elements.append(
                                 SpecOp(
                                     op="match",
-                                    spec=element.spec,
+                                    spec=Spec(
+                                        var_name=flow_ref_uid,
+                                        members=_create_member_ast_dict_helper(
+                                            "Finished", {}
+                                        ),
+                                    ),
                                 )
                             )
                             config_changed = True
@@ -465,27 +500,23 @@ class State:
                     elif element.op == "start":
                         if element.spec.name in self.flow_configs:
                             # It's a flow
-                            element.spec.arguments.update(
-                                {"flow_id": f"'{element.spec.name}'"}
-                            )
+                            element_ref = element.ref
+                            if element_ref is None:
+                                flow_ref_uid = f"_flow_ref_{new_uid()}"
+                                element_ref = _create_ref_ast_dict_helper(flow_ref_uid)
                             new_elements.append(
                                 SpecOp(
-                                    op="send",
-                                    spec=Spec(
-                                        name="StartFlow",
-                                        arguments=element.spec.arguments,
-                                    ),
+                                    op="_new_instance",
+                                    spec=element.spec,
+                                    ref=element_ref,
                                 )
                             )
-                            new_elements.append(
-                                SpecOp(
-                                    op="match",
-                                    spec=Spec(
-                                        name="FlowStarted",
-                                        arguments=element.spec.arguments,
-                                    ),
-                                )
-                            )
+                            spec = element.spec
+                            spec.members = _create_member_ast_dict_helper("Start", {})
+                            spec.var_name = element_ref["elements"][0]["elements"][
+                                0
+                            ].lstrip("$")
+                            new_elements.append(SpecOp(op="send", spec=spec))
                             config_changed = True
                         else:
                             # It's an UMIM action
@@ -515,7 +546,10 @@ class State:
                                 SpecOp(
                                     op="match",
                                     spec=Spec(
-                                        name="FlowFinished",
+                                        name=element.spec.name,
+                                        members=_create_member_ast_dict_helper(
+                                            "Finished", {}
+                                        ),
                                         arguments={"flow_id": f"'{element.spec.name}'"},
                                     ),
                                 )
@@ -530,7 +564,9 @@ class State:
 
         # Create main flow state first
         main_flow_config = self.flow_configs["main"]
-        main_flow = _create_new_flow_instance(self, main_flow_config)
+        main_flow = _add_new_flow_instance(
+            self, _create_flow_instance(main_flow_config)
+        )
         if main_flow_config.loop_id is None:
             main_flow.loop_id = create_readable_uuid("main")
         else:
@@ -540,7 +576,7 @@ class State:
         # Create flow states for all other flows and start with head at position 0.
         for flow_config in self.flow_configs.values():
             if flow_config.id != "main":
-                _create_new_flow_instance(self, flow_config)
+                _add_new_flow_instance(self, _create_flow_instance(flow_config))
 
 
 def _create_ref_ast_dict_helper(ref_name: str) -> dict:
@@ -563,7 +599,9 @@ def _create_member_ast_dict_helper(name: str, arguments: dict) -> list:
     ]
 
 
-def _create_new_flow_instance(state: State, flow_config: FlowConfig) -> FlowState:
+def _create_flow_instance(
+    flow_config: FlowConfig, parent_uid: Optional[str] = None
+) -> FlowState:
     loop_uid: Optional[str] = None
     if flow_config.loop_type == InteractionLoopType.NEW:
         loop_uid = new_uid()
@@ -576,6 +614,7 @@ def _create_new_flow_instance(state: State, flow_config: FlowConfig) -> FlowStat
         uid=flow_uid,
         actions={},
         context={},
+        parent_uid=parent_uid,
         flow_id=flow_config.id,
         loop_id=loop_uid,
         head=FlowHead(
@@ -586,6 +625,10 @@ def _create_new_flow_instance(state: State, flow_config: FlowConfig) -> FlowStat
         ),
     )
 
+    return flow_state
+
+
+def _add_new_flow_instance(state, flow_state: FlowState) -> FlowState:
     # Update state structures
     state.flow_states.update({flow_state.uid: flow_state})
     if flow_state.flow_id in state.flow_id_states:
@@ -613,7 +656,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
     """
     logging.info(f"Process event: {external_event}")
 
-    converted_external_event = Event.from_umim_event(external_event)
+    converted_external_event = ActionEvent.from_umim_event(external_event)
 
     # Initialize the new state
     new_state = copy.copy(state)
@@ -688,7 +731,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
                     flow_state.context = event.arguments
                     parent_flow.child_flow_uids.append(flow_state.uid)
                 # Initialize new flow instance of flow
-                _create_new_flow_instance(new_state, flow_config)
+                _add_new_flow_instance(new_state, _create_flow_instance(flow_config))
             # TODO: Introduce default matching statements with heads for all flows
             # elif event.name == "AbortFlow":
             #     _abort_flow(new_state, flow_state)
@@ -867,7 +910,22 @@ def slide(
         elif element.op == "_new_instance":
             if element.spec.name in state.flow_configs:
                 # It's a flow
-                pass
+                evaluated_arguments = _evaluate_arguments(
+                    element.spec.arguments, flow_state.context
+                )
+                flow_config = state.flow_configs[element.spec.name]
+                new_flow_state = _create_flow_instance(flow_config, flow_state)
+
+                flow_state.actions.update({action.uid: action})
+                reference_name = element.ref["elements"][0]["elements"][0].lstrip("$")
+                flow_state.context.update(
+                    {
+                        reference_name: {
+                            "type": ContextVariableType.ACTION_REFERENCE,
+                            "value": action.uid,
+                        }
+                    }
+                )
             else:
                 # It's an action
                 evaluated_arguments = _evaluate_arguments(
@@ -1137,9 +1195,22 @@ def _get_event_from_element(
         # Case 2)
         if element_spec.name in state.flow_configs:
             # Flow object
-            flow = state.flow_configs[element_spec.name]
-            raise NotImplementedError
+            flow_config = state.flow_configs[element_spec.name]
+            temp_flow_state = _create_flow_instance(flow_config)
+            flow_event_name = element_spec.members[0]["name"]
+            flow_event_arguments = element_spec.members[0]["arguments"]
+            flow_event_arguments = _evaluate_arguments(
+                flow_event_arguments, flow_state.context
+            )
+            flow_event: FlowEvent = temp_flow_state.get_event(
+                flow_event_name, flow_event_arguments
+            )
+            if element["op"] == "match":
+                # Delete action_uid from event since the action is only a helper object
+                flow_event.flow = None
+            return flow_event
         else:
+            # Action object
             action_arguments = _evaluate_arguments(
                 element_spec.arguments, flow_state.context
             )
@@ -1150,7 +1221,7 @@ def _get_event_from_element(
             action_event_arguments = _evaluate_arguments(
                 action_event_arguments, flow_state.context
             )
-            action_event: Event = action.get_event(
+            action_event: ActionEvent = action.get_event(
                 action_event_name, action_event_arguments
             )
             if element["op"] == "match":
@@ -1163,6 +1234,7 @@ def _get_event_from_element(
             # Flow object
             raise NotImplementedError
         else:
+            # Action object
             event_arguments = _evaluate_arguments(
                 element_spec.arguments, flow_state.context
             )
