@@ -23,7 +23,7 @@ import uuid
 from ast import literal_eval
 from functools import lru_cache
 from time import time
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, cast
 
 from jinja2 import Environment, meta
 from langchain.llms import BaseLLM
@@ -41,6 +41,7 @@ from nemoguardrails.actions.llm.utils import (
     strip_quotes,
 )
 from nemoguardrails.colang import parse_colang_file
+from nemoguardrails.colang.v1_1.lang.colang_ast import Flow, SpecOp
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -68,6 +69,10 @@ class LLMGenerationActions:
         self.llm = llm
         self.verbose = verbose
 
+        # We extract the user/bot messages from the config as we might alter them.
+        self.user_messages = config.user_messages.copy()
+        self.bot_messages = config.bot_messages.copy()
+
         # If we have user messages, we build an index with them
         self.user_message_index = None
         self.bot_message_index = None
@@ -84,20 +89,76 @@ class LLMGenerationActions:
         self.env = Environment()
 
     async def init(self):
+        # For Colang 1.1 we need to do some initial processing
+        if self.config.colang_version == "1.1":
+            self._process_flows()
+
         await asyncio.gather(
             self._init_user_message_index(),
             self._init_bot_message_index(),
             self._init_flows_index(),
         )
 
+    def _extract_user_message_example(self, flow: Flow):
+        """Heuristic to extract user message examples from a flow."""
+        if len(flow.elements) != 2:
+            return
+
+        el = flow.elements[1]
+        if not isinstance(el, SpecOp) or el.op != "match":
+            return
+
+        spec = cast(SpecOp, el).spec
+        if spec.name != "UtteranceUserActionFinished":
+            return
+
+        if "final_transcript" not in spec.arguments:
+            return
+
+        # Extract the message and remove the double quotes
+        message = spec.arguments["final_transcript"][1:-1]
+
+        self.user_messages[flow.name] = [message]
+
+    def _extract_bot_message_example(self, flow: Flow):
+        # Quick heuristic to identify the user utterance examples
+        if len(flow.elements) != 2:
+            return
+
+        el = flow.elements[1]
+        if not isinstance(el, SpecOp) or el.op != "await":
+            return
+
+        spec = cast(SpecOp, el).spec
+        if spec.name != "UtteranceBotAction":
+            return
+
+        if "script" not in spec.arguments:
+            return
+
+        # Extract the message and remove the double quotes
+        message = spec.arguments["script"][1:-1]
+
+        self.bot_messages[flow.name] = [message]
+
+    def _process_flows(self):
+        """Process the provided flows to extract the user utterance examples."""
+        flow: Flow
+        for flow in self.config.flows:
+            if flow.name.startswith("user "):
+                self._extract_user_message_example(flow)
+
+            if flow.name.startswith("bot "):
+                self._extract_bot_message_example(flow)
+
     async def _init_user_message_index(self):
         """Initializes the index of user messages."""
 
-        if not self.config.user_messages:
+        if not self.user_messages:
             return
 
         items = []
-        for intent, utterances in self.config.user_messages.items():
+        for intent, utterances in self.user_messages.items():
             for text in utterances:
                 items.append(IndexItem(text=text, meta={"intent": intent}))
 
@@ -116,11 +177,11 @@ class LLMGenerationActions:
     async def _init_bot_message_index(self):
         """Initializes the index of bot messages."""
 
-        if not self.config.bot_messages:
+        if not self.bot_messages:
             return
 
         items = []
-        for intent, utterances in self.config.bot_messages.items():
+        for intent, utterances in self.bot_messages.items():
             for text in utterances:
                 items.append(IndexItem(text=intent, meta={"text": text}))
 
@@ -225,7 +286,7 @@ class LLMGenerationActions:
 
         # TODO: check for an explicit way of enabling the canonical form detection
 
-        if self.config.user_messages:
+        if self.user_messages:
             # TODO: based on the config we can use a specific canonical forms model
             #  or use the LLM to detect the canonical form. The below implementation
             #  is for the latter.
@@ -455,13 +516,13 @@ class LLMGenerationActions:
         bot_intent = event["intent"]
         context_updates = {}
 
-        if bot_intent in self.config.bot_messages:
-            # Choose a message randomly from self.config.bot_messages[bot_message]
+        if bot_intent in self.bot_messages:
+            # Choose a message randomly from self.bot_messages[bot_message]
             # However, in test mode, we always choose the first one, to keep it predictable.
             if "pytest" in sys.modules:
-                bot_utterance = self.config.bot_messages[bot_intent][0]
+                bot_utterance = self.bot_messages[bot_intent][0]
             else:
-                bot_utterance = random.choice(self.config.bot_messages[bot_intent])
+                bot_utterance = random.choice(self.bot_messages[bot_intent])
 
             log.info("Found existing bot message: " + bot_utterance)
 
@@ -476,7 +537,7 @@ class LLMGenerationActions:
             # We search for the most relevant similar bot utterance
             examples = ""
             # NOTE: disabling bot message index when there are no user messages
-            if self.config.user_messages and self.bot_message_index:
+            if self.user_messages and self.bot_message_index:
                 results = await self.bot_message_index.search(
                     text=event["intent"], max_results=5
                 )

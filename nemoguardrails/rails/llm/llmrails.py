@@ -118,20 +118,6 @@ class LLMRails:
         if config_module is not None and hasattr(config_module, "init"):
             config_module.init(self)
 
-        # Register any default actions that have not yet been registered in the custom
-        # init function from config.py.
-        default_actions = {
-            "wolfram alpha request": wolfram_alpha_request,
-            "check_facts": check_facts,
-            "check_jailbreak": check_jailbreak,
-            "output_moderation": output_moderation,
-            "check_hallucination": check_hallucination,
-            "retrieve_relevant_chunks": retrieve_relevant_chunks,
-        }
-
-        for action_name, action_fn in default_actions.items():
-            self.runtime.register_action(action_fn, action_name, override=False)
-
         # If we have a customized embedding model, we'll use it.
         for model in self.config.models:
             if model.type == "embeddings":
@@ -166,6 +152,13 @@ class LLMRails:
 
         # If there's already an action registered, we don't override.
         self.runtime.register_actions(self.llm_generation_actions, override=False)
+
+        # Quick hack for colang 1.1
+        if self.config.colang_version == "1.1":
+            self.runtime.register_action(
+                self.llm_generation_actions.generate_user_intent,
+                "GenerateUserIntentAction",
+            )
 
         # Next, we initialize the Knowledge Base
         asyncio.run(self._init_kb())
