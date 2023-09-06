@@ -607,13 +607,16 @@ def _sort_heads_from_matching_scores(heads: List[FlowHead]) -> List[FlowHead]:
     return [e[1] for e in sorted_lists]
 
 
-def compute_next_state(state: State, external_event: dict) -> State:
+def compute_next_state(state: State, external_event: Union[dict, Event]) -> State:
     """
     Computes the next state of the flow-driven system.
     """
     logging.info(f"Process event: {external_event}")
 
-    converted_external_event = Event.from_umim_event(external_event)
+    if isinstance(external_event, dict):
+        converted_external_event = Event.from_umim_event(external_event)
+    else:
+        converted_external_event = external_event
 
     # Initialize the new state
     new_state = copy.copy(state)
@@ -1246,30 +1249,34 @@ def _create_outgoing_event_from_actionable_element(
 
 # NOTE (schuellc): Are we going to replace this with a stateful approach
 def compute_next_events(
-    history: List[dict], flow_configs: Dict[str, FlowConfig]
+    history: List[Union[dict, Event]], flow_configs: Dict[str, FlowConfig]
 ) -> List[dict]:
     """Computes the next step in a flow-driven system given a history of events."""
     state = State(context={}, flow_states={}, flow_configs=flow_configs)
     state.initialize()
 
     # First, we process the history and apply any alterations e.g. 'hide_prev_turn'
-    actual_history = []
+    processed_history = []
     for event in history:
+        # First of all, we need to convert the input history to proper Event instances
+        if isinstance(event, dict):
+            event = Event.from_umim_event(event)
+
         # NOTE (schuellc): Why is this needed?
         if event.name == "hide_prev_turn":
             # we look up the last `UtteranceUserActionFinished` event and remove everything after
-            end = len(actual_history) - 1
+            end = len(processed_history) - 1
             while (
-                end > 0 and actual_history[end]["type"] != "UtteranceUserActionFinished"
+                end > 0 and processed_history[end].name != "UtteranceUserActionFinished"
             ):
                 end -= 1
 
-            assert actual_history[end]["type"] == "UtteranceUserActionFinished"
-            actual_history = actual_history[0:end]
+            assert processed_history[end].name == "UtteranceUserActionFinished"
+            processed_history = processed_history[0:end]
         else:
-            actual_history.append(event)
+            processed_history.append(event)
 
-    for event in actual_history:
+    for event in processed_history:
         state = compute_next_state(state, event)
 
         # NOTE (Jul 24, Razvan): this is a quick fix. Will debug further.
@@ -1288,8 +1295,8 @@ def compute_next_events(
         next_events.append(next_step_event)
 
     # Finally, we check if there was an explicit "stop" request
-    if actual_history:
-        last_event = actual_history[-1]
+    if processed_history:
+        last_event = processed_history[-1]
         # NOTE (schuellc): Why is this needed?
         if last_event.name == "BotIntent" and last_event["intent"] == "stop":
             # In this case, we remove any next steps
