@@ -33,6 +33,7 @@ from nemoguardrails.actions.output_moderation import output_moderation
 from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
+from nemoguardrails.colang.v1_1.lang.utils import new_uuid
 from nemoguardrails.colang.v1_1.runtime.runtime import RuntimeV1_1
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.kb.kb import KnowledgeBase
@@ -41,6 +42,7 @@ from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
+from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -304,9 +306,19 @@ class LLMRails:
                     }
                 )
             elif msg["role"] == "assistant":
-                events.append(
-                    {"type": "StartUtteranceBotAction", "script": msg["content"]}
+                action_uid = new_uuid()
+                start_event = new_event_dict(
+                    "StartUtteranceBotAction",
+                    final_transcript=msg["content"],
+                    action_uid=action_uid,
                 )
+                finished_event = new_event_dict(
+                    "UtteranceBotActionFinished",
+                    final_transcript=msg["content"],
+                    is_success=True,
+                    action_uid=action_uid,
+                )
+                events.extend([start_event, finished_event])
             elif msg["role"] == "context":
                 events.append({"type": "ContextUpdate", "data": msg["content"]})
             elif msg["role"] == "event":
@@ -374,7 +386,12 @@ class LLMRails:
                 # For the messages interface, we need to consider the UtteranceBotAction finished
                 # as soon as we return the message, hence we add the finished event to the new events.
                 new_extra_events.append(
-                    {"type": "UtteranceBotActionFinished", "script": event["script"]}
+                    new_event_dict(
+                        "UtteranceBotActionFinished",
+                        action_uid=event["action_uid"],
+                        is_success=True,
+                        final_script=event["script"],
+                    )
                 )
 
         new_message = {"role": "assistant", "content": "\n".join(responses)}
