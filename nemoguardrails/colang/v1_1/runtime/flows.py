@@ -26,7 +26,9 @@ from enum import Enum
 from functools import partial
 from typing import Any, Callable, Deque, Dict, List, Optional, Union
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import Spec, SpecOp
+from dataclasses_json import dataclass_json
+
+from nemoguardrails.colang.v1_1.lang.colang_ast import Element, Spec, SpecOp
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 from nemoguardrails.colang.v1_1.runtime.utils import create_readable_uuid
 from nemoguardrails.utils import new_event_dict, new_uid
@@ -367,6 +369,7 @@ class FlowState:
         return Event("FlowFailed", args)
 
 
+@dataclass_json
 @dataclass
 class State:
     """A state of a flow-driven system."""

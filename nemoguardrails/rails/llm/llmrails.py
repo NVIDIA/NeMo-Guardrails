@@ -19,7 +19,7 @@ import importlib.util
 import logging
 import os
 import time
-from typing import Any, List, Optional, Type, Union
+from typing import Any, List, Optional, Tuple, Type, Union
 
 from langchain.llms.base import BaseLLM
 
@@ -472,6 +472,46 @@ class LLMRails:
             )
 
         return asyncio.run(self.generate_events_async(events=events))
+
+    async def process_events_async(
+        self, events: List[dict], state: Optional[dict] = None
+    ) -> Tuple[List[dict], dict]:
+        """Process a sequence of events in a given state.
+
+        The events will be processed one by one, in the input order.
+
+        Args:
+            events: A sequence of events that needs to be processed.
+            state: The state that should be used as the starting point. If not provided,
+              a clean state will be used.
+
+        Returns:
+            (output_events, output_state) Returns a sequence of output events and an output
+              state.
+        """
+        t0 = time.time()
+        llm_stats.reset()
+
+        # Compute the new events.
+        output_events, output_state = await self.runtime.process_events(events, state)
+
+        log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
+        log.info("--- :: Stats: %s" % llm_stats)
+
+        return output_events, output_state
+
+    def process_events(
+        self, events: List[dict], state: Optional[dict] = None
+    ) -> Tuple[List[dict], dict]:
+        """Synchronous version of `LLMRails.process_events_async`."""
+
+        if check_sync_call_from_async_loop():
+            raise RuntimeError(
+                "You are using the sync `generate_events` inside async code. "
+                "You should replace with `await generate_events_async(...)."
+            )
+
+        return asyncio.run(self.process_events_async(events, state))
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""
