@@ -6,7 +6,11 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import State, compute_next_state
+from nemoguardrails.colang.v1_1.runtime.flows import (
+    ActionStatus,
+    State,
+    compute_next_state,
+)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -24,7 +28,7 @@ def test_send_umim_event():
 
     content = """
     flow main
-      send StartUtteranceBotAction(script="Hello world")
+      start UtteranceBotAction(script="Hello world")
     """
     config = convert_parsed_colang_to_flow_config(
         parse_colang_file(
@@ -62,7 +66,7 @@ def test_start_action():
       start UtteranceBotAction(script="Hello world")
       #start UtteranceBotAction(script="Hello world") as $action_ref
       #$action_ref = UtteranceBotAction(script="Hello world")
-      #send $action_ref.Start() # send StartUtteranceBotAction(script="Hello world")
+      #send $action_ref.Start() # start UtteranceBotAction(script="Hello world")
     """
     config = convert_parsed_colang_to_flow_config(
         parse_colang_file(
@@ -97,9 +101,9 @@ def test_await_action():
 
     content = """
     flow main
-      send StartUtteranceBotAction(script="Hello world")
-      match UtteranceBotActionFinished(script="Hello world")
-      send StartUtteranceBotAction(script="Done")
+      start UtteranceBotAction(script="Hello world")
+      match UtteranceBotActionFinished(final_script="Hello world")
+      start UtteranceBotAction(script="Done")
     """
     config = convert_parsed_colang_to_flow_config(
         parse_colang_file(
@@ -132,7 +136,7 @@ def test_await_action():
         state,
         {
             "type": "UtteranceBotActionFinished",
-            "script": "Hello world",
+            "final_script": "Hello world",
         },
     )
     assert is_data_in_events(
@@ -152,7 +156,7 @@ def test_await_action_compact_notation():
     content = """
     flow main
       await UtteranceBotAction(script="Hello world")
-      send StartUtteranceBotAction(script="Done")
+      start UtteranceBotAction(script="Done")
     """
     config = convert_parsed_colang_to_flow_config(
         parse_colang_file(
@@ -180,12 +184,14 @@ def test_await_action_compact_notation():
             }
         ],
     )
+    action_uid = state.outgoing_events[0]["action_uid"]
     state.outgoing_events.clear()
     state = compute_next_state(
         state,
         {
             "type": "UtteranceBotActionFinished",
-            "script": "Hello world",
+            "final_script": "Hello world",
+            "action_uid": action_uid,
         },
     )
     assert is_data_in_events(
@@ -235,12 +241,14 @@ def test_await_action_with_reference():
             }
         ],
     )
+    action_uid = state.outgoing_events[0]["action_uid"]
     state.outgoing_events.clear()
     state = compute_next_state(
         state,
         {
             "type": "UtteranceBotActionFinished",
-            "script": "Hello world",
+            "final_script": "Hello world",
+            "action_uid": action_uid,
         },
     )
     assert is_data_in_events(
@@ -260,8 +268,8 @@ def test_action_state_update():
     content = """
     flow main
       start UtteranceBotAction(script="Hello world") as $action_ref1
-      start UtteranceBotAction(script="Hello world") as $action_ref2
-      match $action_ref.Finished()
+      start UtteranceBotAction(script="Hi") as $action_ref2
+      match $action_ref1.Finished()
     """
     config = convert_parsed_colang_to_flow_config(
         parse_colang_file(
@@ -287,9 +295,25 @@ def test_action_state_update():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello world",
-            }
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            },
         ],
     )
+    state.outgoing_events.clear()
+    action_ref2 = state.main_flow_state.context["action_ref2"]
+    action_uid = action_ref2["value"]
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hi",
+            "action_uid": action_uid,
+        },
+    )
+    assert state.main_flow_state.actions[action_uid].status == ActionStatus.FINISHED
 
 
 def test_start_a_flow():
@@ -297,7 +321,7 @@ def test_start_a_flow():
 
     content = """
     flow a
-      send StartUtteranceBotAction(script="Hello world")
+      start UtteranceBotAction(script="Hello world")
 
     flow main
       # start a
@@ -338,7 +362,7 @@ def test_start_a_flow_compact_notation():
 
     content = """
     flow a
-      send StartUtteranceBotAction(script="Hello world")
+      start UtteranceBotAction(script="Hello world")
 
     flow main
       start a
@@ -377,14 +401,14 @@ def test_await_a_flow():
 
     content = """
     flow a
-      send StartUtteranceBotAction(script="Flow a started")
+      start UtteranceBotAction(script="Flow a started")
 
     flow main
       # await a
       send StartFlow(flow_id="a")
       match FlowStarted(flow_id="a")
       match FlowFinished(flow_id="a")
-      send StartUtteranceBotAction(script="Flow a finished")
+      start UtteranceBotAction(script="Flow a finished")
     """
 
     config = convert_parsed_colang_to_flow_config(
@@ -424,11 +448,11 @@ def test_await_a_flow_compact_notation():
 
     content = """
     flow a
-      send StartUtteranceBotAction(script="Flow a started")
+      start UtteranceBotAction(script="Flow a started")
 
     flow main
       await a
-      send StartUtteranceBotAction(script="Flow a finished")
+      start UtteranceBotAction(script="Flow a finished")
     """
 
     config = convert_parsed_colang_to_flow_config(
@@ -468,8 +492,8 @@ def test_start_child_flow_two_times():
 
     content = """
     flow a
-      send StartUtteranceBotAction(script="Hi")
-      match UtteranceBotActionFinished(script="Hi")
+      start UtteranceBotAction(script="Hi")
+      match UtteranceBotActionFinished(final_script="Hi")
 
     flow main
       # start a
@@ -523,8 +547,8 @@ def test_child_flow_abort():
 
     flow b
       # await UtteranceBotAction(script="Hi")
-      send StartUtteranceBotAction(script="Hi")
-      match UtteranceBotActionFinished(script="Hi")
+      start UtteranceBotAction(script="Hi")
+      match UtteranceBotActionFinished(final_script="Hi")
 
     flow main
       # start a
@@ -533,7 +557,7 @@ def test_child_flow_abort():
       # match b.Failed()
       match FlowFailed(flow_id="b")
       # start UtteranceBotAction(script="Done")
-      send StartUtteranceBotAction(script="Done")
+      start UtteranceBotAction(script="Done")
     """
     config = convert_parsed_colang_to_flow_config(
         parse_colang_file(
@@ -573,16 +597,16 @@ def test_conflicting_actions():
     content = """
     flow a
       match UtteranceUserActionFinished(final_transcript="Hi")
-      send StartUtteranceBotAction(script="Hello")
-      send StartUtteranceBotAction(script="How are you")
+      start UtteranceBotAction(script="Hello")
+      start UtteranceBotAction(script="How are you")
 
     flow main
       # start a
       send StartFlow(flow_id="a")
       match FlowStarted(flow_id="a")
       match UtteranceUserActionFinished(final_transcript="Hi")
-      send StartUtteranceBotAction(script="Hello")
-      send StartUtteranceBotAction(script="Bye")
+      start UtteranceBotAction(script="Hello")
+      start UtteranceBotAction(script="Bye")
     """
 
     config = convert_parsed_colang_to_flow_config(
@@ -677,4 +701,4 @@ def test_flow_parameters():
 
 
 if __name__ == "__main__":
-    test_await_action_with_reference()
+    test_await_a_flow_compact_notation()

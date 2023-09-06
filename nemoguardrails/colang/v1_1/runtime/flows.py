@@ -83,12 +83,14 @@ class Event:
     matching_scores: List[float] = field(default_factory=list)
 
     @classmethod
-    def from_flat_dict(cls, event: dict) -> Event:
+    def from_umim_event(cls, event: dict) -> Event:
         """Creates an event from a flat dictionary."""
         new_event = Event(event["type"], {})
         new_event.arguments = dict(
-            [(key, event[key]) for key in event if key not in ["type"]]
+            [(key, event[key]) for key in event if key not in ["type", "action_uid"]]
         )
+        if "action_uid" in event:
+            new_event.action = event["action_uid"]
         return new_event
 
 
@@ -139,19 +141,14 @@ class Action:
     # Process an event
     def process_event(self, event: Event) -> None:
         """Processes event and updates action accordingly."""
-        if (
-            "Action" in event.name
-            and "action_uid" in event
-            and self.uid is not None
-            and event.arguments["action_uid"] == self.uid
-        ):
+        if "Action" in event.name and event.action == self.uid:
             if "ActionStarted" in event.name:
-                self.context.update(event)
+                self.context.update(event.arguments)
                 self.status = ActionStatus.STARTED
             elif "ActionUpdated" in event.name:
-                self.context.update(event)
+                self.context.update(event.arguments)
             elif "ActionFinished" in event.name:
-                self.context.update(event)
+                self.context.update(event.arguments)
                 self.status = ActionStatus.FINISHED
 
     def get_event(self, name: str, arguments: dict) -> Callable[[], Event]:
@@ -465,7 +462,7 @@ class State:
                         if element.spec.name in self.flow_configs:
                             # It's a flow
                             element.spec.arguments.update(
-                                {"flow_id": element.spec.name}
+                                {"flow_id": f"'{element.spec.name}'"}
                             )
                             new_elements.append(
                                 SpecOp(
@@ -515,7 +512,7 @@ class State:
                                     op="match",
                                     spec=Spec(
                                         name="FlowFinished",
-                                        arguments={"flow_id": element.spec.name},
+                                        arguments={"flow_id": f"'{element.spec.name}'"},
                                     ),
                                 )
                             )
@@ -612,7 +609,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
     """
     logging.info(f"Process event: {external_event}")
 
-    converted_external_event = Event.from_flat_dict(external_event)
+    converted_external_event = Event.from_umim_event(external_event)
 
     # Initialize the new state
     new_state = copy.copy(state)
@@ -646,7 +643,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
         # TODO: Create a head dict for all active flows to speed this up
         # Iterate over all flow states to check for the heads to match the event
         for flow_state in state.flow_states.values():
-            if _is_inactive_flow(flow_state):
+            if not _is_listening_flow(flow_state):
                 # Don't process flows that are no longer active
                 continue
 
@@ -755,7 +752,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
 
     # Update all external event related actions in all flows that were not updated yet
     for flow_state in state.flow_states.values():
-        if _is_inactive_flow(flow_state):
+        if not _is_listening_flow(flow_state):
             # Don't process flows that are no longer active
             continue
 
@@ -852,27 +849,11 @@ def slide(
         logging.info(f"Sliding step: '{element.op}'")
 
         if element.op == "send" and element.spec.name in INTERNAL_EVENTS:
-            # Push internal event
-            # event = create_start_flow_internal_event(
-            #     element.spec.arguments["flow_id"],
-            #     head.flow_state_uid,
-            #     head.matching_scores,
-            # )
-            element.spec.arguments.update(
-                {"source_flow_instance_uid": head.flow_state_uid}
-            )
             # Evaluate expressions (eliminate all double quotes)
-            event_arguments = dict(
-                [
-                    (
-                        key,
-                        eval_expression(
-                            element.spec.arguments[key], flow_state.context
-                        ),
-                    )
-                    for key in element.spec.arguments
-                ]
+            event_arguments = _evaluate_arguments(
+                element.spec.arguments, flow_state.context
             )
+            event_arguments.update({"source_flow_instance_uid": head.flow_state_uid})
             event = create_internal_event(
                 element.spec.name, event_arguments, head.matching_scores
             )
@@ -884,16 +865,8 @@ def slide(
                 pass
             else:
                 # It's an action
-                evaluated_arguments = dict(
-                    [
-                        (
-                            key,
-                            eval_expression(
-                                element.spec.arguments[key], flow_state.context
-                            ),
-                        )
-                        for key in element.spec.arguments
-                    ]
+                evaluated_arguments = _evaluate_arguments(
+                    element.spec.arguments, flow_state.context
                 )
                 action = Action(
                     name=element.spec.name,
@@ -931,7 +904,7 @@ def _abort_flow(
     # abort all running child flows
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
-        if not _is_inactive_flow(child_flow_state):
+        if _is_listening_flow(child_flow_state):
             event = create_abort_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, matching_scores
             )
@@ -953,7 +926,7 @@ def _finish_flow(state: State, head: FlowHead) -> None:
     # Abort all running child flows
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
-        if not _is_inactive_flow(child_flow_state):
+        if _is_listening_flow(child_flow_state):
             event = create_abort_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, head.matching_scores
             )
@@ -964,11 +937,12 @@ def _finish_flow(state: State, head: FlowHead) -> None:
     logging.info(f"Flow '{flow_state.flow_id}' finished")
 
 
-def _is_inactive_flow(flow_state: FlowState) -> bool:
+def _is_listening_flow(flow_state: FlowState) -> bool:
     return (
-        flow_state.status == FlowStatus.ABORTED
-        or flow_state.status == FlowStatus.COMPLETED
-        or flow_state.status == FlowStatus.INTERRUPTED
+        flow_state.status == FlowStatus.INACTIVE
+        or flow_state.status == FlowStatus.ACTIVE
+        or flow_state.status == FlowStatus.STARTED
+        or flow_state.status == FlowStatus.STARTING
     )
 
 
@@ -1016,34 +990,36 @@ def _compute_event_matching_score(
 
     assert _is_match_op_element(element), f"Element '{element}' is not a match element!"
 
-    element_spec = element["spec"]
+    ref_event = _get_event_from_element(state, flow_state, element)
 
-    element_spec_args = element["spec"]["arguments"] or {}
-    element_spec_args = dict(
-        [
-            (key, eval_expression(element_spec_args[key], flow_state.context))
-            for key in element_spec_args
-        ]
-    )
+    # element_spec = element["spec"]
 
-    # Convert element to matching reference event
-    ref_event: Event
-    if element_spec["var_name"] is not None:
-        # Element refers to a reference variable
-        variable_name = element_spec["var_name"]
-        if variable_name not in flow_state.context:
-            logging.warning(f"Unkown variable: '{variable_name}'!")
-            return 0.0
+    # element_spec_args = element["spec"]["arguments"] or {}
+    # element_spec_args = dict(
+    #     [
+    #         (key, eval_expression(element_spec_args[key], flow_state.context))
+    #         for key in element_spec_args
+    #     ]
+    # )
 
-        # Resolve variable
-        context_variable = flow_state.context[variable_name]
-        if context_variable["type"] == ContextVariableType.ACTION_REFERENCE:
-            action = flow_state.actions[context_variable["value"]]
-            action_event_name = element.spec.members[0]["name"]
-            ref_event: Event = action.get_event(action_event_name, element_spec_args)
-    else:
-        # Element refers to an event
-        ref_event = Event(element_spec["name"], event.arguments)
+    # # Convert element to matching reference event
+    # ref_event: Event
+    # if element_spec["var_name"] is not None:
+    #     # Element refers to a reference variable
+    #     variable_name = element_spec["var_name"]
+    #     if variable_name not in flow_state.context:
+    #         logging.warning(f"Unkown variable: '{variable_name}'!")
+    #         return 0.0
+
+    #     # Resolve variable
+    #     context_variable = flow_state.context[variable_name]
+    #     if context_variable["type"] == ContextVariableType.ACTION_REFERENCE:
+    #         action = flow_state.actions[context_variable["value"]]
+    #         action_event_name = element.spec.members[0]["name"]
+    #         ref_event: Event = action.get_event(action_event_name, element_spec_args)
+    # else:
+    #     # Element refers to an event
+    #     ref_event = Event(element_spec["name"], event.arguments)
 
     FUZZY_MATCH_FACTOR = 0.5
 
@@ -1064,18 +1040,19 @@ def _compute_event_matching_score(
         return float(
             ref_event.name == event.name
             and ref_event.arguments["flow_id"]
-            == state.flow_states[
-                ref_event.arguments["source_flow_instance_uid"]
-            ].flow_id
+            == state.flow_states[event.arguments["source_flow_instance_uid"]].flow_id
         )
     else:
         # Its an UMIM event
         if ref_event.name != event.name:
             return 0.0
 
+        if ref_event.action is not None and ref_event.action != event.action:
+            return 0.0
+
         # We need to match all arguments used in the element
         score = 1.0
-        for arg in element_spec_args:
+        for arg in ref_event.arguments:
             if arg in event.arguments:
                 if ref_event.arguments[arg] == event.arguments[arg]:
                     continue
@@ -1130,6 +1107,7 @@ def _get_event_from_element(
             action_event: Event = action.get_event(
                 action_event_name, action_event_arguments
             )
+            action_event.action = action.uid
             return action_event
         elif context_variable["type"] == ContextVariableType.FLOW_REFERENCE:
             raise NotImplementedError
@@ -1234,7 +1212,7 @@ def _create_outgoing_event_from_actionable_element(
         #     evaluated_event_arguments["action_uid"] = new_uid()
 
         event = _get_event_from_element(state, flow_state, element)
-        umim_event = create_umim_action_event(event.name, event.arguments)
+        umim_event = create_umim_action_event(event, event.arguments)
 
         state.outgoing_events.append(umim_event)
 
@@ -1404,6 +1382,9 @@ def create_internal_event(
     return event
 
 
-def create_umim_action_event(event_type: str, event_args: Any) -> Dict[str, Any]:
+def create_umim_action_event(event: Event, event_args: dict) -> Dict[str, Any]:
     """Returns an outgoing UMIM event for the provided action data"""
-    return new_event_dict(event_type, **event_args)
+    if event.action is not None:
+        return new_event_dict(event.name, action_uid=event.action, **event_args)
+    else:
+        return new_event_dict(event.name, **event_args)
