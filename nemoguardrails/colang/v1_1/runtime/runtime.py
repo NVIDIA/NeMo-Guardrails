@@ -43,7 +43,9 @@ class RuntimeV1_1(Runtime):
 
         for flow in self.config.flows:
             flow_id = flow.name
-            self.flow_configs[flow_id] = FlowConfig(id=flow_id, elements=flow.elements)
+            self.flow_configs[flow_id] = FlowConfig(
+                id=flow_id, elements=flow.elements, parameters=flow.parameters
+            )
 
     async def generate_events(self, events: List[dict]) -> List[dict]:
         raise Exception("Stateless API not supported for Colang 1.1, yet.")
