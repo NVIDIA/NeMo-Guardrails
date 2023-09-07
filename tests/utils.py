@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.colang.v1_1.runtime.flows import FlowConfig
+from nemoguardrails.utils import new_event_dict
 
 
 class FakeLLM(LLM, BaseModel):
@@ -80,18 +81,77 @@ class TestChat:
         self.llm = FakeLLM(responses=llm_completions)
         self.config = config
         self.app = LLMRails(config, llm=self.llm)
+
+        # Track the conversation for v1.0
         self.history = []
 
+        # Track the conversation for v1.1
+        self.input_events = []
+        self.state = None
+
+        # For 1.1, we already start the main flow when initializing
+        if self.config.colang_version == "1.1":
+            _, self.state = self.app.process_events(
+                [
+                    {
+                        "type": "StartFlow",
+                        "flow_id": "main",
+                    },
+                ],
+                self.state,
+            )
+
     def user(self, msg: str):
-        self.history.append({"role": "user", "content": msg})
+        if self.config.colang_version == "1.0":
+            self.history.append({"role": "user", "content": msg})
+        elif self.config.colang_version == "1.1":
+            self.input_events.append(
+                {
+                    "type": "UtteranceUserActionFinished",
+                    "final_transcript": msg,
+                }
+            )
+        else:
+            raise Exception(f"Invalid colang version: {self.config.colang_version}")
 
     def bot(self, msg: str):
-        result = self.app.generate(messages=self.history)
-        assert result, "Did not receive any result"
-        assert (
-            result["content"] == msg
-        ), f"Expected `{msg}` and received `{result['content']}`"
-        self.history.append(result)
+        if self.config.colang_version == "1.0":
+            result = self.app.generate(messages=self.history)
+            assert result, "Did not receive any result"
+            assert (
+                result["content"] == msg
+            ), f"Expected `{msg}` and received `{result['content']}`"
+            self.history.append(result)
+
+        elif self.config.colang_version == "1.1":
+            output_msgs = []
+            while self.input_events:
+                output_events, output_state = self.app.process_events(
+                    self.input_events, self.state
+                )
+
+                # We detect any "StartUtteranceBotAction" events, show the message, and
+                # generate the corresponding Finished events as new input events.
+                self.input_events = []
+                for event in output_events:
+                    if event["type"] == "StartUtteranceBotAction":
+                        output_msgs.append(event["script"])
+
+                        self.input_events.append(
+                            new_event_dict(
+                                "UtteranceBotActionFinished",
+                                action_uid=event["action_uid"],
+                                is_success=True,
+                                final_script=event["script"],
+                            )
+                        )
+
+                self.state = output_state
+
+            output_msg = "\n".join(output_msgs)
+            assert output_msg == msg, f"Expected `{msg}` and received `{output_msg}`"
+        else:
+            raise Exception(f"Invalid colang version: {self.config.colang_version}")
 
     def __rshift__(self, msg: str):
         self.user(msg)
@@ -186,6 +246,7 @@ def convert_parsed_colang_to_flow_config(
                     id=flow["name"],
                     loop_id=None,
                     elements=flow["elements"],
+                    parameters=flow["parameters"],
                 ),
             )
             for flow in parsed_colang["flows"]

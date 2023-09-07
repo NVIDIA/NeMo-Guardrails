@@ -17,23 +17,13 @@ import os
 from typing import Optional
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.utils import new_event_dict
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def run_chat(config_path: Optional[str] = None, verbose: bool = False):
-    """Runs a chat session in the terminal."""
-
-    rails_config = RailsConfig.from_path(config_path)
-
-    # TODO: add support for loading a config directly from live playground
-    # rails_config = RailsConfig.from_playground(model="...")
-
-    # TODO: add support to register additional actions
-    # rails_app.register_action(...)
-
-    rails_app = LLMRails(rails_config, verbose=verbose)
-
+def _run_chat_v1_0(rails_app: LLMRails):
+    """Simple chat loop for v1.0 using the messages API."""
     history = []
     # And go into the default listening loop.
     while True:
@@ -45,3 +35,68 @@ def run_chat(config_path: Optional[str] = None, verbose: bool = False):
 
         # We print bot messages in green.
         print(f"\033[92m{bot_message['content']}\033[0m")
+
+
+def _run_chat_v1_1(rails_app: LLMRails):
+    """Simple chat loop for v1.1 using the stateful events API."""
+    state = None
+    first = True
+
+    # And go into the default listening loop.
+    while True:
+        if first:
+            # We first need to initialize the state by starting the main flow.
+            # TODO: a better way to do this?
+            first = False
+            input_events = [
+                {
+                    "type": "StartFlow",
+                    "flow_id": "main",
+                },
+            ]
+        else:
+            user_message = input("> ")
+            input_events = [
+                {
+                    "type": "UtteranceUserActionFinished",
+                    "final_transcript": user_message,
+                }
+            ]
+
+        while input_events:
+            output_events, output_state = rails_app.process_events(input_events, state)
+
+            # We detect any "StartUtteranceBotAction" events, show the message, and
+            # generate the corresponding Finished events as new input events.
+            input_events = []
+            for event in output_events:
+                if event["type"] == "StartUtteranceBotAction":
+                    # We print bot messages in green.
+                    print(f"\033[92m{event['script']}\033[0m")
+
+                    input_events.append(
+                        new_event_dict(
+                            "UtteranceBotActionFinished",
+                            action_uid=event["action_uid"],
+                            is_success=True,
+                            final_script=event["script"],
+                        )
+                    )
+
+            # TODO: deserialize the output state
+            # state = State.from_dict(output_state)
+            state = output_state
+
+
+def run_chat(config_path: Optional[str] = None, verbose: bool = False):
+    """Runs a chat session in the terminal."""
+
+    rails_config = RailsConfig.from_path(config_path)
+    rails_app = LLMRails(rails_config, verbose=verbose)
+
+    if rails_config.colang_version == "1.0":
+        _run_chat_v1_0(rails_app)
+    elif rails_config.colang_version == "1.1":
+        _run_chat_v1_1(rails_app)
+    else:
+        raise Exception(f"Invalid colang version: {rails_config.colang_version}")

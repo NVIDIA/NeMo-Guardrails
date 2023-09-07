@@ -15,7 +15,7 @@
 
 import logging
 from abc import abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from nemoguardrails.actions.action_dispatcher import ActionDispatcher
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -80,5 +80,23 @@ class Runtime:
         processing the events until the `listen` event is produced.
 
         :return: The list of events.
+        """
+        raise NotImplementedError()
+
+    async def process_events(
+        self, events: List[dict], state: Optional[dict] = None
+    ) -> Tuple[List[dict], dict]:
+        """Process a sequence of events in a given state.
+
+        The events will be processed one by one, in the input order.
+
+        Args:
+            events: A sequence of events that needs to be processed.
+            state: The state that should be used as the starting point. If not provided,
+              a clean state will be used.
+
+        Returns:
+            (output_events, output_state) Returns a sequence of output events and an output
+              state.
         """
         raise NotImplementedError()

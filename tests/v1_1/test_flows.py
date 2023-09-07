@@ -739,8 +739,8 @@ def test_conflicting_actions_reference_sharing():
     )
 
 
-def test_flow_parameters():
-    """Test the action conflict resolution"""
+def test_flow_parameters_action_wrapper():
+    """Test flow parameter action wrapper mechanic"""
 
     content = """
     flow bot say $script
@@ -748,6 +748,30 @@ def test_flow_parameters():
 
     flow main
       await bot say $script="Hi"
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            },
+        ],
+    )
+
+
+def test_flow_parameters_event_wrapper():
+    """Test flow parameter event wrapper mechanic"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow main
+      await user said $transcript="Hi"
+      start UtteranceBotAction(script="Yes")
     """
 
     state = compute_next_state(_init_state(content), start_main_flow_event)
@@ -764,15 +788,34 @@ def test_flow_parameters():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "Hello",
-            },
+                "script": "Yes",
+            }
+        ],
+    )
+
+
+def test_flow_parameters_positional_parameter():
+    """Test flow parameter event wrapper mechanic"""
+
+    content = """
+    flow bot say $script
+      await UtteranceBotAction(script=$script)
+
+    flow main
+      await bot say "Hi"
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "Bye",
+                "script": "Hi",
             },
         ],
     )
 
 
 if __name__ == "__main__":
-    test_conflicting_actions_reference_sharing()
+    test_flow_parameters_positional_parameter()

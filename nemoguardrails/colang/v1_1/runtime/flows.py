@@ -19,14 +19,19 @@ from __future__ import annotations
 
 import copy
 import logging
-import uuid
 from collections import deque
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
-from functools import partial
 from typing import Any, Callable, Deque, Dict, List, Optional, Set, Union
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import Element, Spec, SpecOp
+from dataclasses_json import dataclass_json
+
+from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    Element,
+    FlowParamDef,
+    Spec,
+    SpecOp,
+)
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 from nemoguardrails.colang.v1_1.runtime.utils import create_readable_uuid
 from nemoguardrails.utils import new_event_dict, new_uid
@@ -226,6 +231,9 @@ class FlowConfig:
     # The sequence of elements that compose the flow.
     elements: List[Union[Element, SpecOp, dict]]
 
+    # The flow parameters
+    parameters: List[FlowParamDef]
+
     # Interaction loop
     loop_id: Optional[str] = None
     loop_type: InteractionLoopType = InteractionLoopType.PARENT
@@ -401,6 +409,7 @@ class FlowState:
         return FlowEvent("FlowFailed", arguments)
 
 
+@dataclass_json
 @dataclass
 class State:
     """A state of a flow-driven system."""
@@ -613,6 +622,7 @@ def _create_flow_instance(
     # For type InteractionLoopType.PARENT we keep it None to infer loop_id at run_time from parent
 
     flow_uid = create_readable_uuid(flow_config.id)
+
     flow_state = FlowState(
         uid=flow_uid,
         context={},
@@ -627,6 +637,11 @@ def _create_flow_instance(
             matching_scores=[],
         ),
     )
+
+    for idx, param in enumerate(flow_config.parameters):
+        flow_state.context.update(
+            {param.name: f"${idx}", f"${idx}": param.default_value_expr}
+        )
 
     return flow_state
 
@@ -653,7 +668,7 @@ def _sort_heads_from_matching_scores(heads: List[FlowHead]) -> List[FlowHead]:
     return [e[1] for e in sorted_lists]
 
 
-def compute_next_state(state: State, external_event: dict) -> State:
+def compute_next_state(state: State, external_event: Union[dict, Event]) -> State:
     """
     Computes the next state of the flow-driven system.
     """
@@ -732,7 +747,7 @@ def compute_next_state(state: State, external_event: dict) -> State:
                         parent_flow = state.flow_states[parent_flow_uid]
                         flow_state.parent_uid = parent_flow_uid
                         flow_state.loop_id = parent_flow.loop_id
-                        flow_state.context = event.arguments
+                        flow_state.context.update(event.arguments)
                         parent_flow.child_flow_uids.append(flow_state.uid)
                     # Initialize new flow instance of flow
                     _add_new_flow_instance(
@@ -1349,30 +1364,34 @@ def _create_outgoing_event_from_actionable_element(
 
 # NOTE (schuellc): Are we going to replace this with a stateful approach
 def compute_next_events(
-    history: List[dict], flow_configs: Dict[str, FlowConfig]
+    history: List[Union[dict, Event]], flow_configs: Dict[str, FlowConfig]
 ) -> List[dict]:
     """Computes the next step in a flow-driven system given a history of events."""
     state = State(context={}, flow_states={}, flow_configs=flow_configs)
     state.initialize()
 
     # First, we process the history and apply any alterations e.g. 'hide_prev_turn'
-    actual_history = []
+    processed_history = []
     for event in history:
+        # First of all, we need to convert the input history to proper Event instances
+        if isinstance(event, dict):
+            event = Event.from_umim_event(event)
+
         # NOTE (schuellc): Why is this needed?
         if event.name == "hide_prev_turn":
             # we look up the last `UtteranceUserActionFinished` event and remove everything after
-            end = len(actual_history) - 1
+            end = len(processed_history) - 1
             while (
-                end > 0 and actual_history[end]["type"] != "UtteranceUserActionFinished"
+                end > 0 and processed_history[end].name != "UtteranceUserActionFinished"
             ):
                 end -= 1
 
-            assert actual_history[end]["type"] == "UtteranceUserActionFinished"
-            actual_history = actual_history[0:end]
+            assert processed_history[end].name == "UtteranceUserActionFinished"
+            processed_history = processed_history[0:end]
         else:
-            actual_history.append(event)
+            processed_history.append(event)
 
-    for event in actual_history:
+    for event in processed_history:
         state = compute_next_state(state, event)
 
         # NOTE (Jul 24, Razvan): this is a quick fix. Will debug further.
@@ -1391,8 +1410,8 @@ def compute_next_events(
         next_events.append(next_step_event)
 
     # Finally, we check if there was an explicit "stop" request
-    if actual_history:
-        last_event = actual_history[-1]
+    if processed_history:
+        last_event = processed_history[-1]
         # NOTE (schuellc): Why is this needed?
         if last_event.name == "BotIntent" and last_event["intent"] == "stop":
             # In this case, we remove any next steps

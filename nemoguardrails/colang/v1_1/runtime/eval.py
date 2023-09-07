@@ -42,7 +42,14 @@ def eval_expression(expr, context):
         if f"var_{var_name}" in expr_locals:
             continue
 
-        val = context.get(var_name)
+        temp_var_name = var_name
+        while temp_var_name in context:
+            val = context.get(temp_var_name)
+            if isinstance(val, str) and val.startswith("$"):
+                # Let's try to resolve values that are just variables themselves
+                temp_var_name = val
+            else:
+                break
 
         # We transform dicts to AttributeDict so we can access their keys as attributes
         # e.g. write things like $speaker.name

@@ -16,7 +16,7 @@
 import inspect
 import logging
 from textwrap import indent
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import aiohttp
@@ -27,8 +27,10 @@ from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v1_1.runtime.flows import (
     FlowConfig,
+    State,
     compute_context,
     compute_next_events,
+    compute_next_state,
 )
 from nemoguardrails.utils import new_event_dict
 
@@ -373,3 +375,43 @@ class RuntimeV1_1(Runtime):
         next_steps = await self._compute_next_steps(events)
 
         return next_steps
+
+    async def process_events(
+        self, events: List[dict], state: Optional[dict] = None
+    ) -> Tuple[List[dict], dict]:
+        """Process a sequence of events in a given state.
+
+        The events will be processed one by one, in the input order.
+
+        Args:
+            events: A sequence of events that needs to be processed.
+            state: The state that should be used as the starting point. If not provided,
+              a clean state will be used.
+
+        Returns:
+            (output_events, output_state) Returns a sequence of output events and an output
+              state.
+        """
+
+        if state is None:
+            state = State(context={}, flow_states={}, flow_configs=self.flow_configs)
+            state.initialize()
+        else:
+            if isinstance(state, dict):
+                state = State.from_dict(state)
+
+        output_events = []
+        for event in events:
+            state = compute_next_state(state, event)
+
+            # If we have context updates after this event, we first add that.
+            if state.context_updates:
+                output_events.append(
+                    new_event_dict("ContextUpdate", data=state.context_updates)
+                )
+
+            for out_event in state.outgoing_events:
+                output_events.append(out_event)
+
+        # TODO: serialize the state to dict
+        return output_events, state

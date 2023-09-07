@@ -19,7 +19,7 @@ import importlib.util
 import logging
 import os
 import time
-from typing import Any, List, Optional, Type, Union
+from typing import Any, List, Optional, Tuple, Type, Union
 
 from langchain.llms.base import BaseLLM
 
@@ -33,6 +33,7 @@ from nemoguardrails.actions.output_moderation import output_moderation
 from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
+from nemoguardrails.colang.v1_1.lang.utils import new_uuid
 from nemoguardrails.colang.v1_1.runtime.runtime import RuntimeV1_1
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.kb.kb import KnowledgeBase
@@ -41,6 +42,7 @@ from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
+from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -118,20 +120,6 @@ class LLMRails:
         if config_module is not None and hasattr(config_module, "init"):
             config_module.init(self)
 
-        # Register any default actions that have not yet been registered in the custom
-        # init function from config.py.
-        default_actions = {
-            "wolfram alpha request": wolfram_alpha_request,
-            "check_facts": check_facts,
-            "check_jailbreak": check_jailbreak,
-            "output_moderation": output_moderation,
-            "check_hallucination": check_hallucination,
-            "retrieve_relevant_chunks": retrieve_relevant_chunks,
-        }
-
-        for action_name, action_fn in default_actions.items():
-            self.runtime.register_action(action_fn, action_name, override=False)
-
         # If we have a customized embedding model, we'll use it.
         for model in self.config.models:
             if model.type == "embeddings":
@@ -166,6 +154,13 @@ class LLMRails:
 
         # If there's already an action registered, we don't override.
         self.runtime.register_actions(self.llm_generation_actions, override=False)
+
+        # Quick hack for colang 1.1
+        if self.config.colang_version == "1.1":
+            self.runtime.register_action(
+                self.llm_generation_actions.generate_user_intent,
+                "GenerateUserIntentAction",
+            )
 
         # Next, we initialize the Knowledge Base
         asyncio.run(self._init_kb())
@@ -311,9 +306,19 @@ class LLMRails:
                     }
                 )
             elif msg["role"] == "assistant":
-                events.append(
-                    {"type": "StartUtteranceBotAction", "script": msg["content"]}
+                action_uid = new_uuid()
+                start_event = new_event_dict(
+                    "StartUtteranceBotAction",
+                    final_transcript=msg["content"],
+                    action_uid=action_uid,
                 )
+                finished_event = new_event_dict(
+                    "UtteranceBotActionFinished",
+                    final_transcript=msg["content"],
+                    is_success=True,
+                    action_uid=action_uid,
+                )
+                events.extend([start_event, finished_event])
             elif msg["role"] == "context":
                 events.append({"type": "ContextUpdate", "data": msg["content"]})
             elif msg["role"] == "event":
@@ -380,9 +385,14 @@ class LLMRails:
 
                 # For the messages interface, we need to consider the UtteranceBotAction finished
                 # as soon as we return the message, hence we add the finished event to the new events.
-                new_extra_events.append(
-                    {"type": "UtteranceBotActionFinished", "script": event["script"]}
-                )
+                # new_extra_events.append(
+                #     new_event_dict(
+                #         "UtteranceBotActionFinished",
+                #         action_uid=event["action_uid"],
+                #         is_success=True,
+                #         final_script=event["script"],
+                #     )
+                # )
 
         new_message = {"role": "assistant", "content": "\n".join(responses)}
 
@@ -462,6 +472,46 @@ class LLMRails:
             )
 
         return asyncio.run(self.generate_events_async(events=events))
+
+    async def process_events_async(
+        self, events: List[dict], state: Optional[dict] = None
+    ) -> Tuple[List[dict], dict]:
+        """Process a sequence of events in a given state.
+
+        The events will be processed one by one, in the input order.
+
+        Args:
+            events: A sequence of events that needs to be processed.
+            state: The state that should be used as the starting point. If not provided,
+              a clean state will be used.
+
+        Returns:
+            (output_events, output_state) Returns a sequence of output events and an output
+              state.
+        """
+        t0 = time.time()
+        llm_stats.reset()
+
+        # Compute the new events.
+        output_events, output_state = await self.runtime.process_events(events, state)
+
+        log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
+        log.info("--- :: Stats: %s" % llm_stats)
+
+        return output_events, output_state
+
+    def process_events(
+        self, events: List[dict], state: Optional[dict] = None
+    ) -> Tuple[List[dict], dict]:
+        """Synchronous version of `LLMRails.process_events_async`."""
+
+        if check_sync_call_from_async_loop():
+            raise RuntimeError(
+                "You are using the sync `generate_events` inside async code. "
+                "You should replace with `await generate_events_async(...)."
+            )
+
+        return asyncio.run(self.process_events_async(events, state))
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""
