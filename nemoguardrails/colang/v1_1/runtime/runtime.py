@@ -12,10 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import asyncio
 import inspect
 import logging
-from textwrap import indent
+import re
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
@@ -23,13 +23,10 @@ import aiohttp
 from langchain.chains.base import Chain
 
 from nemoguardrails.actions.actions import ActionResult
-from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v1_1.runtime.flows import (
     FlowConfig,
     State,
-    compute_context,
-    compute_next_events,
     compute_next_state,
 )
 from nemoguardrails.utils import new_event_dict
@@ -46,94 +43,12 @@ class RuntimeV1_1(Runtime):
 
         for flow in self.config.flows:
             flow_id = flow.name
-            self.flow_configs[flow_id] = FlowConfig(id=flow_id, elements=flow.elements)
+            self.flow_configs[flow_id] = FlowConfig(
+                id=flow_id, elements=flow.elements, parameters=flow.parameters
+            )
 
     async def generate_events(self, events: List[dict]) -> List[dict]:
-        """Generates the next events based on the provided history.
-
-        This is a wrapper around the `process_events` method, that will keep
-        processing the events until the `listen` event is produced.
-
-        :return: The list of events.
-        """
-        events = events.copy()
-
-        # TODO: figure out a better way to do this
-        # If the first event is not a StartFlow for the main flow, we need to add it.
-        if events[0]["type"] != "StartFlow":
-            events.insert(
-                0,
-                {
-                    "type": "StartFlow",
-                    "flow_id": "main",
-                },
-            )
-
-        new_events = []
-
-        while True:
-            last_event = events[-1]
-
-            log.info("Processing event: %s", last_event)
-
-            event_type = last_event["type"]
-            log.info(
-                "Event :: %s %s",
-                event_type,
-                str({k: v for k, v in last_event.items() if k != "type"}),
-            )
-
-            # If we need to execute an action, we start doing that.
-            # NOTE (schuellc): What are these system actions? We need to make them non-blocking.
-            # We are going to separate internal form external events in two different queues
-            if last_event["type"] == "StartInternalSystemAction":
-                next_events = await self._process_start_action(events)
-
-            # If we need to start a flow, we parse the content and register it.
-            # NOTE (schuellc): Is this needed for generated flows only?
-            # NOTE: This is a hack to be able to process LLM generated flows
-            elif last_event["type"] == "start_flow":
-                next_events = await self._process_start_flow(events)
-
-            else:
-                # We need to slide all the flows based on the current event,
-                # to compute the next steps.
-                next_events = await self._compute_next_steps(events)
-
-                if len(next_events) == 0:
-                    next_events = [new_event_dict("Listen")]
-
-            # Otherwise, we append the event and continue the processing.
-            events.extend(next_events)
-            new_events.extend(next_events)
-
-            # If the next event is a listen, we stop the processing.
-            # NOTE (schuellc): This will no longer be needed. Can I remove this without side effects?
-            if next_events[-1]["type"] == "Listen":
-                break
-
-            # As a safety measure, we stop the processing if we have too many events.
-            if len(new_events) > 100:
-                raise Exception("Too many events.")
-
-        return new_events
-
-    async def _compute_next_steps(self, events: List[dict]) -> List[dict]:
-        """Computes the next step based on the current flow."""
-        next_steps = compute_next_events(events, self.flow_configs)
-
-        # If there are any StartInternalSystemAction events, we mark if they are system actions or not
-        # NOTE (schuellc): What's that for?
-        for event in next_steps:
-            if event["type"] == "StartInternalSystemAction":
-                is_system_action = False
-                fn = self.action_dispatcher.get_action(event["action_name"])
-                if fn:
-                    action_meta = getattr(fn, "action_meta", {})
-                    is_system_action = action_meta.get("is_system_action", False)
-                event["is_system_action"] = is_system_action
-
-        return next_steps
+        raise Exception("Stateless API not supported for Colang 1.1, yet.")
 
     @staticmethod
     def _internal_error_action_result(message: str):
@@ -153,30 +68,19 @@ class RuntimeV1_1(Runtime):
             ]
         )
 
-    async def _process_start_action(self, events: List[dict]) -> List[dict]:
+    async def _process_start_action(
+        self, action_name: str, action_params: dict, context: dict, events: List[dict]
+    ) -> Tuple[Any, List[dict], dict]:
         """Starts the specified action, waits for it to finish and posts back the result."""
-
-        event = events[-1]
-
-        action_name = event["action_name"]
-        action_params = event["action_params"]
-        action_result_key = event["action_result_key"]
-
-        context = {}
-        action_meta = {}
 
         fn = self.action_dispatcher.get_action(action_name)
 
         # TODO: check action is available in action server
         if fn is None:
-            status = "failed"
             result = self._internal_error_action_result(
                 f"Action '{action_name}' not found."
             )
-
         else:
-            context = compute_context(events)
-
             # We pass all the parameters that are passed explicitly to the action.
             kwargs = {**action_params}
 
@@ -266,43 +170,24 @@ class RuntimeV1_1(Runtime):
             return_events = result.events
             context_updates.update(result.context_updates)
 
-        # If we have an action result key, we also record the update.
-        if action_result_key:
-            context_updates[action_result_key] = return_value
+        # next_steps = []
+        #
+        # if context_updates:
+        #     # We check if at least one key changed
+        #     changes = False
+        #     for k, v in context_updates.items():
+        #         if context.get(k) != v:
+        #             changes = True
+        #             break
+        #
+        #     if changes:
+        #         next_steps.append(new_event_dict("ContextUpdate", data=context_updates))
+        #
+        # # If the action returned additional events, we also add them to the next steps.
+        # if return_events:
+        #     next_steps.extend(return_events)
 
-        next_steps = []
-
-        if context_updates:
-            # We check if at least one key changed
-            changes = False
-            for k, v in context_updates.items():
-                if context.get(k) != v:
-                    changes = True
-                    break
-
-            if changes:
-                next_steps.append(new_event_dict("ContextUpdate", data=context_updates))
-
-        next_steps.append(
-            new_event_dict(
-                "InternalSystemActionFinished",
-                action_name=action_name,
-                action_params=action_params,
-                action_result_key=action_result_key,
-                status=status,
-                is_success=status != "failed",
-                failure_reason=status,
-                return_value=return_value,
-                events=return_events,
-                is_system_action=action_meta.get("is_system_action", False),
-            )
-        )
-
-        # If the action returned additional events, we also add them to the next steps.
-        if return_events:
-            next_steps.extend(return_events)
-
-        return next_steps
+        return return_value, return_events, context_updates
 
     async def _get_action_resp(
         self, action_meta: Dict[str, Any], action_name: str, kwargs: Dict[str, Any]
@@ -344,38 +229,6 @@ class RuntimeV1_1(Runtime):
             log.info(f"Failed to get response from {action_name} due to exception {e}")
         return result, status
 
-    async def _process_start_flow(self, events: List[dict]) -> List[dict]:
-        """Starts a flow."""
-
-        event = events[-1]
-
-        flow_id = event["flow_id"]
-
-        # Up to this point, the body will be the sequence of instructions.
-        # We need to alter it to be an actual flow definition, i.e., add `define flow xxx`
-        # and intent the body.
-        body = event["flow_body"]
-        body = "define flow " + flow_id + ":\n" + indent(body, "  ")
-
-        # We parse the flow
-        parsed_data = parse_colang_file("dynamic.co", content=body)
-
-        assert len(parsed_data["flows"]) == 1
-        flow = parsed_data["flows"][0]
-
-        # To make sure that the flow will start now, we add a start_flow element at
-        # the beginning as well.
-        flow["elements"].insert(0, {"_type": "start_flow", "flow_id": flow_id})
-
-        # We add the flow to the list of flows.
-        self._load_flow_config(flow)
-
-        # And we compute the next steps. The new flow should match the current event,
-        # and start.
-        next_steps = await self._compute_next_steps(events)
-
-        return next_steps
-
     async def process_events(
         self, events: List[dict], state: Optional[dict] = None
     ) -> Tuple[List[dict], dict]:
@@ -401,17 +254,89 @@ class RuntimeV1_1(Runtime):
                 state = State.from_dict(state)
 
         output_events = []
-        for event in events:
-            state = compute_next_state(state, event)
+        input_events = events.copy()
+        local_running_actions = []
 
-            # If we have context updates after this event, we first add that.
-            if state.context_updates:
-                output_events.append(
-                    new_event_dict("ContextUpdate", data=state.context_updates)
+        # While we have input events to process, or there are local running actions
+        # we continue the processing.
+        while input_events or local_running_actions:
+            # First, we process all events
+            for event in input_events:
+                log.info(f"Processing event {event}")
+
+                state = compute_next_state(state, event)
+
+                # If we have context updates after this event, we first add that.
+                if state.context_updates:
+                    output_events.append(
+                        new_event_dict("ContextUpdate", data=state.context_updates)
+                    )
+
+                for out_event in state.outgoing_events:
+                    # We need to check if we need to run a locally registered action
+                    start_action_match = re.match(r"Start(.*Action)", out_event["type"])
+                    if start_action_match:
+                        action_name = start_action_match[1]
+
+                        if action_name in self.action_dispatcher.registered_actions:
+                            # In this case we need to start the action asynchronously
+
+                            # Start the local action
+                            local_action = asyncio.create_task(
+                                self._run_action(
+                                    action_name, start_action_event=out_event
+                                )
+                            )
+                            local_running_actions.append(local_action)
+                        else:
+                            output_events.append(out_event)
+                    else:
+                        output_events.append(out_event)
+
+            # We clear the input events
+            input_events = []
+
+            # If we have any local running actions, we need to wait for at least one
+            # of them to finish.
+            if local_running_actions:
+                log.info(
+                    f"Waiting for {len(local_running_actions)} local actions to finish."
                 )
+                done, pending = await asyncio.wait(
+                    local_running_actions, return_when=asyncio.FIRST_COMPLETED
+                )
+                log.info(f"{len(done)} actions finished.")
 
-            for out_event in state.outgoing_events:
-                output_events.append(out_event)
+                for finished_task in done:
+                    local_running_actions.remove(finished_task)
+                    result = finished_task.result()
+
+                    # We need to create the corresponding action finished event
+                    action_finished_event = new_event_dict(
+                        f"{result['action_name']}Finished",
+                        action_uid=result["start_action_event"]["action_uid"],
+                        action_name=result["action_name"],
+                        status="success",
+                        is_success=True,
+                        return_value=None,
+                        events=result["new_events"],
+                        # is_system_action=action_meta.get("is_system_action", False),
+                    )
+                    input_events.append(action_finished_event)
 
         # TODO: serialize the state to dict
         return output_events, state
+
+    async def _run_action(self, action_name: str, start_action_event: dict) -> dict:
+        """Runs the locally registered action."""
+        # TODO: fill in the parameters correctly
+        return_value, new_events, context_updates = await self._process_start_action(
+            action_name, action_params={}, context={}, events=[]
+        )
+        return {
+            "action_name": action_name,
+            "return_value": return_value,
+            "new_events": new_events,
+            "context_updates": context_updates,
+            "start_action_event": start_action_event,
+        }
