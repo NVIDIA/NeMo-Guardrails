@@ -952,5 +952,52 @@ def test_activate_flow_mechanism():
     )
 
 
+def test_finish_flow_event():
+    """Test the FinishFlow event that will immediately finish a flow"""
+
+    content = """
+    flow a
+      await UtteranceBotAction(script="Hi")
+
+    flow b
+      match a
+      await UtteranceBotAction(script="Yes")
+
+    flow main
+      start b
+      start a
+      match UtteranceUserAction().Finished(final_transcript="Hi")
+      send FinishFlow(flow_id="a")
+      match WaitAction().Finished()
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            },
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Yes",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_activate_flow_mechanism()
+    test_finish_flow_event()
