@@ -795,7 +795,7 @@ def test_flow_parameters_event_wrapper():
 
 
 def test_flow_parameters_positional_parameter():
-    """Test flow parameter event wrapper mechanic"""
+    """Test positional flow parameters"""
 
     content = """
     flow bot say $script
@@ -817,5 +817,74 @@ def test_flow_parameters_positional_parameter():
     )
 
 
+def test_flow_parameters_default_parameter():
+    """Test default flow parameters"""
+
+    content = """
+    flow bot say $script="Howdy"
+      await UtteranceBotAction(script=$script)
+
+    flow main
+      await bot say
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Howdy",
+            },
+        ],
+    )
+
+
+def test_distributed_flow_matching():
+    """Test flow default parameters."""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow bot say $script
+      await UtteranceBotAction(script=$script)
+
+    flow a
+      match user said $transcript="Hi"
+      bot say 'Check1'
+
+    flow b
+      match user said $transcript="Hello"
+      bot say 'Check2'
+
+    flow main
+      start a
+      start b
+      start user said "Hi"
+      start user said "Hello"
+      match UtteranceUserAction(final_transcript="wait")
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert state.outgoing_events == []
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hello",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Check2",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_flow_parameters_positional_parameter()
+    test_distributed_flow_matching()

@@ -320,7 +320,7 @@ class FlowState:
     context: dict
 
     # Child flow ids
-    arguments: dict = field(default_factory=dict)
+    arguments: List[str] = field(default_factory=list)
 
     # Parent flow id
     # TODO: Implement proper parenting
@@ -377,35 +377,45 @@ class FlowState:
         """Returns the flow Started event."""
         arguments = args.copy()
         arguments["flow_id"] = self.flow_id
-        arguments["flow_arguments"] = self.arguments
+        arguments["flow_arguments"] = dict(
+            [(arg, self.context[arg]) for arg in self.arguments]
+        )
         return FlowEvent("FlowStarted", arguments)
 
     def paused_event(self, args: dict) -> FlowEvent:
         """Returns the flow Pause event."""
         arguments = args.copy()
         arguments["flow_id"] = self.flow_id
-        arguments["flow_arguments"] = self.arguments
+        arguments["flow_arguments"] = dict(
+            [(arg, self.context[arg]) for arg in self.arguments]
+        )
         return FlowEvent("FlowPaused", arguments)
 
     def resumed_event(self, args: dict) -> FlowEvent:
         """Returns the flow Resumed event."""
         arguments = args.copy()
         arguments["flow_id"] = self.flow_id
-        arguments["flow_arguments"] = self.arguments
+        arguments["flow_arguments"] = dict(
+            [(arg, self.context[arg]) for arg in self.arguments]
+        )
         return FlowEvent("FlowResumed", arguments)
 
     def finished_event(self, args: dict) -> FlowEvent:
         """Returns the flow Finished event."""
         arguments = args.copy()
         arguments["flow_id"] = self.flow_id
-        arguments["flow_arguments"] = self.arguments
+        arguments["flow_arguments"] = dict(
+            [(arg, self.context[arg]) for arg in self.arguments]
+        )
         return FlowEvent("FlowFinished", arguments)
 
     def failed_event(self, args: dict) -> FlowEvent:
         """Returns the flow Failed event."""
         arguments = args.copy()
         arguments["flow_id"] = self.flow_id
-        arguments["flow_arguments"] = self.arguments
+        arguments["flow_arguments"] = dict(
+            [(arg, self.context[arg]) for arg in self.arguments]
+        )
         return FlowEvent("FlowFailed", arguments)
 
 
@@ -557,12 +567,16 @@ class State:
                     elif element.op == "match":
                         if element.spec.name in self.flow_configs:
                             # It's a flow
+                            arguments = {"flow_id": f"'{element.spec.name}'"}
+                            for arg in element.spec.arguments:
+                                arguments.update({arg: element.spec.arguments[arg]})
+
                             new_elements.append(
                                 SpecOp(
                                     op="match",
                                     spec=Spec(
                                         name="FlowFinished",
-                                        arguments={"flow_id": f"'{element.spec.name}'"},
+                                        arguments=arguments,
                                     ),
                                 )
                             )
@@ -639,8 +653,11 @@ def _create_flow_instance(
     )
 
     for idx, param in enumerate(flow_config.parameters):
+        flow_state.arguments.append(param.name)
         flow_state.context.update(
-            {param.name: f"${idx}", f"${idx}": param.default_value_expr}
+            {
+                param.name: eval_expression(param.default_value_expr, {}),
+            }
         )
 
     return flow_state
@@ -741,14 +758,30 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                 if event.name == "StartFlow":
                     flow_state = _get_flow_state_from_head(state, head)
                     flow_config = _get_flow_config_from_head(state, head)
-                    # Start flow and link to parent flow
-                    if flow_state != state.main_flow_state:
-                        parent_flow_uid = event.arguments["source_flow_instance_uid"]
-                        parent_flow = state.flow_states[parent_flow_uid]
-                        flow_state.parent_uid = parent_flow_uid
-                        flow_state.loop_id = parent_flow.loop_id
-                        flow_state.context.update(event.arguments)
-                        parent_flow.child_flow_uids.append(flow_state.uid)
+
+                    if flow_state == state.main_flow_state:
+                        continue
+
+                    # Link to parent flow
+                    parent_flow_uid = event.arguments["source_flow_instance_uid"]
+                    parent_flow = state.flow_states[parent_flow_uid]
+                    flow_state.parent_uid = parent_flow_uid
+                    parent_flow.child_flow_uids.append(flow_state.uid)
+                    flow_state.loop_id = parent_flow.loop_id
+
+                    # Update context with event/flow parameters
+                    # TODO: Check if we really need all arguments int the context
+                    flow_state.context.update(event.arguments)
+                    # Resolve positional flow parameters to their actual name in the flow
+                    for idx in range(10):
+                        pos_arg = f"${idx}"
+                        if pos_arg in event.arguments:
+                            flow_state.context[
+                                flow_state.arguments[idx]
+                            ] = event.arguments[pos_arg]
+                        else:
+                            break
+
                     # Initialize new flow instance of flow
                     _add_new_flow_instance(
                         new_state, _create_flow_instance(flow_config)
@@ -1026,7 +1059,7 @@ def _finish_flow(state: State, head: FlowHead) -> None:
     flow_state = _get_flow_state_from_head(state, head)
 
     # Generate FlowFinished event
-    event = create_flow_finished_internal_event(flow_state.uid, head.matching_scores)
+    event = create_flow_finished_internal_event(flow_state, head.matching_scores)
     _push_internal_event(state, event)
 
     # Abort all running child flows
@@ -1143,11 +1176,17 @@ def _compute_event_matching_score(
             and ref_event.arguments["flow_id"] == event.arguments["flow_id"]
         )
     elif event.name in INTERNAL_EVENTS:
-        return float(
-            ref_event.name == event.name
-            and ref_event.arguments["flow_id"]
-            == state.flow_states[event.arguments["source_flow_instance_uid"]].flow_id
+        if (
+            ref_event.name != event.name
+            or ref_event.arguments["flow_id"]
+            != state.flow_states[event.arguments["source_flow_instance_uid"]].flow_id
+        ):
+            return 0.0
+
+        return _compute_arguments_dict_matching_score(
+            event.arguments, ref_event.arguments
         )
+
     else:
         # Its an UMIM event
         if ref_event.name != event.name:
@@ -1471,12 +1510,15 @@ def create_flow_started_internal_event(
 
 
 def create_flow_finished_internal_event(
-    source_flow_instance_uid: str, matching_scores: List[float]
+    source_flow_state: FlowState, matching_scores: List[float]
 ) -> Event:
     """Returns 'FlowFinished' internal event"""
+    arguments = {"source_flow_instance_uid": source_flow_state.uid}
+    for arg in source_flow_state.arguments:
+        arguments.update({arg: source_flow_state.context[arg]})
     return create_internal_event(
         "FlowFinished",
-        {"source_flow_instance_uid": source_flow_instance_uid},
+        arguments,
         matching_scores,
     )
 
