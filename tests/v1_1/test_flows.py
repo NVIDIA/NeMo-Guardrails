@@ -886,5 +886,71 @@ def test_distributed_flow_matching():
     )
 
 
+def test_activate_flow_mechanism():
+    """Test the activate a flow mechanism"""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="Start")
+      match UtteranceUserAction().Finished(final_transcript="Hi")
+      start UtteranceBotAction(script="End")
+
+    flow main
+      activate a
+      match WaitAction().Finished()
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start",
+            }
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "End",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start",
+            },
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "End",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_distributed_flow_matching()
+    test_activate_flow_mechanism()

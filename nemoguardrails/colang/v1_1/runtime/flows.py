@@ -332,6 +332,9 @@ class FlowState:
     # The current state of the flow
     status: FlowStatus = FlowStatus.INACTIVE
 
+    # An activated flow will restart immediately when finished
+    activated: bool = False
+
     # The UID of the flows that interrupted this one
     # interrupted_by = None
 
@@ -584,6 +587,37 @@ class State:
                         else:
                             # It's an UMIM event
                             new_elements.append(element)
+                    elif element.op == "activate":
+                        if element.spec.name in self.flow_configs:
+                            # It's a flow
+                            element.spec.arguments.update(
+                                {
+                                    "flow_id": f"'{element.spec.name}'",
+                                    "activated": "True",
+                                }
+                            )
+                            new_elements.append(
+                                SpecOp(
+                                    op="send",
+                                    spec=Spec(
+                                        name="StartFlow",
+                                        arguments=element.spec.arguments,
+                                    ),
+                                )
+                            )
+                            new_elements.append(
+                                SpecOp(
+                                    op="match",
+                                    spec=Spec(
+                                        name="FlowStarted",
+                                        arguments=element.spec.arguments,
+                                    ),
+                                )
+                            )
+                            config_changed = True
+                        else:
+                            # It's an UMIM event
+                            new_elements.append(element)
                     else:
                         new_elements.append(element)
                 flow_config.elements = new_elements
@@ -767,7 +801,9 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                     parent_flow = state.flow_states[parent_flow_uid]
                     flow_state.parent_uid = parent_flow_uid
                     parent_flow.child_flow_uids.append(flow_state.uid)
+
                     flow_state.loop_id = parent_flow.loop_id
+                    flow_state.activated = event.arguments.get("activated", False)
 
                     # Update context with event/flow parameters
                     # TODO: Check if we really need all arguments int the context
@@ -1074,6 +1110,25 @@ def _finish_flow(state: State, head: FlowHead) -> None:
     flow_state.status = FlowStatus.COMPLETED
 
     logging.info(f"Flow '{flow_state.flow_id}' finished")
+
+    if flow_state.activated:
+        # TODO: Check if this creates unwanted side effects of arguments being passed and keeping their state
+        arguments = dict(
+            [(arg, flow_state.context[arg]) for arg in flow_state.arguments]
+        )
+        arguments.update(
+            {
+                "flow_id": flow_state.context["flow_id"],
+                "source_flow_instance_uid": flow_state.context[
+                    "source_flow_instance_uid"
+                ],
+                "activated": flow_state.context["activated"],
+            }
+        )
+        event = create_internal_event("StartFlow", arguments, head.matching_scores)
+        state.internal_events.append(event)
+        logging.info(f"Activated flow '{flow_state.flow_id}' restart")
+        logging.info(f"Created internal event: {event}")
 
 
 def _is_listening_flow(flow_state: FlowState) -> bool:
