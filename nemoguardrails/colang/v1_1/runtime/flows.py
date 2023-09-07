@@ -640,7 +640,10 @@ def _create_flow_instance(
 
     for idx, param in enumerate(flow_config.parameters):
         flow_state.context.update(
-            {param.name: f"${idx}", f"${idx}": param.default_value_expr}
+            {
+                param.name: f"${idx}",
+                f"${idx}": eval_expression(param.default_value_expr, {}),
+            }
         )
 
     return flow_state
