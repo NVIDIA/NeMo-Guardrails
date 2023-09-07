@@ -851,11 +851,11 @@ def test_distributed_flow_matching():
       await UtteranceBotAction(script=$script)
 
     flow a
-      match user said "Hi"
+      match user said $transcript="Hi"
       bot say 'Check1'
 
     flow b
-      match user said "Hello"
+      match user said $transcript="Hello"
       bot say 'Check2'
 
     flow main

@@ -557,12 +557,16 @@ class State:
                     elif element.op == "match":
                         if element.spec.name in self.flow_configs:
                             # It's a flow
+                            arguments = {"flow_id": f"'{element.spec.name}'"}
+                            for arg in element.spec.arguments:
+                                arguments.update({arg: element.spec.arguments[arg]})
+
                             new_elements.append(
                                 SpecOp(
                                     op="match",
                                     spec=Spec(
                                         name="FlowFinished",
-                                        arguments={"flow_id": f"'{element.spec.name}'"},
+                                        arguments=arguments,
                                     ),
                                 )
                             )
@@ -639,6 +643,7 @@ def _create_flow_instance(
     )
 
     for idx, param in enumerate(flow_config.parameters):
+        flow_state.arguments.update({param.name: f"${idx}"})
         flow_state.context.update(
             {
                 param.name: f"${idx}",
@@ -1029,7 +1034,7 @@ def _finish_flow(state: State, head: FlowHead) -> None:
     flow_state = _get_flow_state_from_head(state, head)
 
     # Generate FlowFinished event
-    event = create_flow_finished_internal_event(flow_state.uid, head.matching_scores)
+    event = create_flow_finished_internal_event(flow_state, head.matching_scores)
     _push_internal_event(state, event)
 
     # Abort all running child flows
@@ -1474,12 +1479,21 @@ def create_flow_started_internal_event(
 
 
 def create_flow_finished_internal_event(
-    source_flow_instance_uid: str, matching_scores: List[float]
+    source_flow_state: FlowState, matching_scores: List[float]
 ) -> Event:
     """Returns 'FlowFinished' internal event"""
+    arguments = {"source_flow_instance_uid": source_flow_state.uid}
+    for arg in source_flow_state.arguments:
+        arguments.update(
+            {
+                arg: _evaluate_arguments(
+                    source_flow_state.arguments, source_flow_state.context
+                )
+            }
+        )
     return create_internal_event(
         "FlowFinished",
-        {"source_flow_instance_uid": source_flow_instance_uid},
+        arguments,
         matching_scores,
     )
 
