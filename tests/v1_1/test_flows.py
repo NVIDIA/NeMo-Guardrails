@@ -880,7 +880,7 @@ def test_distributed_flow_matching():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "CHeck2",
+                "script": "Check2",
             }
         ],
     )
