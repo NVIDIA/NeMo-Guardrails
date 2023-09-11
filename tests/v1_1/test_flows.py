@@ -999,5 +999,132 @@ def test_finish_flow_event():
     )
 
 
+def test_match_failure_flow_abort():
+    """Test the mechanism where a match statement FlowFinished/FlowFailed will abort the flow
+    if it fails to be satisfied"""
+
+    content = """
+    flow a
+      start b
+      match b
+
+    flow b
+      match WaitAction().Finished()
+
+    flow c
+      match UtteranceUserAction().Finished(final_transcript="Start")
+      send AbortFlow(flow_id="b")
+
+    flow main
+      start a
+      start c
+      match FlowFailed(flow_id="a")
+      await UtteranceBotAction(script="Yes")
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Start",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Yes",
+            }
+        ],
+    )
+
+
+def test_abort_flow_propagation_v_a():
+    """Test that when a child flow has failed, the parent flow will also fail if
+    matched on the FlowFinished() of the child flow."""
+
+    content = """
+    flow a
+      await b
+      await UtteranceBotAction(script="No1")
+
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="Hi")
+      await UtteranceBotAction(script="No2")
+
+    flow c
+      match FlowFailed(flow_id="a")
+      await UtteranceBotAction(script="No3")
+
+    flow main
+      start a
+      start c
+      send AbortFlow(flow_id="b")
+      match WaitAction().Finished()
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "No3",
+            }
+        ],
+    )
+
+
+def test_abort_flow_propagation_v_b():
+    """Test that when a child flow has failed, the parent flow will also fail if
+    matched on the FlowFinished() of the child flow."""
+
+    content = """
+    flow a
+      start b
+      match FlowFailed(flow_id="b")
+
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="Start")
+
+    flow c
+      match FlowFailed(flow_id="a")
+      await UtteranceBotAction(script="Ok")
+
+    flow main
+      start a
+      start c
+      match WaitAction().Finished()
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Start",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Ok",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_finish_flow_event()
+    test_abort_flow_propagation_v_b()

@@ -37,6 +37,6 @@ flow fallback
 #  send StartGenerateUserIntentAction
 
 flow main
-  start greeting
-  start fallback
+  activate greeting
+  activate fallback
   wait
