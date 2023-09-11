@@ -307,7 +307,7 @@ class FlowHead:
 class FlowStatus(Enum):
     """The status of a flow."""
 
-    WAITING = "inactive"
+    WAITING = "waiting"
     STARTING = "starting"
     STARTED = "started"
     ACTIVE = "active"
@@ -776,16 +776,27 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                     for flow_state in new_state.flow_id_states[
                         event.arguments["flow_id"]
                     ]:
-                        _finish_flow(new_state, flow_state, event.matching_scores)
+                        if _is_active_flow(flow_state):
+                            _finish_flow(new_state, flow_state, event.matching_scores)
                 elif "flow_instance_uid" in event.arguments:
                     flow_state = new_state.flow_states[
                         event.arguments["flow_instance_uid"]
                     ]
-                    _finish_flow(new_state, flow_state, event.matching_scores)
-                # TODO: Add support also for specific flow instances with "flow_instance_uid"
+                    if _is_active_flow(flow_state):
+                        _finish_flow(new_state, flow_state, event.matching_scores)
             elif event.name == InternalEvents.ABORT_FLOW:
-                flow_state = new_state.flow_states[event.arguments["source_flow_instance_uid"]]
-                _abort_flow(new_state, flow_state, event.matching_scores)
+                if "flow_id" in event.arguments:
+                    for flow_state in new_state.flow_id_states[
+                        event.arguments["flow_id"]
+                    ]:
+                        if _is_active_flow(flow_state):
+                            _abort_flow(new_state, flow_state, event.matching_scores)
+                elif "flow_instance_uid" in event.arguments:
+                    flow_state = new_state.flow_states[
+                        event.arguments["flow_instance_uid"]
+                    ]
+                    if _is_active_flow(flow_state):
+                        _abort_flow(new_state, flow_state, event.matching_scores)
                 # TODO: Add support for all flow instances of same flow with "flow_id"
             # elif event.name == "ResumeFlow":
             #     pass
@@ -796,7 +807,7 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
             heads_matching: List[FlowHead] = []
             heads_not_matching: List[FlowHead] = []
             heads_failing: List[FlowHead] = []
-            match_order_score : float = 1.0
+            match_order_score: float = 1.0
 
             # TODO: Create a head dict for all active flows to speed this up
             # Iterate over all flow states to check for the heads to match the event
@@ -817,15 +828,17 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                     # Make sure that we can always resolve conflicts, using the matching score
                     matching_score *= match_order_score
                     match_order_score *= 0.99
-                    head.matching_scores.append(matching_score)
                     head.matching_scores = event.matching_scores.copy()
+                    head.matching_scores.append(matching_score)
 
                     if matching_score > 0.0:
                         heads_matching.append(head)
                         logging.info(f"Matching head (score: {matching_score}): {head}")
                     elif matching_score < 0.0:
                         heads_failing.append(head)
-                        logging.info(f"Matching failure head (score: {matching_score}): {head}")
+                        logging.info(
+                            f"Matching failure head (score: {matching_score}): {head}"
+                        )
                     else:
                         heads_not_matching.append(head)
 
@@ -1079,28 +1092,26 @@ def slide(
 def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
     flow_config = state.flow_configs[flow_state.flow_id]
 
-    if flow_state == state.main_flow_state:
-        return
+    if flow_state != state.main_flow_state:
+        # Link to parent flow
+        parent_flow_uid = arguments["source_flow_instance_uid"]
+        parent_flow = state.flow_states[parent_flow_uid]
+        flow_state.parent_uid = parent_flow_uid
+        parent_flow.child_flow_uids.append(flow_state.uid)
 
-    # Link to parent flow
-    parent_flow_uid = arguments["source_flow_instance_uid"]
-    parent_flow = state.flow_states[parent_flow_uid]
-    flow_state.parent_uid = parent_flow_uid
-    parent_flow.child_flow_uids.append(flow_state.uid)
+        flow_state.loop_id = parent_flow.loop_id
+        flow_state.activated = arguments.get("activated", False)
 
-    flow_state.loop_id = parent_flow.loop_id
-    flow_state.activated = arguments.get("activated", False)
-
-    # Update context with event/flow parameters
-    # TODO: Check if we really need all arguments int the context
-    flow_state.context.update(arguments)
-    # Resolve positional flow parameters to their actual name in the flow
-    for idx in range(10):
-        pos_arg = f"${idx}"
-        if pos_arg in arguments:
-            flow_state.context[flow_state.arguments[idx]] = arguments[pos_arg]
-        else:
-            break
+        # Update context with event/flow parameters
+        # TODO: Check if we really need all arguments int the context
+        flow_state.context.update(arguments)
+        # Resolve positional flow parameters to their actual name in the flow
+        for idx in range(10):
+            pos_arg = f"${idx}"
+            if pos_arg in arguments:
+                flow_state.context[flow_state.arguments[idx]] = arguments[pos_arg]
+            else:
+                break
 
     # Initialize new flow instance of flow
     _add_new_flow_instance(state, _create_flow_instance(flow_config))
@@ -1126,6 +1137,10 @@ def _abort_flow(
     flow_state.status = FlowStatus.ABORTED
 
     logging.info(f"Flow '{flow_state.flow_id}' aborted/failed")
+
+    if flow_state.activated:
+        _restart_flow(state, flow_state, matching_scores)
+        logging.info(f"Activated flow '{flow_state.flow_id}' restart")
 
 
 def _finish_flow(
@@ -1153,25 +1168,26 @@ def _finish_flow(
     logging.info(f"Flow '{flow_state.flow_id}' finished")
 
     if flow_state.activated:
-        # TODO: Check if this creates unwanted side effects of arguments being passed and keeping their state
-        arguments = dict(
-            [(arg, flow_state.context[arg]) for arg in flow_state.arguments]
-        )
-        arguments.update(
-            {
-                "flow_id": flow_state.context["flow_id"],
-                "source_flow_instance_uid": flow_state.context[
-                    "source_flow_instance_uid"
-                ],
-                "activated": flow_state.context["activated"],
-            }
-        )
-        event = create_internal_event(
-            InternalEvents.START_FLOW, arguments, matching_scores
-        )
-        state.internal_events.append(event)
+        _restart_flow(state, flow_state, matching_scores)
         logging.info(f"Activated flow '{flow_state.flow_id}' restart")
-        logging.info(f"Created internal event: {event}")
+
+
+def _restart_flow(
+    state: State, flow_state: FlowState, matching_scores: List[float]
+) -> None:
+    # TODO: Check if this creates unwanted side effects of arguments being passed and keeping their state
+    arguments = dict([(arg, flow_state.context[arg]) for arg in flow_state.arguments])
+    arguments.update(
+        {
+            "flow_id": flow_state.context["flow_id"],
+            "source_flow_instance_uid": flow_state.context["source_flow_instance_uid"],
+            "activated": flow_state.context["activated"],
+        }
+    )
+    event = create_internal_event(InternalEvents.START_FLOW, arguments, matching_scores)
+    state.internal_events.append(event)
+
+    logging.info(f"Created internal event: {event}")
 
 
 def _is_listening_flow(flow_state: FlowState) -> bool:
@@ -1259,12 +1275,30 @@ def _compute_event_matching_score(
             and ref_event.arguments["flow_id"] == event.arguments["flow_id"]
         )
     elif event.name in InternalEvents.ALL and ref_event.name in InternalEvents.ALL:
-
-        if ref_event.arguments["flow_id"] == state.flow_states[event.arguments["source_flow_instance_uid"]].flow_id:
-            match_score = _compute_arguments_dict_matching_score(event.arguments, ref_event.arguments)
+        if (
+            ref_event.arguments["flow_id"]
+            == state.flow_states[event.arguments["source_flow_instance_uid"]].flow_id
+        ):
+            match_score = _compute_arguments_dict_matching_score(
+                event.arguments, ref_event.arguments
+            )
             if match_score > 0.0:
-                if ((ref_event.name == InternalEvents.FLOW_FINISHED and event.name == InternalEvents.FLOW_FAILED)
-                    or (ref_event.name == InternalEvents.FLOW_FAILED and event.name == InternalEvents.FINISH_FLOW)
+                if (
+                    (
+                        ref_event.name == InternalEvents.FLOW_FINISHED
+                        and event.name == InternalEvents.FLOW_FAILED
+                    )
+                    or (
+                        ref_event.name == InternalEvents.FLOW_FAILED
+                        and event.name == InternalEvents.FLOW_FINISHED
+                    )
+                    or (
+                        ref_event.name == InternalEvents.FLOW_STARTED
+                        and (
+                            event.name == InternalEvents.FLOW_FINISHED
+                            or event.name == InternalEvents.FLOW_FAILED
+                        )
+                    )
                 ):
                     # Match failure
                     return -1.0
