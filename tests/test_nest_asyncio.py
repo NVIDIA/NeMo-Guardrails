@@ -54,7 +54,7 @@ async def test_async_api_error(monkeypatch):
 
     with pytest.raises(
         RuntimeError,
-        match=r"asyncio.run\(\) cannot be called from a running event loop",
+        match=r"You are using the sync `generate` inside async code.",
     ):
         chat >> "Hi!"
         chat << "Hello there!"
