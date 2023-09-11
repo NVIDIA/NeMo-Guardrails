@@ -998,6 +998,50 @@ def test_finish_flow_event():
         ],
     )
 
+def test_match_failure_flow_abort():
+    """Test the mechanism where a match statement FlowFinished/FlowFailed will abort the flow
+    if it fails to be satisfied"""
+
+    content = """
+    flow a
+      start b
+      match b
+
+    flow b
+      match WaitAction().Finished()
+
+    flow c
+      match UtteranceUserAction().Finished(final_transcript="Start")
+      send AbortFlow(flow_id="b")
+
+    flow main
+      start a
+      start c
+      match FlowFailed(flow_id="a")
+      await UtteranceBotAction(script="Yes")
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,[],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Start",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Yes",
+            }
+        ],
+    )
+
 
 if __name__ == "__main__":
-    test_finish_flow_event()
+    test_match_failure_flow_abort()

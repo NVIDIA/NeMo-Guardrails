@@ -784,7 +784,7 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                     _finish_flow(new_state, flow_state, event.matching_scores)
                 # TODO: Add support also for specific flow instances with "flow_instance_uid"
             elif event.name == InternalEvents.ABORT_FLOW:
-                flow_state = new_state.flow_states[event.arguments["flow_instance_uid"]]
+                flow_state = new_state.flow_states[event.arguments["source_flow_instance_uid"]]
                 _abort_flow(new_state, flow_state, event.matching_scores)
                 # TODO: Add support for all flow instances of same flow with "flow_id"
             # elif event.name == "ResumeFlow":
@@ -795,7 +795,8 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
             # Find all heads of flows where event is relevant
             heads_matching: List[FlowHead] = []
             heads_not_matching: List[FlowHead] = []
-            match_order_score = 1.0
+            heads_failing: List[FlowHead] = []
+            match_order_score : float = 1.0
 
             # TODO: Create a head dict for all active flows to speed this up
             # Iterate over all flow states to check for the heads to match the event
@@ -813,15 +814,18 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                     matching_score = _compute_event_matching_score(
                         new_state, flow_state, element, event
                     )
-                    if matching_score > 0.0:
-                        head.matching_scores = event.matching_scores.copy()
-                        # Make sure that we can always resolve conflicts, using the matching score
-                        matching_score *= match_order_score
-                        match_order_score *= 0.99
-                        head.matching_scores.append(matching_score)
+                    # Make sure that we can always resolve conflicts, using the matching score
+                    matching_score *= match_order_score
+                    match_order_score *= 0.99
+                    head.matching_scores.append(matching_score)
+                    head.matching_scores = event.matching_scores.copy()
 
+                    if matching_score > 0.0:
                         heads_matching.append(head)
                         logging.info(f"Matching head (score: {matching_score}): {head}")
+                    elif matching_score < 0.0:
+                        heads_failing.append(head)
+                        logging.info(f"Matching failure head (score: {matching_score}): {head}")
                     else:
                         heads_not_matching.append(head)
 
@@ -847,6 +851,9 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
             #         flow_state = _get_flow_state_from_head(new_state, head)
             #         _abort_flow(new_state, flow_state, [])
             # return new_state
+            for head in heads_failing:
+                flow_state = _get_flow_state_from_head(new_state, head)
+                _abort_flow(new_state, flow_state, [])
 
             # Advance front of all matching heads to actionable or match statements
             actionable_heads = actionable_heads.union(
@@ -1224,42 +1231,19 @@ def _is_match_op_element(element: SpecOp) -> bool:
 def _compute_event_matching_score(
     state: State, flow_state: FlowState, element: SpecOp, event: Event
 ) -> float:
-    """Checks if the given element matches the given event."""
+    """Checks if the given element matches the given event.
+
+    Args:
+    Returns:
+        1.0: Exact match (all parameters match)
+        < 1.0: Fuzzy match (some parameters are missing, but all the others match)
+        0.0: No match
+        -1.0: Event will fail the current match
+    """
 
     assert _is_match_op_element(element), f"Element '{element}' is not a match element!"
 
     ref_event = _get_event_from_element(state, flow_state, element)
-
-    # element_spec = element["spec"]
-
-    # element_spec_args = element["spec"]["arguments"] or {}
-    # element_spec_args = dict(
-    #     [
-    #         (key, eval_expression(element_spec_args[key], flow_state.context))
-    #         for key in element_spec_args
-    #     ]
-    # )
-
-    # # Convert element to matching reference event
-    # ref_event: Event
-    # if element_spec["var_name"] is not None:
-    #     # Element refers to a reference variable
-    #     variable_name = element_spec["var_name"]
-    #     if variable_name not in flow_state.context:
-    #         logging.warning(f"Unkown variable: '{variable_name}'!")
-    #         return 0.0
-
-    #     # Resolve variable
-    #     context_variable = flow_state.context[variable_name]
-    #     if context_variable["type"] == ContextVariableType.ACTION_REFERENCE:
-    #         action = flow_state.actions[context_variable["value"]]
-    #         action_event_name = element.spec.members[0]["name"]
-    #         ref_event: Event = action.get_event(action_event_name, element_spec_args)
-    # else:
-    #     # Element refers to an event
-    #     ref_event = Event(element_spec["name"], event.arguments)
-
-    FUZZY_MATCH_FACTOR = 0.5
 
     # Compute matching score based on event argument matching
     if event.name == InternalEvents.START_FLOW:
@@ -1274,17 +1258,21 @@ def _compute_event_matching_score(
             ref_event.name == InternalEvents.START_FLOW
             and ref_event.arguments["flow_id"] == event.arguments["flow_id"]
         )
-    elif event.name in InternalEvents.ALL:
-        if (
-            ref_event.name != event.name
-            or ref_event.arguments["flow_id"]
-            != state.flow_states[event.arguments["source_flow_instance_uid"]].flow_id
-        ):
-            return 0.0
+    elif event.name in InternalEvents.ALL and ref_event.name in InternalEvents.ALL:
 
-        return _compute_arguments_dict_matching_score(
-            event.arguments, ref_event.arguments
-        )
+        if ref_event.arguments["flow_id"] == state.flow_states[event.arguments["source_flow_instance_uid"]].flow_id:
+            match_score = _compute_arguments_dict_matching_score(event.arguments, ref_event.arguments)
+            if match_score > 0.0:
+                if ((ref_event.name == InternalEvents.FLOW_FINISHED and event.name == InternalEvents.FLOW_FAILED)
+                    or (ref_event.name == InternalEvents.FLOW_FAILED and event.name == InternalEvents.FINISH_FLOW)
+                ):
+                    # Match failure
+                    return -1.0
+                elif ref_event.name == event.name:
+                    # Match success
+                    return match_score
+        # No match
+        return 0.0
 
     else:
         # Its an UMIM event
