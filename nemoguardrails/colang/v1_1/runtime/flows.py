@@ -59,6 +59,27 @@ Questions:
 """
 
 
+@dataclass
+class InternalEvents:
+    """All internal event types."""
+
+    START_FLOW = "StartFlow"
+    FINISH_FLOW = "FinishFlow"
+    ABORT_FLOW = "AbortFlow"
+    FLOW_STARTED = "FlowStarted"
+    FLOW_FINISHED = "FlowFinished"
+    FLOW_FAILED = "FlowFailed"
+
+    ALL = {
+        START_FLOW,
+        FINISH_FLOW,
+        ABORT_FLOW,
+        FLOW_STARTED,
+        FLOW_FINISHED,
+        FLOW_FAILED,
+    }
+
+
 class ContextVariableType(Enum):
     """The type of a context variable."""
 
@@ -286,7 +307,7 @@ class FlowHead:
 class FlowStatus(Enum):
     """The status of a flow."""
 
-    INACTIVE = "inactive"
+    WAITING = "inactive"
     STARTING = "starting"
     STARTED = "started"
     ACTIVE = "active"
@@ -330,7 +351,10 @@ class FlowState:
     child_flow_uids: List[str] = field(default_factory=list)
 
     # The current state of the flow
-    status: FlowStatus = FlowStatus.INACTIVE
+    status: FlowStatus = FlowStatus.WAITING
+
+    # An activated flow will restart immediately when finished
+    activated: bool = False
 
     # The UID of the flows that interrupted this one
     # interrupted_by = None
@@ -358,7 +382,11 @@ class FlowState:
     # Flow events to send
     def start(self, args: dict) -> FlowEvent:
         """Starts the flow. Takes no arguments."""
-        return FlowEvent("StartFlow", {"flow_id": self.flow_id})
+        return FlowEvent(InternalEvents.START_FLOW, {"flow_id": self.flow_id})
+
+    def finish(self, args: dict) -> FlowEvent:
+        """Finishes the flow. Takes no arguments."""
+        return FlowEvent(InternalEvents.FINISH_FLOW, {"flow_id": self.flow_id})
 
     def stop(self, args: dict) -> FlowEvent:
         """Stops the flow. Takes no arguments."""
@@ -380,7 +408,7 @@ class FlowState:
         arguments["flow_arguments"] = dict(
             [(arg, self.context[arg]) for arg in self.arguments]
         )
-        return FlowEvent("FlowStarted", arguments)
+        return FlowEvent(InternalEvents.FLOW_STARTED, arguments)
 
     def paused_event(self, args: dict) -> FlowEvent:
         """Returns the flow Pause event."""
@@ -407,7 +435,7 @@ class FlowState:
         arguments["flow_arguments"] = dict(
             [(arg, self.context[arg]) for arg in self.arguments]
         )
-        return FlowEvent("FlowFinished", arguments)
+        return FlowEvent(InternalEvents.FLOW_FINISHED, arguments)
 
     def failed_event(self, args: dict) -> FlowEvent:
         """Returns the flow Failed event."""
@@ -416,7 +444,7 @@ class FlowState:
         arguments["flow_arguments"] = dict(
             [(arg, self.context[arg]) for arg in self.arguments]
         )
-        return FlowEvent("FlowFailed", arguments)
+        return FlowEvent(InternalEvents.FLOW_FAILED, arguments)
 
 
 @dataclass_json
@@ -528,7 +556,7 @@ class State:
                                 SpecOp(
                                     op="send",
                                     spec=Spec(
-                                        name="StartFlow",
+                                        name=InternalEvents.START_FLOW,
                                         arguments=element.spec.arguments,
                                     ),
                                 )
@@ -537,7 +565,7 @@ class State:
                                 SpecOp(
                                     op="match",
                                     spec=Spec(
-                                        name="FlowStarted",
+                                        name=InternalEvents.FLOW_STARTED,
                                         arguments=element.spec.arguments,
                                     ),
                                 )
@@ -575,8 +603,39 @@ class State:
                                 SpecOp(
                                     op="match",
                                     spec=Spec(
-                                        name="FlowFinished",
+                                        name=InternalEvents.FLOW_FINISHED,
                                         arguments=arguments,
+                                    ),
+                                )
+                            )
+                            config_changed = True
+                        else:
+                            # It's an UMIM event
+                            new_elements.append(element)
+                    elif element.op == "activate":
+                        if element.spec.name in self.flow_configs:
+                            # It's a flow
+                            element.spec.arguments.update(
+                                {
+                                    "flow_id": f"'{element.spec.name}'",
+                                    "activated": "True",
+                                }
+                            )
+                            new_elements.append(
+                                SpecOp(
+                                    op="send",
+                                    spec=Spec(
+                                        name=InternalEvents.START_FLOW,
+                                        arguments=element.spec.arguments,
+                                    ),
+                                )
+                            )
+                            new_elements.append(
+                                SpecOp(
+                                    op="match",
+                                    spec=Spec(
+                                        name=InternalEvents.FLOW_STARTED,
+                                        arguments=element.spec.arguments,
                                     ),
                                 )
                             )
@@ -712,9 +771,22 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
             logging.info(f"Process internal event: {event}")
 
             # Handle internal events that have no default matchers in flows yet
-            if event.name == "AbortFlow":
-                flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
+            if event.name == InternalEvents.FINISH_FLOW:
+                if "flow_id" in event.arguments:
+                    for flow_state in new_state.flow_id_states[
+                        event.arguments["flow_id"]
+                    ]:
+                        _finish_flow(new_state, flow_state, event.matching_scores)
+                elif "flow_instance_uid" in event.arguments:
+                    flow_state = new_state.flow_states[
+                        event.arguments["flow_instance_uid"]
+                    ]
+                    _finish_flow(new_state, flow_state, event.matching_scores)
+                # TODO: Add support also for specific flow instances with "flow_instance_uid"
+            elif event.name == InternalEvents.ABORT_FLOW:
+                flow_state = new_state.flow_states[event.arguments["flow_instance_uid"]]
                 _abort_flow(new_state, flow_state, event.matching_scores)
+                # TODO: Add support for all flow instances of same flow with "flow_id"
             # elif event.name == "ResumeFlow":
             #     pass
             # elif event.name == "PauseFlow":
@@ -727,11 +799,11 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
 
             # TODO: Create a head dict for all active flows to speed this up
             # Iterate over all flow states to check for the heads to match the event
-            for flow_state in state.flow_states.values():
+            for flow_state in new_state.flow_states.values():
                 if not _is_listening_flow(flow_state):
                     continue
 
-                flow_config = state.flow_configs[flow_state.flow_id]
+                flow_config = new_state.flow_configs[flow_state.flow_id]
                 # TODO: Generalize to multiple heads in flow
                 head = flow_state.head
 
@@ -755,39 +827,13 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
 
             # Handle internal event matching
             for head in heads_matching:
-                if event.name == "StartFlow":
-                    flow_state = _get_flow_state_from_head(state, head)
-                    flow_config = _get_flow_config_from_head(state, head)
-
-                    if flow_state == state.main_flow_state:
-                        continue
-
-                    # Link to parent flow
-                    parent_flow_uid = event.arguments["source_flow_instance_uid"]
-                    parent_flow = state.flow_states[parent_flow_uid]
-                    flow_state.parent_uid = parent_flow_uid
-                    parent_flow.child_flow_uids.append(flow_state.uid)
-                    flow_state.loop_id = parent_flow.loop_id
-
-                    # Update context with event/flow parameters
-                    # TODO: Check if we really need all arguments int the context
-                    flow_state.context.update(event.arguments)
-                    # Resolve positional flow parameters to their actual name in the flow
-                    for idx in range(10):
-                        pos_arg = f"${idx}"
-                        if pos_arg in event.arguments:
-                            flow_state.context[
-                                flow_state.arguments[idx]
-                            ] = event.arguments[pos_arg]
-                        else:
-                            break
-
-                    # Initialize new flow instance of flow
-                    _add_new_flow_instance(
-                        new_state, _create_flow_instance(flow_config)
-                    )
+                if event.name == InternalEvents.START_FLOW:
+                    flow_state = _get_flow_state_from_head(new_state, head)
+                    _start_flow(new_state, flow_state, event.arguments)
+                # elif event.name == InternalEvents.FINISH_FLOW:
+                #     _finish_flow(new_state, flow_state)
                 # TODO: Introduce default matching statements with heads for all flows
-                # elif event.name == "AbortFlow":
+                # elif event.name == InternalEvents.ABORT_FLOW:
                 #     _abort_flow(new_state, flow_state)
                 # elif event.name == "ResumeFlow":
                 #     pass
@@ -866,7 +912,7 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
 
                         advancing_heads.append(head)
                     else:
-                        flow_state = _get_flow_state_from_head(state, head)
+                        flow_state = _get_flow_state_from_head(new_state, head)
                         logging.info(f"Conflicting action at head: {head}")
                         _abort_flow(new_state, flow_state, head.matching_scores)
 
@@ -874,7 +920,7 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
         actionable_heads = _advance_head_front(new_state, advancing_heads)
 
     # Update all external event related actions in all flows that were not updated yet
-    for flow_state in state.flow_states.values():
+    for flow_state in new_state.flow_states.values():
         if not _is_listening_flow(flow_state):
             # Don't process flows that are no longer active
             continue
@@ -901,7 +947,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
         flow_state = _get_flow_state_from_head(state, head)
         flow_config = _get_flow_config_from_head(state, head)
 
-        if flow_state.status == FlowStatus.INACTIVE:
+        if flow_state.status == FlowStatus.WAITING:
             flow_state.status = FlowStatus.STARTING
 
         head.position += 1
@@ -930,18 +976,9 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
         # Check if flow has finished
         # TODO: Refactor to properly finish flow and all its child flows
         if flow_finished:
-            _finish_flow(state, head)
+            _finish_flow(state, flow_state, head.matching_scores)
 
     return heads_actionable
-
-
-INTERNAL_EVENTS = {
-    "StartFlow",
-    "AbortFLow",
-    "FlowStarted",
-    "FlowFinished",
-    "FlowFailed",
-}
 
 
 # TODO: Implement support for more sliding operations
@@ -972,7 +1009,7 @@ def slide(
 
         logging.info(f"Sliding step: '{element.op}'")
 
-        if element.op == "send" and element.spec.name in INTERNAL_EVENTS:
+        if element.op == "send" and element.spec.name in InternalEvents.ALL:
             # Evaluate expressions (eliminate all double quotes)
             event_arguments = _evaluate_arguments(
                 element.spec.arguments, flow_state.context
@@ -1032,6 +1069,36 @@ def slide(
     return internal_events
 
 
+def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
+    flow_config = state.flow_configs[flow_state.flow_id]
+
+    if flow_state == state.main_flow_state:
+        return
+
+    # Link to parent flow
+    parent_flow_uid = arguments["source_flow_instance_uid"]
+    parent_flow = state.flow_states[parent_flow_uid]
+    flow_state.parent_uid = parent_flow_uid
+    parent_flow.child_flow_uids.append(flow_state.uid)
+
+    flow_state.loop_id = parent_flow.loop_id
+    flow_state.activated = arguments.get("activated", False)
+
+    # Update context with event/flow parameters
+    # TODO: Check if we really need all arguments int the context
+    flow_state.context.update(arguments)
+    # Resolve positional flow parameters to their actual name in the flow
+    for idx in range(10):
+        pos_arg = f"${idx}"
+        if pos_arg in arguments:
+            flow_state.context[flow_state.arguments[idx]] = arguments[pos_arg]
+        else:
+            break
+
+    # Initialize new flow instance of flow
+    _add_new_flow_instance(state, _create_flow_instance(flow_config))
+
+
 def _abort_flow(
     state: State, flow_state: FlowState, matching_scores: List[float]
 ) -> None:
@@ -1054,12 +1121,15 @@ def _abort_flow(
     logging.info(f"Flow '{flow_state.flow_id}' aborted/failed")
 
 
-def _finish_flow(state: State, head: FlowHead) -> None:
-    """Finishes a flow instance and all active its child flows."""
-    flow_state = _get_flow_state_from_head(state, head)
+def _finish_flow(
+    state: State, flow_state: FlowState, matching_scores: List[float]
+) -> None:
+    """Finishes a flow instance and all its active child flows."""
+    if not _is_active_flow(flow_state):
+        return
 
     # Generate FlowFinished event
-    event = create_flow_finished_internal_event(flow_state, head.matching_scores)
+    event = create_flow_finished_internal_event(flow_state, matching_scores)
     _push_internal_event(state, event)
 
     # Abort all running child flows
@@ -1067,7 +1137,7 @@ def _finish_flow(state: State, head: FlowHead) -> None:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
             event = create_abort_flow_internal_event(
-                child_flow_state.uid, flow_state.uid, head.matching_scores
+                child_flow_state.uid, flow_state.uid, matching_scores
             )
             _push_internal_event(state, event)
 
@@ -1075,11 +1145,40 @@ def _finish_flow(state: State, head: FlowHead) -> None:
 
     logging.info(f"Flow '{flow_state.flow_id}' finished")
 
+    if flow_state.activated:
+        # TODO: Check if this creates unwanted side effects of arguments being passed and keeping their state
+        arguments = dict(
+            [(arg, flow_state.context[arg]) for arg in flow_state.arguments]
+        )
+        arguments.update(
+            {
+                "flow_id": flow_state.context["flow_id"],
+                "source_flow_instance_uid": flow_state.context[
+                    "source_flow_instance_uid"
+                ],
+                "activated": flow_state.context["activated"],
+            }
+        )
+        event = create_internal_event(
+            InternalEvents.START_FLOW, arguments, matching_scores
+        )
+        state.internal_events.append(event)
+        logging.info(f"Activated flow '{flow_state.flow_id}' restart")
+        logging.info(f"Created internal event: {event}")
+
 
 def _is_listening_flow(flow_state: FlowState) -> bool:
     return (
-        flow_state.status == FlowStatus.INACTIVE
+        flow_state.status == FlowStatus.WAITING
         or flow_state.status == FlowStatus.ACTIVE
+        or flow_state.status == FlowStatus.STARTED
+        or flow_state.status == FlowStatus.STARTING
+    )
+
+
+def _is_active_flow(flow_state: FlowState) -> bool:
+    return (
+        flow_state.status == FlowStatus.ACTIVE
         or flow_state.status == FlowStatus.STARTED
         or flow_state.status == FlowStatus.STARTING
     )
@@ -1110,7 +1209,7 @@ def _is_action_op_element(element: SpecOp) -> bool:
     return (
         isinstance(element, SpecOp)
         and element.op == "send"
-        and element.spec.name not in INTERNAL_EVENTS
+        and element.spec.name not in InternalEvents.ALL
     )
 
 
@@ -1163,7 +1262,7 @@ def _compute_event_matching_score(
     FUZZY_MATCH_FACTOR = 0.5
 
     # Compute matching score based on event argument matching
-    if event.name == "StartFlow":
+    if event.name == InternalEvents.START_FLOW:
         for var in event.arguments:
             if (
                 var in ref_event.arguments
@@ -1172,10 +1271,10 @@ def _compute_event_matching_score(
                 return 0.0
 
         return float(
-            ref_event.name == "StartFlow"
+            ref_event.name == InternalEvents.START_FLOW
             and ref_event.arguments["flow_id"] == event.arguments["flow_id"]
         )
-    elif event.name in INTERNAL_EVENTS:
+    elif event.name in InternalEvents.ALL:
         if (
             ref_event.name != event.name
             or ref_event.arguments["flow_id"]
@@ -1489,7 +1588,7 @@ def create_abort_flow_internal_event(
 ) -> Event:
     """Returns 'AbortFlow' internal event"""
     return create_internal_event(
-        "AbortFlow",
+        InternalEvents.ABORT_FLOW,
         {
             "flow_instance_uid": flow_instance_uid,
             "source_flow_instance_uid": source_flow_instance_uid,
@@ -1503,7 +1602,7 @@ def create_flow_started_internal_event(
 ) -> Event:
     """Returns 'FlowStarted' internal event"""
     return create_internal_event(
-        "FlowStarted",
+        InternalEvents.FLOW_STARTED,
         {"source_flow_instance_uid": source_flow_instance_uid},
         matching_scores,
     )
@@ -1517,7 +1616,7 @@ def create_flow_finished_internal_event(
     for arg in source_flow_state.arguments:
         arguments.update({arg: source_flow_state.context[arg]})
     return create_internal_event(
-        "FlowFinished",
+        InternalEvents.FLOW_FINISHED,
         arguments,
         matching_scores,
     )
@@ -1528,7 +1627,7 @@ def create_flow_failed_internal_event(
 ) -> Event:
     """Returns 'FlowFailed' internal event"""
     return create_internal_event(
-        "FlowFailed",
+        InternalEvents.FLOW_FAILED,
         {"source_flow_instance_uid": source_flow_instance_uid},
         matching_scores,
     )

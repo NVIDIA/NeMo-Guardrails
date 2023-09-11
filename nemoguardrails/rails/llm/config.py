@@ -390,13 +390,18 @@ class RailsConfig(BaseModel):
         """Loads a configuration from the provided colang/YAML content."""
         raw_config = {}
 
-        if colang_content:
-            _join_config(
-                raw_config, parse_colang_file("main.co", content=colang_content)
-            )
-
         if yaml_content:
             _join_config(raw_config, yaml.safe_load(yaml_content))
+
+        if colang_content:
+            _join_config(
+                raw_config,
+                parse_colang_file(
+                    "main.co",
+                    content=colang_content,
+                    version=raw_config.get("colang_version", "1.0"),
+                ),
+            )
 
         # If there are no instructions, we use the default ones.
         if len(raw_config.get("instructions", [])) == 0:
