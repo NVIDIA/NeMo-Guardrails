@@ -18,6 +18,7 @@ import asyncio
 import importlib.util
 import logging
 import os
+import threading
 import time
 from typing import Any, List, Optional, Type, Union
 
@@ -142,7 +143,12 @@ class LLMRails:
         self.runtime.register_actions(self.llm_generation_actions, override=False)
 
         # Next, we initialize the Knowledge Base
-        asyncio.run(self._init_kb())
+        if check_sync_call_from_async_loop():
+            t = threading.Thread(target=asyncio.run, args=(self._init_kb(),))
+            t.start()
+            t.join()
+        else:
+            asyncio.run(self._init_kb())
 
         # We also register the kb as a parameter that can be passed to actions.
         self.runtime.register_action_param("kb", self.kb)
