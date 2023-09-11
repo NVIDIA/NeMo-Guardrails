@@ -39,7 +39,11 @@ def test_sync_api():
 
 
 @pytest.mark.asyncio
-async def test_async_api():
+async def test_async_api(monkeypatch):
+    monkeypatch.setenv("DISABLE_NEST_ASYNCIO", "False")
+
+    importlib.reload(nemoguardrails)
+
     chat >> "Hi!"
     chat << "Hello there!"
 
@@ -54,7 +58,7 @@ async def test_async_api_error(monkeypatch):
 
     with pytest.raises(
         RuntimeError,
-        match=r"You are using the sync `generate` inside async code.",
+        match=r"asyncio.run\(\) cannot be called from a running event loop",
     ):
         chat >> "Hi!"
         chat << "Hello there!"
