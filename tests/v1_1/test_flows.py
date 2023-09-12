@@ -85,7 +85,15 @@ def test_match_umim_event():
         state,
         {
             "type": "UtteranceUserActionFinished",
+            "uid": "d4a265bb-4a27-4d28-8ca5-80cc73dc4707",
+            "event_created_at": "2023-09-12T13:01:16.334940+00:00",
+            "source_uid": "umim_tui_app",
+            "action_uid": "cc63b1a0-5703-4e80-b66b-2734c13abcf3",
             "final_transcript": "Hi",
+            "is_success": True,
+            "action_info_modality": "user_speech",
+            "action_info_modality_policy": "replace",
+            "action_finished_at": "2023-09-12T13:01:16.334954+00:00",
         },
     )
     assert is_data_in_events(
@@ -1127,4 +1135,4 @@ def test_abort_flow_propagation_v_b():
 
 
 if __name__ == "__main__":
-    test_abort_flow_propagation_v_b()
+    test_match_umim_event()

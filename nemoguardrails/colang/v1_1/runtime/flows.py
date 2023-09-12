@@ -1319,7 +1319,7 @@ def _compute_event_matching_score(
         ):
             return 0.0
 
-        if event.action_uid is not None:
+        if event.action_uid is not None and event.action_uid in state.actions:
             action_arguments = state.actions[event.action_uid].start_event_arguments
             event.arguments["action_arguments"] = action_arguments
 
