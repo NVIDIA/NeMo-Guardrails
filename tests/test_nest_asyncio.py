@@ -39,7 +39,11 @@ def test_sync_api():
 
 
 @pytest.mark.asyncio
-async def test_async_api():
+async def test_async_api(monkeypatch):
+    monkeypatch.setenv("DISABLE_NEST_ASYNCIO", "False")
+
+    importlib.reload(nemoguardrails)
+
     chat >> "Hi!"
     chat << "Hello there!"
 

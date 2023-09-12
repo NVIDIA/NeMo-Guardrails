@@ -155,3 +155,35 @@ Optionally, the output from the LLM can be parsed using an *output parser*. The 
 Currently, the NeMo Guardrails toolkit includes prompts for `openai/text-davinci-003`, `openai/gpt-3.5-turbo`, `openai/gpt-4`, `databricks/dolly-v2-3b`, `cohere/command`, `cohere/command-light`, `cohere/command-light-nightly`.
 
 **DISCLAIMER**: Evaluating and improving the provided prompts is a work in progress. We do not recommend deploying this alpha version using these prompts in a production setting.
+
+## Custom Tasks and Prompts
+
+In the scenario where you would like to create a custom task beyond those included in
+[the default tasks](../../../nemoguardrails/llm/types.py), you can include the task and associated prompt as provided in the example below:
+
+```yaml
+prompts:
+- task: summarize_text
+  content: |-
+      Text: {{ user_input }}
+      Summarize the above text.
+```
+
+Refer to ["Prompt Customization"](#prompt-customization) on where to include this custom task and prompt.
+
+Within an action, this prompt can be rendered via the `LLMTaskManager`:
+
+```python
+prompt = llm_task_manager.render_task_prompt(
+    task="summarize_text",
+    context={
+        "user_input": user_input,
+    },
+)
+
+with llm_params(llm, temperature=0.0):
+    check = await llm_call(llm, prompt)
+...
+```
+
+With this approach, you can quickly modify custom tasks' prompts in your configuration files.
