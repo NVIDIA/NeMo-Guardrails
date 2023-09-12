@@ -31,6 +31,8 @@ from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_name
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
+from nemoguardrails.llm.taskmanager import LLMTaskManager
+
 
 log = logging.getLogger(__name__)
 
@@ -153,6 +155,40 @@ class LLMRails:
                 self.runtime.register_action_param(
                     model_name, getattr(self, model_name)
                 )
+
+
+    def update_config(self, config: RailsConfig):
+        """Automatic updating for colang files"""
+
+        # Replace old config with updated one
+        self.config = config
+        self.config.flows = config.flows
+    
+        # We also load the default flows from the `default_flows.yml` file in the current folder.
+        current_folder = os.path.dirname(__file__)
+        default_flows_path = os.path.join(current_folder, "llm_flows.co")
+        with open(default_flows_path, "r") as f:
+            default_flows_content = f.read()
+            default_flows = parse_colang_file("llm_flows.co", default_flows_content)[
+                "flows"
+            ]
+
+        # We add the default flows to the config.
+        self.config.flows.extend(default_flows)
+
+        # Creating new runtime with updated config
+        self.runtime = Runtime(config=self.config, verbose=self.verbose)
+        actions = LLMGenerationActions(
+            config=self.config,
+            llm=self.llm,
+            llm_task_manager=self.runtime.llm_task_manager,
+            verbose=self.verbose,
+        )
+
+        # Registering updated actions & databases
+        self.runtime.register_actions(actions)
+        self.runtime.register_action_param("kb", actions.kb)
+
 
     def _get_events_for_messages(self, messages: List[dict]):
         """Return the list of events corresponding to the provided messages.

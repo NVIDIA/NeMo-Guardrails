@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig
+from fastapi_utils.tasks import repeat_every
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -104,24 +105,31 @@ def get_rails_configs():
             or os.path.exists(os.path.join(app.rails_config_path, f, "config.yaml"))
         )
     ]
-
+    
     return [{"id": config_id} for config_id in config_ids]
 
 
 # One instance of LLMRails per config id
 llm_rails_instances = {}
+# Config_ids for LLMs
+llm_configs = []
+
+@app.on_event("startup")
+@repeat_every(seconds = 1)
+async def update_rails():
+    llm_configs = await get_rails_configs()
+    for cfg in llm_configs:
+        rails_config = RailsConfig.from_path(os.path.join(app.rails_config_path, cfg["id"]))
+        if cfg['id'] in llm_rails_instances:
+            llm_rails_instances[cfg['id']].update_config(rails_config)
+            print ('updated rails config')
+        else:
+            llm_rails_instances[cfg['id']] = LLMRails(config=rails_config)
 
 
 def _get_rails(config_id: str) -> LLMRails:
     """Returns the rails instance for the given config id."""
-    if config_id in llm_rails_instances:
-        return llm_rails_instances[config_id]
-
-    rails_config = RailsConfig.from_path(os.path.join(app.rails_config_path, config_id))
-    llm_rails = LLMRails(config=rails_config, verbose=True)
-    llm_rails_instances[config_id] = llm_rails
-
-    return llm_rails
+    return llm_rails_instances[config_id]
 
 
 @app.post(
