@@ -246,16 +246,24 @@ class RuntimeV1_1(Runtime):
               state.
         """
 
-        if state is None:
-            state = State(context={}, flow_states={}, flow_configs=self.flow_configs)
-            state.initialize()
-        else:
-            if isinstance(state, dict):
-                state = State.from_dict(state)
-
         output_events = []
         input_events = events.copy()
         local_running_actions = []
+
+        if state is None:
+            state = State(context={}, flow_states={}, flow_configs=self.flow_configs)
+            state.initialize()
+            input_events = [
+                {
+                    "type": "StartFlow",
+                    "flow_id": "main",
+                },
+            ]
+            input_events.extend(events)
+            log.info("Start of story!")
+        else:
+            if isinstance(state, dict):
+                state = State.from_dict(state)
 
         # While we have input events to process, or there are local running actions
         # we continue the processing.

@@ -89,15 +89,10 @@ class TestChat:
         self.input_events = []
         self.state = None
 
-        # For 1.1, we already start the main flow when initializing
+        # For 1.1, we start the main flow when initializing by providing a empty state
         if self.config.colang_version == "1.1":
             _, self.state = self.app.process_events(
-                [
-                    {
-                        "type": "StartFlow",
-                        "flow_id": "main",
-                    },
-                ],
+                [],
                 self.state,
             )
 
