@@ -205,37 +205,49 @@ class Action:
     def start(self, args: dict) -> ActionEvent:
         """Starts the action. Takes no arguments."""
         self.status = ActionStatus.STARTING
-        return ActionEvent(f"Start{self.name}", self.start_event_arguments, self.uid)
+        return ActionEvent(
+            name=f"Start{self.name}",
+            arguments=self.start_event_arguments,
+            action_uid=self.uid,
+        )
 
     def change(self, args: dict) -> ActionEvent:
         """Changes a parameter of a started action."""
-        return ActionEvent(f"Change{self.name}", args["arguments"], self.uid)
+        return ActionEvent(
+            name=f"Change{self.name}", arguments=args["arguments"], action_uid=self.uid
+        )
 
     def stop(self, args: dict) -> ActionEvent:
         """Stops a started action. Takes no arguments."""
         self.status = ActionStatus.STOPPING
-        return ActionEvent(f"Stop{self.name}", {}, self.uid)
+        return ActionEvent(name=f"Stop{self.name}", arguments={}, action_uid=self.uid)
 
     # Action events to match
     def started_event(self, args: dict) -> ActionEvent:
         """Returns the Started action event."""
         arguments = args.copy()
         arguments["action_arguments"] = self.start_event_arguments
-        return ActionEvent(f"{self.name}Started", arguments, self.uid)
+        return ActionEvent(
+            name=f"{self.name}Started", arguments=arguments, action_uid=self.uid
+        )
 
     def updated_event(self, args: dict) -> ActionEvent:
         """Returns the Updated parameter action event."""
         arguments = args.copy()
         arguments["action_arguments"] = self.start_event_arguments
         return ActionEvent(
-            f"{self.name}{args['parameter_name']}Updated", arguments, self.uid
+            name=f"{self.name}{args['parameter_name']}Updated",
+            arguments=arguments,
+            action_uid=self.uid,
         )
 
     def finished_event(self, args: dict) -> ActionEvent:
         """Returns the Finished action event."""
         arguments = args.copy()
         arguments["action_arguments"] = self.start_event_arguments
-        return ActionEvent(f"{self.name}Finished", arguments, self.uid)
+        return ActionEvent(
+            name=f"{self.name}Finished", arguments=arguments, action_uid=self.uid
+        )
 
 
 class InteractionLoopType(Enum):
@@ -701,11 +713,14 @@ def _expand_while_stmt_element(
     label_uid = new_uid()
     begin_label = Label(name=f"_while_begin_{label_uid}")
     end_label = Label(name=f"_while_end_{label_uid}")
-    goto_begin = Goto(
-        label=begin_label.name,
+    goto_end = Goto(
+        label=end_label.name,
         expression=f"({element['elements'][0]['elements'][0]}) == False",
     )
-    goto_end = Goto(label=end_label.name, expression="True")
+    goto_begin = Goto(
+        label=begin_label.name,
+        expression="True",
+    )
     body_elements = _expand_elements(element["elements"][1]["elements"], flow_configs)
 
     new_elements = [begin_label, goto_end]
@@ -892,6 +907,18 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                     if matching_score > 0.0:
                         heads_matching.append(head)
                         logging.info(f"Matching head (score: {matching_score}): {head}")
+
+                        if element.ref is not None:
+                            # Create event and the reference
+                            # TODO: Encapsulate this section in a function
+                            reference_name = element.ref["elements"][0]["elements"][
+                                0
+                            ].lstrip("$")
+                            new_event = _get_event_from_element(
+                                new_state, flow_state, element
+                            )
+                            flow_state.context.update({reference_name: new_event})
+
                     elif matching_score < 0.0:
                         heads_failing.append(head)
                         logging.info(
@@ -954,10 +981,9 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
             # Find winning and loosing heads for each group
             for group in head_groups.values():
                 ordered_heads = _sort_heads_from_matching_scores(group)
-                winning_element = _get_element(
-                    _get_flow_config_from_head(new_state, ordered_heads[0]),
-                    ordered_heads[0],
-                )
+                winning_element = _get_flow_config_from_head(
+                    new_state, ordered_heads[0]
+                ).elements[ordered_heads[0].position]
                 flow_state = _get_flow_state_from_head(new_state, ordered_heads[0])
                 winning_event: ActionEvent = _get_event_from_element(
                     new_state, flow_state, winning_element
@@ -1035,6 +1061,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
         flow_finished = flow_state.head.position >= len(flow_config.elements)
         state.internal_events.extend(internal_events)
 
+        # TODO: Use additional element to finish flow
         if flow_finished:
             logging.info(f"Flow {head.flow_state_uid} finished with last element")
         else:
@@ -1049,7 +1076,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
                     flow_state.uid, head.matching_scores
                 )
                 _push_internal_event(state, event)
-        elif _is_action_op_element(_get_element(flow_config, head.position)):
+        elif _is_action_op_element(flow_config.elements[head.position]):
             heads_actionable.add(head)
 
         # Check if flow has finished
@@ -1143,9 +1170,17 @@ def slide(
             else:
                 # Not a sliding element
                 break
+        elif isinstance(element, Label):
+            head_position += 1
+        elif isinstance(element, Goto):
+            if eval_expression(element.expression, flow_state.context):
+                if element.label in flow_config.element_labels:
+                    head_position = flow_config.element_labels[element.label] + 1
+            else:
+                head_position += 1
         else:
-            if element["_type"] == "goto":
-                pass
+            # Ignore unknown element
+            head_position += 1
 
     # If we got this far, it means we had a match and the flow advanced
     head.position = head_position
@@ -1277,7 +1312,7 @@ def _push_internal_event(state: State, event: dict) -> None:
 
 def _get_element_from_head(state: State, head: FlowHead) -> SpecOp:
     """Returns the element at the flow head position"""
-    return _get_element(_get_flow_config_from_head(state, head), head)
+    return _get_flow_config_from_head(state, head).elements[head.position]
 
 
 def _get_flow_config_from_head(state: State, head: FlowHead) -> FlowConfig:

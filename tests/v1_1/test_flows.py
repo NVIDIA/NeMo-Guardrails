@@ -1157,7 +1157,7 @@ def test_while_loop_mechanic():
         state,
         {
             "type": "UtteranceUserActionFinished",
-            "final_transcript": "Start1",
+            "final_transcript": "End",
         },
     )
     assert is_data_in_events(
@@ -1165,8 +1165,12 @@ def test_while_loop_mechanic():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "Ok",
-            }
+                "script": "Test",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            },
         ],
     )
 
@@ -1211,4 +1215,4 @@ def test_when_branching_mechanic():
 
 
 if __name__ == "__main__":
-    test_while_loop_mechanic()
+    test_start_a_flow()
