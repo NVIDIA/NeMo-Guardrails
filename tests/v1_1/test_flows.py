@@ -6,11 +6,8 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (
-    ActionStatus,
-    State,
-    compute_next_state,
-)
+from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, State,
+                                                      compute_next_state)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -1082,8 +1079,8 @@ def test_abort_flow_propagation_v_a():
 
 
 def test_abort_flow_propagation_v_b():
-    """Test that when a child flow has failed, the parent flow will also fail if
-    matched on the FlowFinished() of the child flow."""
+    """Test that when a child flow finished, the parent flow will fail if
+    it was waiting for FlowFailed() of the child flow."""
 
     content = """
     flow a
@@ -1126,5 +1123,82 @@ def test_abort_flow_propagation_v_b():
     )
 
 
+def test_while_loop_mechanic():
+    """"""
+
+    content = """
+    flow main
+
+      while $ref is None
+        # comment
+        match UtteranceUserAction().Finished(final_transcript="End") as $ref
+        start UtteranceBotAction(script="Test")
+
+      start UtteranceBotAction(script="Done")
+    """
+
+    config = _init_state(content)
+    state = compute_next_state(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Start1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Ok",
+            }
+        ],
+    )
+
+
+def test_when_branching_mechanic():
+    """"""
+
+    content = """
+    flow main
+      when UtteranceUserAction().Finished(final_transcript="Case1")
+        start UtteranceBotAction(script="Action1")
+      else when UtteranceUserAction().Finished(final_transcript="Case2")
+        start UtteranceBotAction(script="Action2")
+      else when UtteranceUserAction().Finished(final_transcript="Case3")
+        start UtteranceBotAction(script="Action3")
+      else
+        start UtteranceBotAction(script="ActionElse")
+    """
+
+    config = _init_state(content)
+    state = compute_next_state(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Start1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Ok",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_abort_flow_propagation_v_b()
+    test_send_umim_event()

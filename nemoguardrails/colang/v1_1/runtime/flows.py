@@ -242,6 +242,9 @@ class InteractionLoopType(Enum):
     NAMED = "named"  # Every new instance of the flow will live in the loop with the given name
 
 
+ElementType = Union[Element, SpecOp, dict]
+
+
 @dataclass
 class FlowConfig:
     """The configuration of a flow."""
@@ -250,7 +253,7 @@ class FlowConfig:
     id: str
 
     # The sequence of elements that compose the flow.
-    elements: List[Union[Element, SpecOp, dict]]
+    elements: List[ElementType]
 
     # The flow parameters
     parameters: List[FlowParamDef]
@@ -292,7 +295,7 @@ class FlowHead:
     uid: str
 
     # The position of the flow element the head is pointing to
-    position: int
+    position: List[int]
 
     # The flow of the head
     flow_state_uid: str
@@ -499,153 +502,10 @@ class State:
 
         # TODO: Think about where to put this
         # Transform and resolve flow configuration element notation (actions, flows, ...)
-        config_changed = True
-        while config_changed:
-            config_changed = False
-            for flow_config in self.flow_configs.values():
-                new_elements: List[Union[SpecOp, dict]] = []
-                for element in flow_config.elements:
-                    if not isinstance(element, SpecOp):
-                        # It's a comment
-                        new_elements.append(element)
-                    elif element.op == "await":
-                        if element.spec.name in self.flow_configs:
-                            # It's a flow
-                            new_elements.append(
-                                SpecOp(
-                                    op="start",
-                                    spec=element.spec,
-                                )
-                            )
-                            new_elements.append(
-                                SpecOp(
-                                    op="match",
-                                    spec=element.spec,
-                                )
-                            )
-                            config_changed = True
-                        else:
-                            # It's an UMIM action
-                            action_ref_uid = f"_action_ref_{new_uid()}"
-                            new_elements.append(
-                                SpecOp(
-                                    op="start",
-                                    spec=element.spec,
-                                    ref=_create_ref_ast_dict_helper(action_ref_uid),
-                                )
-                            )
-                            new_elements.append(
-                                SpecOp(
-                                    op="match",
-                                    spec=Spec(
-                                        var_name=action_ref_uid,
-                                        members=_create_member_ast_dict_helper(
-                                            "Finished", {}
-                                        ),
-                                    ),
-                                )
-                            )
-                            config_changed = True
-                    elif element.op == "start":
-                        if element.spec.name in self.flow_configs:
-                            # It's a flow
-                            element.spec.arguments.update(
-                                {"flow_id": f"'{element.spec.name}'"}
-                            )
-                            new_elements.append(
-                                SpecOp(
-                                    op="send",
-                                    spec=Spec(
-                                        name=InternalEvents.START_FLOW,
-                                        arguments=element.spec.arguments,
-                                    ),
-                                )
-                            )
-                            new_elements.append(
-                                SpecOp(
-                                    op="match",
-                                    spec=Spec(
-                                        name=InternalEvents.FLOW_STARTED,
-                                        arguments=element.spec.arguments,
-                                    ),
-                                )
-                            )
-                            config_changed = True
-                        else:
-                            # It's an UMIM action
-                            element_ref = element.ref
-                            if element_ref is None:
-                                action_ref_uid = f"_action_ref_{new_uid()}"
-                                element_ref = _create_ref_ast_dict_helper(
-                                    action_ref_uid
-                                )
-                            new_elements.append(
-                                SpecOp(
-                                    op="_new_instance",
-                                    spec=element.spec,
-                                    ref=element_ref,
-                                )
-                            )
-                            spec = element.spec
-                            spec.members = _create_member_ast_dict_helper("Start", {})
-                            spec.var_name = element_ref["elements"][0]["elements"][
-                                0
-                            ].lstrip("$")
-                            new_elements.append(SpecOp(op="send", spec=spec))
-                    elif element.op == "match":
-                        if element.spec.name in self.flow_configs:
-                            # It's a flow
-                            arguments = {"flow_id": f"'{element.spec.name}'"}
-                            for arg in element.spec.arguments:
-                                arguments.update({arg: element.spec.arguments[arg]})
-
-                            new_elements.append(
-                                SpecOp(
-                                    op="match",
-                                    spec=Spec(
-                                        name=InternalEvents.FLOW_FINISHED,
-                                        arguments=arguments,
-                                    ),
-                                )
-                            )
-                            config_changed = True
-                        else:
-                            # It's an UMIM event
-                            new_elements.append(element)
-                    elif element.op == "activate":
-                        if element.spec.name in self.flow_configs:
-                            # It's a flow
-                            element.spec.arguments.update(
-                                {
-                                    "flow_id": f"'{element.spec.name}'",
-                                    "activated": "True",
-                                }
-                            )
-                            new_elements.append(
-                                SpecOp(
-                                    op="send",
-                                    spec=Spec(
-                                        name=InternalEvents.START_FLOW,
-                                        arguments=element.spec.arguments,
-                                    ),
-                                )
-                            )
-                            new_elements.append(
-                                SpecOp(
-                                    op="match",
-                                    spec=Spec(
-                                        name=InternalEvents.FLOW_STARTED,
-                                        arguments=element.spec.arguments,
-                                    ),
-                                )
-                            )
-                            config_changed = True
-                        else:
-                            # It's an UMIM event
-                            new_elements.append(element)
-                    else:
-                        new_elements.append(element)
-                flow_config.elements = new_elements
+        for flow_config in self.flow_configs.values():
+            flow_config.elements = _expand_elements(
+                flow_config.elements, self.flow_configs
+            )
 
         # Create main flow state first
         main_flow_config = self.flow_configs["main"]
@@ -662,6 +522,180 @@ class State:
         for flow_config in self.flow_configs.values():
             if flow_config.id != "main":
                 _add_new_flow_instance(self, _create_flow_instance(flow_config))
+
+
+def _expand_elements(
+    elements: List[ElementType], flow_configs: Dict[str, FlowConfig]
+) -> List[ElementType]:
+    elements_changed = True
+    while elements_changed:
+        elements_changed = False
+        new_elements: List[ElementType] = []
+        for element in elements:
+            expanded_elems: List[ElementType] = []
+            if isinstance(element, SpecOp):
+                expanded_elems = _expand_spec_op_element(element, flow_configs)
+                if len(expanded_elems) > 0:
+                    elements_changed = True
+            elif element["_type"] == "while_stmt":
+                expanded_elems = [_expand_while_stmt_element(element, flow_configs)]
+            elif element["_type"] == "when_stmt":
+                expanded_elems = [_expand_when_stmt_element(element, flow_configs)]
+
+            if len(expanded_elems) > 0:
+                new_elements.extend(expanded_elems)
+            else:
+                new_elements.extend([element])
+
+        elements = new_elements
+    return elements
+
+
+def _expand_spec_op_element(
+    element: SpecOp, flow_configs: Dict[str, FlowConfig]
+) -> List[ElementType]:
+    new_elements: List[ElementType] = []
+    if element.op == "await":
+        if element.spec.name in flow_configs:
+            # It's a flow
+            new_elements.append(
+                SpecOp(
+                    op="start",
+                    spec=element.spec,
+                )
+            )
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=element.spec,
+                )
+            )
+        else:
+            # It's an UMIM action
+            action_ref_uid = f"_action_ref_{new_uid()}"
+            new_elements.append(
+                SpecOp(
+                    op="start",
+                    spec=element.spec,
+                    ref=_create_ref_ast_dict_helper(action_ref_uid),
+                )
+            )
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=Spec(
+                        var_name=action_ref_uid,
+                        members=_create_member_ast_dict_helper("Finished", {}),
+                    ),
+                )
+            )
+    elif element.op == "start":
+        if element.spec.name in flow_configs:
+            # It's a flow
+            element.spec.arguments.update({"flow_id": f"'{element.spec.name}'"})
+            new_elements.append(
+                SpecOp(
+                    op="send",
+                    spec=Spec(
+                        name=InternalEvents.START_FLOW,
+                        arguments=element.spec.arguments,
+                    ),
+                )
+            )
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=Spec(
+                        name=InternalEvents.FLOW_STARTED,
+                        arguments=element.spec.arguments,
+                    ),
+                )
+            )
+        else:
+            # It's an UMIM action
+            element_ref = element.ref
+            if element_ref is None:
+                action_ref_uid = f"_action_ref_{new_uid()}"
+                element_ref = _create_ref_ast_dict_helper(action_ref_uid)
+            new_elements.append(
+                SpecOp(
+                    op="_new_instance",
+                    spec=element.spec,
+                    ref=element_ref,
+                )
+            )
+            spec = element.spec
+            spec.members = _create_member_ast_dict_helper("Start", {})
+            spec.var_name = element_ref["elements"][0]["elements"][0].lstrip("$")
+            new_elements.append(SpecOp(op="send", spec=spec))
+    elif element.op == "match":
+        if element.spec.name in flow_configs:
+            # It's a flow
+            arguments = {"flow_id": f"'{element.spec.name}'"}
+            for arg in element.spec.arguments:
+                arguments.update({arg: element.spec.arguments[arg]})
+
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=Spec(
+                        name=InternalEvents.FLOW_FINISHED,
+                        arguments=arguments,
+                    ),
+                )
+            )
+        else:
+            # It's an UMIM event
+            pass
+    elif element.op == "activate":
+        if element.spec.name in flow_configs:
+            # It's a flow
+            element.spec.arguments.update(
+                {
+                    "flow_id": f"'{element.spec.name}'",
+                    "activated": "True",
+                }
+            )
+            new_elements.append(
+                SpecOp(
+                    op="send",
+                    spec=Spec(
+                        name=InternalEvents.START_FLOW,
+                        arguments=element.spec.arguments,
+                    ),
+                )
+            )
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=Spec(
+                        name=InternalEvents.FLOW_STARTED,
+                        arguments=element.spec.arguments,
+                    ),
+                )
+            )
+        else:
+            # It's an UMIM event
+            pass
+
+    return new_elements
+
+
+def _expand_while_stmt_element(
+    element: dict, flow_configs: Dict[str, FlowConfig]
+) -> dict:
+    new_element = element.copy()
+    new_element["elements"][1]["elements"] = _expand_elements(
+        element["elements"][1]["elements"], flow_configs
+    )
+    return new_element
+
+
+def _expand_when_stmt_element(
+    element: dict, flow_configs: Dict[str, FlowConfig]
+) -> List[ElementType]:
+    raise NotImplementedError()
+    return element
 
 
 def _create_ref_ast_dict_helper(ref_name: str) -> dict:
@@ -705,7 +739,7 @@ def _create_flow_instance(
         loop_id=loop_uid,
         head=FlowHead(
             uid=new_uid(),
-            position=0,
+            position=[0],
             flow_state_uid=flow_uid,
             matching_scores=[],
         ),
@@ -819,7 +853,7 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                 # TODO: Generalize to multiple heads in flow
                 head = flow_state.head
 
-                element = flow_config.elements[head.position]
+                element = _get_element(flow_config, head)
                 if _is_match_op_element(element):
                     # TODO: Assign matching score
                     matching_score = _compute_event_matching_score(
@@ -896,9 +930,10 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
             # Find winning and loosing heads for each group
             for group in head_groups.values():
                 ordered_heads = _sort_heads_from_matching_scores(group)
-                winning_element = _get_flow_config_from_head(
-                    new_state, ordered_heads[0]
-                ).elements[ordered_heads[0].position]
+                winning_element = _get_element(
+                    _get_flow_config_from_head(new_state, ordered_heads[0]),
+                    ordered_heads[0],
+                )
                 flow_state = _get_flow_state_from_head(new_state, ordered_heads[0])
                 winning_event: ActionEvent = _get_event_from_element(
                     new_state, flow_state, winning_element
@@ -970,7 +1005,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
         if flow_state.status == FlowStatus.WAITING:
             flow_state.status = FlowStatus.STARTING
 
-        head.position += 1
+        head.position[-1] += 1
 
         internal_events = slide(state, flow_state, flow_config, flow_state.head)
         flow_finished = flow_state.head.position >= len(flow_config.elements)
@@ -980,17 +1015,17 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
             logging.info(f"Flow {head.flow_state_uid} finished with last element")
         else:
             logging.info(
-                f"Head in flow {head.flow_state_uid} advanced to element: {flow_config.elements[head.position]}"
+                f"Head in flow {head.flow_state_uid} advanced to element: {_get_element(flow_config, head)}"
             )
 
-        if flow_finished or _is_match_op_element(flow_config.elements[head.position]):
+        if flow_finished or _is_match_op_element(_get_element(flow_config, head)):
             if flow_state.status == FlowStatus.STARTING:
                 flow_state.status = FlowStatus.STARTED
                 event = create_flow_started_internal_event(
                     flow_state.uid, head.matching_scores
                 )
                 _push_internal_event(state, event)
-        elif _is_action_op_element(flow_config.elements[head.position]):
+        elif _is_action_op_element(_get_element(flow_config, head.position)):
             heads_actionable.add(head)
 
         # Check if flow has finished
@@ -1087,6 +1122,17 @@ def slide(
     # If we got this far, it means we had a match and the flow advanced
     head.position = head_position
     return internal_events
+
+
+def _get_element(flow_config: FlowConfig, head: FlowHead) -> ElementType:
+    return _get_child_element(flow_config.elements, head.position)
+
+
+def _get_child_element(elements: List[ElementType], indices: List[int]) -> ElementType:
+    if len(indices) == 1:
+        return elements[indices[0]]
+    else:
+        return _get_child_element(elements[indices[0]]["elements"], indices[1:])
 
 
 def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
@@ -1212,9 +1258,9 @@ def _push_internal_event(state: State, event: dict) -> None:
     logging.info(f"Created internal event: {event}")
 
 
-def _get_head_element_from_head(state: State, head: FlowHead) -> SpecOp:
+def _get_element_from_head(state: State, head: FlowHead) -> SpecOp:
     """Returns the element at the flow head position"""
-    return _get_flow_config_from_head(state, head).elements[head.position]
+    return _get_element(_get_flow_config_from_head(state, head), head)
 
 
 def _get_flow_config_from_head(state: State, head: FlowHead) -> FlowConfig:
@@ -1481,7 +1527,7 @@ def _create_outgoing_event_from_actionable_element(
 ) -> None:
     """Helper to create an outgoing event from the flow head element."""
     flow_state = _get_flow_state_from_head(state, head)
-    element = _get_head_element_from_head(state, head)
+    element = _get_element_from_head(state, head)
     assert _is_action_op_element(
         element
     ), f"Cannot create an event from a non actionable flow element {element}!"
