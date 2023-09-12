@@ -79,3 +79,46 @@ def test_openai_gpt_3_5_turbo_prompts(task):
     )
 
     assert isinstance(task_prompt, list)
+
+
+@pytest.mark.parametrize(
+    "task, expected_prompt",
+    [
+        ("summarize_text", "Text: test.\nSummarize the above text."),
+        ("compose_response", "Text: test.\nCompose a response using the above text."),
+    ],
+)
+def test_custom_task_prompts(task, expected_prompt):
+    """Test the prompts for the OpenAI GPT-3 5 Turbo model with custom
+    prompts for custom tasks."""
+    config = RailsConfig.from_content(
+        yaml_content=textwrap.dedent(
+            """
+            models:
+             - type: main
+               engine: openai
+               model: gpt-3.5-turbo
+            prompts:
+            - task: summarize_text
+              content: |-
+                  Text: {{ user_input }}
+                  Summarize the above text.
+            - task: compose_response
+              content: |-
+                  Text: {{ user_input }}
+                  Compose a response using the above text.
+            """
+        )
+    )
+
+    assert config.models[0].engine == "openai"
+
+    llm_task_manager = LLMTaskManager(config)
+
+    user_input = "test."
+    task_prompt = llm_task_manager.render_task_prompt(
+        task=task,
+        context={"user_input": user_input},
+    )
+
+    assert task_prompt == expected_prompt

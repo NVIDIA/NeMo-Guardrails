@@ -49,7 +49,7 @@ class FlowParamDef:
 class Element:
     """Base class for all elements in the AST."""
 
-    _type: str = field(kw_only=True)
+    _type: str
     _source: Optional[Source] = None
 
     def __getitem__(self, key):
@@ -75,9 +75,9 @@ class Value(Element):
 @dataclass_json
 @dataclass
 class Elements(Element):
-    """Element that encapsulates multile sub-elements."""
+    """Element that encapsulates multiple sub-elements."""
 
-    elements: List[Element] = field(kw_only=True)
+    elements: List[Element] = field(default_factory=list())
     _type: str = "value"
 
 
@@ -86,9 +86,9 @@ class Elements(Element):
 class Flow(Element):
     """Element that represents a flow."""
 
-    name: str = field(kw_only=True)
+    name: str = ""
     parameters: List[FlowParamDef] = field(default_factory=list)
-    elements: List[Element] = field(kw_only=True)
+    elements: List[Element] = field(default_factory=list())
     _type: str = "flow"
 
 
@@ -116,7 +116,7 @@ class Spec(Element):
 class SpecAnd(Element):
     """A conjunction of specs."""
 
-    specs: List[Spec] = field(kw_only=True)
+    specs: List[Spec] = field(default_factory=list())
     _type: str = "spec_and"
 
 
@@ -125,7 +125,7 @@ class SpecAnd(Element):
 class SpecOr(Element):
     """A disjunction of spects."""
 
-    specs: List[Spec] = field(kw_only=True)
+    specs: List[Spec] = field(default_factory=list())
     _type: str = "spec_or"
 
 
@@ -137,8 +137,8 @@ class SpecOp(Element):
     Valid operations are: await, start, match, activate, send.
     """
 
-    op: str = field(kw_only=True)
-    spec: Union[Spec, SpecAnd, SpecOr] = field(kw_only=True)
+    op: str = ""
+    spec: Union[Spec, SpecAnd, SpecOr] = Spec()
     ref: Optional[str] = field(default=None)
     _type: str = "spec_op"
 
@@ -146,8 +146,8 @@ class SpecOp(Element):
 @dataclass_json
 @dataclass
 class If(Element):
-    expression: str = field(kw_only=True)
-    then_elements: List[Element] = field(kw_only=True)
+    expression: str = ""
+    then_elements: List[Element] = field(default_factory=list())
     else_elements: Optional[List[Element]] = None
     _type: str = "if"
 
@@ -155,16 +155,16 @@ class If(Element):
 @dataclass_json
 @dataclass
 class While(Element):
-    expression: str = field(kw_only=True)
-    do: List[Element] = field(kw_only=True)
+    expression: str = ""
+    do: List[Element] = field(default_factory=list())
     _type: str = "while"
 
 
 @dataclass_json
 @dataclass
 class Set(Element):
-    key: str = field(kw_only=True)
-    expression: str = field(kw_only=True)
+    key: str = ""
+    expression: str = ""
     _type: str = "set"
 
 
@@ -198,19 +198,19 @@ class Return(Element):
 @dataclass_json
 @dataclass
 class Label(Element):
-    name: str = field(kw_only=True)
+    name: str = ""
     _type: str = "label"
 
 
 @dataclass_json
 @dataclass
 class Goto(Element):
-    label: str = field(kw_only=True)
+    label: str = ""
     _type: str = "goto"
 
 
 @dataclass_json
 @dataclass
 class Meta(Element):
-    meta: dict = field(kw_only=True)
+    meta: dict = field(default_factory=dict())
     _type: str = "meta"

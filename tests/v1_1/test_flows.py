@@ -6,8 +6,11 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, State,
-                                                      compute_next_state)
+from nemoguardrails.colang.v1_1.runtime.flows import (
+    ActionStatus,
+    State,
+    compute_next_state,
+)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
