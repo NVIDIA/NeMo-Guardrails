@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import pickle
 from typing import Optional
 
 from nemoguardrails import LLMRails, RailsConfig
@@ -40,28 +41,16 @@ def _run_chat_v1_0(rails_app: LLMRails):
 def _run_chat_v1_1(rails_app: LLMRails):
     """Simple chat loop for v1.1 using the stateful events API."""
     state = None
-    first = True
 
     # And go into the default listening loop.
     while True:
-        if first:
-            # We first need to initialize the state by starting the main flow.
-            # TODO: a better way to do this?
-            first = False
-            input_events = [
-                {
-                    "type": "StartFlow",
-                    "flow_id": "main",
-                },
-            ]
-        else:
-            user_message = input("> ")
-            input_events = [
-                {
-                    "type": "UtteranceUserActionFinished",
-                    "final_transcript": user_message,
-                }
-            ]
+        user_message = input("> ")
+        input_events = [
+            {
+                "type": "UtteranceUserActionFinished",
+                "final_transcript": user_message,
+            }
+        ]
 
         while input_events:
             output_events, output_state = rails_app.process_events(input_events, state)
@@ -85,6 +74,9 @@ def _run_chat_v1_1(rails_app: LLMRails):
 
             # TODO: deserialize the output state
             # state = State.from_dict(output_state)
+            # Simulate serialization for testing
+            data = pickle.dumps(output_state)
+            output_state = pickle.loads(data)
             state = output_state
 
 

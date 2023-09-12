@@ -1092,7 +1092,7 @@ def slide(
 def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
     flow_config = state.flow_configs[flow_state.flow_id]
 
-    if flow_state != state.main_flow_state:
+    if flow_state.uid != state.main_flow_state.uid:
         # Link to parent flow
         parent_flow_uid = arguments["source_flow_instance_uid"]
         parent_flow = state.flow_states[parent_flow_uid]
