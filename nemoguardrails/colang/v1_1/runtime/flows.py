@@ -174,12 +174,12 @@ class Action:
 
         # The action event name mapping
         self._event_name_map = {
-            "Start": self.start,
-            "Change": self.change,
-            "Stop": self.stop,
-            "Started": self.started_event,
-            "Updated": self.updated_event,
-            "Finished": self.finished_event,
+            "Start": "start",
+            "Change": "change",
+            "Stop": "stop",
+            "Started": "started_event",
+            "Updated": "updated_event",
+            "Finished": "finished_event",
         }
 
     # Process an event
@@ -197,7 +197,9 @@ class Action:
 
     def get_event(self, name: str, arguments: dict) -> Callable[[], ActionEvent]:
         """Returns the corresponding action event."""
-        return self._event_name_map[name](arguments)
+        assert name in self._event_name_map, f"Event '{name}' not available!"
+        func = getattr(self, self._event_name_map[name])
+        return func(arguments)
 
     # Action events to send
     def start(self, args: dict) -> ActionEvent:
@@ -372,20 +374,22 @@ class FlowState:
 
     def __post_init__(self) -> None:
         self._event_name_map = {
-            "Start": self.start,
-            "Stop": self.stop,
-            "Pause": self.pause,
-            "Resume": self.resume,
-            "Started": self.started_event,
-            "Paused": self.paused_event,
-            "Resumed": self.resumed_event,
-            "Finished": self.finished_event,
-            "Failed": self.failed_event,
+            "Start": "start",
+            "Stop": "stop",
+            "Pause": "pause",
+            "Resume": "resume",
+            "Started": "started_event",
+            "Paused": "paused_event",
+            "Resumed": "resumed_event",
+            "Finished": "finished_event",
+            "Failed": "failed_event",
         }
 
     def get_event(self, name: str, arguments: dict) -> Callable[[], FlowEvent]:
         """Returns the corresponding action event."""
-        return self._event_name_map[name](arguments)
+        assert name in self._event_name_map, f"Event '{name}' not available!"
+        func = getattr(self, self._event_name_map[name])
+        return func(arguments)
 
     # Flow events to send
     def start(self, args: dict) -> FlowEvent:
@@ -1151,7 +1155,7 @@ def slide(
 def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
     flow_config = state.flow_configs[flow_state.flow_id]
 
-    if flow_state != state.main_flow_state:
+    if flow_state.uid != state.main_flow_state.uid:
         # Link to parent flow
         parent_flow_uid = arguments["source_flow_instance_uid"]
         parent_flow = state.flow_states[parent_flow_uid]
@@ -1378,7 +1382,7 @@ def _compute_event_matching_score(
         ):
             return 0.0
 
-        if event.action_uid is not None:
+        if event.action_uid is not None and event.action_uid in state.actions:
             action_arguments = state.actions[event.action_uid].start_event_arguments
             event.arguments["action_arguments"] = action_arguments
 

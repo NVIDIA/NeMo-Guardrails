@@ -179,4 +179,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return dataclasses.asdict(o)
         if isinstance(o, Enum):
             return o.value
-        return super().default(o)
+        try:
+            return super().default(o)
+        except Exception as e:
+            return f"Type {type(o)} not serializable"
