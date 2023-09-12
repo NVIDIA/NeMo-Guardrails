@@ -1090,8 +1090,8 @@ def test_abort_flow_propagation_v_a():
 
 
 def test_abort_flow_propagation_v_b():
-    """Test that when a child flow has failed, the parent flow will also fail if
-    matched on the FlowFinished() of the child flow."""
+    """Test that when a child flow finished, the parent flow will fail if
+    it was waiting for FlowFailed() of the child flow."""
 
     content = """
     flow a
@@ -1134,5 +1134,46 @@ def test_abort_flow_propagation_v_b():
     )
 
 
+def test_while_loop_mechanic():
+    """"""
+
+    content = """
+    flow main
+
+      while $ref is None
+        match UtteranceUserAction().Finished(final_transcript="End") as $ref
+        start UtteranceBotAction(script="Test")
+
+      start UtteranceBotAction(script="Done")
+    """
+
+    config = _init_state(content)
+    state = compute_next_state(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "End",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Test",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_match_umim_event()
+    test_start_a_flow()
