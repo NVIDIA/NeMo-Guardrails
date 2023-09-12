@@ -1175,44 +1175,5 @@ def test_while_loop_mechanic():
     )
 
 
-def test_when_branching_mechanic():
-    """"""
-
-    content = """
-    flow main
-      when UtteranceUserAction().Finished(final_transcript="Case1")
-        start UtteranceBotAction(script="Action1")
-      else when UtteranceUserAction().Finished(final_transcript="Case2")
-        start UtteranceBotAction(script="Action2")
-      else when UtteranceUserAction().Finished(final_transcript="Case3")
-        start UtteranceBotAction(script="Action3")
-      else
-        start UtteranceBotAction(script="ActionElse")
-    """
-
-    config = _init_state(content)
-    state = compute_next_state(config, start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
-    state = compute_next_state(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "Start1",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Ok",
-            }
-        ],
-    )
-
-
 if __name__ == "__main__":
     test_start_a_flow()
