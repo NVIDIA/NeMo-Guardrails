@@ -29,6 +29,8 @@ from dataclasses_json import dataclass_json
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Element,
     FlowParamDef,
+    Goto,
+    Label,
     Spec,
     SpecOp,
 )
@@ -258,6 +260,9 @@ class FlowConfig:
     # The flow parameters
     parameters: List[FlowParamDef]
 
+    # All the label element positions in the flow
+    element_labels: Dict[str, int] = field(default_factory=dict)
+
     # Interaction loop
     loop_id: Optional[str] = None
     loop_type: InteractionLoopType = InteractionLoopType.PARENT
@@ -295,7 +300,7 @@ class FlowHead:
     uid: str
 
     # The position of the flow element the head is pointing to
-    position: List[int]
+    position: int
 
     # The flow of the head
     flow_state_uid: str
@@ -501,11 +506,16 @@ class State:
         self.flow_states = dict()
 
         # TODO: Think about where to put this
-        # Transform and resolve flow configuration element notation (actions, flows, ...)
         for flow_config in self.flow_configs.values():
+            # Transform and resolve flow configuration element notation (actions, flows, ...)
             flow_config.elements = _expand_elements(
                 flow_config.elements, self.flow_configs
             )
+
+            # Extract all the label elements
+            for idx, element in enumerate(flow_config.elements):
+                if isinstance(element, Label):
+                    flow_config.element_labels.update({element["name"]: idx})
 
         # Create main flow state first
         main_flow_config = self.flow_configs["main"]
@@ -538,9 +548,9 @@ def _expand_elements(
                 if len(expanded_elems) > 0:
                     elements_changed = True
             elif element["_type"] == "while_stmt":
-                expanded_elems = [_expand_while_stmt_element(element, flow_configs)]
+                expanded_elems = _expand_while_stmt_element(element, flow_configs)
             elif element["_type"] == "when_stmt":
-                expanded_elems = [_expand_when_stmt_element(element, flow_configs)]
+                expanded_elems = _expand_when_stmt_element(element, flow_configs)
 
             if len(expanded_elems) > 0:
                 new_elements.extend(expanded_elems)
@@ -684,11 +694,21 @@ def _expand_spec_op_element(
 def _expand_while_stmt_element(
     element: dict, flow_configs: Dict[str, FlowConfig]
 ) -> dict:
-    new_element = element.copy()
-    new_element["elements"][1]["elements"] = _expand_elements(
-        element["elements"][1]["elements"], flow_configs
+    label_uid = new_uid()
+    begin_label = Label(name=f"_while_begin_{label_uid}")
+    end_label = Label(name=f"_while_end_{label_uid}")
+    goto_begin = Goto(
+        label=begin_label.name,
+        expression=f"({element['elements'][0]['elements'][0]}) == False",
     )
-    return new_element
+    goto_end = Goto(label=end_label.name, expression="True")
+    body_elements = _expand_elements(element["elements"][1]["elements"], flow_configs)
+
+    new_elements = [begin_label, goto_end]
+    new_elements.extend(body_elements)
+    new_elements.extend([goto_begin, end_label])
+
+    return new_elements
 
 
 def _expand_when_stmt_element(
@@ -739,7 +759,7 @@ def _create_flow_instance(
         loop_id=loop_uid,
         head=FlowHead(
             uid=new_uid(),
-            position=[0],
+            position=0,
             flow_state_uid=flow_uid,
             matching_scores=[],
         ),
@@ -853,7 +873,7 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                 # TODO: Generalize to multiple heads in flow
                 head = flow_state.head
 
-                element = _get_element(flow_config, head)
+                element = flow_config.elements[head.position]
                 if _is_match_op_element(element):
                     # TODO: Assign matching score
                     matching_score = _compute_event_matching_score(
@@ -1005,7 +1025,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
         if flow_state.status == FlowStatus.WAITING:
             flow_state.status = FlowStatus.STARTING
 
-        head.position[-1] += 1
+        head.position += 1
 
         internal_events = slide(state, flow_state, flow_config, flow_state.head)
         flow_finished = flow_state.head.position >= len(flow_config.elements)
@@ -1015,10 +1035,10 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
             logging.info(f"Flow {head.flow_state_uid} finished with last element")
         else:
             logging.info(
-                f"Head in flow {head.flow_state_uid} advanced to element: {_get_element(flow_config, head)}"
+                f"Head in flow {head.flow_state_uid} advanced to element: {flow_config.elements[head.position]}"
             )
 
-        if flow_finished or _is_match_op_element(_get_element(flow_config, head)):
+        if flow_finished or _is_match_op_element(flow_config.elements[head.position]):
             if flow_state.status == FlowStatus.STARTING:
                 flow_state.status = FlowStatus.STARTED
                 event = create_flow_started_internal_event(
@@ -1056,83 +1076,76 @@ def slide(
 
         # prev_head = head_position
         element = flow_config.elements[head_position]
+        logging.info(f"Sliding element: '{element}'")
 
-        if not isinstance(element, SpecOp):
-            # Non op statement (e.g. a comment)
-            head_position += 1
-            continue
-
-        logging.info(f"Sliding step: '{element.op}'")
-
-        if element.op == "send" and element.spec.name in InternalEvents.ALL:
-            # Evaluate expressions (eliminate all double quotes)
-            event_arguments = _evaluate_arguments(
-                element.spec.arguments, flow_state.context
-            )
-            event_arguments.update({"source_flow_instance_uid": head.flow_state_uid})
-            event = create_internal_event(
-                element.spec.name, event_arguments, head.matching_scores
-            )
-            internal_events.append(event)
-            logging.info(f"Created internal event: {event}")
-            head_position += 1
-        elif element.op == "_new_instance":
-            if element.spec.name in state.flow_configs:
-                # It's a flow
-                evaluated_arguments = _evaluate_arguments(
+        if isinstance(element, SpecOp):
+            if element.op == "send" and element.spec.name in InternalEvents.ALL:
+                # Evaluate expressions (eliminate all double quotes)
+                event_arguments = _evaluate_arguments(
                     element.spec.arguments, flow_state.context
                 )
-                flow_config = state.flow_configs[element.spec.name]
-                new_flow_state = _create_flow_instance(flow_config, flow_state)
-                reference_name = element.ref["elements"][0]["elements"][0].lstrip("$")
-                flow_state.context.update(
-                    {
-                        reference_name: {
-                            "type": ContextVariableType.ACTION_REFERENCE,
-                            "value": action.uid,
-                        }
-                    }
+                event_arguments.update(
+                    {"source_flow_instance_uid": head.flow_state_uid}
                 )
+                event = create_internal_event(
+                    element.spec.name, event_arguments, head.matching_scores
+                )
+                internal_events.append(event)
+                logging.info(f"Created internal event: {event}")
+                head_position += 1
+            elif element.op == "_new_instance":
+                if element.spec.name in state.flow_configs:
+                    # It's a flow
+                    evaluated_arguments = _evaluate_arguments(
+                        element.spec.arguments, flow_state.context
+                    )
+                    flow_config = state.flow_configs[element.spec.name]
+                    new_flow_state = _create_flow_instance(flow_config, flow_state)
+                    reference_name = element.ref["elements"][0]["elements"][0].lstrip(
+                        "$"
+                    )
+                    flow_state.context.update(
+                        {
+                            reference_name: {
+                                "type": ContextVariableType.ACTION_REFERENCE,
+                                "value": action.uid,
+                            }
+                        }
+                    )
+                else:
+                    # It's an action
+                    evaluated_arguments = _evaluate_arguments(
+                        element.spec.arguments, flow_state.context
+                    )
+                    action = Action(
+                        name=element.spec.name,
+                        arguments=evaluated_arguments,
+                        flow_uid=head.flow_state_uid,
+                    )
+                    state.actions.update({action.uid: action})
+                    flow_state.action_uids.append(action.uid)
+                    reference_name = element.ref["elements"][0]["elements"][0].lstrip(
+                        "$"
+                    )
+                    flow_state.context.update(
+                        {
+                            reference_name: {
+                                "type": ContextVariableType.ACTION_REFERENCE,
+                                "value": action.uid,
+                            }
+                        }
+                    )
+                head_position += 1
             else:
-                # It's an action
-                evaluated_arguments = _evaluate_arguments(
-                    element.spec.arguments, flow_state.context
-                )
-                action = Action(
-                    name=element.spec.name,
-                    arguments=evaluated_arguments,
-                    flow_uid=head.flow_state_uid,
-                )
-                state.actions.update({action.uid: action})
-                flow_state.action_uids.append(action.uid)
-                reference_name = element.ref["elements"][0]["elements"][0].lstrip("$")
-                flow_state.context.update(
-                    {
-                        reference_name: {
-                            "type": ContextVariableType.ACTION_REFERENCE,
-                            "value": action.uid,
-                        }
-                    }
-                )
-            head_position += 1
+                # Not a sliding element
+                break
         else:
-            # Not a sliding element
-            break
+            if element["_type"] == "goto":
+                pass
 
     # If we got this far, it means we had a match and the flow advanced
     head.position = head_position
     return internal_events
-
-
-def _get_element(flow_config: FlowConfig, head: FlowHead) -> ElementType:
-    return _get_child_element(flow_config.elements, head.position)
-
-
-def _get_child_element(elements: List[ElementType], indices: List[int]) -> ElementType:
-    if len(indices) == 1:
-        return elements[indices[0]]
-    else:
-        return _get_child_element(elements[indices[0]]["elements"], indices[1:])
 
 
 def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:

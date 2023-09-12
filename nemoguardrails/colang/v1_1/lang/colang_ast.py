@@ -206,6 +206,7 @@ class Label(Element):
 @dataclass
 class Goto(Element):
     label: str = ""
+    expression: str = "True"
     _type: str = "goto"
 
 

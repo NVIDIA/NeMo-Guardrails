@@ -1133,7 +1133,6 @@ def test_while_loop_mechanic():
     flow main
 
       while $ref is None
-        # comment
         match UtteranceUserAction().Finished(final_transcript="End") as $ref
         start UtteranceBotAction(script="Test")
 
@@ -1204,4 +1203,4 @@ def test_when_branching_mechanic():
 
 
 if __name__ == "__main__":
-    test_send_umim_event()
+    test_while_loop_mechanic()
