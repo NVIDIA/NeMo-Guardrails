@@ -1175,5 +1175,132 @@ def test_while_loop_mechanic():
     )
 
 
+def test_match_or_event_group():
+    """"""
+
+    content = """
+    flow main
+        match UtteranceUserAction().Finished(final_transcript="A")
+          or UtteranceUserAction().Finished(final_transcript="B")
+          or UtteranceUserAction().Finished(final_transcript="C")
+        start UtteranceBotAction(script="Match")
+    """
+
+    config = _init_state(content)
+    state = compute_next_state(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "A",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Match",
+            },
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Match",
+            },
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "C",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Match",
+            },
+        ],
+    )
+
+
+# def test_if_branching_mechanic():
+#     """"""
+
+#     content = """
+#     flow main
+#       while $action_ref is None
+#         if $event_ref_1 is None
+#           UtteranceUserAction().Finished(final_transcript="Event1") as $event_ref_1
+#           start UtteranceBotAction(script="Action1")
+#         else if $event_ref_2 is None
+#           UtteranceUserAction().Finished(final_transcript="Event2") as $event_ref_2
+#           start UtteranceBotAction(script="Action2")
+#         else
+#           start UtteranceBotAction(script="ActionElse") as $action_ref
+#     """
+
+#     config = _init_state(content)
+#     state = compute_next_state(config, start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [],
+#     )
+#     state = compute_next_state(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "Event1",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "Action1",
+#             }
+#         ],
+#     )
+#     state = compute_next_state(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "Event2",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "Action2",
+#             },
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "ActionElse",
+#             },
+#         ],
+#     )
+
+
 if __name__ == "__main__":
-    test_start_a_flow()
+    test_match_or_event_group()

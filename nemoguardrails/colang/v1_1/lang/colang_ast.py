@@ -77,7 +77,7 @@ class Value(Element):
 class Elements(Element):
     """Element that encapsulates multiple sub-elements."""
 
-    elements: List[Element] = field(default_factory=list())
+    elements: List[Element] = field(default_factory=list)
     _type: str = "value"
 
 
@@ -88,7 +88,7 @@ class Flow(Element):
 
     name: str = ""
     parameters: List[FlowParamDef] = field(default_factory=list)
-    elements: List[Element] = field(default_factory=list())
+    elements: List[Element] = field(default_factory=list)
     _type: str = "flow"
 
 
@@ -116,7 +116,7 @@ class Spec(Element):
 class SpecAnd(Element):
     """A conjunction of specs."""
 
-    specs: List[Spec] = field(default_factory=list())
+    specs: List[Spec] = field(default_factory=list)
     _type: str = "spec_and"
 
 
@@ -125,7 +125,7 @@ class SpecAnd(Element):
 class SpecOr(Element):
     """A disjunction of spects."""
 
-    specs: List[Spec] = field(default_factory=list())
+    specs: List[Spec] = field(default_factory=list)
     _type: str = "spec_or"
 
 
@@ -147,7 +147,7 @@ class SpecOp(Element):
 @dataclass
 class If(Element):
     expression: str = ""
-    then_elements: List[Element] = field(default_factory=list())
+    then_elements: List[Element] = field(default_factory=list)
     else_elements: Optional[List[Element]] = None
     _type: str = "if"
 
@@ -156,7 +156,7 @@ class If(Element):
 @dataclass
 class While(Element):
     expression: str = ""
-    do: List[Element] = field(default_factory=list())
+    do: List[Element] = field(default_factory=list)
     _type: str = "while"
 
 
@@ -213,5 +213,18 @@ class Goto(Element):
 @dataclass_json
 @dataclass
 class Meta(Element):
-    meta: dict = field(default_factory=dict())
+    meta: dict = field(default_factory=dict)
     _type: str = "meta"
+
+
+@dataclass_json
+@dataclass
+class ForkHead(Element):
+    labels: List[str] = field(default_factory=list)
+    _type: str = "_fork"
+
+
+@dataclass_json
+@dataclass
+class MergeHeads(Element):
+    _type: str = "_merge"

@@ -29,8 +29,10 @@ from dataclasses_json import dataclass_json
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Element,
     FlowParamDef,
+    ForkHead,
     Goto,
     Label,
+    MergeHeads,
     Spec,
     SpecOp,
 )
@@ -354,7 +356,7 @@ class FlowState:
 
     # The position in the sequence of elements that compose the flow.
     # TODO: Generalize to have multiple heads for branching head statements like when/else
-    head: FlowHead
+    heads: List[FlowHead]
 
     # All actions that were instantiated since the beginning of the flow
     action_uids: List[str]
@@ -565,6 +567,8 @@ def _expand_elements(
                     elements_changed = True
             elif element["_type"] == "while_stmt":
                 expanded_elems = _expand_while_stmt_element(element, flow_configs)
+            elif element["_type"] == "if_stmt":
+                expanded_elems = _expand_if_stmt_element(element, flow_configs)
             elif element["_type"] == "when_stmt":
                 expanded_elems = _expand_when_stmt_element(element, flow_configs)
 
@@ -655,24 +659,61 @@ def _expand_spec_op_element(
             spec.var_name = element_ref["elements"][0]["elements"][0].lstrip("$")
             new_elements.append(SpecOp(op="send", spec=spec))
     elif element.op == "match":
-        if element.spec.name in flow_configs:
-            # It's a flow
-            arguments = {"flow_id": f"'{element.spec.name}'"}
-            for arg in element.spec.arguments:
-                arguments.update({arg: element.spec.arguments[arg]})
+        if isinstance(element.spec, Spec):
+            # Single match element
+            if element.spec.name in flow_configs:
+                # It's a flow
+                arguments = {"flow_id": f"'{element.spec.name}'"}
+                for arg in element.spec.arguments:
+                    arguments.update({arg: element.spec.arguments[arg]})
 
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        name=InternalEvents.FLOW_FINISHED,
-                        arguments=arguments,
-                    ),
+                new_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=Spec(
+                            name=InternalEvents.FLOW_FINISHED,
+                            arguments=arguments,
+                        ),
+                    )
                 )
-            )
+            else:
+                # It's an UMIM event
+                pass
         else:
-            # It's an UMIM event
-            pass
+            # Multiple match elements
+            fork_element = ForkHead()
+            label_elements: List[Label] = []
+            match_elements: List[SpecOp] = []
+            end_label_name = f"end_label_{new_uid()}"
+            goto_end_element = Goto(label=end_label_name)
+            for idx, match_element in enumerate(element.spec["elements"]):
+                label_name = f"event_{idx}"
+                label_elements.append(Label(name=label_name))
+                fork_element.labels.append(label_name)
+                if match_element.name in flow_configs:
+                    # It's a flow
+                    match_elements.append(
+                        SpecOp(
+                            op="match",
+                            spec=Spec(
+                                name=InternalEvents.FLOW_FINISHED,
+                                arguments=arguments,
+                            ),
+                        )
+                    )
+                else:
+                    # It's an UMIM event
+                    new_match_element = copy.copy(element)
+                    new_match_element.spec = match_element
+                    match_elements.append(new_match_element)
+            new_elements.append(fork_element)
+            for idx, label_element in enumerate(label_elements):
+                new_elements.append(label_element)
+                new_elements.append(match_elements[idx])
+                new_elements.append(goto_end_element)
+            new_elements.append(end_label_name)
+            new_elements.append(MergeHeads())
+
     elif element.op == "activate":
         if element.spec.name in flow_configs:
             # It's a flow
@@ -730,6 +771,13 @@ def _expand_while_stmt_element(
     return new_elements
 
 
+def _expand_if_stmt_element(
+    element: dict, flow_configs: Dict[str, FlowConfig]
+) -> List[ElementType]:
+    raise NotImplementedError()
+    return element
+
+
 def _expand_when_stmt_element(
     element: dict, flow_configs: Dict[str, FlowConfig]
 ) -> List[ElementType]:
@@ -776,12 +824,14 @@ def _create_flow_instance(
         action_uids=[],
         flow_id=flow_config.id,
         loop_id=loop_uid,
-        head=FlowHead(
-            uid=new_uid(),
-            position=0,
-            flow_state_uid=flow_uid,
-            matching_scores=[],
-        ),
+        heads=[
+            FlowHead(
+                uid=new_uid(),
+                position=0,
+                flow_state_uid=flow_uid,
+                matching_scores=[],
+            )
+        ],
     )
 
     for idx, param in enumerate(flow_config.parameters):
@@ -832,8 +882,8 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
 
     # Clear all matching scores
     for flow_state in state.flow_states.values():
-        head = flow_state.head
-        head.matching_scores.clear()
+        for head in flow_state.heads:
+            head.matching_scores.clear()
 
     actionable_heads: Set[FlowHead] = set()
 
@@ -889,43 +939,43 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                     continue
 
                 flow_config = new_state.flow_configs[flow_state.flow_id]
-                # TODO: Generalize to multiple heads in flow
-                head = flow_state.head
-
-                element = flow_config.elements[head.position]
-                if _is_match_op_element(element):
-                    # TODO: Assign matching score
-                    matching_score = _compute_event_matching_score(
-                        new_state, flow_state, element, event
-                    )
-                    # Make sure that we can always resolve conflicts, using the matching score
-                    matching_score *= match_order_score
-                    match_order_score *= 0.99
-                    head.matching_scores = event.matching_scores.copy()
-                    head.matching_scores.append(matching_score)
-
-                    if matching_score > 0.0:
-                        heads_matching.append(head)
-                        logging.info(f"Matching head (score: {matching_score}): {head}")
-
-                        if element.ref is not None:
-                            # Create event and the reference
-                            # TODO: Encapsulate this section in a function
-                            reference_name = element.ref["elements"][0]["elements"][
-                                0
-                            ].lstrip("$")
-                            new_event = _get_event_from_element(
-                                new_state, flow_state, element
-                            )
-                            flow_state.context.update({reference_name: new_event})
-
-                    elif matching_score < 0.0:
-                        heads_failing.append(head)
-                        logging.info(
-                            f"Matching failure head (score: {matching_score}): {head}"
+                for head in flow_state.heads:
+                    element = flow_config.elements[head.position]
+                    if _is_match_op_element(element):
+                        # TODO: Assign matching score
+                        matching_score = _compute_event_matching_score(
+                            new_state, flow_state, element, event
                         )
-                    else:
-                        heads_not_matching.append(head)
+                        # Make sure that we can always resolve conflicts, using the matching score
+                        matching_score *= match_order_score
+                        match_order_score *= 0.99
+                        head.matching_scores = event.matching_scores.copy()
+                        head.matching_scores.append(matching_score)
+
+                        if matching_score > 0.0:
+                            heads_matching.append(head)
+                            logging.info(
+                                f"Matching head (score: {matching_score}): {head}"
+                            )
+
+                            if element.ref is not None:
+                                # Create event and the reference
+                                # TODO: Encapsulate this section in a function
+                                reference_name = element.ref["elements"][0]["elements"][
+                                    0
+                                ].lstrip("$")
+                                new_event = _get_event_from_element(
+                                    new_state, flow_state, element
+                                )
+                                flow_state.context.update({reference_name: new_event})
+
+                        elif matching_score < 0.0:
+                            heads_failing.append(head)
+                            logging.info(
+                                f"Matching failure head (score: {matching_score}): {head}"
+                            )
+                        else:
+                            heads_not_matching.append(head)
 
             # Handle internal event matching
             for head in heads_matching:
@@ -1057,8 +1107,8 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
 
         head.position += 1
 
-        internal_events = slide(state, flow_state, flow_config, flow_state.head)
-        flow_finished = flow_state.head.position >= len(flow_config.elements)
+        internal_events = slide(state, flow_state, flow_config, head)
+        flow_finished = head.position >= len(flow_config.elements)
         state.internal_events.extend(internal_events)
 
         # TODO: Use additional element to finish flow
@@ -1178,6 +1228,15 @@ def slide(
                     head_position = flow_config.element_labels[element.label] + 1
             else:
                 head_position += 1
+        elif isinstance(element, ForkHead):
+            for label in element.labels:
+                pos = flow_config.element_labels[label]
+                new_head = FlowHead(
+                    new_uid(), pos, flow_state.uid, head.matching_scores
+                )
+                flow_state.heads.extend(new_head)
+                # TODO: we need to also advance these new heads
+                # Maybe we should better use an internal event to fork the heads?
         else:
             # Ignore unknown element
             head_position += 1
