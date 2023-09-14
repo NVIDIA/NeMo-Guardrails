@@ -69,7 +69,7 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
         raise RuntimeError(f"Could not find LLM provider '{model_config.engine}'")
 
     # For OpenAI, we use a different provider depending on whether it's a chat model or not
-    if model_config.model == "openai" and (
+    if model_config.engine == "openai" and (
         "gpt-3.5" in model_config.model or "gpt-4" in model_config.model
     ):
         return ChatOpenAI
