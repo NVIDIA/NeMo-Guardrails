@@ -585,39 +585,57 @@ def _expand_spec_op_element(
 ) -> List[ElementType]:
     new_elements: List[ElementType] = []
     if element.op == "await":
-        if element.spec.name in flow_configs:
-            # It's a flow
-            new_elements.append(
-                SpecOp(
-                    op="start",
-                    spec=element.spec,
+        if isinstance(element.spec, Spec):
+            # Single match element
+            if element.spec.name in flow_configs:
+                # It's a flow
+                new_elements.append(
+                    SpecOp(
+                        op="start",
+                        spec=element.spec,
+                    )
                 )
-            )
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=element.spec,
+                new_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=element.spec,
+                    )
                 )
-            )
+            else:
+                # It's an UMIM action
+                action_ref_uid = f"_action_ref_{new_uid()}"
+                new_elements.append(
+                    SpecOp(
+                        op="start",
+                        spec=element.spec,
+                        ref=_create_ref_ast_dict_helper(action_ref_uid),
+                    )
+                )
+                new_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=Spec(
+                            var_name=action_ref_uid,
+                            members=_create_member_ast_dict_helper("Finished", {}),
+                        ),
+                    )
+                )
         else:
-            # It's an UMIM action
-            action_ref_uid = f"_action_ref_{new_uid()}"
-            new_elements.append(
-                SpecOp(
-                    op="start",
-                    spec=element.spec,
-                    ref=_create_ref_ast_dict_helper(action_ref_uid),
-                )
-            )
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        var_name=action_ref_uid,
-                        members=_create_member_ast_dict_helper("Finished", {}),
-                    ),
-                )
-            )
+            # Multiple match elements
+            for idx, match_element in enumerate(element.spec["elements"]):
+                if match_element.name in flow_configs:
+                    # It's a flow
+                    new_elements.append(
+                        SpecOp(
+                            op="start",
+                            spec=match_element,
+                        )
+                    )
+                else:
+                    # It's an UMIM action
+                    pass
+            element.op = "match"
+            new_elements.append(element)
     elif element.op == "start":
         if element.spec.name in flow_configs:
             # It's a flow
