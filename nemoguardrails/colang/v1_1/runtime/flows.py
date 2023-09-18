@@ -622,6 +622,7 @@ def _expand_spec_op_element(
                 )
         else:
             # Multiple match elements
+            element.spec = normalize(element.spec)
             for idx, match_element in enumerate(element.spec["elements"]):
                 if match_element.name in flow_configs:
                     # It's a flow
@@ -696,8 +697,9 @@ def _expand_spec_op_element(
             else:
                 # It's an UMIM event
                 pass
-        else:
+        elif isinstance(element.spec, dict):
             # Multiple match elements
+            element.spec = normalize(element.spec)
             fork_element = ForkHead()
             label_elements: List[Label] = []
             match_elements: List[SpecOp] = []
@@ -734,6 +736,8 @@ def _expand_spec_op_element(
                 new_elements.append(goto_end_element)
             new_elements.append(Label(name=end_label_name))
             new_elements.append(MergeHeads())
+        else:
+            raise ValueError("Unknown element type")
 
     elif element.op == "activate":
         if element.spec.name in flow_configs:
@@ -804,6 +808,55 @@ def _expand_when_stmt_element(
 ) -> List[ElementType]:
     raise NotImplementedError()
     return element
+
+
+def distribute(and_elem: Union[Dict, str], or_elem: Union[Dict, str]) -> List[Dict]:
+    if not isinstance(and_elem, dict):
+        and_elem = {"_type": "spec_and", "elements": [and_elem]}
+    if not isinstance(or_elem, dict):
+        or_elem = {"_type": "spec_and", "elements": [or_elem]}
+
+    new_elements = []
+    for a in and_elem["elements"]:
+        for o in or_elem["elements"]:
+            new_elements.append({"_type": "spec_and", "elements": [a, o]})
+    return new_elements
+
+
+def normalize(group: Union[Dict, Spec]) -> Dict:
+    # Create top 'or' group
+    result = {"_type": "spec_or", "elements": []}
+    # Iterate through all elements of the group, normalize and at to result
+    if group["_type"] == "spec_or":
+        for element in group["elements"]:
+            result["elements"].extend(normalize(element)["elements"])
+
+    if isinstance(group, Spec):
+        return group
+    elif group["_type"] == "spec_or":
+        or_elements = []
+        for element in group["elements"]:
+            normalized = normalize(
+                element
+                if isinstance(element, dict)
+                else {"_type": "spec_and", "elements": [element]}
+            )
+            or_elements.extend(normalized["elements"])
+        return {"_type": "spec_or", "elements": or_elements}
+
+    elif group["_type"] == "spec_and":
+        if len(group["elements"]) == 1:
+            return normalize(group["elements"][0])
+
+        left = group["elements"][0]
+        right = {"_type": "spec_and", "elements": group["elements"][1:]}
+
+        # The key change: We need to make sure that right is normalized before distributing.
+        or_elements = distribute(left, normalize(right))
+        return {"_type": "spec_or", "elements": or_elements}
+
+    else:
+        raise ValueError("Unsupported _type in group")
 
 
 def _create_ref_ast_dict_helper(ref_name: str) -> dict:

@@ -1254,6 +1254,83 @@ def test_user_action_and_flow_or_grouping():
     )
 
 
+def test_user_action_and_flow_and_grouping():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction().Finished(final_transcript=$transcript)
+
+    flow main
+        await (user said "A1" or user said "A2") and (user said "A3" or user said "A4")
+        start UtteranceBotAction(script="Match")
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "A",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Match",
+            },
+        ],
+    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Match",
+            },
+        ],
+    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "C",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Match",
+            },
+        ],
+    )
+
+
 # def test_if_branching_mechanic():
 #     """"""
 
@@ -1315,4 +1392,4 @@ def test_user_action_and_flow_or_grouping():
 
 
 if __name__ == "__main__":
-    test_await_or_flow_group()
+    test_user_action_and_flow_and_grouping()
