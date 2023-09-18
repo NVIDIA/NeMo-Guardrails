@@ -22,7 +22,7 @@ import logging
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Deque, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
@@ -687,7 +687,7 @@ def _expand_spec_op_element(
             end_label_name = f"end_label_{new_uid()}"
             goto_end_element = Goto(label=end_label_name)
             for idx, match_element in enumerate(element.spec["elements"]):
-                label_name = f"event_{idx}"
+                label_name = f"event_{idx}_{new_uid()}"
                 label_elements.append(Label(name=label_name))
                 fork_element.labels.append(label_name)
                 if match_element.name in flow_configs:
@@ -711,7 +711,7 @@ def _expand_spec_op_element(
                 new_elements.append(label_element)
                 new_elements.append(match_elements[idx])
                 new_elements.append(goto_end_element)
-            new_elements.append(end_label_name)
+            new_elements.append(Label(name=end_label_name))
             new_elements.append(MergeHeads())
 
     elif element.op == "activate":
@@ -1097,7 +1097,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
     Advances all provided heads to the next blocking elements (actionable or matching) and returns all heads on
     actionable elements.
     """
-    heads_actionable: Set[FlowHead] = set()
+    actionable_heads: Set[FlowHead] = set()
     for head in heads:
         flow_state = _get_flow_state_from_head(state, head)
         flow_config = _get_flow_config_from_head(state, head)
@@ -1107,9 +1107,16 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
 
         head.position += 1
 
-        internal_events = slide(state, flow_state, flow_config, head)
-        flow_finished = head.position >= len(flow_config.elements)
+        internal_events, new_heads = slide(state, flow_state, flow_config, head)
         state.internal_events.extend(internal_events)
+
+        # Advance all new heads from a head fork
+        if len(new_heads) > 0:
+            actionable_heads = actionable_heads.union(
+                _advance_head_front(state, new_heads)
+            )
+
+        flow_finished = head.position >= len(flow_config.elements)
 
         # TODO: Use additional element to finish flow
         if flow_finished:
@@ -1119,7 +1126,15 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
                 f"Head in flow {head.flow_state_uid} advanced to element: {flow_config.elements[head.position]}"
             )
 
-        if flow_finished or _is_match_op_element(flow_config.elements[head.position]):
+        # Check if all all flow heads at a match element
+        if not flow_finished:
+            all_heads_at_match_elements = True
+            for temp_head in flow_state.heads:
+                if not _is_match_op_element(flow_config.elements[temp_head.position]):
+                    all_heads_at_match_elements = False
+                    break
+
+        if flow_finished or all_heads_at_match_elements:
             if flow_state.status == FlowStatus.STARTING:
                 flow_state.status = FlowStatus.STARTED
                 event = create_flow_started_internal_event(
@@ -1127,24 +1142,25 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
                 )
                 _push_internal_event(state, event)
         elif _is_action_op_element(flow_config.elements[head.position]):
-            heads_actionable.add(head)
+            actionable_heads.add(head)
 
         # Check if flow has finished
         # TODO: Refactor to properly finish flow and all its child flows
         if flow_finished:
             _finish_flow(state, flow_state, head.matching_scores)
 
-    return heads_actionable
+    return actionable_heads
 
 
 # TODO: Implement support for more sliding operations
 def slide(
     state: State, flow_state: FlowState, flow_config: FlowConfig, head: FlowHead
-) -> Deque[dict]:
+) -> Tuple[Deque[dict], List[FlowHead]]:
     """Tries to slide a flow with the provided head."""
     head_position = head.position
 
     internal_events: Deque[dict] = deque()
+    new_heads: List[FlowHead] = []
 
     # TODO: Implement global/local flow context handling
     # context = state.context
@@ -1153,7 +1169,7 @@ def slide(
     while True:
         # if we reached the end, we stop
         if head_position == len(flow_config.elements) or head_position < 0:
-            return internal_events
+            return internal_events, new_heads
 
         # prev_head = head_position
         element = flow_config.elements[head_position]
@@ -1177,6 +1193,7 @@ def slide(
             elif element.op == "_new_instance":
                 if element.spec.name in state.flow_configs:
                     # It's a flow
+                    raise NotImplementedError()
                     evaluated_arguments = _evaluate_arguments(
                         element.spec.arguments, flow_state.context
                     )
@@ -1229,21 +1246,28 @@ def slide(
             else:
                 head_position += 1
         elif isinstance(element, ForkHead):
-            for label in element.labels:
+            # We create new heads for
+            for idx, label in enumerate(element.labels):
                 pos = flow_config.element_labels[label]
-                new_head = FlowHead(
-                    new_uid(), pos, flow_state.uid, head.matching_scores
-                )
-                flow_state.heads.extend(new_head)
-                # TODO: we need to also advance these new heads
-                # Maybe we should better use an internal event to fork the heads?
+                if idx == 0:
+                    head_position = pos
+                else:
+                    new_head = FlowHead(
+                        new_uid(), pos, flow_state.uid, head.matching_scores
+                    )
+                    flow_state.heads.append(new_head)
+                    new_heads.append(new_head)
+        elif isinstance(element, MergeHeads):
+            # Delete all heads from the flow except for the current on
+            flow_state.heads = [head]
+            head_position += 1
         else:
             # Ignore unknown element
             head_position += 1
 
     # If we got this far, it means we had a match and the flow advanced
     head.position = head_position
-    return internal_events
+    return internal_events, new_heads
 
 
 def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:

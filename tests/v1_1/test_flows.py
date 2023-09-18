@@ -1186,8 +1186,7 @@ def test_match_or_event_group():
         start UtteranceBotAction(script="Match")
     """
 
-    config = _init_state(content)
-    state = compute_next_state(config, start_main_flow_event)
+    state = compute_next_state(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [],
@@ -1208,6 +1207,11 @@ def test_match_or_event_group():
             },
         ],
     )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
     state = compute_next_state(
         state,
         {
@@ -1223,6 +1227,11 @@ def test_match_or_event_group():
                 "script": "Match",
             },
         ],
+    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
     )
     state = compute_next_state(
         state,
