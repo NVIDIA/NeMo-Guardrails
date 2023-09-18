@@ -51,15 +51,14 @@ from nemoguardrails.utils import new_event_dict, new_uid
 # )
 
 """
-Questions:
-* What's the plan with the state
-  - Distribution of helper functions? E.g. internal event creation?
-* Should we have only 'send', 'match' and assignment at the basis of the language, everything else can be expended to that
-  - Assignment of actions
-* Where should this extension be done? Since we need the context of the flows and actions
-* Not everything is a SpecOp in ast, e.g. comments
-* Handling of double quotation
-* Transformer must extract flow parameters
+Open points:
+* Parser:
+  * Assigning references inside e.g. event or action groups does not work yet
+  * Does assignment work?
+* Colanng flow control:
+  * Discuss expansion to fork/merge/wait_for_heads keywords
+  * what does 'when else' actually do?
+  * We should probably introduce the missatching with e.g. 'not'
 """
 
 
@@ -692,6 +691,10 @@ def _expand_spec_op_element(
                 fork_element.labels.append(label_name)
                 if match_element.name in flow_configs:
                     # It's a flow
+                    arguments = {"flow_id": f"'{match_element.name}'"}
+                    for arg in match_element.arguments:
+                        arguments.update({arg: match_element.arguments[arg]})
+
                     match_elements.append(
                         SpecOp(
                             op="match",

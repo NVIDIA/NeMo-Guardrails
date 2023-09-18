@@ -1251,6 +1251,91 @@ def test_match_or_event_group():
     )
 
 
+def test_match_or_flow_group():
+    """"""
+
+    content = """
+    flow bot say $script
+      await UtteranceBotAction(script=$script)
+
+    flow user said $transcript
+      match UtteranceUserAction().Finished(final_transcript=$transcript)
+
+    flow main
+        start user said "A"
+        start user said "B"
+        start user said "C"
+        match user said "A"
+          or user said "B"
+          or user said "C"
+        start bot say "Match"
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "A",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Match",
+            },
+        ],
+    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Match",
+            },
+        ],
+    )
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "C",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Match",
+            },
+        ],
+    )
+
+
 # def test_if_branching_mechanic():
 #     """"""
 
@@ -1312,4 +1397,4 @@ def test_match_or_event_group():
 
 
 if __name__ == "__main__":
-    test_match_or_event_group()
+    test_match_or_flow_group()
