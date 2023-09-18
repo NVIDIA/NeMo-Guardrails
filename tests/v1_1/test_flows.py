@@ -6,8 +6,11 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, State,
-                                                      compute_next_state)
+from nemoguardrails.colang.v1_1.runtime.flows import (
+    ActionStatus,
+    State,
+    compute_next_state,
+)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -1172,182 +1175,18 @@ def test_while_loop_mechanic():
     )
 
 
-def test_match_or_event_group():
+def test_user_action_and_flow_or_grouping():
     """"""
 
     content = """
-    flow main
-        match UtteranceUserAction().Finished(final_transcript="A")
-          or UtteranceUserAction().Finished(final_transcript="B")
-          or UtteranceUserAction().Finished(final_transcript="C")
-        start UtteranceBotAction(script="Match")
-    """
-
-    state = compute_next_state(_init_state(content), start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
-    state = compute_next_state(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "A",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Match",
-            },
-        ],
-    )
-    state = compute_next_state(_init_state(content), start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
-    state = compute_next_state(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "B",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Match",
-            },
-        ],
-    )
-    state = compute_next_state(_init_state(content), start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
-    state = compute_next_state(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "C",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Match",
-            },
-        ],
-    )
-
-
-def test_await_or_flow_group():
-    """"""
-
-    content = """
-    flow bot say $script
-      await UtteranceBotAction(script=$script)
-
     flow user said $transcript
       match UtteranceUserAction().Finished(final_transcript=$transcript)
 
     flow main
         await user said "A"
-          or user said "B"
+          or UtteranceUserAction().Finished(final_transcript="B")
           or user said "C"
-        start bot say "Match"
-    """
-
-    state = compute_next_state(_init_state(content), start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
-    state = compute_next_state(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "A",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Match",
-            },
-        ],
-    )
-    state = compute_next_state(_init_state(content), start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
-    state = compute_next_state(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "B",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Match",
-            },
-        ],
-    )
-    state = compute_next_state(_init_state(content), start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
-    state = compute_next_state(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "C",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Match",
-            },
-        ],
-    )
-
-
-def test_match_or_flow_group():
-    """"""
-
-    content = """
-    flow bot say $script
-      await UtteranceBotAction(script=$script)
-
-    flow user said $transcript
-      match UtteranceUserAction().Finished(final_transcript=$transcript)
-
-    flow main
-        start user said "A"
-        start user said "B"
-        start user said "C"
-        match user said "A"
-          or user said "B"
-          or user said "C"
-        start bot say "Match"
+        start UtteranceBotAction(script="Match")
     """
 
     state = compute_next_state(_init_state(content), start_main_flow_event)
