@@ -16,7 +16,7 @@
 """The data types that are used when constructing the Abstract Syntax Tree after parsing."""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
@@ -62,6 +62,27 @@ class Element:
         """
         return self[key] or default_value
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__hash__() == other.__hash__()
+        return NotImplemented
+
+    def hash(self):
+        """Return the hash for the current object."""
+        return hash(_make_hashable(self))
+
+
+def _make_hashable(obj: Any) -> Any:
+    """Make all subtypes of Element hashable."""
+    if isinstance(obj, dict):
+        return tuple((k, _make_hashable(v)) for k, v in sorted(obj.items()))
+    elif isinstance(obj, list):
+        return tuple(_make_hashable(x) for x in obj)
+    elif isinstance(obj, Element):
+        return tuple((k, _make_hashable(v)) for k, v in sorted(vars(obj).items()))
+    else:
+        return obj
+
 
 @dataclass_json
 @dataclass
@@ -77,7 +98,7 @@ class Value(Element):
 class Elements(Element):
     """Element that encapsulates multiple sub-elements."""
 
-    elements: List[Element] = field(default_factory=list())
+    elements: List[Element] = field(default_factory=list)
     _type: str = "value"
 
 
@@ -88,7 +109,7 @@ class Flow(Element):
 
     name: str = ""
     parameters: List[FlowParamDef] = field(default_factory=list)
-    elements: List[Element] = field(default_factory=list())
+    elements: List[Element] = field(default_factory=list)
     _type: str = "flow"
 
 
@@ -116,7 +137,7 @@ class Spec(Element):
 class SpecAnd(Element):
     """A conjunction of specs."""
 
-    specs: List[Spec] = field(default_factory=list())
+    specs: List[Spec] = field(default_factory=list)
     _type: str = "spec_and"
 
 
@@ -125,7 +146,7 @@ class SpecAnd(Element):
 class SpecOr(Element):
     """A disjunction of spects."""
 
-    specs: List[Spec] = field(default_factory=list())
+    specs: List[Spec] = field(default_factory=list)
     _type: str = "spec_or"
 
 
@@ -147,7 +168,7 @@ class SpecOp(Element):
 @dataclass
 class If(Element):
     expression: str = ""
-    then_elements: List[Element] = field(default_factory=list())
+    then_elements: List[Element] = field(default_factory=list)
     else_elements: Optional[List[Element]] = None
     _type: str = "if"
 
@@ -156,7 +177,7 @@ class If(Element):
 @dataclass
 class While(Element):
     expression: str = ""
-    do: List[Element] = field(default_factory=list())
+    do: List[Element] = field(default_factory=list)
     _type: str = "while"
 
 
@@ -213,5 +234,25 @@ class Goto(Element):
 @dataclass_json
 @dataclass
 class Meta(Element):
-    meta: dict = field(default_factory=dict())
+    meta: dict = field(default_factory=dict)
     _type: str = "meta"
+
+
+@dataclass_json
+@dataclass
+class ForkHead(Element):
+    labels: List[str] = field(default_factory=list)
+    _type: str = "_fork"
+
+
+@dataclass_json
+@dataclass
+class MergeHeads(Element):
+    _type: str = "_merge"
+
+
+@dataclass_json
+@dataclass
+class WaitForHeads(Element):
+    number: int = 1
+    _type: str = "_wait_for_heads"

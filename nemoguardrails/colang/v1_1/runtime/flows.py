@@ -22,17 +22,20 @@ import logging
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Deque, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Element,
     FlowParamDef,
+    ForkHead,
     Goto,
     Label,
+    MergeHeads,
     Spec,
     SpecOp,
+    WaitForHeads,
 )
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 from nemoguardrails.colang.v1_1.runtime.utils import create_readable_uuid
@@ -49,15 +52,14 @@ from nemoguardrails.utils import new_event_dict, new_uid
 # )
 
 """
-Questions:
-* What's the plan with the state
-  - Distribution of helper functions? E.g. internal event creation?
-* Should we have only 'send', 'match' and assignment at the basis of the language, everything else can be expended to that
-  - Assignment of actions
-* Where should this extension be done? Since we need the context of the flows and actions
-* Not everything is a SpecOp in ast, e.g. comments
-* Handling of double quotation
-* Transformer must extract flow parameters
+Open points:
+* Parser:
+  * Assigning references inside e.g. event or action groups does not work yet
+  * Does assignment work?
+* Colanng flow control:
+  * Discuss expansion to fork/merge/wait_for_heads keywords
+  * what does 'when else' actually do?
+  * We should probably introduce the missatching with e.g. 'not'
 """
 
 
@@ -354,7 +356,7 @@ class FlowState:
 
     # The position in the sequence of elements that compose the flow.
     # TODO: Generalize to have multiple heads for branching head statements like when/else
-    head: FlowHead
+    heads: List[FlowHead]
 
     # All actions that were instantiated since the beginning of the flow
     action_uids: List[str]
@@ -565,6 +567,8 @@ def _expand_elements(
                     elements_changed = True
             elif element["_type"] == "while_stmt":
                 expanded_elems = _expand_while_stmt_element(element, flow_configs)
+            elif element["_type"] == "if_stmt":
+                expanded_elems = _expand_if_stmt_element(element, flow_configs)
             elif element["_type"] == "when_stmt":
                 expanded_elems = _expand_when_stmt_element(element, flow_configs)
 
@@ -582,127 +586,246 @@ def _expand_spec_op_element(
 ) -> List[ElementType]:
     new_elements: List[ElementType] = []
     if element.op == "await":
-        if element.spec.name in flow_configs:
-            # It's a flow
-            new_elements.append(
-                SpecOp(
-                    op="start",
-                    spec=element.spec,
+        if isinstance(element.spec, Spec):
+            # Single element
+            if element.spec.name in flow_configs:
+                # It's a flow
+                new_elements.append(
+                    SpecOp(
+                        op="start",
+                        spec=element.spec,
+                    )
                 )
-            )
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=element.spec,
+                new_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=element.spec,
+                    )
                 )
-            )
-        else:
-            # It's an UMIM action
-            action_ref_uid = f"_action_ref_{new_uid()}"
-            new_elements.append(
-                SpecOp(
-                    op="start",
-                    spec=element.spec,
-                    ref=_create_ref_ast_dict_helper(action_ref_uid),
-                )
-            )
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        var_name=action_ref_uid,
-                        members=_create_member_ast_dict_helper("Finished", {}),
-                    ),
-                )
-            )
-    elif element.op == "start":
-        if element.spec.name in flow_configs:
-            # It's a flow
-            element.spec.arguments.update({"flow_id": f"'{element.spec.name}'"})
-            new_elements.append(
-                SpecOp(
-                    op="send",
-                    spec=Spec(
-                        name=InternalEvents.START_FLOW,
-                        arguments=element.spec.arguments,
-                    ),
-                )
-            )
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        name=InternalEvents.FLOW_STARTED,
-                        arguments=element.spec.arguments,
-                    ),
-                )
-            )
-        else:
-            # It's an UMIM action
-            element_ref = element.ref
-            if element_ref is None:
+            else:
+                # It's an UMIM action
                 action_ref_uid = f"_action_ref_{new_uid()}"
-                element_ref = _create_ref_ast_dict_helper(action_ref_uid)
-            new_elements.append(
-                SpecOp(
-                    op="_new_instance",
-                    spec=element.spec,
-                    ref=element_ref,
+                new_elements.append(
+                    SpecOp(
+                        op="start",
+                        spec=element.spec,
+                        ref=_create_ref_ast_dict_helper(action_ref_uid),
+                    )
                 )
-            )
-            spec = element.spec
-            spec.members = _create_member_ast_dict_helper("Start", {})
-            spec.var_name = element_ref["elements"][0]["elements"][0].lstrip("$")
-            new_elements.append(SpecOp(op="send", spec=spec))
-    elif element.op == "match":
-        if element.spec.name in flow_configs:
-            # It's a flow
-            arguments = {"flow_id": f"'{element.spec.name}'"}
-            for arg in element.spec.arguments:
-                arguments.update({arg: element.spec.arguments[arg]})
+                new_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=Spec(
+                            var_name=action_ref_uid,
+                            members=_create_member_ast_dict_helper("Finished", {}),
+                        ),
+                    )
+                )
+        else:
+            # Element group
+            normalized_group = normalize_element_groups(element.spec)
+            unique_group = convert_to_single_and_element_group(normalized_group)
+            for and_group in unique_group["elements"]:
+                for match_element in and_group["elements"]:
+                    if match_element.name in flow_configs:
+                        # It's a flow
+                        new_elements.append(
+                            SpecOp(
+                                op="start",
+                                spec=match_element,
+                            )
+                        )
+                    else:
+                        # It's an UMIM action
+                        pass
+            element.op = "match"
+            new_elements.append(element)
+    elif element.op == "start":
+        if isinstance(element.spec, Spec):
+            # Single element
+            if element.spec.name in flow_configs:
+                # It's a flow
+                element.spec.arguments.update({"flow_id": f"'{element.spec.name}'"})
+                new_elements.append(
+                    SpecOp(
+                        op="send",
+                        spec=Spec(
+                            name=InternalEvents.START_FLOW,
+                            arguments=element.spec.arguments,
+                        ),
+                    )
+                )
+                new_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=Spec(
+                            name=InternalEvents.FLOW_STARTED,
+                            arguments=element.spec.arguments,
+                        ),
+                    )
+                )
+            else:
+                # It's an UMIM action
+                element_ref = element.ref
+                if element_ref is None:
+                    action_ref_uid = f"_action_ref_{new_uid()}"
+                    element_ref = _create_ref_ast_dict_helper(action_ref_uid)
+                new_elements.append(
+                    SpecOp(
+                        op="_new_instance",
+                        spec=element.spec,
+                        ref=element_ref,
+                    )
+                )
+                spec = element.spec
+                spec.members = _create_member_ast_dict_helper("Start", {})
+                spec.var_name = element_ref["elements"][0]["elements"][0].lstrip("$")
+                new_elements.append(SpecOp(op="send", spec=spec))
+        else:
+            # Element group
+            normalized_group = normalize_element_groups(element.spec)
+            if len(normalized_group["elements"]) > 1:
+                raise NotImplementedError("Starting 'or' groups not implemented yet!")
+            for group_element in normalized_group["elements"][0]["elements"]:
+                new_elements.append(
+                    SpecOp(
+                        op="start",
+                        spec=group_element,
+                    )
+                )
 
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        name=InternalEvents.FLOW_FINISHED,
-                        arguments=arguments,
-                    ),
+    elif element.op == "match":
+        if isinstance(element.spec, Spec):
+            # Single match element
+            if element.spec.name in flow_configs:
+                # It's a flow
+                arguments = {"flow_id": f"'{element.spec.name}'"}
+                for arg in element.spec.arguments:
+                    arguments.update({arg: element.spec.arguments[arg]})
+
+                new_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=Spec(
+                            name=InternalEvents.FLOW_FINISHED,
+                            arguments=arguments,
+                        ),
+                    )
                 )
-            )
+            else:
+                # It's an UMIM event
+                pass
+        elif isinstance(element.spec, dict):
+            # Multiple match elements
+            normalized_group = normalize_element_groups(element.spec)
+
+            fork_element = ForkHead()
+            event_label_elements: List[Label] = []
+            event_match_elements: List[SpecOp] = []
+            goto_group_elements: List[Goto] = []
+            group_label_elements: List[Label] = []
+            wait_for_heads_elements: List[WaitForHeads] = []
+            end_label_name = f"end_label_{new_uid()}"
+            goto_end_element = Goto(label=end_label_name)
+            end_label_element = Label(name=end_label_name)
+
+            element_idx = 0
+            for group_idx, and_group in enumerate(normalized_group["elements"]):
+                group_label_name = f"group_{group_idx}_{new_uid()}"
+                group_label_elements.append(Label(name=group_label_name))
+                goto_group_elements.append(Goto(label=group_label_name))
+                wait_for_heads_elements.append(
+                    WaitForHeads(number=len(and_group["elements"]))
+                )
+
+                for match_element in and_group["elements"]:
+                    label_name = f"event_{element_idx}_{new_uid()}"
+                    event_label_elements.append(Label(name=label_name))
+                    fork_element.labels.append(label_name)
+                    if match_element.name in flow_configs:
+                        # It's a flow
+                        arguments = {"flow_id": f"'{match_element.name}'"}
+                        for arg in match_element.arguments:
+                            arguments.update({arg: match_element.arguments[arg]})
+
+                        event_match_elements.append(
+                            SpecOp(
+                                op="match",
+                                spec=Spec(
+                                    name=InternalEvents.FLOW_FINISHED,
+                                    arguments=arguments,
+                                ),
+                            )
+                        )
+                    else:
+                        # It's an UMIM event
+                        new_match_element = copy.copy(element)
+                        new_match_element.spec = match_element
+                        event_match_elements.append(new_match_element)
+                    element_idx += 1
+
+            # Generate new element sequence
+            element_idx = 0
+            new_elements.append(fork_element)
+            for group_idx, and_group in enumerate(normalized_group["elements"]):
+                for match_element in and_group["elements"]:
+                    new_elements.append(event_label_elements[element_idx])
+                    new_elements.append(event_match_elements[element_idx])
+                    new_elements.append(goto_group_elements[group_idx])
+                    element_idx += 1
+                new_elements.append(group_label_elements[group_idx])
+                new_elements.append(wait_for_heads_elements[group_idx])
+                new_elements.append(MergeHeads())
+                new_elements.append(goto_end_element)
+            new_elements.append(end_label_element)
+
         else:
-            # It's an UMIM event
-            pass
+            raise ValueError("Unknown element type")
+
     elif element.op == "activate":
-        if element.spec.name in flow_configs:
-            # It's a flow
-            element.spec.arguments.update(
-                {
-                    "flow_id": f"'{element.spec.name}'",
-                    "activated": "True",
-                }
-            )
-            new_elements.append(
-                SpecOp(
-                    op="send",
-                    spec=Spec(
-                        name=InternalEvents.START_FLOW,
-                        arguments=element.spec.arguments,
-                    ),
+        if isinstance(element.spec, Spec):
+            # Single match element
+            if element.spec.name in flow_configs:
+                # It's a flow
+                element.spec.arguments.update(
+                    {
+                        "flow_id": f"'{element.spec.name}'",
+                        "activated": "True",
+                    }
                 )
-            )
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        name=InternalEvents.FLOW_STARTED,
-                        arguments=element.spec.arguments,
-                    ),
+                new_elements.append(
+                    SpecOp(
+                        op="send",
+                        spec=Spec(
+                            name=InternalEvents.START_FLOW,
+                            arguments=element.spec.arguments,
+                        ),
+                    )
                 )
-            )
-        else:
-            # It's an UMIM event
-            pass
+                new_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=Spec(
+                            name=InternalEvents.FLOW_STARTED,
+                            arguments=element.spec.arguments,
+                        ),
+                    )
+                )
+            else:
+                # It's an UMIM event
+                raise NotImplementedError("Events cannot be activated!")
+        elif isinstance(element.spec, dict):
+            # Multiple match elements
+            normalized_group = normalize_element_groups(element.spec)
+            if len(normalized_group["elements"]) > 1:
+                raise NotImplementedError("Activating 'or' groups not implemented yet!")
+            for group_element in normalized_group["elements"][0]["elements"]:
+                new_elements.append(
+                    SpecOp(
+                        op="activate",
+                        spec=group_element,
+                    )
+                )
 
     return new_elements
 
@@ -730,11 +853,108 @@ def _expand_while_stmt_element(
     return new_elements
 
 
+def _expand_if_stmt_element(
+    element: dict, flow_configs: Dict[str, FlowConfig]
+) -> List[ElementType]:
+    raise NotImplementedError()
+    return element
+
+
 def _expand_when_stmt_element(
     element: dict, flow_configs: Dict[str, FlowConfig]
 ) -> List[ElementType]:
     raise NotImplementedError()
     return element
+
+
+def normalize_element_groups(group: Union[Spec, dict]) -> dict:
+    """
+    Normalize groups to the disjunctive normal form (DNF),
+    resulting in a single or group that contains multiple and groups.
+    """
+
+    if isinstance(group, Spec):
+        group = {"_type": "spec_and", "elements": [group]}
+
+    if group["_type"] == "spec_or":
+        return flatten_or_group(
+            {
+                "_type": "spec_or",
+                "elements": [
+                    normalize_element_groups(elem)
+                    if isinstance(elem, dict)
+                    else {"_type": "spec_and", "elements": [elem]}
+                    for elem in group["elements"]
+                ],
+            }
+        )
+    elif group["_type"] == "spec_and":
+        results = [{"_type": "spec_and", "elements": []}]
+        for elem in group["elements"]:
+            normalized = (
+                normalize_element_groups(elem)
+                if isinstance(elem, dict)
+                else {
+                    "_type": "spec_or",
+                    "elements": [{"_type": "spec_and", "elements": [elem]}],
+                }
+            )
+
+            # Distribute using the property: A and (B or C) = (A and B) or (A and C)
+            new_results = []
+            for res_elem in results:
+                for norm_elem in normalized["elements"]:
+                    new_elem = {
+                        "_type": "spec_and",
+                        "elements": res_elem["elements"] + norm_elem["elements"],
+                    }
+                    new_results.append(new_elem)
+            results = new_results
+
+        # Remove duplicate elements from groups
+        for idx, and_group in enumerate(results):
+            results[idx] = uniquify_element_group(and_group)
+
+        # TODO: Remove duplicated and groups
+        return flatten_or_group({"_type": "spec_or", "elements": results})
+
+
+def flatten_or_group(group: dict):
+    new_elements = []
+    for elem in group["elements"]:
+        if isinstance(elem, dict) and elem["_type"] == "spec_or":
+            new_elements.extend(elem["elements"])
+        else:
+            new_elements.append(elem)
+    return {"_type": "spec_or", "elements": new_elements}
+
+
+def uniquify_element_group(group: dict) -> dict:
+    """Remove all duplicate elements from group."""
+    unique_elements: Dict[Tuple[int, Spec]] = {}
+    for element in group["elements"]:
+        unique_elements.setdefault(element.hash(), element)
+    new_group = group.copy()
+    new_group["elements"] = [e for e in unique_elements.values()]
+    return new_group
+
+
+def convert_to_single_and_element_group(group: dict) -> dict:
+    """Convert element group into a single 'and' group with unique elements."""
+    unique_elements: Dict[Tuple[int, Spec]] = {}
+    for and_group in group["elements"]:
+        for element in and_group["elements"]:
+            # Makes sure that we add the same element only once
+            unique_elements.update({element.hash(): element})
+    return {
+        "_type": "spec_or",
+        "elements": [
+            {
+                "_type": "spec_and",
+                "elements": [elem for elem in unique_elements.values()],
+            }
+        ],
+    }
 
 
 def _create_ref_ast_dict_helper(ref_name: str) -> dict:
@@ -776,14 +996,17 @@ def _create_flow_instance(
         action_uids=[],
         flow_id=flow_config.id,
         loop_id=loop_uid,
-        head=FlowHead(
-            uid=new_uid(),
-            position=0,
-            flow_state_uid=flow_uid,
-            matching_scores=[],
-        ),
+        heads=[
+            FlowHead(
+                uid=new_uid(),
+                position=0,
+                flow_state_uid=flow_uid,
+                matching_scores=[],
+            )
+        ],
     )
 
+    # Add all the flow parameters
     for idx, param in enumerate(flow_config.parameters):
         flow_state.arguments.append(param.name)
         flow_state.context.update(
@@ -791,6 +1014,9 @@ def _create_flow_instance(
                 param.name: eval_expression(param.default_value_expr, {}),
             }
         )
+    # Add the positional flow parameter identifiers
+    for idx, param in enumerate(flow_config.parameters):
+        flow_state.arguments.append(f"${idx}")
 
     return flow_state
 
@@ -832,8 +1058,8 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
 
     # Clear all matching scores
     for flow_state in state.flow_states.values():
-        head = flow_state.head
-        head.matching_scores.clear()
+        for head in flow_state.heads:
+            head.matching_scores.clear()
 
     actionable_heads: Set[FlowHead] = set()
 
@@ -889,43 +1115,43 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                     continue
 
                 flow_config = new_state.flow_configs[flow_state.flow_id]
-                # TODO: Generalize to multiple heads in flow
-                head = flow_state.head
-
-                element = flow_config.elements[head.position]
-                if _is_match_op_element(element):
-                    # TODO: Assign matching score
-                    matching_score = _compute_event_matching_score(
-                        new_state, flow_state, element, event
-                    )
-                    # Make sure that we can always resolve conflicts, using the matching score
-                    matching_score *= match_order_score
-                    match_order_score *= 0.99
-                    head.matching_scores = event.matching_scores.copy()
-                    head.matching_scores.append(matching_score)
-
-                    if matching_score > 0.0:
-                        heads_matching.append(head)
-                        logging.info(f"Matching head (score: {matching_score}): {head}")
-
-                        if element.ref is not None:
-                            # Create event and the reference
-                            # TODO: Encapsulate this section in a function
-                            reference_name = element.ref["elements"][0]["elements"][
-                                0
-                            ].lstrip("$")
-                            new_event = _get_event_from_element(
-                                new_state, flow_state, element
-                            )
-                            flow_state.context.update({reference_name: new_event})
-
-                    elif matching_score < 0.0:
-                        heads_failing.append(head)
-                        logging.info(
-                            f"Matching failure head (score: {matching_score}): {head}"
+                for head in flow_state.heads:
+                    element = flow_config.elements[head.position]
+                    if _is_match_op_element(element):
+                        # TODO: Assign matching score
+                        matching_score = _compute_event_matching_score(
+                            new_state, flow_state, element, event
                         )
-                    else:
-                        heads_not_matching.append(head)
+                        # Make sure that we can always resolve conflicts, using the matching score
+                        matching_score *= match_order_score
+                        match_order_score *= 0.99
+                        head.matching_scores = event.matching_scores.copy()
+                        head.matching_scores.append(matching_score)
+
+                        if matching_score > 0.0:
+                            heads_matching.append(head)
+                            logging.info(
+                                f"Matching head (score: {matching_score}): {head}"
+                            )
+
+                            if element.ref is not None:
+                                # Create event and the reference
+                                # TODO: Encapsulate this section in a function
+                                reference_name = element.ref["elements"][0]["elements"][
+                                    0
+                                ].lstrip("$")
+                                new_event = _get_event_from_element(
+                                    new_state, flow_state, element
+                                )
+                                flow_state.context.update({reference_name: new_event})
+
+                        elif matching_score < 0.0:
+                            heads_failing.append(head)
+                            logging.info(
+                                f"Matching failure head (score: {matching_score}): {head}"
+                            )
+                        else:
+                            heads_not_matching.append(head)
 
             # Handle internal event matching
             for head in heads_matching:
@@ -1047,7 +1273,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
     Advances all provided heads to the next blocking elements (actionable or matching) and returns all heads on
     actionable elements.
     """
-    heads_actionable: Set[FlowHead] = set()
+    actionable_heads: Set[FlowHead] = set()
     for head in heads:
         flow_state = _get_flow_state_from_head(state, head)
         flow_config = _get_flow_config_from_head(state, head)
@@ -1057,9 +1283,16 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
 
         head.position += 1
 
-        internal_events = slide(state, flow_state, flow_config, flow_state.head)
-        flow_finished = flow_state.head.position >= len(flow_config.elements)
+        internal_events, new_heads = slide(state, flow_state, flow_config, head)
         state.internal_events.extend(internal_events)
+
+        # Advance all new heads from a head fork
+        if len(new_heads) > 0:
+            actionable_heads = actionable_heads.union(
+                _advance_head_front(state, new_heads)
+            )
+
+        flow_finished = head.position >= len(flow_config.elements)
 
         # TODO: Use additional element to finish flow
         if flow_finished:
@@ -1069,7 +1302,15 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
                 f"Head in flow {head.flow_state_uid} advanced to element: {flow_config.elements[head.position]}"
             )
 
-        if flow_finished or _is_match_op_element(flow_config.elements[head.position]):
+        # Check if all all flow heads at a match element
+        if not flow_finished:
+            all_heads_at_match_elements = True
+            for temp_head in flow_state.heads:
+                if not _is_match_op_element(flow_config.elements[temp_head.position]):
+                    all_heads_at_match_elements = False
+                    break
+
+        if flow_finished or all_heads_at_match_elements:
             if flow_state.status == FlowStatus.STARTING:
                 flow_state.status = FlowStatus.STARTED
                 event = create_flow_started_internal_event(
@@ -1077,24 +1318,25 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
                 )
                 _push_internal_event(state, event)
         elif _is_action_op_element(flow_config.elements[head.position]):
-            heads_actionable.add(head)
+            actionable_heads.add(head)
 
         # Check if flow has finished
         # TODO: Refactor to properly finish flow and all its child flows
         if flow_finished:
             _finish_flow(state, flow_state, head.matching_scores)
 
-    return heads_actionable
+    return actionable_heads
 
 
 # TODO: Implement support for more sliding operations
 def slide(
     state: State, flow_state: FlowState, flow_config: FlowConfig, head: FlowHead
-) -> Deque[dict]:
+) -> Tuple[Deque[dict], List[FlowHead]]:
     """Tries to slide a flow with the provided head."""
     head_position = head.position
 
     internal_events: Deque[dict] = deque()
+    new_heads: List[FlowHead] = []
 
     # TODO: Implement global/local flow context handling
     # context = state.context
@@ -1103,7 +1345,7 @@ def slide(
     while True:
         # if we reached the end, we stop
         if head_position == len(flow_config.elements) or head_position < 0:
-            return internal_events
+            return internal_events, new_heads
 
         # prev_head = head_position
         element = flow_config.elements[head_position]
@@ -1127,6 +1369,7 @@ def slide(
             elif element.op == "_new_instance":
                 if element.spec.name in state.flow_configs:
                     # It's a flow
+                    raise NotImplementedError()
                     evaluated_arguments = _evaluate_arguments(
                         element.spec.arguments, flow_state.context
                     )
@@ -1178,13 +1421,39 @@ def slide(
                     head_position = flow_config.element_labels[element.label] + 1
             else:
                 head_position += 1
+        elif isinstance(element, ForkHead):
+            # We create new heads for
+            for idx, label in enumerate(element.labels):
+                pos = flow_config.element_labels[label]
+                if idx == 0:
+                    head_position = pos
+                else:
+                    new_head = FlowHead(
+                        new_uid(), pos, flow_state.uid, head.matching_scores
+                    )
+                    flow_state.heads.append(new_head)
+                    new_heads.append(new_head)
+        elif isinstance(element, MergeHeads):
+            # Delete all heads from the flow except for the current on
+            # TODO: Check if these heads are in no another list
+            flow_state.heads = [head]
+            head_position += 1
+        elif isinstance(element, WaitForHeads):
+            # Check if enough heads are on this element to continue
+            waiting_heads = [h for h in flow_state.heads if h.position == head_position]
+            if len(waiting_heads) >= element.number - 1:
+                # TODO: Check if these heads are in no another list
+                flow_state.heads = [head]
+                head_position += 1
+            else:
+                break
         else:
             # Ignore unknown element
             head_position += 1
 
     # If we got this far, it means we had a match and the flow advanced
     head.position = head_position
-    return internal_events
+    return internal_events, new_heads
 
 
 def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
@@ -1734,7 +2003,8 @@ def create_flow_finished_internal_event(
     """Returns 'FlowFinished' internal event"""
     arguments = {"source_flow_instance_uid": source_flow_state.uid}
     for arg in source_flow_state.arguments:
-        arguments.update({arg: source_flow_state.context[arg]})
+        if arg in source_flow_state.context:
+            arguments.update({arg: source_flow_state.context[arg]})
     return create_internal_event(
         InternalEvents.FLOW_FINISHED,
         arguments,
