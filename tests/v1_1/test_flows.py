@@ -1175,7 +1175,41 @@ def test_while_loop_mechanic():
     )
 
 
-def test_user_action_and_flow_or_grouping():
+def test_start_grouping():
+    """"""
+
+    content = """
+    flow bot say $script
+      await UtteranceBotAction(script=$script)
+
+    flow main
+        start bot say "A"
+          and bot say "B"
+          and UtteranceBotAction(script="C")
+          and bot say "A"
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "C",
+            },
+        ],
+    )
+
+
+def test_match_or_grouping():
     """"""
 
     content = """
@@ -1254,7 +1288,7 @@ def test_user_action_and_flow_or_grouping():
     )
 
 
-def test_user_action_and_flow_and_grouping():
+def test_match_and_or_grouping():
     """"""
 
     content = """
@@ -1262,7 +1296,8 @@ def test_user_action_and_flow_and_grouping():
       match UtteranceUserAction().Finished(final_transcript=$transcript)
 
     flow main
-        await (user said "A1" or user said "A2") and (user said "A3" or user said "A4")
+        await (user said "A" and user said "B")
+          or (user said "C" and user said "D")
         start UtteranceBotAction(script="Match")
     """
 
@@ -1280,14 +1315,15 @@ def test_user_action_and_flow_and_grouping():
     )
     assert is_data_in_events(
         state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Match",
-            },
-        ],
+        [],
     )
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "C",
+        },
+    )
     assert is_data_in_events(
         state.outgoing_events,
         [],
@@ -1308,6 +1344,7 @@ def test_user_action_and_flow_and_grouping():
             },
         ],
     )
+
     state = compute_next_state(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
@@ -1317,7 +1354,29 @@ def test_user_action_and_flow_and_grouping():
         state,
         {
             "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
             "final_transcript": "C",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "D",
         },
     )
     assert is_data_in_events(
@@ -1392,4 +1451,4 @@ def test_user_action_and_flow_and_grouping():
 
 
 if __name__ == "__main__":
-    test_user_action_and_flow_and_grouping()
+    test_flow_parameters_event_wrapper()

@@ -16,7 +16,7 @@
 """The data types that are used when constructing the Abstract Syntax Tree after parsing."""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
@@ -61,6 +61,27 @@ class Element:
         TODO: to remove at some point.
         """
         return self[key] or default_value
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__hash__() == other.__hash__()
+        return NotImplemented
+
+    def hash(self):
+        """Return the hash for the current object."""
+        return hash(_make_hashable(self))
+
+
+def _make_hashable(obj: Any) -> Any:
+    """Make all subtypes of Element hashable."""
+    if isinstance(obj, dict):
+        return tuple((k, _make_hashable(v)) for k, v in sorted(obj.items()))
+    elif isinstance(obj, list):
+        return tuple(_make_hashable(x) for x in obj)
+    elif isinstance(obj, Element):
+        return tuple((k, _make_hashable(v)) for k, v in sorted(vars(obj).items()))
+    else:
+        return obj
 
 
 @dataclass_json
@@ -228,3 +249,10 @@ class ForkHead(Element):
 @dataclass
 class MergeHeads(Element):
     _type: str = "_merge"
+
+
+@dataclass_json
+@dataclass
+class WaitForHeads(Element):
+    number: int = 1
+    _type: str = "_wait_for_heads"

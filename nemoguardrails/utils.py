@@ -19,7 +19,7 @@ import uuid
 from collections import namedtuple
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import yaml
 
@@ -181,5 +181,5 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return o.value
         try:
             return super().default(o)
-        except Exception as e:
+        except Exception:
             return f"Type {type(o)} not serializable"
