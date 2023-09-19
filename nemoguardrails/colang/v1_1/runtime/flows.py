@@ -783,35 +783,49 @@ def _expand_spec_op_element(
             raise ValueError("Unknown element type")
 
     elif element.op == "activate":
-        if element.spec.name in flow_configs:
-            # It's a flow
-            element.spec.arguments.update(
-                {
-                    "flow_id": f"'{element.spec.name}'",
-                    "activated": "True",
-                }
-            )
-            new_elements.append(
-                SpecOp(
-                    op="send",
-                    spec=Spec(
-                        name=InternalEvents.START_FLOW,
-                        arguments=element.spec.arguments,
-                    ),
+        if isinstance(element.spec, Spec):
+            # Single match element
+            if element.spec.name in flow_configs:
+                # It's a flow
+                element.spec.arguments.update(
+                    {
+                        "flow_id": f"'{element.spec.name}'",
+                        "activated": "True",
+                    }
                 )
-            )
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        name=InternalEvents.FLOW_STARTED,
-                        arguments=element.spec.arguments,
-                    ),
+                new_elements.append(
+                    SpecOp(
+                        op="send",
+                        spec=Spec(
+                            name=InternalEvents.START_FLOW,
+                            arguments=element.spec.arguments,
+                        ),
+                    )
                 )
-            )
-        else:
-            # It's an UMIM event
-            pass
+                new_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=Spec(
+                            name=InternalEvents.FLOW_STARTED,
+                            arguments=element.spec.arguments,
+                        ),
+                    )
+                )
+            else:
+                # It's an UMIM event
+                raise NotImplementedError("Events cannot be activated!")
+        elif isinstance(element.spec, dict):
+            # Multiple match elements
+            normalized_group = normalize_element_groups(element.spec)
+            if len(normalized_group["elements"]) > 1:
+                raise NotImplementedError("Activating 'or' groups not implemented yet!")
+            for group_element in normalized_group["elements"][0]["elements"]:
+                new_elements.append(
+                    SpecOp(
+                        op="activate",
+                        spec=group_element,
+                    )
+                )
 
     return new_elements
 

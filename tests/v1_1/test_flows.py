@@ -1390,6 +1390,71 @@ def test_match_and_or_grouping():
     )
 
 
+def test_activate_and_grouping():
+    """"""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="A")
+      match UtteranceUserAction().Finished(final_transcript="a")
+
+    flow b
+      start UtteranceBotAction(script="B")
+      match UtteranceUserAction().Finished(final_transcript="b")
+
+    flow main
+        activate a and b
+        match UtteranceUserAction().Finished(final_transcript="end")
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "a",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "b",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+        ],
+    )
+
+
 # def test_if_branching_mechanic():
 #     """"""
 
@@ -1451,4 +1516,4 @@ def test_match_and_or_grouping():
 
 
 if __name__ == "__main__":
-    test_flow_parameters_event_wrapper()
+    test_activate_and_grouping()
