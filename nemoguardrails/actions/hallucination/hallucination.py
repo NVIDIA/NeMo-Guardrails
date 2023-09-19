@@ -20,6 +20,7 @@ from langchain import LLMChain, PromptTemplate
 from langchain.llms import OpenAI
 from langchain.llms.base import BaseLLM
 
+from nemoguardrails.actions.alignment_score import alignscore_request, ALIGNSCORE_THRESHOLD
 from nemoguardrails.actions.llm.utils import (
     get_multiline_response,
     llm_call,
@@ -48,6 +49,7 @@ async def check_hallucination(
     """
 
     bot_response = context.get("last_bot_message")
+    evidence = context.get("relevant_chunks", [])
     last_bot_prompt_string = context.get("_last_bot_prompt")
 
     if bot_response and last_bot_prompt_string:
@@ -115,7 +117,12 @@ async def check_hallucination(
             log.info(f"Agreement result for looking for hallucination is {agreement}.")
 
             # Return True if the hallucination check fails
-            return "no" in agreement
+            alignscore = await alignscore_request(context)
+
+            if alignscore is None:
+                return "no" in agreement
+            else:
+                return "no" in agreement or alignscore < ALIGNSCORE_THRESHOLD
         else:
             # TODO Implement BERT-Score based consistency method proposed by SelfCheckGPT paper
             # See details: https://arxiv.org/abs/2303.08896

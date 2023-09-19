@@ -15,9 +15,11 @@
 
 import logging
 from typing import Optional
+import aiohttp
 
 from langchain.llms.base import BaseLLM
 
+from nemoguardrails.actions.alignment_score import alignscore_request, ALIGNSCORE_THRESHOLD
 from nemoguardrails.actions.llm.utils import llm_call
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -51,7 +53,11 @@ async def check_facts(
         entails = entails.lower().strip()
         log.info(f"Entailment result is {entails}.")
 
-        return "yes" in entails
+        alignscore = await alignscore_request(context)
+        if alignscore is None:
+            return "yes" in entails
+        else:
+            return "yes" in entails and alignscore >= ALIGNSCORE_THRESHOLD
 
     # If there was no evidence, we always return true
     return True
