@@ -1477,62 +1477,52 @@ def test_activate_and_grouping():
     )
 
 
-# def test_if_branching_mechanic():
-#     """"""
+def test_if_branching_mechanic():
+    """"""
 
-#     content = """
-#     flow main
-#       while $action_ref is None
-#         if $event_ref_1 is None
-#           start UtteranceBotAction(script="Action1")
-#         else if $event_ref_2 is None
-#           start UtteranceBotAction(script="Action2")
-#         else
-#           start UtteranceBotAction(script="ActionElse")
-#     """
+    content = """
+    flow main
+      while $action_ref_3 is None
+        if $event_ref_1 is None
+          start UtteranceBotAction(script="Action1") as $event_ref_1
+        else if $event_ref_2 is None
+          start UtteranceBotAction(script="Action2") as $event_ref_2
+        else
+          start UtteranceBotAction(script="ActionElse") as $action_ref_3
+        start UtteranceBotAction(script="Next")
+    """
 
-#     config = _init_state(content)
-#     state = compute_next_state(config, start_main_flow_event)
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [],
-#     )
-#     state = compute_next_state(
-#         state,
-#         {
-#             "type": "UtteranceUserActionFinished",
-#             "final_transcript": "Event1",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "Action1",
-#             }
-#         ],
-#     )
-#     state = compute_next_state(
-#         state,
-#         {
-#             "type": "UtteranceUserActionFinished",
-#             "final_transcript": "Event2",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "Action2",
-#             },
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "ActionElse",
-#             },
-#         ],
-#     )
+    config = _init_state(content)
+    state = compute_next_state(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Action1",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Next",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Action2",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Next",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "ActionElse",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Next",
+            },
+        ],
+    )
 
 
 def test_event_reference_member_access():
@@ -1595,4 +1585,4 @@ def test_action_reference_member_access():
 
 
 if __name__ == "__main__":
-    test_conflicting_actions_reference_sharing()
+    test_if_branching_mechanic()
