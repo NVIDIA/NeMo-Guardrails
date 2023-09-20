@@ -257,8 +257,10 @@ class ColangTransformer(Transformer):
         assert children[0]["_type"] == "var_name"
         assert children[2]["_type"] == "expr"
 
+        # Extract the var name (getting rid of the $)
+        var_name = children[0]["elements"][0][1:]
         return Set(
-            key=children[0]["elements"][0],
+            key=var_name,
             expression=children[2]["elements"][0],
             _source=self.__source(meta),
         )

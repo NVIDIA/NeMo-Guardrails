@@ -33,10 +33,9 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Goto,
     Label,
     MergeHeads,
-    Spec,
-    SpecOp,
-    WaitForHeads,
 )
+from nemoguardrails.colang.v1_1.lang.colang_ast import Set as Set_
+from nemoguardrails.colang.v1_1.lang.colang_ast import Spec, SpecOp, WaitForHeads
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 from nemoguardrails.colang.v1_1.runtime.utils import create_readable_uuid
 from nemoguardrails.utils import new_event_dict, new_uid
@@ -1447,6 +1446,13 @@ def slide(
                 head_position += 1
             else:
                 break
+
+        elif isinstance(element, Set_):
+            # We need to first evaluate the expression
+            expr_val = eval_expression(element.expression, flow_state.context)
+            flow_state.context.update({element.key: expr_val})
+            head_position += 1
+
         else:
             # Ignore unknown element
             head_position += 1

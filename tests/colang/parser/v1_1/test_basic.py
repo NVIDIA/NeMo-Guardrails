@@ -502,3 +502,27 @@ flow main
         )
         > 0
     )
+
+
+def test_flow_assignment_1():
+    assert (
+        _flows(
+            """
+                flow main
+                  $name = "John"
+            """
+        )[0]["elements"][1]
+        == {"_source": None, "_type": "set", "expression": '"John"', "key": "$name"}
+    )
+
+
+def test_flow_assignment_2():
+    assert (
+        _flows(
+            """
+                flow main
+                  $name = $full_name
+            """
+        )[0]["elements"][1]
+        == {"_source": None, "_type": "set", "expression": "$full_name", "key": "$name"}
+    )

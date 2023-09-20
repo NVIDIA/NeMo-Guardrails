@@ -22,7 +22,7 @@ CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "../test_configs")
 
 
 def test_1():
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "mvp_v1_1_b"))
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "mvp_v1_1_c"))
 
     chat = TestChat(
         config,
@@ -34,7 +34,7 @@ def test_1():
 
 
 def test_2():
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "mvp_v1_1_b"))
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "mvp_v1_1_c"))
 
     chat = TestChat(
         config,
@@ -46,7 +46,7 @@ def test_2():
 
 
 def test_3():
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "mvp_v1_1_b"))
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "mvp_v1_1_c"))
 
     chat = TestChat(
         config,
@@ -59,3 +59,15 @@ def test_3():
     chat << "I'm not sure how to respond."
     chat >> "hi"
     chat << "Hello again!"
+
+
+def test_4():
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "mvp_v1_1_c"))
+
+    chat = TestChat(
+        config,
+        llm_completions=[],
+    )
+
+    chat >> "hello_2"
+    chat << "Hello 2!"
