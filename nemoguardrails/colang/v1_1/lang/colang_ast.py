@@ -226,8 +226,15 @@ class Label(Element):
 @dataclass_json
 @dataclass
 class Goto(Element):
+    """Element for navigating to a label.
+
+    If the `else_label` is set and the expression evaluates to False, it will navigate
+    to the `else label`.
+    """
+
     label: str = ""
     expression: str = "True"
+    else_label: Optional[str] = None
     _type: str = "goto"
 
 

@@ -1419,8 +1419,24 @@ def slide(
             if eval_expression(element.expression, flow_state.context):
                 if element.label in flow_config.element_labels:
                     head_position = flow_config.element_labels[element.label] + 1
+                else:
+                    # Still advance by one on invalid label
+                    log.warning(f"Invalid label `{element.label}`.")
+                    head_position += 1
             else:
-                head_position += 1
+                # If there's an "else label" set, we navigate to it, otherwise, we advance
+                # the head by one.
+                if element.else_label:
+                    if element.else_label in flow_config.element_labels:
+                        head_position = (
+                            flow_config.element_labels[element.else_label] + 1
+                        )
+                    else:
+                        # Still advance by one on invalid label
+                        log.warning(f"Invalid label `{element.else_label}`.")
+                        head_position += 1
+                else:
+                    head_position += 1
         elif isinstance(element, ForkHead):
             # We create new heads for
             for idx, label in enumerate(element.labels):
