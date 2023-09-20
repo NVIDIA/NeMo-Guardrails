@@ -16,7 +16,7 @@ from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
 FORMAT = "%(message)s"
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format=FORMAT,
     datefmt="[%X,%f]",
     handlers=[RichHandler(markup=True)],
@@ -1595,4 +1595,4 @@ def test_action_reference_member_access():
 
 
 if __name__ == "__main__":
-    test_action_reference_member_access()
+    test_conflicting_actions_reference_sharing()

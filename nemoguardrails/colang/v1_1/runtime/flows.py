@@ -101,10 +101,13 @@ class Event:
     # A list of matching scores from the event sequence triggered by external event
     matching_scores: List[float] = field(default_factory=list)
 
-    def __eq__(self, event: Event) -> bool:
-        if isinstance(event, Event):
-            return self.name == event.name and self.arguments == event.arguments
+    def is_equal(self, other: Event) -> bool:
+        if isinstance(other, Event):
+            return self.name == other.name and self.arguments == other.arguments
         return NotImplemented
+
+    def __eq__(self, other: Event) -> bool:
+        return self.is_equal(other)
 
     def __repr__(self) -> str:
         return f"[bold blue]{self.name}[/] {self.arguments}"
@@ -1232,7 +1235,7 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                     competing_event: ActionEvent = _get_event_from_element(
                         new_state, competing_flow_state, competing_element
                     )
-                    if winning_event == competing_event:
+                    if winning_event.is_equal(competing_event):
                         # All heads that are on the exact same action as the winning head
                         # need to align their action references to the winning head
                         for (
