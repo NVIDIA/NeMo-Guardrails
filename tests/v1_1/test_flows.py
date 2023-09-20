@@ -1175,6 +1175,28 @@ def test_while_loop_mechanic():
     )
 
 
+# def test_while_loop_break_mechanic():
+#     """"""
+
+#     content = """
+#     flow main
+
+#       while $ref is None
+#         match UtteranceUserAction().Finished(final_transcript="End") as $ref
+#         break
+#         start UtteranceBotAction(script="Test")
+
+#       start UtteranceBotAction(script="Done")
+#     """
+
+#     config = _init_state(content)
+#     state = compute_next_state(config, start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [],
+#     )
+
+
 def test_start_grouping():
     """"""
 
@@ -1462,13 +1484,11 @@ def test_activate_and_grouping():
 #     flow main
 #       while $action_ref is None
 #         if $event_ref_1 is None
-#           UtteranceUserAction().Finished(final_transcript="Event1") as $event_ref_1
 #           start UtteranceBotAction(script="Action1")
 #         else if $event_ref_2 is None
-#           UtteranceUserAction().Finished(final_transcript="Event2") as $event_ref_2
 #           start UtteranceBotAction(script="Action2")
 #         else
-#           start UtteranceBotAction(script="ActionElse") as $action_ref
+#           start UtteranceBotAction(script="ActionElse")
 #     """
 
 #     config = _init_state(content)
@@ -1515,5 +1535,64 @@ def test_activate_and_grouping():
 #     )
 
 
+def test_event_reference_member_access():
+    """"""
+
+    content = """
+    flow main
+      match UtteranceUserAction().Finished() as $ref
+      start UtteranceBotAction(script=$ref.arguments.final_transcript)
+    """
+
+    config = _init_state(content)
+    state = compute_next_state(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi there!",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi there!",
+            }
+        ],
+    )
+
+
+def test_action_reference_member_access():
+    """"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello") as $ref
+      start UtteranceBotAction(script=$ref.start_event_arguments.script)
+    """
+
+    config = _init_state(content)
+    state = compute_next_state(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_activate_and_grouping()
+    test_action_reference_member_access()

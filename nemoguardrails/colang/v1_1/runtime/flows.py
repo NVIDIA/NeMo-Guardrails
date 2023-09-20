@@ -83,15 +83,6 @@ class InternalEvents:
     }
 
 
-class ContextVariableType(Enum):
-    """The type of a context variable."""
-
-    PRIMITIVE = "primitive"
-    EVENT_REFERENCE = "event_reference"
-    ACTION_REFERENCE = "action_reference"
-    FLOW_REFERENCE = "action_reference"
-
-
 @dataclass
 class Event:
     """The base event class."""
@@ -1142,6 +1133,7 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                                 new_event = _get_event_from_element(
                                     new_state, flow_state, element
                                 )
+                                new_event.arguments.update(event.arguments)
                                 flow_state.context.update({reference_name: new_event})
 
                         elif matching_score < 0.0:
@@ -1229,16 +1221,17 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                     if winning_event.is_equal(competing_event):
                         # All heads that are on the exact same action as the winning head
                         # need to align their action references to the winning head
-                        for context_variable in competing_flow_state.context.values():
+                        for (
+                            key,
+                            context_variable,
+                        ) in competing_flow_state.context.items():
                             if (
-                                isinstance(context_variable, dict)
-                                and "type" in context_variable
-                                and context_variable["type"]
-                                == ContextVariableType.ACTION_REFERENCE
-                                and context_variable["value"]
-                                == competing_event.action_uid
+                                isinstance(context_variable, Action)
+                                and context_variable.uid == competing_event.action_uid
                             ):
-                                context_variable["value"] = winning_event.action_uid
+                                competing_flow_state.context[key] = new_state.actions[
+                                    winning_event.action_uid
+                                ]
 
                         advancing_heads.append(head)
                     else:
@@ -1369,22 +1362,15 @@ def slide(
                 if element.spec.name in state.flow_configs:
                     # It's a flow
                     raise NotImplementedError()
-                    evaluated_arguments = _evaluate_arguments(
-                        element.spec.arguments, flow_state.context
-                    )
-                    flow_config = state.flow_configs[element.spec.name]
-                    new_flow_state = _create_flow_instance(flow_config, flow_state)
-                    reference_name = element.ref["elements"][0]["elements"][0].lstrip(
-                        "$"
-                    )
-                    flow_state.context.update(
-                        {
-                            reference_name: {
-                                "type": ContextVariableType.ACTION_REFERENCE,
-                                "value": action.uid,
-                            }
-                        }
-                    )
+                    # evaluated_arguments = _evaluate_arguments(
+                    #     element.spec.arguments, flow_state.context
+                    # )
+                    # flow_config = state.flow_configs[element.spec.name]
+                    # new_flow_state = _create_flow_instance(flow_config, flow_state)
+                    # reference_name = element.ref["elements"][0]["elements"][0].lstrip(
+                    #     "$"
+                    # )
+                    # flow_state.context.update({reference_name: action})
                 else:
                     # It's an action
                     evaluated_arguments = _evaluate_arguments(
@@ -1400,14 +1386,7 @@ def slide(
                     reference_name = element.ref["elements"][0]["elements"][0].lstrip(
                         "$"
                     )
-                    flow_state.context.update(
-                        {
-                            reference_name: {
-                                "type": ContextVariableType.ACTION_REFERENCE,
-                                "value": action.uid,
-                            }
-                        }
-                    )
+                    flow_state.context.update({reference_name: action})
                 head_position += 1
             else:
                 # Not a sliding element
@@ -1753,10 +1732,10 @@ def _get_event_from_element(
 
         # Resolve variable
         context_variable = flow_state.context[variable_name]
-        if context_variable["type"] == ContextVariableType.EVENT_REFERENCE:
+        if isinstance(context_variable, Event):
             raise NotImplementedError
-        elif context_variable["type"] == ContextVariableType.ACTION_REFERENCE:
-            action = state.actions[context_variable["value"]]
+        elif isinstance(context_variable, Action):
+            action = context_variable
             action_event_name = element_spec.members[0]["name"]
             action_event_arguments = element_spec.members[0]["arguments"]
             action_event_arguments = _evaluate_arguments(
@@ -1767,7 +1746,7 @@ def _get_event_from_element(
             )
             action_event.action_uid = action.uid
             return action_event
-        elif context_variable["type"] == ContextVariableType.FLOW_REFERENCE:
+        elif isinstance(context_variable, FlowState):
             raise NotImplementedError
 
     if element_spec.members is not None:
@@ -1820,33 +1799,6 @@ def _get_event_from_element(
             action_event = ActionEvent(element_spec.name, event_arguments)
             return action_event
 
-    # else:
-    #     # Element refers to an event
-    #     ref_event = Event(element_spec["name"], event.arguments)
-
-    # if element.ref is not None and element.ref["_type"] == "capture_ref":
-    #     ref_name = element.ref["elements"][0]["elements"][0].lstrip("$")
-    #     reference = flow_state.context[ref_name]
-    #     if reference["type"] == ContextVariableType.EVENT_REFERENCE:
-    #         raise NotImplementedError
-    #     elif reference["type"] == ContextVariableType.ACTION_REFERENCE:
-    #         action = flow_state.actions[reference["value"]]
-    #     elif reference["type"] == ContextVariableType.FLOW_REFERENCE:
-    #         raise NotImplementedError
-    # elif element_spec.members is not None:
-    #     action_event_name = element_spec.members[0]["name"]
-
-    # else:
-    #     pass
-
-    # action_event_name = element_spec.members[0]["name"]
-    # event: Event = action.get_event(action_event_name, evaluated_event_arguments)
-    # event_name = event.name
-    # evaluated_event_arguments = event.arguments
-
-    # action_event_name = element.spec.members[0]["name"]
-    # ref_event: Event = action.get_event(action_event_name, element_spec_args)
-
 
 def _create_outgoing_event_from_actionable_element(
     state: State,
@@ -1859,33 +1811,7 @@ def _create_outgoing_event_from_actionable_element(
         element
     ), f"Cannot create an event from a non actionable flow element {element}!"
 
-    # Evaluate expressions (eliminate all double quotes)
-    # evaluated_event_arguments = _evaluate_arguments(
-    #     element.spec.arguments, flow_state.context
-    # )
-
     if element.op == "send":
-        # event_name: str
-        # if element.ref is not None and element.ref["_type"] == "capture_ref":
-        #     ref_name = element.ref["elements"][0]["elements"][0].lstrip("$")
-        #     reference = flow_state.context[ref_name]
-        #     if reference["type"] == ContextVariableType.EVENT_REFERENCE:
-        #         raise NotImplementedError
-        #     elif reference["type"] == ContextVariableType.ACTION_REFERENCE:
-        #         action = flow_state.actions[reference["value"]]
-        #         action_event_name = element.spec.members[0]["name"]
-        #         event: Event = action.get_event(
-        #             action_event_name, evaluated_event_arguments
-        #         )
-        #         event_name = event.name
-        #         evaluated_event_arguments = event.arguments
-        #         evaluated_event_arguments["action_uid"] = action.uid
-        #     elif reference["type"] == ContextVariableType.FLOW_REFERENCE:
-        #         raise NotImplementedError
-        # else:
-        #     event_name = element.spec.name
-        #     evaluated_event_arguments["action_uid"] = new_uid()
-
         event = _get_event_from_element(state, flow_state, element)
         umim_event = create_umim_action_event(event, event.arguments)
 
