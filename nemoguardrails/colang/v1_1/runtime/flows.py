@@ -31,6 +31,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     FlowParamDef,
     ForkHead,
     Goto,
+    If,
     Label,
     MergeHeads,
 )
@@ -575,8 +576,8 @@ def _expand_elements(
                     elements_changed = True
             elif element["_type"] == "while_stmt":
                 expanded_elems = _expand_while_stmt_element(element, flow_configs)
-            elif element["_type"] == "if_stmt":
-                expanded_elems = _expand_if_stmt_element(element, flow_configs)
+            elif isinstance(element, If):
+                expanded_elems = _expand_if_element(element, flow_configs)
             elif element["_type"] == "when_stmt":
                 expanded_elems = _expand_when_stmt_element(element, flow_configs)
 
@@ -861,11 +862,31 @@ def _expand_while_stmt_element(
     return new_elements
 
 
-def _expand_if_stmt_element(
-    element: dict, flow_configs: Dict[str, FlowConfig]
+def _expand_if_element(
+    element: If, flow_configs: Dict[str, FlowConfig]
 ) -> List[ElementType]:
-    raise NotImplementedError()
-    return element
+    elements: List[ElementType] = []
+
+    if_body_label_name = f"if_body_label_{new_uid()}"
+    if_else_body_label_name = f"if_else_body_label_{new_uid()}"
+    if_end_label_name = f"if_end_label_{new_uid()}"
+
+    # TODO: optimize for cases when the else section is missing
+    elements.append(
+        Goto(
+            expression=element.expression,
+            label=if_body_label_name,
+            else_label=if_else_body_label_name,
+        )
+    )
+    elements.append(Label(name=if_body_label_name))
+    elements.extend(element.then_elements)
+    elements.append(Goto(label=if_end_label_name))
+    elements.append(Label(name=if_else_body_label_name))
+    elements.extend(element.else_elements)
+    elements.append(Label(name=if_end_label_name))
+
+    return elements
 
 
 def _expand_when_stmt_element(

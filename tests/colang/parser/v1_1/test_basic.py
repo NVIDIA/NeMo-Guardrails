@@ -526,3 +526,77 @@ def test_flow_assignment_2():
         )[0]["elements"][1]
         == {"_source": None, "_type": "set", "expression": "$full_name", "key": "name"}
     )
+
+
+def test_flow_if_1():
+    assert (
+        _flows(
+            """
+                flow main
+                  $name = $full_name
+                  if $name == "John"
+                    bot say "Hi, John!"
+                  else
+                    bot say "Hello!"
+            """
+        )[0]["elements"]
+        == [
+            {
+                "_source": None,
+                "_type": "spec_op",
+                "op": "match",
+                "ref": None,
+                "spec": {
+                    "_source": None,
+                    "_type": "spec",
+                    "arguments": {"flow_id": '"main"'},
+                    "members": None,
+                    "name": "StartFlow",
+                    "var_name": None,
+                },
+            },
+            {
+                "_source": None,
+                "_type": "set",
+                "expression": "$full_name",
+                "key": "name",
+            },
+            {
+                "_source": None,
+                "_type": "if",
+                "else_elements": [
+                    {
+                        "_source": None,
+                        "_type": "spec_op",
+                        "op": "await",
+                        "ref": None,
+                        "spec": {
+                            "_source": None,
+                            "_type": "spec",
+                            "arguments": {"$0": '"Hello!"'},
+                            "members": None,
+                            "name": "bot say",
+                            "var_name": None,
+                        },
+                    }
+                ],
+                "expression": '$name == "John"',
+                "then_elements": [
+                    {
+                        "_source": None,
+                        "_type": "spec_op",
+                        "op": "await",
+                        "ref": None,
+                        "spec": {
+                            "_source": None,
+                            "_type": "spec",
+                            "arguments": {"$0": '"Hi, John!"'},
+                            "members": None,
+                            "name": "bot say",
+                            "var_name": None,
+                        },
+                    }
+                ],
+            },
+        ]
+    )
