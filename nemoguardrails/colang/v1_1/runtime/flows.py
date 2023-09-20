@@ -1129,7 +1129,7 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                         )
                         # Make sure that we can always resolve conflicts, using the matching score
                         matching_score *= match_order_score
-                        match_order_score *= 0.99
+                        match_order_score *= 0.999999
                         head.matching_scores = event.matching_scores.copy()
                         head.matching_scores.append(matching_score)
 
@@ -1493,7 +1493,9 @@ def _abort_flow(
 ) -> None:
     """Aborts a flow instance and all its active child flows."""
     # Generate FlowFailed event
-    event = create_flow_failed_internal_event(flow_state.uid, matching_scores)
+    event = create_flow_internal_event(
+        InternalEvents.FLOW_FAILED, flow_state, matching_scores
+    )
     _push_internal_event(state, event)
 
     # abort all running child flows
@@ -1524,7 +1526,9 @@ def _finish_flow(
         return
 
     # Generate FlowFinished event
-    event = create_flow_finished_internal_event(flow_state, matching_scores)
+    event = create_flow_internal_event(
+        InternalEvents.FLOW_FINISHED, flow_state, matching_scores
+    )
     _push_internal_event(state, event)
 
     # Abort all running child flows
@@ -1951,39 +1955,19 @@ def create_abort_flow_internal_event(
     )
 
 
-def create_flow_started_internal_event(
-    source_flow_instance_uid: str, matching_scores: List[float]
-) -> Event:
-    """Returns 'FlowStarted' internal event"""
-    return create_internal_event(
-        InternalEvents.FLOW_STARTED,
-        {"source_flow_instance_uid": source_flow_instance_uid},
-        matching_scores,
-    )
-
-
-def create_flow_finished_internal_event(
-    source_flow_state: FlowState, matching_scores: List[float]
-) -> Event:
-    """Returns 'FlowFinished' internal event"""
+def create_flow_internal_event(
+    event_type: InternalEvents,
+    source_flow_state: FlowState,
+    matching_scores: List[float],
+) -> FlowEvent:
+    """Creates and return a internal flow event"""
     arguments = {"source_flow_instance_uid": source_flow_state.uid}
     for arg in source_flow_state.arguments:
         if arg in source_flow_state.context:
             arguments.update({arg: source_flow_state.context[arg]})
     return create_internal_event(
-        InternalEvents.FLOW_FINISHED,
+        event_type,
         arguments,
-        matching_scores,
-    )
-
-
-def create_flow_failed_internal_event(
-    source_flow_instance_uid: str, matching_scores: List[float]
-) -> Event:
-    """Returns 'FlowFailed' internal event"""
-    return create_internal_event(
-        InternalEvents.FLOW_FAILED,
-        {"source_flow_instance_uid": source_flow_instance_uid},
         matching_scores,
     )
 
