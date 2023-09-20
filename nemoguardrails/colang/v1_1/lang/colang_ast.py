@@ -183,10 +183,10 @@ class While(Element):
 
 @dataclass_json
 @dataclass
-class Set(Element):
+class Assignment(Element):
     key: str = ""
     expression: str = ""
-    _type: str = "set"
+    _type: str = "assignment"
 
 
 @dataclass_json

@@ -27,6 +27,7 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 from dataclasses_json import dataclass_json
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    Assignment,
     Element,
     FlowParamDef,
     ForkHead,
@@ -34,9 +35,10 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     If,
     Label,
     MergeHeads,
+    Spec,
+    SpecOp,
+    WaitForHeads,
 )
-from nemoguardrails.colang.v1_1.lang.colang_ast import Set as Set_
-from nemoguardrails.colang.v1_1.lang.colang_ast import Spec, SpecOp, WaitForHeads
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 from nemoguardrails.colang.v1_1.runtime.utils import create_readable_uuid
 from nemoguardrails.utils import new_event_dict, new_uid

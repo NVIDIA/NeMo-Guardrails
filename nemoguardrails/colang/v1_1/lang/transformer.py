@@ -19,10 +19,10 @@ from lark import Token, Transformer, Tree
 from lark.tree import Meta
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    Assignment,
     Flow,
     FlowParamDef,
     If,
-    Set,
     Source,
     Spec,
     SpecOp,
@@ -259,7 +259,7 @@ class ColangTransformer(Transformer):
 
         # Extract the var name (getting rid of the $)
         var_name = children[0]["elements"][0][1:]
-        return Set(
+        return Assignment(
             key=var_name,
             expression=children[2]["elements"][0],
             _source=self.__source(meta),
