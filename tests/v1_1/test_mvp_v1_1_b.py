@@ -18,11 +18,11 @@ import os
 from nemoguardrails import RailsConfig
 from tests.utils import TestChat
 
-CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "test_configs")
+CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "../test_configs")
 
 
 def test_1():
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "mvp_v1_1"))
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "mvp_v1_1_b"))
 
     chat = TestChat(
         config,
@@ -31,5 +31,15 @@ def test_1():
 
     chat >> "hi"
     chat << "Hello world!"
-    chat >> "hi"
-    chat << "Hello again!"
+
+
+def test_2():
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "mvp_v1_1_b"))
+
+    chat = TestChat(
+        config,
+        llm_completions=[],
+    )
+
+    chat >> "asdf"
+    chat << "I'm not sure how to respond."
