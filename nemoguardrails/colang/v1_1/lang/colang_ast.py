@@ -228,13 +228,11 @@ class Label(Element):
 class Goto(Element):
     """Element for navigating to a label.
 
-    If the `else_label` is set and the expression evaluates to False, it will navigate
-    to the `else label`.
+    If the expression is not True, just skips to the next element.
     """
 
     label: str = ""
     expression: str = "True"
-    else_label: Optional[str] = None
     _type: str = "goto"
 
 

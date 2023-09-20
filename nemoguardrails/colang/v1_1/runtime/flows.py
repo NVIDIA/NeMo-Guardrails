@@ -578,6 +578,8 @@ def _expand_elements(
                 expanded_elems = _expand_while_stmt_element(element, flow_configs)
             elif isinstance(element, If):
                 expanded_elems = _expand_if_element(element, flow_configs)
+                if len(expanded_elems) > 0:
+                    elements_changed = True
             elif element["_type"] == "when_stmt":
                 expanded_elems = _expand_when_stmt_element(element, flow_configs)
 
@@ -867,23 +869,25 @@ def _expand_if_element(
 ) -> List[ElementType]:
     elements: List[ElementType] = []
 
-    if_body_label_name = f"if_body_label_{new_uid()}"
     if_else_body_label_name = f"if_else_body_label_{new_uid()}"
     if_end_label_name = f"if_end_label_{new_uid()}"
 
     # TODO: optimize for cases when the else section is missing
     elements.append(
         Goto(
-            expression=element.expression,
-            label=if_body_label_name,
-            else_label=if_else_body_label_name,
+            expression=f"not({element.expression})",
+            label=if_end_label_name
+            if not element.else_elements
+            else if_else_body_label_name,
         )
     )
-    elements.append(Label(name=if_body_label_name))
     elements.extend(element.then_elements)
-    elements.append(Goto(label=if_end_label_name))
-    elements.append(Label(name=if_else_body_label_name))
-    elements.extend(element.else_elements)
+
+    if element.else_elements:
+        elements.append(Goto(label=if_end_label_name))
+        elements.append(Label(name=if_else_body_label_name))
+        elements.extend(element.else_elements)
+
     elements.append(Label(name=if_end_label_name))
 
     return elements
@@ -1445,19 +1449,7 @@ def slide(
                     log.warning(f"Invalid label `{element.label}`.")
                     head_position += 1
             else:
-                # If there's an "else label" set, we navigate to it, otherwise, we advance
-                # the head by one.
-                if element.else_label:
-                    if element.else_label in flow_config.element_labels:
-                        head_position = (
-                            flow_config.element_labels[element.else_label] + 1
-                        )
-                    else:
-                        # Still advance by one on invalid label
-                        log.warning(f"Invalid label `{element.else_label}`.")
-                        head_position += 1
-                else:
-                    head_position += 1
+                head_position += 1
         elif isinstance(element, ForkHead):
             # We create new heads for
             for idx, label in enumerate(element.labels):

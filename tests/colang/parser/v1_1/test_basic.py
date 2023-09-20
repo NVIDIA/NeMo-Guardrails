@@ -600,3 +600,127 @@ def test_flow_if_1():
             },
         ]
     )
+
+
+def test_flow_if_2():
+    assert (
+        _flows(
+            """
+                flow main
+                  $name = $full_name
+                  if $name == "John"
+                    bot say "Hi, John!"
+                  elif $name == "Michael"
+                    bot say "Hi, Michael"
+                  elif $name == "Mike"
+                    bot say "Hi, Mike"
+                  else
+                    bot say "Hello!"
+            """
+        )[0]["elements"]
+        == [
+            {
+                "_source": None,
+                "_type": "spec_op",
+                "op": "match",
+                "ref": None,
+                "spec": {
+                    "_source": None,
+                    "_type": "spec",
+                    "arguments": {"flow_id": '"main"'},
+                    "members": None,
+                    "name": "StartFlow",
+                    "var_name": None,
+                },
+            },
+            {
+                "_source": None,
+                "_type": "set",
+                "expression": "$full_name",
+                "key": "name",
+            },
+            {
+                "_source": None,
+                "_type": "if",
+                "else_elements": [
+                    {
+                        "_source": None,
+                        "_type": "if",
+                        "else_elements": [
+                            {
+                                "_source": None,
+                                "_type": "if",
+                                "else_elements": [
+                                    {
+                                        "_source": None,
+                                        "_type": "spec_op",
+                                        "op": "await",
+                                        "ref": None,
+                                        "spec": {
+                                            "_source": None,
+                                            "_type": "spec",
+                                            "arguments": {"$0": '"Hello!"'},
+                                            "members": None,
+                                            "name": "bot " "say",
+                                            "var_name": None,
+                                        },
+                                    }
+                                ],
+                                "expression": '$name == "Mike"',
+                                "then_elements": [
+                                    {
+                                        "_source": None,
+                                        "_type": "spec_op",
+                                        "op": "await",
+                                        "ref": None,
+                                        "spec": {
+                                            "_source": None,
+                                            "_type": "spec",
+                                            "arguments": {"$0": '"Hi, ' 'Mike"'},
+                                            "members": None,
+                                            "name": "bot " "say",
+                                            "var_name": None,
+                                        },
+                                    }
+                                ],
+                            }
+                        ],
+                        "expression": '$name == "Michael"',
+                        "then_elements": [
+                            {
+                                "_source": None,
+                                "_type": "spec_op",
+                                "op": "await",
+                                "ref": None,
+                                "spec": {
+                                    "_source": None,
+                                    "_type": "spec",
+                                    "arguments": {"$0": '"Hi, ' 'Michael"'},
+                                    "members": None,
+                                    "name": "bot say",
+                                    "var_name": None,
+                                },
+                            }
+                        ],
+                    }
+                ],
+                "expression": '$name == "John"',
+                "then_elements": [
+                    {
+                        "_source": None,
+                        "_type": "spec_op",
+                        "op": "await",
+                        "ref": None,
+                        "spec": {
+                            "_source": None,
+                            "_type": "spec",
+                            "arguments": {"$0": '"Hi, John!"'},
+                            "members": None,
+                            "name": "bot say",
+                            "var_name": None,
+                        },
+                    }
+                ],
+            },
+        ]
+    )

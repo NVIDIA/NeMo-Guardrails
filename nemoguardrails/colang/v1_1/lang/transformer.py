@@ -274,13 +274,37 @@ class ColangTransformer(Transformer):
         assert len(children) == 4
         expression = children[0]["elements"][0]
         then_elements = children[1]["elements"]
+        elif_elements = []
+        if children[2]:
+            for _el in children[2]["elements"]:
+                assert _el["_type"] == "elif_"
+                expr_el = _el["elements"][0]
+                suite_el = _el["elements"][1]
+                elif_elements.append(
+                    {"expr": expr_el["elements"][0], "body": suite_el["elements"]}
+                )
         else_elements = children[3]["elements"] if children[3] else None
 
-        return If(
+        main_if_element = if_element = If(
             expression=expression,
             then_elements=then_elements,
             else_elements=else_elements,
         )
+
+        # If we have elif elements, we need to add additional If elements.
+        while elif_elements:
+            # We create a new one which takes the else body from the current one
+            new_if_element = If(
+                expression=elif_elements[0]["expr"],
+                then_elements=elif_elements[0]["body"],
+                else_elements=if_element.else_elements,
+            )
+            # The new element becomes the "else body"
+            if_element.else_elements = [new_if_element]
+            if_element = new_if_element
+            elif_elements = elif_elements[1:]
+
+        return main_if_element
 
     def __default__(self, data, children, meta):
         """Default function that is called if there is no attribute matching ``data``
