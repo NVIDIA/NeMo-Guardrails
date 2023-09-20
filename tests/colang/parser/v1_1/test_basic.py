@@ -512,7 +512,7 @@ def test_flow_assignment_1():
                   $name = "John"
             """
         )[0]["elements"][1]
-        == {"_source": None, "_type": "set", "expression": '"John"', "key": "$name"}
+        == {"_source": None, "_type": "set", "expression": '"John"', "key": "name"}
     )
 
 
@@ -524,5 +524,5 @@ def test_flow_assignment_2():
                   $name = $full_name
             """
         )[0]["elements"][1]
-        == {"_source": None, "_type": "set", "expression": "$full_name", "key": "$name"}
+        == {"_source": None, "_type": "set", "expression": "$full_name", "key": "name"}
     )
