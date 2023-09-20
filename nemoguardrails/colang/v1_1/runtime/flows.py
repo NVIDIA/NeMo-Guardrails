@@ -1405,6 +1405,7 @@ def slide(
                 internal_events.append(event)
                 log.debug(f"Created internal event: {event}")
                 head_position += 1
+
             elif element.op == "_new_instance":
                 if element.spec.name in state.flow_configs:
                     # It's a flow
@@ -1438,8 +1439,10 @@ def slide(
             else:
                 # Not a sliding element
                 break
+
         elif isinstance(element, Label):
             head_position += 1
+
         elif isinstance(element, Goto):
             if eval_expression(element.expression, flow_state.context):
                 if element.label in flow_config.element_labels:
@@ -1450,6 +1453,7 @@ def slide(
                     head_position += 1
             else:
                 head_position += 1
+
         elif isinstance(element, ForkHead):
             # We create new heads for
             for idx, label in enumerate(element.labels):
@@ -1462,11 +1466,13 @@ def slide(
                     )
                     flow_state.heads.append(new_head)
                     new_heads.append(new_head)
+
         elif isinstance(element, MergeHeads):
             # Delete all heads from the flow except for the current on
             # TODO: Check if these heads are in no another list
             flow_state.heads = [head]
             head_position += 1
+
         elif isinstance(element, WaitForHeads):
             # Check if enough heads are on this element to continue
             waiting_heads = [h for h in flow_state.heads if h.position == head_position]
@@ -1477,7 +1483,7 @@ def slide(
             else:
                 break
 
-        elif isinstance(element, Set_):
+        elif isinstance(element, Assignment):
             # We need to first evaluate the expression
             expr_val = eval_expression(element.expression, flow_state.context)
             flow_state.context.update({element.key: expr_val})
