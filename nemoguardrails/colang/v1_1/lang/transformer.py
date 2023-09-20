@@ -308,11 +308,19 @@ class ColangTransformer(Transformer):
             }
 
             if self.include_source_mapping:
-                value["_source"] = {
-                    "line": meta.line,
-                    "column": meta.column,
-                    "start_pos": meta.start_pos,
-                    "end_pos": meta.end_pos,
-                }
+                if not meta.empty:
+                    value["_source"] = {
+                        "line": meta.line,
+                        "column": meta.column,
+                        "start_pos": meta.start_pos,
+                        "end_pos": meta.end_pos,
+                    }
+                else:
+                    value["_source"] = {
+                        "line": 0,
+                        "column": 0,
+                        "start_pos": 0,
+                        "end_pos": 0,
+                    }
 
             return value
