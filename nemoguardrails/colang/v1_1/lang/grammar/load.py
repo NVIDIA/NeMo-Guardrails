@@ -36,7 +36,7 @@ def load_lark_parser(grammar_path: str):
     return Lark(
         grammar,
         start="start",
-        parser="earley",
+        parser="lalr",
         lexer="basic",
         postlex=PythonIndenter(),
         propagate_positions=True,

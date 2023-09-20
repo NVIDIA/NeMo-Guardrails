@@ -2,8 +2,8 @@
 ?start: _statements | suite
 
 // General sequences of statements
-_statements: (_NEWLINE | stmt)*
-?stmt: (def_stmt | flow_stmt | comment _NEWLINE | expr _NEWLINE | _NEWLINE)
+_statements: stmt*
+?stmt: (def_stmt | flow_stmt | comment _NEWLINE | _NEWLINE)
 suite: _NEWLINE _INDENT (stmt+) _DEDENT
 
 // Flow definition and calling
@@ -13,11 +13,12 @@ flow_def: "flow" spec_name [flow_params_def] suite
 flow_params_def_classic: "(" (flow_param_def ("," flow_param_def)*) ")"
 flow_params_def_simple: (flow_param_def)+
 flow_param_def: var_name ("=" test)?
-?flow_stmt: simple_stmt | spec_op_stmt | compound_stmt
+?flow_stmt: simple_stmt | spec_op_stmt | compound_stmt | doc_string_stmt
 
 // Simple statements
 ?simple_stmt: set_stmt | return_stmt
 set_stmt: var_name set_op test _NEWLINE
+doc_string_stmt: doc_string _NEWLINE
 
 // TODO: support more assignment operators?
 set_op: "=" -> set
@@ -68,7 +69,7 @@ simple_arguments: simple_argvalue+
 ?compound_stmt: if_stmt | while_stmt | when_stmt
 if_stmt: "if" test suite elifs ["else" suite]
 elifs: elif_*
-elif_: ("elif" | "else" "if") test suite
+elif_: _ELSE_IF test suite
 while_stmt: "while" test suite
 when_stmt: "when" spec_op suite ("else" "when" spec_op suite)* ("else" suite)?
 
@@ -118,6 +119,7 @@ sliceop: ":" [test]
 ?atom: var_name -> var
      | number
      | string
+     | doc_string
      | "None"    -> const_none
      | "True"    -> const_true
      | "False"   -> const_false
@@ -132,9 +134,12 @@ comment: COMMENT
 // TODO: add more primitive types
 
 number: DEC_NUMBER | FLOAT_NUMBER
-string: STRING | LONG_STRING
+string: STRING
+doc_string: LONG_STRING
 
 // LEXER rules below
+
+_ELSE_IF.1: /(elif|else\s+if)/
 
 COMMENT: /#[^\n]*/
 
