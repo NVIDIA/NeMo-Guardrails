@@ -578,8 +578,6 @@ def _expand_elements(
                 expanded_elems = _expand_while_stmt_element(element, flow_configs)
             elif isinstance(element, If):
                 expanded_elems = _expand_if_element(element, flow_configs)
-                if len(expanded_elems) > 0:
-                    elements_changed = True
             elif element["_type"] == "when_stmt":
                 expanded_elems = _expand_when_stmt_element(element, flow_configs)
 
@@ -849,7 +847,7 @@ def _expand_while_stmt_element(
     end_label = Label(name=f"_while_end_{label_uid}")
     goto_end = Goto(
         label=end_label.name,
-        expression=f"({element['elements'][0]['elements'][0]}) == False",
+        expression=f"not ({element['elements'][0]['elements'][0]})",
     )
     goto_begin = Goto(
         label=begin_label.name,
@@ -881,12 +879,12 @@ def _expand_if_element(
             else if_else_body_label_name,
         )
     )
-    elements.extend(element.then_elements)
+    elements.extend(_expand_elements(element.then_elements, flow_configs))
 
     if element.else_elements:
         elements.append(Goto(label=if_end_label_name))
         elements.append(Label(name=if_else_body_label_name))
-        elements.extend(element.else_elements)
+        elements.extend(_expand_elements(element.else_elements, flow_configs))
 
     elements.append(Label(name=if_end_label_name))
 
