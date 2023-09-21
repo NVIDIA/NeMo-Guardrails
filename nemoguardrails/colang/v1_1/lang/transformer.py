@@ -254,16 +254,25 @@ class ColangTransformer(Transformer):
         return self.element("expr", [self.source[meta.start_pos : meta.end_pos]], meta)
 
     def _set_stmt(self, children, meta):
+        """The set statement can result in either a Set operation, or a SpecOp with a
+        return value capturing."""
         assert children[0]["_type"] == "var_name"
-        assert children[2]["_type"] == "expr"
+
+        assert children[2]["_type"] in ["expr", "spec_op"]
 
         # Extract the var name (getting rid of the $)
         var_name = children[0]["elements"][0][1:]
-        return Assignment(
-            key=var_name,
-            expression=children[2]["elements"][0],
-            _source=self.__source(meta),
-        )
+
+        if children[2]["_type"] == "expr":
+            return Assignment(
+                key=var_name,
+                expression=children[2]["elements"][0],
+                _source=self.__source(meta),
+            )
+        elif children[2]["_type"] == "spec_op":
+            spec_op = children[2]
+            spec_op.return_var_name = var_name
+            return spec_op
 
     def _if_stmt(self, children, meta):
         """Processing for `spec` tree nodes.

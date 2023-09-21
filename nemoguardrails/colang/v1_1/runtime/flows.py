@@ -628,6 +628,9 @@ def _expand_spec_op_element(
                             var_name=action_ref_uid,
                             members=_create_member_ast_dict_helper("Finished", {}),
                         ),
+                        # We make sure we propagate the return_var_name so we can
+                        # capture the return value
+                        return_var_name=element.return_var_name,
                     )
                 )
         else:
@@ -1202,6 +1205,15 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                                         ]
 
                                 flow_state.context.update({reference_name: new_event})
+                            # If we need to capture the return value, we update the context
+                            if element.return_var_name:
+                                flow_state.context.update(
+                                    {
+                                        element.return_var_name: event.arguments.get(
+                                            "return_value"
+                                        )
+                                    }
+                                )
 
                         elif matching_score < 0.0:
                             heads_failing.append(head)

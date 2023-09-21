@@ -326,7 +326,7 @@ class RuntimeV1_1(Runtime):
                         action_name=result["action_name"],
                         status="success",
                         is_success=True,
-                        return_value=None,
+                        return_value=result["return_value"],
                         events=result["new_events"],
                         # is_system_action=action_meta.get("is_system_action", False),
                     )

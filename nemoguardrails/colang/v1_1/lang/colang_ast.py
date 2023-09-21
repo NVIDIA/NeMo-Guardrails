@@ -160,7 +160,16 @@ class SpecOp(Element):
 
     op: str = ""
     spec: Union[Spec, SpecAnd, SpecOr] = Spec()
+
+    # The reference that should be captured.
     ref: Optional[str] = field(default=None)
+
+    # If the return value of the spec needs to be captured. The return value only makes sense
+    # for await on flows and actions.
+    # For compatibility, the return value in all other cases is the same value as the ref.
+    # TODO: or should it just be None?
+    return_var_name: Optional[str] = None
+
     _type: str = "spec_op"
 
 

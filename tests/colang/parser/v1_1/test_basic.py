@@ -49,6 +49,7 @@ def test_1():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -63,6 +64,7 @@ def test_1():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -77,6 +79,7 @@ def test_1():
                     "_type": "spec_op",
                     "op": "await",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -115,6 +118,7 @@ def test_2():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -129,6 +133,7 @@ def test_2():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -147,6 +152,7 @@ def test_2():
                             "_type": "spec_op",
                             "op": "await",
                             "ref": None,
+                            "return_var_name": None,
                             "spec": {
                                 "_source": None,
                                 "_type": "spec",
@@ -164,6 +170,7 @@ def test_2():
                             "_type": "spec_op",
                             "op": "await",
                             "ref": None,
+                            "return_var_name": None,
                             "spec": {
                                 "_source": None,
                                 "_type": "spec",
@@ -202,6 +209,7 @@ def test_3():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -216,6 +224,7 @@ def test_3():
                     "_type": "spec_op",
                     "op": "await",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_type": "spec_or",
                         "elements": [
@@ -243,6 +252,7 @@ def test_3():
                     "_type": "spec_op",
                     "op": "await",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -257,6 +267,7 @@ def test_3():
                     "_type": "spec_op",
                     "op": "await",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -271,6 +282,7 @@ def test_3():
                     "_type": "spec_op",
                     "op": "await",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -308,6 +320,7 @@ def test_4():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -322,6 +335,7 @@ def test_4():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -345,6 +359,7 @@ def test_4():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -368,6 +383,7 @@ def test_4():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -382,6 +398,7 @@ def test_4():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -405,6 +422,7 @@ def test_4():
                     "_type": "spec_op",
                     "op": "match",
                     "ref": None,
+                    "return_var_name": None,
                     "spec": {
                         "_source": None,
                         "_type": "spec",
@@ -546,6 +564,7 @@ def test_flow_if_1():
                 "_type": "spec_op",
                 "op": "match",
                 "ref": None,
+                "return_var_name": None,
                 "spec": {
                     "_source": None,
                     "_type": "spec",
@@ -570,6 +589,7 @@ def test_flow_if_1():
                         "_type": "spec_op",
                         "op": "await",
                         "ref": None,
+                        "return_var_name": None,
                         "spec": {
                             "_source": None,
                             "_type": "spec",
@@ -587,6 +607,7 @@ def test_flow_if_1():
                         "_type": "spec_op",
                         "op": "await",
                         "ref": None,
+                        "return_var_name": None,
                         "spec": {
                             "_source": None,
                             "_type": "spec",
@@ -624,6 +645,7 @@ def test_flow_if_2():
                 "_type": "spec_op",
                 "op": "match",
                 "ref": None,
+                "return_var_name": None,
                 "spec": {
                     "_source": None,
                     "_type": "spec",
@@ -656,6 +678,7 @@ def test_flow_if_2():
                                         "_type": "spec_op",
                                         "op": "await",
                                         "ref": None,
+                                        "return_var_name": None,
                                         "spec": {
                                             "_source": None,
                                             "_type": "spec",
@@ -673,6 +696,7 @@ def test_flow_if_2():
                                         "_type": "spec_op",
                                         "op": "await",
                                         "ref": None,
+                                        "return_var_name": None,
                                         "spec": {
                                             "_source": None,
                                             "_type": "spec",
@@ -692,6 +716,7 @@ def test_flow_if_2():
                                 "_type": "spec_op",
                                 "op": "await",
                                 "ref": None,
+                                "return_var_name": None,
                                 "spec": {
                                     "_source": None,
                                     "_type": "spec",
@@ -711,6 +736,7 @@ def test_flow_if_2():
                         "_type": "spec_op",
                         "op": "await",
                         "ref": None,
+                        "return_var_name": None,
                         "spec": {
                             "_source": None,
                             "_type": "spec",

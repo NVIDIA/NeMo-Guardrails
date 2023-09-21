@@ -17,7 +17,9 @@ flow_param_def: var_name ("=" test)?
 
 // Simple statements
 ?simple_stmt: set_stmt | return_stmt
-set_stmt: var_name set_op test _NEWLINE
+set_stmt: var_name set_op set_right_side _NEWLINE
+?set_right_side: test | spec_op
+
 doc_string_stmt: doc_string _NEWLINE
 
 // TODO: support more assignment operators?
@@ -116,7 +118,10 @@ kwargs: "**" test ("," argvalue)*
 ?subscript: test | ([test] ":" [test] [sliceop]) -> slice
 sliceop: ":" [test]
 
-?atom: var_name -> var
+// Setting the priority for this rule is imporant!
+// When using a variable in the right side of an assignment, it will be considered an expression
+// rather than a spec (both expressions and specs can be just a variable).
+?atom.1: var_name -> var
      | number
      | string
      | doc_string

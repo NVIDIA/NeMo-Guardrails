@@ -48,6 +48,7 @@ def test_basic():
                 "_type": "spec_op",
                 "op": "match",
                 "ref": None,
+                "return_var_name": None,
                 "spec": {
                     "_source": None,
                     "_type": "spec",
@@ -68,6 +69,7 @@ def test_basic():
                         "_type": "spec_op",
                         "op": "await",
                         "ref": None,
+                        "return_var_name": None,
                         "spec": {
                             "_source": None,
                             "_type": "spec",
