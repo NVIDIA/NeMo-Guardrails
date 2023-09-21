@@ -255,6 +255,11 @@ class Meta(Element):
 @dataclass_json
 @dataclass
 class ForkHead(Element):
+    """Element to fork the current head into multiple heads.
+
+    For each label a new head.
+    """
+
     labels: List[str] = field(default_factory=list)
     _type: str = "_fork"
 
@@ -262,11 +267,31 @@ class ForkHead(Element):
 @dataclass_json
 @dataclass
 class MergeHeads(Element):
+    """Merge all heads from same flow.
+
+    Only one head will advance from this element.
+    """
+
     _type: str = "_merge"
 
 
 @dataclass_json
 @dataclass
 class WaitForHeads(Element):
+    """Wait for a number of heads.
+
+    Once enough heads have reached this element they will be merged
+    and only one head will advance.
+    """
+
     number: int = 1
     _type: str = "_wait_for_heads"
+
+
+@dataclass_json
+@dataclass
+class RandomGoto(Element):
+    """Randomly pick one label and jump to it"""
+
+    labels: List[str] = field(default_factory=list)
+    _type: str = "_random_goto"

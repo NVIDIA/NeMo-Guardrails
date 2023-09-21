@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import copy
 import logging
+import random
+import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
@@ -35,6 +37,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     If,
     Label,
     MergeHeads,
+    RandomGoto,
     Spec,
     SpecOp,
     WaitForHeads,
@@ -54,6 +57,8 @@ from nemoguardrails.utils import new_event_dict, new_uid
 # )
 
 log = logging.getLogger(__name__)
+
+random_seed = int(time.time())
 
 """
 Open points:
@@ -635,6 +640,7 @@ def _expand_spec_op_element(
                 )
         else:
             # Element group
+            # TODO: Fix this such that action are also supported using references for flows and actions
             normalized_group = normalize_element_groups(element.spec)
             unique_group = convert_to_single_and_element_group(normalized_group)
             for and_group in unique_group["elements"]:
@@ -712,15 +718,31 @@ def _expand_spec_op_element(
         else:
             # Element group
             normalized_group = normalize_element_groups(element.spec)
-            if len(normalized_group["elements"]) > 1:
-                raise NotImplementedError("Starting 'or' groups not implemented yet!")
-            for group_element in normalized_group["elements"][0]["elements"]:
-                new_elements.append(
-                    SpecOp(
-                        op="start",
-                        spec=group_element,
+
+            random_goto_element = RandomGoto()
+            group_label_elements: List[Label] = []
+            end_label_name = f"end_label_{new_var_uid()}"
+            goto_end_element = Goto(label=end_label_name)
+            end_label_element = Label(name=end_label_name)
+
+            for group_idx, and_group in enumerate(normalized_group["elements"]):
+                group_label_name = f"group_{group_idx}_{new_var_uid()}"
+                random_goto_element.labels.append(group_label_name)
+                group_label_elements.append(Label(name=group_label_name))
+
+            # Generate new element sequence
+            new_elements.append(random_goto_element)
+            for group_idx, and_group in enumerate(normalized_group["elements"]):
+                new_elements.append(group_label_elements[group_idx])
+                for match_element in and_group["elements"]:
+                    new_elements.append(
+                        SpecOp(
+                            op="start",
+                            spec=match_element,
+                        )
                     )
-                )
+                new_elements.append(goto_end_element)
+            new_elements.append(end_label_element)
 
     elif element.op == "match":
         if isinstance(element.spec, Spec):
@@ -1533,6 +1555,10 @@ def slide(
             expr_val = eval_expression(element.expression, flow_state.context)
             flow_state.context.update({element.key: expr_val})
             head_position += 1
+
+        elif isinstance(element, RandomGoto):
+            idx = random.randint(0, len(element.labels) - 1)
+            head_position = flow_config.element_labels[element.labels[idx]] + 1
 
         else:
             # Ignore unknown element

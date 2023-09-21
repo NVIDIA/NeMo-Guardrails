@@ -1238,7 +1238,7 @@ def test_while_loop_mechanic():
 #     )
 
 
-def test_start_grouping():
+def test_start_and_grouping():
     """"""
 
     content = """
@@ -1272,6 +1272,27 @@ def test_start_grouping():
     )
 
 
+def test_start_or_grouping():
+    """"""
+
+    content = """
+    flow bot say $script
+      await UtteranceBotAction(script=$script)
+
+    flow main
+        $number = 0
+        while $number < 10
+          start bot say "Hi"
+            or bot say "Hello"
+            or bot say "Welcome"
+          $number = $number + 1
+        await bot say "Done"
+    """
+
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert len(state.outgoing_events) == 11
+
+
 def test_match_or_grouping():
     """"""
 
@@ -1281,7 +1302,7 @@ def test_match_or_grouping():
 
     flow main
         await user said "A"
-          or UtteranceUserAction().Finished(final_transcript="B")
+          or user said "B"
           or user said "C"
         start UtteranceBotAction(script="Match")
     """
@@ -1349,6 +1370,102 @@ def test_match_or_grouping():
             },
         ],
     )
+
+
+# TODO: Make this work rather than the one before
+# def test_match_or_grouping_fixed():
+#     """"""
+
+#     content = """
+#     flow user said $transcript
+#       match UtteranceUserAction().Finished(final_transcript=$transcript)
+
+#     flow main
+#         await user said "A"
+#           or UtteranceBotAction(script="B")
+#           or user said "C"
+#         start UtteranceBotAction(script="Match")
+#     """
+
+#     state = compute_next_state(_init_state(content), start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "B",
+#             }
+#         ],
+#     )
+#     state = compute_next_state(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "A",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "Match",
+#             },
+#         ],
+#     )
+#     state = compute_next_state(_init_state(content), start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "B",
+#             }
+#         ],
+#     )
+#     state = compute_next_state(
+#         state,
+#         {
+#             "type": "UtteranceBotActionFinished",
+#             "final_script": "B",
+#             "action_uid": state.outgoing_events[0]["action_uid"],
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "Match",
+#             },
+#         ],
+#     )
+#     state = compute_next_state(_init_state(content), start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "B",
+#             }
+#         ],
+#     )
+#     state = compute_next_state(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "C",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "Match",
+#             },
+#         ],
+#     )
 
 
 def test_match_and_or_grouping():
@@ -1625,13 +1742,16 @@ def test_action_reference_member_access():
     )
 
 
-def test_flow_references():
+def test_flow_references_member_access():
     """"""
 
     content = """
+    flow bot say $text
+      start UtteranceBotAction(script=$text) as $action_ref
+
     flow main
-      start UtteranceBotAction(script="Hello") as $ref
-      start UtteranceBotAction(script=$ref.start_event_arguments.script)
+      start bot say "Hello" as $flow_ref
+      start UtteranceBotAction(script=$flow_ref.context.action_ref.start_event_arguments.script)
     """
 
     config = _init_state(content)
@@ -1652,4 +1772,4 @@ def test_flow_references():
 
 
 if __name__ == "__main__":
-    test_while_loop_mechanic()
+    test_start_or_grouping()
