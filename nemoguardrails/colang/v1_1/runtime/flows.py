@@ -40,7 +40,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     WaitForHeads,
 )
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
-from nemoguardrails.colang.v1_1.runtime.utils import create_readable_uuid
+from nemoguardrails.colang.v1_1.runtime.utils import new_readable_uid, new_var_uid
 from nemoguardrails.utils import new_event_dict, new_uid
 
 # from rich.logging import RichHandler  # isort:skip
@@ -112,7 +112,7 @@ class Event:
     def __eq__(self, other: Event) -> bool:
         return self.is_equal(other)
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"[bold blue]{self.name}[/] {self.arguments}"
 
 
@@ -120,8 +120,12 @@ class Event:
 class ActionEvent(Event):
     """The action event class."""
 
-    # An event can belong to an action
+    # The event can belong to an action
     action_uid: Optional[str] = None
+
+    # This is the action reference to enable direct access via expressions
+    # This needs to be consistent with the action_uid
+    action: Optional[Action] = None
 
     @classmethod
     def from_umim_event(cls, event: dict) -> ActionEvent:
@@ -335,7 +339,7 @@ class FlowHead:
     def __hash__(self):
         return hash(self.uid)
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"flow='{self.flow_state_uid.split(')',1)[0][1:]}' pos={self.position}"
 
 
@@ -440,48 +444,37 @@ class FlowState:
     # Flow events to match
     def started_event(self, args: dict) -> FlowEvent:
         """Returns the flow Started event."""
-        arguments = args.copy()
-        arguments["flow_id"] = self.flow_id
-        arguments["flow_arguments"] = dict(
-            [(arg, self.context[arg]) for arg in self.arguments]
-        )
-        return FlowEvent(InternalEvents.FLOW_STARTED, arguments)
+        return self._create_event(InternalEvents.FLOW_STARTED, args)
 
-    def paused_event(self, args: dict) -> FlowEvent:
-        """Returns the flow Pause event."""
-        arguments = args.copy()
-        arguments["flow_id"] = self.flow_id
-        arguments["flow_arguments"] = dict(
-            [(arg, self.context[arg]) for arg in self.arguments]
-        )
-        return FlowEvent("FlowPaused", arguments)
+    # def paused_event(self, args: dict) -> FlowEvent:
+    #     """Returns the flow Pause event."""
+    #     return self._create_event(InternalEvents.FLOW_PAUSED, args)
 
-    def resumed_event(self, args: dict) -> FlowEvent:
-        """Returns the flow Resumed event."""
-        arguments = args.copy()
-        arguments["flow_id"] = self.flow_id
-        arguments["flow_arguments"] = dict(
-            [(arg, self.context[arg]) for arg in self.arguments]
-        )
-        return FlowEvent("FlowResumed", arguments)
+    # def resumed_event(self, args: dict) -> FlowEvent:
+    #     """Returns the flow Resumed event."""
+    #     return self._create_event(InternalEvents.FLOW_RESUMED, args)
 
     def finished_event(self, args: dict) -> FlowEvent:
         """Returns the flow Finished event."""
-        arguments = args.copy()
-        arguments["flow_id"] = self.flow_id
-        arguments["flow_arguments"] = dict(
-            [(arg, self.context[arg]) for arg in self.arguments]
-        )
-        return FlowEvent(InternalEvents.FLOW_FINISHED, arguments)
+        return self._create_event(InternalEvents.FLOW_FINISHED, args)
 
     def failed_event(self, args: dict) -> FlowEvent:
         """Returns the flow Failed event."""
+        return self._create_event(InternalEvents.FLOW_FAILED, args)
+
+    def _create_event(self, event_type: InternalEvents, args: dict) -> FlowEvent:
         arguments = args.copy()
         arguments["flow_id"] = self.flow_id
-        arguments["flow_arguments"] = dict(
-            [(arg, self.context[arg]) for arg in self.arguments]
+        arguments.update(
+            dict(
+                [
+                    (arg, self.context[arg])
+                    for arg in self.arguments
+                    if arg in self.context
+                ]
+            )
         )
-        return FlowEvent(InternalEvents.FLOW_FAILED, arguments)
+        return FlowEvent(event_type, arguments)
 
 
 @dataclass_json
@@ -552,7 +545,7 @@ class State:
             self, _create_flow_instance(main_flow_config)
         )
         if main_flow_config.loop_id is None:
-            main_flow.loop_id = create_readable_uuid("main")
+            main_flow.loop_id = new_readable_uid("main")
         else:
             main_flow.loop_id = main_flow_config.loop_id
         self.main_flow_state = main_flow
@@ -601,21 +594,26 @@ def _expand_spec_op_element(
             # Single element
             if element.spec.name in flow_configs:
                 # It's a flow
+                flow_ref_uid = f"_flow_ref_{new_var_uid()}"
                 new_elements.append(
                     SpecOp(
                         op="start",
                         spec=element.spec,
+                        ref=_create_ref_ast_dict_helper(flow_ref_uid),
                     )
                 )
                 new_elements.append(
                     SpecOp(
                         op="match",
-                        spec=element.spec,
+                        spec=Spec(
+                            var_name=flow_ref_uid,
+                            members=_create_member_ast_dict_helper("Finished", {}),
+                        ),
                     )
                 )
             else:
                 # It's an UMIM action
-                action_ref_uid = f"_action_ref_{new_uid()}"
+                action_ref_uid = f"_action_ref_{new_var_uid()}"
                 new_elements.append(
                     SpecOp(
                         op="start",
@@ -656,6 +654,7 @@ def _expand_spec_op_element(
             # Single element
             if element.spec.name in flow_configs:
                 # It's a flow
+                # send StartFlow(flow_id="FLOW_NAME")
                 element.spec.arguments.update({"flow_id": f"'{element.spec.name}'"})
                 new_elements.append(
                     SpecOp(
@@ -666,6 +665,9 @@ def _expand_spec_op_element(
                         ),
                     )
                 )
+                # TODO: This could potential still be triggered from another flow start
+                # match FlowStarted(...) as $_event_ref
+                event_ref_uid = f"_event_ref_{new_var_uid()}"
                 new_elements.append(
                     SpecOp(
                         op="match",
@@ -673,13 +675,25 @@ def _expand_spec_op_element(
                             name=InternalEvents.FLOW_STARTED,
                             arguments=element.spec.arguments,
                         ),
+                        ref=_create_ref_ast_dict_helper(event_ref_uid),
+                    )
+                )
+                # $flow_ref = $_event_ref.flow
+                element_ref = element.ref
+                if element_ref is None:
+                    flow_ref_uid = f"_flow_ref_{new_var_uid()}"
+                    element_ref = _create_ref_ast_dict_helper(flow_ref_uid)
+                new_elements.append(
+                    Assignment(
+                        key=element_ref["elements"][0]["elements"][0].lstrip("$"),
+                        expression=f"${event_ref_uid}.flow",
                     )
                 )
             else:
                 # It's an UMIM action
                 element_ref = element.ref
                 if element_ref is None:
-                    action_ref_uid = f"_action_ref_{new_uid()}"
+                    action_ref_uid = f"_action_ref_{new_var_uid()}"
                     element_ref = _create_ref_ast_dict_helper(action_ref_uid)
                 new_elements.append(
                     SpecOp(
@@ -724,7 +738,7 @@ def _expand_spec_op_element(
                     )
                 )
             else:
-                # It's an UMIM event
+                # It's an event
                 pass
         elif isinstance(element.spec, dict):
             # Multiple match elements
@@ -736,13 +750,13 @@ def _expand_spec_op_element(
             goto_group_elements: List[Goto] = []
             group_label_elements: List[Label] = []
             wait_for_heads_elements: List[WaitForHeads] = []
-            end_label_name = f"end_label_{new_uid()}"
+            end_label_name = f"end_label_{new_var_uid()}"
             goto_end_element = Goto(label=end_label_name)
             end_label_element = Label(name=end_label_name)
 
             element_idx = 0
             for group_idx, and_group in enumerate(normalized_group["elements"]):
-                group_label_name = f"group_{group_idx}_{new_uid()}"
+                group_label_name = f"group_{group_idx}_{new_var_uid()}"
                 group_label_elements.append(Label(name=group_label_name))
                 goto_group_elements.append(Goto(label=group_label_name))
                 wait_for_heads_elements.append(
@@ -750,7 +764,7 @@ def _expand_spec_op_element(
                 )
 
                 for match_element in and_group["elements"]:
-                    label_name = f"event_{element_idx}_{new_uid()}"
+                    label_name = f"event_{element_idx}_{new_var_uid()}"
                     event_label_elements.append(Label(name=label_name))
                     fork_element.labels.append(label_name)
                     if match_element.name in flow_configs:
@@ -844,7 +858,7 @@ def _expand_spec_op_element(
 def _expand_while_stmt_element(
     element: dict, flow_configs: Dict[str, FlowConfig]
 ) -> dict:
-    label_uid = new_uid()
+    label_uid = new_var_uid()
     begin_label = Label(name=f"_while_begin_{label_uid}")
     end_label = Label(name=f"_while_end_{label_uid}")
     goto_end = Goto(
@@ -869,8 +883,8 @@ def _expand_if_element(
 ) -> List[ElementType]:
     elements: List[ElementType] = []
 
-    if_else_body_label_name = f"if_else_body_label_{new_uid()}"
-    if_end_label_name = f"if_end_label_{new_uid()}"
+    if_else_body_label_name = f"if_else_body_label_{new_var_uid()}"
+    if_end_label_name = f"if_end_label_{new_var_uid()}"
 
     # TODO: optimize for cases when the else section is missing
     elements.append(
@@ -1020,7 +1034,7 @@ def _create_flow_instance(
         loop_uid = flow_config.loop_id
     # For type InteractionLoopType.PARENT we keep it None to infer loop_id at run_time from parent
 
-    flow_uid = create_readable_uuid(flow_config.id)
+    flow_uid = new_readable_uid(flow_config.id)
 
     flow_state = FlowState(
         uid=flow_uid,
@@ -1175,6 +1189,18 @@ def compute_next_state(state: State, external_event: Union[dict, Event]) -> Stat
                                     new_state, flow_state, element
                                 )
                                 new_event.arguments.update(event.arguments)
+
+                                if isinstance(new_event, FlowEvent):
+                                    new_event.flow = new_state.flow_states[
+                                        event.arguments["source_flow_instance_uid"]
+                                    ]
+                                elif isinstance(new_event, ActionEvent):
+                                    new_event.action_uid = event.action_uid
+                                    if event.action_uid is not None:
+                                        new_event.action = new_state.actions[
+                                            event.action_uid
+                                        ]
+
                                 flow_state.context.update({reference_name: new_event})
 
                         elif matching_score < 0.0:
@@ -1364,6 +1390,15 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
         if flow_finished:
             _finish_flow(state, flow_state, head.matching_scores)
 
+    # Make sure that all actionable heads still exist in flows, otherwise remove them
+    actionable_heads = set(
+        [
+            head
+            for head in actionable_heads
+            if head in state.flow_states[head.flow_state_uid].heads
+        ]
+    )
+
     return actionable_heads
 
 
@@ -1384,7 +1419,7 @@ def slide(
     while True:
         # if we reached the end, we stop
         if head_position == len(flow_config.elements) or head_position < 0:
-            return internal_events, new_heads
+            break
 
         # prev_head = head_position
         element = flow_config.elements[head_position]
@@ -1469,7 +1504,6 @@ def slide(
 
         elif isinstance(element, MergeHeads):
             # Delete all heads from the flow except for the current on
-            # TODO: Check if these heads are in no another list
             flow_state.heads = [head]
             head_position += 1
 
@@ -1477,7 +1511,6 @@ def slide(
             # Check if enough heads are on this element to continue
             waiting_heads = [h for h in flow_state.heads if h.position == head_position]
             if len(waiting_heads) >= element.number - 1:
-                # TODO: Check if these heads are in no another list
                 flow_state.heads = [head]
                 head_position += 1
             else:
@@ -1705,9 +1738,14 @@ def _compute_event_matching_score(
             ref_event.arguments["flow_id"]
             == state.flow_states[event.arguments["source_flow_instance_uid"]].flow_id
         ):
+            # TODO: Check if this is needed
+            # if isinstance(event, FlowEvent) and event.flow is not None:
+            #     event.arguments["flow_arguments"] = event.flow.context
+
             match_score = _compute_arguments_dict_matching_score(
                 event.arguments, ref_event.arguments
             )
+            # TODO: Generalize this with mismatch using the 'not' keyword
             if match_score > 0.0:
                 if (
                     (
@@ -1815,13 +1853,21 @@ def _get_event_from_element(
             action_event_arguments = _evaluate_arguments(
                 action_event_arguments, flow_state.context
             )
-            action_event: Event = action.get_event(
-                action_event_name, action_event_arguments
-            )
+            action_event = action.get_event(action_event_name, action_event_arguments)
             action_event.action_uid = action.uid
             return action_event
         elif isinstance(context_variable, FlowState):
-            raise NotImplementedError
+            flow = context_variable
+            flow_event_name = element_spec.members[0]["name"]
+            flow_event_arguments = element_spec.members[0]["arguments"]
+            flow_event_arguments = _evaluate_arguments(
+                flow_event_arguments, flow_state.context
+            )
+            flow_event = flow.get_event(flow_event_name, flow_event_arguments)
+            flow_event.flow = flow
+            return flow_event
+        else:
+            raise ValueError("Unknown type")
 
     if element_spec.members is not None:
         # Case 2)
@@ -1862,11 +1908,18 @@ def _get_event_from_element(
             return action_event
     else:
         # Case 1)
-        if element_spec.name in state.flow_configs:
-            # Flow object
-            raise NotImplementedError
+        if (
+            element_spec.name in state.flow_configs
+            or element_spec.name in InternalEvents.ALL
+        ):
+            # Flow event
+            event_arguments = _evaluate_arguments(
+                element_spec.arguments, flow_state.context
+            )
+            flow_event = FlowEvent(element_spec.name, event_arguments)
+            return flow_event
         else:
-            # Action object
+            # Action event
             event_arguments = _evaluate_arguments(
                 element_spec.arguments, flow_state.context
             )
@@ -1909,7 +1962,7 @@ def compute_next_events(
     for event in history:
         # First of all, we need to convert the input history to proper Event instances
         if isinstance(event, dict):
-            event = Event.from_umim_event(event)
+            event = ActionEvent.from_umim_event(event)
 
         # NOTE (schuellc): Why is this needed?
         if event.name == "hide_prev_turn":
@@ -2000,6 +2053,7 @@ def create_flow_internal_event(
 ) -> FlowEvent:
     """Creates and return a internal flow event"""
     arguments = {"source_flow_instance_uid": source_flow_state.uid}
+    arguments.update({"flow_id": source_flow_state.flow_id})
     for arg in source_flow_state.arguments:
         if arg in source_flow_state.context:
             arguments.update({arg: source_flow_state.context[arg]})
@@ -2012,9 +2066,9 @@ def create_flow_internal_event(
 
 def create_internal_event(
     event_name: str, event_args: dict, matching_scores: List[float]
-) -> Event:
+) -> FlowEvent:
     """Returns an internal event for the provided event data"""
-    event = Event(event_name, event_args, matching_scores=matching_scores)
+    event = FlowEvent(event_name, event_args, matching_scores=matching_scores)
     return event
 
 

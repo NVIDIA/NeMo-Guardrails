@@ -426,6 +426,47 @@ def test_start_a_flow_compact_notation():
     )
 
 
+def test_start_match_flow_with_reference():
+    """Test to start and match an UMIM action based on action parameters"""
+
+    content = """
+    flow bot say hello
+      await UtteranceBotAction(script="Hello") as $action_ref
+
+    flow main
+      start bot say hello as $flow_ref
+      match $flow_ref.Finished()
+      start UtteranceBotAction(script="Done")
+    """
+    state = compute_next_state(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            }
+        ],
+    )
+    state = compute_next_state(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            }
+        ],
+    )
+
+
 def test_await_a_flow():
     """Test await a child flow"""
 
@@ -1584,5 +1625,31 @@ def test_action_reference_member_access():
     )
 
 
+def test_flow_references():
+    """"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello") as $ref
+      start UtteranceBotAction(script=$ref.start_event_arguments.script)
+    """
+
+    config = _init_state(content)
+    state = compute_next_state(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_if_branching_mechanic()
+    test_while_loop_mechanic()

@@ -32,6 +32,11 @@ class AttributeDict(dict):
         self[attr] = value
 
 
-def create_readable_uuid(name: str) -> str:
+def new_readable_uid(name: str) -> str:
     """Creates a new uuid with a human readable prefix."""
     return f"({name}){str(uuid.uuid4())}"
+
+
+def new_var_uid() -> str:
+    """Creates a new uuid that is compatible with variable names."""
+    return str(uuid.uuid4()).replace("-", "_")
