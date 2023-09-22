@@ -100,7 +100,7 @@ expr: or_expr
 !comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="|"in"|"not" "in"|"is"|"is" "not"
 
 ?power: atom_expr ("**" factor)?
-?atom_expr: atom_expr "(" [arguments] ")"      -> funccall
+?atom_expr: func_name "(" [arguments] ")"      -> funccall
           | atom_expr "[" subscriptlist "]"  -> getitem
           | atom_expr "." name               -> getattr
           | atom
@@ -131,6 +131,9 @@ sliceop: ":" [test]
 
 spec_name: name+
          | "(" name+ ")"
+
+func_name: "flow" | "action"
+
 name: NAME
 var_name: VAR_NAME
 comment: COMMENT
