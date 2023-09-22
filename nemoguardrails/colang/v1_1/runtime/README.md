@@ -2,6 +2,10 @@
 
 The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 
+## Questions
+
+- process_events alters the passed state, but also returns it, we should clean this up
+
 ## Todos
 
 - References should belong to a Spec and not a SpecOp in order to support assigning references in action and flow groups
@@ -12,16 +16,16 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Implement pause/resume mechanism for activated flows
 - Add support for 'return VALUE' to finish a flow and assign return value to a variable
 - Add support to 'abort VALUE' a flow to fail it
-- Access strings in objects using curly brackets
+- Add support for multiline strings in Colang
+- We need to make sure that local system actions are non-blocking
+- Implement support for starting actions and flows assigned to variables
 
 - Fix `send user say "how are you".Start() as $id` parsing
 - Support calling actions with positional arguments
 
-
 ## To Discuss
 
 - Should the action parameters be under a separate key in the event? (currently using a black list to extract the actual action parameters from the `Start...Action` event).
-
 
 ## Events
 

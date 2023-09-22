@@ -126,6 +126,7 @@ class Spec(Element):
     """
 
     name: Optional[str] = None
+    spec_type: str = ""
     arguments: Dict[str, Any] = field(default_factory=dict)
     members: Optional[List["Spec"]] = None
     var_name: Optional[str] = None

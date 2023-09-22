@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nemoguardrails.colang.v1_1.lang.colang_ast import Spec
+
 
 def flow(name: str):
-    """Convert a flow name to a FlowConfig/Spec? object.
+    """Convert a flow name to a FlowConfig/Spec? object."""
 
-    TODO (cschuller): to implement.
-    """
+    flow_spec = Spec(name=name, spec_type="flow", arguments=[], members=[])
 
-    # NOTE (razvan): just returning a dummy object for testing, for now.
-    return {"name": name}
+    return flow_spec
 
 
 def action(name: str):

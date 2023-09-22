@@ -23,12 +23,17 @@ import aiohttp
 from langchain.chains.base import Chain
 
 from nemoguardrails.actions.actions import ActionResult
+from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v1_1.runtime.flows import (
     FlowConfig,
     State,
-    compute_next_state,
+    add_new_flow_instance,
+    create_flow_instance,
+    expand_elements,
+    run_to_completion,
 )
+from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
@@ -36,6 +41,56 @@ log = logging.getLogger(__name__)
 
 class RuntimeV1_1(Runtime):
     """Runtime for executing the guardrails."""
+
+    def __init__(self, config: RailsConfig, verbose: bool = False):
+        super().__init__(config, verbose)
+
+        self.state: Optional[State] = None
+
+        # Register local system actions
+        self.register_action(self._add_flows_action, "AddFlowsAction", False)
+
+    async def _add_flows_action(self, **args):
+        log.info(f"Start AddFlowsAction! {args}")
+        flow_content = args["config"]
+        # Parse new flow
+        try:
+            parsed_flow = parse_colang_file(
+                filename="",
+                content=flow_content,
+                include_source_mapping=False,
+                version="1.1",
+            )
+        except Exception as e:
+            log.warning(f"Could not parse the colang content! {e}")
+
+        added_flows: List[str] = []
+        for flow in parsed_flow["flows"]:
+            if flow.name in self.state.flow_configs:
+                log.warning(f"Flow '{flow.name}' already exists!")
+                break
+
+            # Add flow config to state.flow_configs
+            self.state.flow_configs.update(
+                {
+                    flow.name: FlowConfig(
+                        id=flow.name,
+                        loop_id=None,
+                        elements=expand_elements(
+                            flow.elements, self.state.flow_configs
+                        ),
+                        parameters=flow.parameters,
+                    )
+                }
+            )
+            # Create an instance of the flow in flow_states
+            add_new_flow_instance(
+                self.state, create_flow_instance(self.state.flow_configs[flow.name])
+            )
+
+            added_flows.append(flow.name)
+
+        return added_flows
 
     def _init_flow_configs(self):
         """Initializes the flow configs based on the config."""
@@ -265,6 +320,8 @@ class RuntimeV1_1(Runtime):
             if isinstance(state, dict):
                 state = State.from_dict(state)
 
+        self.state = state
+
         # While we have input events to process, or there are local running actions
         # we continue the processing.
         while input_events or local_running_actions:
@@ -272,7 +329,7 @@ class RuntimeV1_1(Runtime):
             for event in input_events:
                 log.info(f"Processing event {event}")
 
-                state = compute_next_state(state, event)
+                run_to_completion(state, event)
 
                 # If we have context updates after this event, we first add that.
                 if state.context_updates:

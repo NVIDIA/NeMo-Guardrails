@@ -128,7 +128,11 @@ class ColangTransformer(Transformer):
         elements[0:0] = [
             SpecOp(
                 op="match",
-                spec=Spec(name="StartFlow", arguments={"flow_id": f'"{name}"'}),
+                spec=Spec(
+                    name="StartFlow",
+                    spec_type="event",
+                    arguments={"flow_id": f'"{name}"'},
+                ),
             )
         ]
 
@@ -238,6 +242,16 @@ class ColangTransformer(Transformer):
 
         if members:
             spec.members = members
+
+        if spec.name is not None:
+            if spec.name.islower():
+                spec.spec_type = "flow"
+            elif spec.name.endswith("Action"):
+                spec.spec_type = "action"
+            else:
+                spec.spec_type = "event"
+        elif spec.var_name is not None:
+            spec.spec_type = "var"
 
         return spec
 
