@@ -42,7 +42,7 @@ flow user asked where are the toilettes response
 
 flow user asked how are you multi turn response
   #await user say "how are you"
-  send user say "how are you".Start() as $id
+  # send user say "how are you".Start() as $id
   match $id.Started()
   match $id.Finished()
   await bot say "Good! And you?"
