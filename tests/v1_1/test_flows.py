@@ -1771,5 +1771,31 @@ def test_flow_references_member_access():
     )
 
 
+def test_values_in_strings():
+    """"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Roger") as $ref
+      start UtteranceBotAction(script="Hi {$ref.start_event_arguments.script}!")
+    """
+
+    config = _init_state(content)
+    state = compute_next_state(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Roger",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi Roger!",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_start_or_grouping()
+    test_values_in_strings()

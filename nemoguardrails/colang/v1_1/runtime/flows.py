@@ -60,17 +60,6 @@ log = logging.getLogger(__name__)
 
 random_seed = int(time.time())
 
-"""
-Open points:
-* Parser:
-  * Assigning references inside e.g. event or action groups does not work yet
-  * Does assignment work?
-* Colanng flow control:
-  * Discuss expansion to fork/merge/wait_for_heads keywords
-  * what does 'when else' actually do?
-  * We should probably introduce the missatching with e.g. 'not'
-"""
-
 
 @dataclass
 class InternalEvents:

@@ -31,6 +31,18 @@ def eval_expression(expr, context):
 
         return expr
 
+    # We search for all expressions inside expressions mark inside curly brackets
+    # and evaluate them first
+    pattern = r"(\{.*?\})"
+    inner_expressions = re.findall(pattern, expr)
+    if inner_expressions:
+        inner_expression_values = []
+        for inner_expression in inner_expressions:
+            inner_expression_values.append(
+                eval_expression(inner_expression.strip("{}"), context)
+            )
+        expr = re.sub(pattern, lambda x: inner_expression_values.pop(0), expr)
+
     # We search for all variable names starting with $, remove the $ and add
     # the value in the globals dict for eval
     var_names = re.findall(r"\$([a-zA-Z_][a-zA-Z0-9_]*)", expr)
