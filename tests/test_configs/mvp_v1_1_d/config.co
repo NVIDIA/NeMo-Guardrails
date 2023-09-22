@@ -1,0 +1,63 @@
+# Common
+
+flow user said $text
+  match UtteranceUserActionFinished(final_transcript=$text)
+
+flow user says something
+  match UtteranceUserActionFinished()
+
+flow bot say $text
+  await UtteranceBotAction(script=$text)
+
+flow wait
+  await SomeRandomEvent()
+
+# Custom
+
+flow user express greeting
+  user said "hi"
+
+flow user provide custom instructions
+  user said "do something"
+
+flow bot express greeting
+  bot say "Hello world!"
+
+flow bot comment unsure how to respond
+  bot say "I'm not sure how to respond."
+
+flow dynamic_1
+  bot say "Why don't scientists trust atoms? Because they make up everything!"
+  bot say "I'm smiling."
+
+flow greeting
+  user express greeting
+  bot express greeting
+
+flow fallback
+  user says something
+  bot comment unsure how to respond
+
+flow do $instructions
+  $flow_config = await GenerateFlowAction(instructions=$instructions)
+
+  # $flow_name = await AddFlowAction($flow_config)
+  # $flow_obj = flow($flow_name)
+  # await $flow_obj
+
+  await dynamic_1
+
+flow custom instructions
+  user provide custom instructions
+
+  # Extract this in a hardcoded way, for testing.
+  $instructions = "I want you to tell a joke and smile."
+
+  do $instructions
+
+
+flow main
+  activate greeting
+  activate custom instructions
+  activate fallback
+  wait
