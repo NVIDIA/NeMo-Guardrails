@@ -337,9 +337,16 @@ class RuntimeV1_1(Runtime):
 
     async def _run_action(self, action_name: str, start_action_event: dict) -> dict:
         """Runs the locally registered action."""
-        # TODO: fill in the parameters correctly
+
+        # NOTE: To extract the actual parameters that should be passed to the local action,
+        # we ignore all the keys from "an empty event" of the same type.
+        ignore_keys = new_event_dict(start_action_event["type"]).keys()
+        action_params = {
+            k: v for k, v in start_action_event.items() if k not in ignore_keys
+        }
+
         return_value, new_events, context_updates = await self._process_start_action(
-            action_name, action_params={}, context={}, events=[]
+            action_name, action_params=action_params, context={}, events=[]
         )
         return {
             "action_name": action_name,
