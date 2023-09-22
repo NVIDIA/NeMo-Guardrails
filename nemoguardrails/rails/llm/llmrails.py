@@ -158,10 +158,11 @@ class LLMRails:
 
         # Quick hack for colang 1.1
         if self.config.colang_version == "1.1":
-            self.runtime.register_action(
-                self.llm_generation_actions.generate_user_intent,
-                "GenerateUserIntentAction",
-            )
+            # self.runtime.register_action(
+            #     self.llm_generation_actions.generate_user_intent,
+            #     "GenerateUserIntentAction",
+            # )
+            pass
 
         # Next, we initialize the Knowledge Base
         if check_sync_call_from_async_loop():
