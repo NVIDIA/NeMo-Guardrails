@@ -58,11 +58,9 @@ flow unknown intent
   bot comment unsure how to respond
 
 flow do $instructions
-  $flow_config = await GenerateFlowAction(instructions=$instructions)
-
-  # $flow_name = await AddFlowAction($flow_config)
-  # $flow_obj = flow($flow_name)
-  # await $flow_obj
+  $flow_config = await GenerateFlowAction(instructions=$instructions, flow_name="user instruction action")
+  await AddFlowAction($flow_config)
+  await user instruction action
 
   await dynamic_1
 
