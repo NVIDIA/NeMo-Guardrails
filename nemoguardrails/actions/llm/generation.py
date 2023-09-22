@@ -42,7 +42,7 @@ from nemoguardrails.actions.llm.utils import (
     strip_quotes,
 )
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.lang.colang_ast import Flow, SpecOp
+from nemoguardrails.colang.v1_1.lang.colang_ast import Flow, Spec, SpecOp
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -113,20 +113,36 @@ class LLMGenerationActions:
             return
 
         el = flow.elements[1]
-        if not isinstance(el, SpecOp) or el.op != "match":
-            return
+        if isinstance(el, SpecOp):
+            if el.op == "match":
+                spec = cast(SpecOp, el).spec
+                if spec.name != "UtteranceUserActionFinished":
+                    return
 
-        spec = cast(SpecOp, el).spec
-        if spec.name != "UtteranceUserActionFinished":
-            return
+                if "final_transcript" not in spec.arguments:
+                    return
 
-        if "final_transcript" not in spec.arguments:
-            return
+                # Extract the message and remove the double quotes
+                message = spec.arguments["final_transcript"][1:-1]
+                self.user_messages[flow.name] = [message]
 
-        # Extract the message and remove the double quotes
-        message = spec.arguments["final_transcript"][1:-1]
+            elif el.op == "await":
+                spec = cast(SpecOp, el).spec
+                if isinstance(spec, dict) and spec.get("_type") == "spec_or":
+                    specs = spec.get("elements")
+                else:
+                    assert isinstance(spec, Spec)
+                    specs = [spec]
 
-        self.user_messages[flow.name] = [message]
+                for spec in specs:
+                    if not spec.name.startswith("user "):
+                        continue
+
+                    message = spec.arguments["$0"][1:-1]
+                    if flow.name not in self.user_messages:
+                        self.user_messages[flow.name] = []
+
+                    self.user_messages[flow.name].append(message)
 
     def _extract_bot_message_example(self, flow: Flow):
         # Quick heuristic to identify the user utterance examples
