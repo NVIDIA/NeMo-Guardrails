@@ -14,6 +14,8 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Add support to 'abort VALUE' a flow to fail it
 - Access strings in objects using curly brackets
 
+- Fix `send user say "how are you".Start() as $id` parsing
+
 ## Events
 
 The following is the list of standard events:
