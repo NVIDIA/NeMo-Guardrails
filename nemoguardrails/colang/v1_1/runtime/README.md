@@ -2,6 +2,18 @@
 
 The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 
+## Todos
+
+- References should belong to a Spec and not a SpecOp in order to support assigning references in action and flow groups
+- Implement when/or/else construct for branching
+- Implement match failing with the 'not' keyword, also for internal flow events
+- Abort actions from flows that get aborted
+- Add support to abort a flow (e.g. with 'abort $flow_ref' or 'send $flow_ref.Stop()')
+- Implement pause/resume mechanism for activated flows
+- Add support for 'return VALUE' to finish a flow and assign return value to a variable
+- Add support to 'abort VALUE' a flow to fail it
+- Access strings in objects using curly brackets
+
 ## Events
 
 The following is the list of standard events:
