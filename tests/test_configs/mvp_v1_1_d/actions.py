@@ -19,3 +19,11 @@ from nemoguardrails.actions import action
 @action(name="GenerateFlowAction")
 async def generate_flow(instructions: str):
     return None
+
+
+@action(name="GenerateUserIntentAction")
+async def generate_user_intent_action(user_message: str):
+    if "hello" in user_message:
+        return "user express greeting"
+    else:
+        return "unknown"
