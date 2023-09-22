@@ -15,6 +15,13 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Access strings in objects using curly brackets
 
 - Fix `send user say "how are you".Start() as $id` parsing
+- Support calling actions with positional arguments
+
+
+## To Discuss
+
+- Should the action parameters be under a separate key in the event? (currently using a black list to extract the actual action parameters from the `Start...Action` event).
+
 
 ## Events
 
