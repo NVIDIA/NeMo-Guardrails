@@ -23,6 +23,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Flow,
     FlowParamDef,
     If,
+    Return,
     Source,
     Spec,
     SpecOp,
@@ -328,6 +329,14 @@ class ColangTransformer(Transformer):
             elif_elements = elif_elements[1:]
 
         return main_if_element
+
+    def _return_stmt(self, children, meta):
+        assert len(children) == 1 and children[0]["_type"] == "expr"
+        expression = children[0]["elements"][0]
+        return Return(
+            expression=expression,
+            _source=self.__source(meta),
+        )
 
     def __default__(self, data, children, meta):
         """Default function that is called if there is no attribute matching ``data``

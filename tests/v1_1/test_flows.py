@@ -6,11 +6,8 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (
-    ActionStatus,
-    State,
-    run_to_completion,
-)
+from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, State,
+                                                      run_to_completion)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -1797,5 +1794,39 @@ def test_values_in_strings():
     )
 
 
+def test_flow_return_values():
+    """"""
+
+    content = """
+    flow a
+      return "success"
+
+    flow b
+      return 100
+
+    flow c
+      $result = "failed"
+      return $result
+
+    flow main
+      $result_a = await a
+      $result_b = await b
+      $result_c = await c
+      start UtteranceBotAction(script="{$result_a} {$result_b} {$result_c}")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success 100 failed",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_match_umim_event()
+    test_flow_return_values()

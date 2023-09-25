@@ -24,20 +24,27 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import (Any, Callable, Deque, Dict, List, Optional, Set, Tuple,
-                    Union)
+from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import (Assignment, Element,
-                                                        FlowParamDef, ForkHead,
-                                                        Goto, If, Label,
-                                                        MergeHeads, RandomGoto,
-                                                        Spec, SpecOp,
-                                                        WaitForHeads)
+from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    Assignment,
+    Element,
+    FlowParamDef,
+    ForkHead,
+    Goto,
+    If,
+    Label,
+    MergeHeads,
+    RandomGoto,
+    Return,
+    Spec,
+    SpecOp,
+    WaitForHeads,
+)
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
-from nemoguardrails.colang.v1_1.runtime.utils import (new_readable_uid,
-                                                      new_var_uid)
+from nemoguardrails.colang.v1_1.runtime.utils import new_readable_uid, new_var_uid
 from nemoguardrails.utils import new_event_dict, new_uid
 
 # from rich.logging import RichHandler  # isort:skip
@@ -595,6 +602,7 @@ def _expand_spec_op_element(
                             var_name=flow_ref_uid,
                             members=_create_member_ast_dict_helper("Finished", {}),
                         ),
+                        return_var_name=element.return_var_name,
                     )
                 )
             else:
@@ -614,8 +622,6 @@ def _expand_spec_op_element(
                             var_name=action_ref_uid,
                             members=_create_member_ast_dict_helper("Finished", {}),
                         ),
-                        # We make sure we propagate the return_var_name so we can
-                        # capture the return value
                         return_var_name=element.return_var_name,
                     )
                 )
@@ -656,8 +662,8 @@ def _expand_spec_op_element(
                     )
                 )
                 # TODO: This could potential still be triggered from another flow start
-                # match FlowStarted(...) as $_event_ref
-                event_ref_uid = f"_event_ref_{new_var_uid()}"
+                # match FlowStarted(...) as $_flow_event_ref
+                flow_event_ref_uid = f"_flow_event_ref_{new_var_uid()}"
                 new_elements.append(
                     SpecOp(
                         op="match",
@@ -665,10 +671,10 @@ def _expand_spec_op_element(
                             name=InternalEvents.FLOW_STARTED,
                             arguments=element.spec.arguments,
                         ),
-                        ref=_create_ref_ast_dict_helper(event_ref_uid),
+                        ref=_create_ref_ast_dict_helper(flow_event_ref_uid),
                     )
                 )
-                # $flow_ref = $_event_ref.flow
+                # $flow_ref = $_flow_event_ref.flow
                 element_ref = element.ref
                 if element_ref is None:
                     flow_ref_uid = f"_flow_ref_{new_var_uid()}"
@@ -676,15 +682,15 @@ def _expand_spec_op_element(
                 new_elements.append(
                     Assignment(
                         key=element_ref["elements"][0]["elements"][0].lstrip("$"),
-                        expression=f"${event_ref_uid}.flow",
+                        expression=f"${flow_event_ref_uid}.flow",
                     )
                 )
             else:
                 # It's an UMIM action
                 element_ref = element.ref
                 if element_ref is None:
-                    action_ref_uid = f"_action_ref_{new_var_uid()}"
-                    element_ref = _create_ref_ast_dict_helper(action_ref_uid)
+                    action_event_ref_uid = f"_action_ref_{new_var_uid()}"
+                    element_ref = _create_ref_ast_dict_helper(action_event_ref_uid)
                 new_elements.append(
                     SpecOp(
                         op="_new_instance",
@@ -730,6 +736,12 @@ def _expand_spec_op_element(
             # Single match element
             if element.spec.spec_type == "flow":
                 # It's a flow
+                element_ref = element.ref
+                if element_ref is None:
+                    element_ref = _create_ref_ast_dict_helper(
+                        f"_flow_event_ref_{new_var_uid()}"
+                    )
+
                 arguments = {"flow_id": f"'{element.spec.name}'"}
                 for arg in element.spec.arguments:
                     arguments.update({arg: element.spec.arguments[arg]})
@@ -741,11 +753,41 @@ def _expand_spec_op_element(
                             name=InternalEvents.FLOW_FINISHED,
                             arguments=arguments,
                         ),
+                        ref=element_ref,
+                        return_var_name=element.return_var_name,
                     )
                 )
+                if element.return_var_name is not None:
+                    new_elements.append(
+                        Assignment(
+                            key=element.return_var_name,
+                            expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
+                        )
+                    )
             else:
                 # It's an event
-                pass
+                if element.return_var_name is not None:
+                    element_ref = element.ref
+                    if element_ref is None:
+                        element_ref = _create_ref_ast_dict_helper(
+                            f"_event_ref_{new_var_uid()}"
+                        )
+
+                    return_var_name = element.return_var_name
+
+                    match_element = element
+                    match_element.ref = element_ref
+                    match_element.return_var_name = None
+
+                    new_elements.append(match_element)
+                    new_elements.append(
+                        Assignment(
+                            key=return_var_name,
+                            expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
+                        )
+                    )
+                else:
+                    pass
         elif isinstance(element.spec, dict):
             # Multiple match elements
             normalized_group = normalize_element_groups(element.spec)
@@ -1199,15 +1241,6 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                                         ]
 
                                 flow_state.context.update({reference_name: new_event})
-                            # If we need to capture the return value, we update the context
-                            if element.return_var_name:
-                                flow_state.context.update(
-                                    {
-                                        element.return_var_name: event.arguments.get(
-                                            "return_value"
-                                        )
-                                    }
-                                )
 
                         elif matching_score < 0.0:
                             heads_failing.append(head)
@@ -1528,6 +1561,16 @@ def slide(
         elif isinstance(element, RandomGoto):
             idx = random.randint(0, len(element.labels) - 1)
             head_position = flow_config.element_labels[element.labels[idx]] + 1
+
+        elif isinstance(element, Return):
+            flow_state.context.update(
+                {
+                    "_return_value": eval_expression(
+                        element.expression, flow_state.context
+                    )
+                }
+            )
+            head_position = len(flow_config.elements)
 
         else:
             # Ignore unknown element
@@ -2058,9 +2101,12 @@ def create_flow_internal_event(
     source_flow_state: FlowState,
     matching_scores: List[float],
 ) -> FlowEvent:
-    """Creates and return a internal flow event"""
+    """Creates and returns a internal flow event"""
     arguments = {"source_flow_instance_uid": source_flow_state.uid}
     arguments.update({"flow_id": source_flow_state.flow_id})
+    arguments.update(
+        {"return_value": source_flow_state.context.get("_return_value", None)}
+    )
     for arg in source_flow_state.arguments:
         if arg in source_flow_state.context:
             arguments.update({arg: source_flow_state.context[arg]})

@@ -221,9 +221,8 @@ class Break(Element):
 @dataclass_json
 @dataclass
 class Return(Element):
+    expression: Optional[str] = None
     _type: str = "return"
-    _next = "-1"
-    _absolute = True
 
 
 @dataclass_json

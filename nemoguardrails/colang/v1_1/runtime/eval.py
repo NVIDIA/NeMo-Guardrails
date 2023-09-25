@@ -42,7 +42,7 @@ def eval_expression(expr, context):
             inner_expression_values.append(
                 eval_expression(inner_expression.strip("{}"), context)
             )
-        expr = re.sub(pattern, lambda x: inner_expression_values.pop(0), expr)
+        expr = re.sub(pattern, lambda x: str(inner_expression_values.pop(0)), expr)
 
     # We search for all variable names starting with $, remove the $ and add
     # the value in the globals dict for eval
