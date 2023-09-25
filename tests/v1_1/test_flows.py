@@ -6,8 +6,11 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, State,
-                                                      run_to_completion)
+from nemoguardrails.colang.v1_1.runtime.flows import (
+    ActionStatus,
+    State,
+    run_to_completion,
+)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -1828,5 +1831,57 @@ def test_flow_return_values():
     )
 
 
+def test_break_statement():
+    """"""
+
+    content = """
+    flow main
+      $count = -1
+      while True
+        $count = $count + 1
+        start UtteranceBotAction(script="S:{$count}")
+        if $count < 1
+          $count = $count
+        elif $count < 3
+          continue
+        elif $count == 3
+          break
+        start UtteranceBotAction(script="E:{$count}")
+      start UtteranceBotAction(script="Done")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "S:0",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "E:0",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "S:1",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "S:2",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "S:3",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_flow_return_values()
+    test_break_statement()

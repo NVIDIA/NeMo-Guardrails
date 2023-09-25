@@ -20,6 +20,8 @@ from lark.tree import Meta
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Assignment,
+    Break,
+    Continue,
     Flow,
     FlowParamDef,
     If,
@@ -341,9 +343,22 @@ class ColangTransformer(Transformer):
 
     def _return_stmt(self, children, meta):
         assert len(children) == 1 and children[0]["_type"] == "expr"
-        expression = children[0]["elements"][0]
         return Return(
-            expression=expression,
+            expression=children[0]["elements"][0],
+            _source=self.__source(meta),
+        )
+
+    def _break_stmt(self, children, meta):
+        assert len(children) == 0
+        return Break(
+            label=None,
+            _source=self.__source(meta),
+        )
+
+    def _continue_stmt(self, children, meta):
+        assert len(children) == 0
+        return Continue(
+            label=None,
             _source=self.__source(meta),
         )
 

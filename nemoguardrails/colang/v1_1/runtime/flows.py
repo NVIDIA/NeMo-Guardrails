@@ -30,6 +30,8 @@ from dataclasses_json import dataclass_json
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Assignment,
+    Break,
+    Continue,
     Element,
     FlowParamDef,
     ForkHead,
@@ -551,7 +553,9 @@ class State:
 
 
 def expand_elements(
-    elements: List[ElementType], flow_configs: Dict[str, FlowConfig]
+    elements: List[ElementType],
+    flow_configs: Dict[str, FlowConfig],
+    continue_break_labels: Optional[Tuple[str, str]] = None,
 ) -> List[ElementType]:
     elements_changed = True
     while elements_changed:
@@ -569,6 +573,12 @@ def expand_elements(
                 expanded_elems = _expand_if_element(element, flow_configs)
             elif element["_type"] == "when_stmt":
                 expanded_elems = _expand_when_stmt_element(element, flow_configs)
+            elif isinstance(element, Continue):
+                if continue_break_labels is not None:
+                    element.label = continue_break_labels[0]
+            elif isinstance(element, Break):
+                if continue_break_labels is not None:
+                    element.label = continue_break_labels[1]
 
             if len(expanded_elems) > 0:
                 new_elements.extend(expanded_elems)
@@ -580,7 +590,8 @@ def expand_elements(
 
 
 def _expand_spec_op_element(
-    element: SpecOp, flow_configs: Dict[str, FlowConfig]
+    element: SpecOp,
+    flow_configs: Dict[str, FlowConfig],
 ) -> List[ElementType]:
     new_elements: List[ElementType] = []
     if element.op == "await":
@@ -918,7 +929,9 @@ def _expand_while_stmt_element(
         label=begin_label.name,
         expression="True",
     )
-    body_elements = expand_elements(element.elements, flow_configs)
+    body_elements = expand_elements(
+        element.elements, flow_configs, [begin_label.name, end_label.name]
+    )
 
     new_elements = [begin_label, goto_end]
     new_elements.extend(body_elements)
@@ -1572,6 +1585,12 @@ def slide(
                 }
             )
             head_position = len(flow_config.elements)
+
+        elif isinstance(element, Continue) or isinstance(element, Break):
+            if element.label is None:
+                head_position += 1
+            else:
+                head_position = flow_config.element_labels[element.label] + 1
 
         else:
             # Ignore unknown element

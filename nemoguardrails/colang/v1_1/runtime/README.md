@@ -19,6 +19,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Add support for multiline strings in Colang
 - We need to make sure that local system actions are non-blocking
 - Implement support for starting actions and flows assigned to variables
+- Logical operators like 'and' and 'or' not working in if statements
 
 - Fix `send user say "how are you".Start() as $id` parsing
 - Support calling actions with positional arguments

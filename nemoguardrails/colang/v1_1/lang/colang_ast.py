@@ -202,6 +202,7 @@ class Assignment(Element):
 @dataclass_json
 @dataclass
 class Continue(Element):
+    label: Optional[str] = None
     _type: str = "continue"
 
 
@@ -215,6 +216,7 @@ class Abort(Element):
 @dataclass_json
 @dataclass
 class Break(Element):
+    label: Optional[str] = None
     _type: str = "break"
 
 
