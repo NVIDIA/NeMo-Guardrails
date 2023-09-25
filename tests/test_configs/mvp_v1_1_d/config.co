@@ -51,18 +51,16 @@ flow fallback
   bot say $intent
 
   # TODO: trigger the finishing of the event with the corresponding flow name
-  # await FinishFlow(name=$intent)
+  # send FinishFlow(flow_id=$intent)
 
 flow unknown intent
   user unknown intent
   bot comment unsure how to respond
 
 flow do $instructions
-  $flow_config = await GenerateFlowAction(instructions=$instructions, flow_name="user instruction action")
-  await AddFlowAction($flow_config)
+  $flow_source = await GenerateFlowAction(instructions=$instructions, flow_name="user instruction action")
+  await AddFlowAction($flow_source)
   await user instruction action
-
-  await dynamic_1
 
 flow custom instructions
   user provide custom instructions
