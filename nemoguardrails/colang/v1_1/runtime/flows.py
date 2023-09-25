@@ -42,6 +42,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Spec,
     SpecOp,
     WaitForHeads,
+    While,
 )
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 from nemoguardrails.colang.v1_1.runtime.utils import new_readable_uid, new_var_uid
@@ -562,7 +563,7 @@ def expand_elements(
                 expanded_elems = _expand_spec_op_element(element, flow_configs)
                 if len(expanded_elems) > 0:
                     elements_changed = True
-            elif element["_type"] == "while_stmt":
+            elif isinstance(element, While):
                 expanded_elems = _expand_while_stmt_element(element, flow_configs)
             elif isinstance(element, If):
                 expanded_elems = _expand_if_element(element, flow_configs)
@@ -904,20 +905,20 @@ def _expand_spec_op_element(
 
 
 def _expand_while_stmt_element(
-    element: dict, flow_configs: Dict[str, FlowConfig]
+    element: While, flow_configs: Dict[str, FlowConfig]
 ) -> dict:
     label_uid = new_var_uid()
     begin_label = Label(name=f"_while_begin_{label_uid}")
     end_label = Label(name=f"_while_end_{label_uid}")
     goto_end = Goto(
         label=end_label.name,
-        expression=f"not ({element['elements'][0]['elements'][0]})",
+        expression=f"not ({element.expression})",
     )
     goto_begin = Goto(
         label=begin_label.name,
         expression="True",
     )
-    body_elements = expand_elements(element["elements"][1]["elements"], flow_configs)
+    body_elements = expand_elements(element.elements, flow_configs)
 
     new_elements = [begin_label, goto_end]
     new_elements.extend(body_elements)

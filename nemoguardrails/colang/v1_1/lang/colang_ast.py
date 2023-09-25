@@ -187,7 +187,7 @@ class If(Element):
 @dataclass
 class While(Element):
     expression: str = ""
-    do: List[Element] = field(default_factory=list)
+    elements: List[Element] = field(default_factory=list)
     _type: str = "while"
 
 

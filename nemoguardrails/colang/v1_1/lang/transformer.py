@@ -27,6 +27,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Source,
     Spec,
     SpecOp,
+    While,
 )
 
 
@@ -288,6 +289,14 @@ class ColangTransformer(Transformer):
             spec_op = children[2]
             spec_op.return_var_name = var_name
             return spec_op
+
+    def _while_stmt(self, children, meta):
+        assert len(children) == 2
+        return While(
+            expression=children[0]["elements"][0],
+            elements=children[1]["elements"],
+            _source=self.__source(meta),
+        )
 
     def _if_stmt(self, children, meta):
         """Processing for `spec` tree nodes.
