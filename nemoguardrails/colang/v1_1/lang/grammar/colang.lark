@@ -8,7 +8,7 @@ suite: _NEWLINE _INDENT (stmt+) _DEDENT
 
 // Flow definition and calling
 ?def_stmt: flow_def
-flow_def: "flow" spec_name [flow_params_def] suite
+flow_def: _FLOW spec_name [flow_params_def] suite
 ?flow_params_def: flow_params_def_classic | flow_params_def_simple
 flow_params_def_classic: "(" (flow_param_def ("," flow_param_def)*) ")"
 flow_params_def_simple: (flow_param_def)+
@@ -134,7 +134,7 @@ sliceop: ":" [test]
 spec_name: name+
          | "(" name+ ")"
 
-func_name: "flow" | "action"
+func_name: FUNC_NAME
 
 name: NAME
 var_name: VAR_NAME
@@ -156,8 +156,11 @@ COMMENT: /#[^\n]*/
 _AND.1: /(and|(\r?\n[\t ]*)+and[ \t])/
 _OR.1: /(or|(\r?\n[\t ]*)+or[ \t])/
 
+_FLOW.1: /flow(?!(\s*\(|[a-zA-Z0-9_]))/
+
 NAME: /[^\W\d]\w*/
 VAR_NAME: /\$[^\W\d]\w*/
+FUNC_NAME: /(?<![a-zA-Z]\s)(flow|action)(?=\()/
 
 _NEWLINE: (/\r?\n[\t ]*/)+
 
