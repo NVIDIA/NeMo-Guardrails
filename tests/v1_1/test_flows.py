@@ -1915,6 +1915,10 @@ def test_when_or_mechanics():
           start UtteranceBotAction(script="C")
         orwhen user said "D"
           start UtteranceBotAction(script="D")
+        orwhen (user said "E" and user said "F")
+          start UtteranceBotAction(script="EF")
+        orwhen (user said "G" or user said "H")
+          start UtteranceBotAction(script="GH")
           break
     """
 
@@ -2003,10 +2007,61 @@ def test_when_or_mechanics():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "D",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Happens immediately",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "E",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "F",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "EF",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Happens immediately",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "H",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "GH",
             }
         ],
     )
 
 
 if __name__ == "__main__":
-    test_when_or_mechanics_with_actions()
+    test_when_or_mechanics()

@@ -1037,25 +1037,28 @@ def _expand_when_stmt_element(
                 )
         else:
             # Element group
-            raise NotImplementedError()
             # TODO: Fix this such that action are also supported using references for flows and actions
-            # normalized_group = normalize_element_groups(when_element)
-            # unique_group = convert_to_single_and_element_group(normalized_group)
-            # for and_group in unique_group["elements"]:
-            #     for match_element in and_group["elements"]:
-            #         if match_element.spec_type == "flow":
-            #             # It's a flow
-            #             new_elements.append(
-            #                 SpecOp(
-            #                     op="start",
-            #                     spec=match_element,
-            #                 )
-            #             )
-            #         else:
-            #             # It's an UMIM action
-            #             pass
-            # when_element.op = "match"
-            # new_elements.append(when_element)
+            normalized_group = normalize_element_groups(when_element)
+            unique_group = convert_to_single_and_element_group(normalized_group)
+            for and_group in unique_group["elements"]:
+                for match_element in and_group["elements"]:
+                    if match_element.spec_type == "flow":
+                        # It's a flow
+                        start_elements.append(
+                            SpecOp(
+                                op="start",
+                                spec=match_element,
+                            )
+                        )
+                    else:
+                        # It's an UMIM action
+                        pass
+            when_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=when_element,
+                )
+            )
 
     new_elements: List[ElementType] = []
     new_elements.extend(start_elements)
