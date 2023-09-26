@@ -44,6 +44,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Spec,
     SpecOp,
     WaitForHeads,
+    When,
     While,
 )
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
@@ -572,7 +573,7 @@ def expand_elements(
             elif isinstance(element, If):
                 expanded_elems = _expand_if_element(element, flow_configs)
                 elements_changed = True  # Makes sure to update continue/break elements
-            elif element["_type"] == "when_stmt":
+            elif isinstance(element, When):
                 expanded_elems = _expand_when_stmt_element(element, flow_configs)
                 elements_changed = True  # Makes sure to update continue/break elements
             elif isinstance(element, Continue):
@@ -972,10 +973,102 @@ def _expand_if_element(
 
 
 def _expand_when_stmt_element(
-    element: dict, flow_configs: Dict[str, FlowConfig]
+    element: When, flow_configs: Dict[str, FlowConfig]
 ) -> List[ElementType]:
-    raise NotImplementedError()
-    return element
+    start_elements: List[SpecOp] = []
+    fork_head_element = ForkHead()
+    when_group_labels: List[str] = []
+    when_elements: List[SpecOp] = []
+    end_label_name = f"when_end_label_{new_var_uid()}"
+    goto_end_label = Goto(label=end_label_name)
+    end_label = Label(name=end_label_name)
+
+    for idx, when_element in enumerate(element.when_specs):
+        when_group_label_name = f"when_group_{idx}_label_{new_var_uid()}"
+        fork_head_element.labels.append(when_group_label_name)
+        when_group_labels.append(Label(name=when_group_label_name))
+        if isinstance(when_element, Spec):
+            # Single element
+            if when_element.spec_type == "flow":
+                # It's a flow
+                flow_ref_uid = f"_flow_ref_{new_var_uid()}"
+                start_elements.append(
+                    SpecOp(
+                        op="start",
+                        spec=when_element,
+                        ref=_create_ref_ast_dict_helper(flow_ref_uid),
+                    )
+                )
+                when_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=Spec(
+                            var_name=flow_ref_uid,
+                            members=_create_member_ast_dict_helper("Finished", {}),
+                        ),
+                    )
+                )
+            elif when_element.spec_type == "action":
+                # It's an UMIM action
+                action_ref_uid = f"_action_ref_{new_var_uid()}"
+                start_elements.append(
+                    SpecOp(
+                        op="start",
+                        spec=when_element,
+                        ref=_create_ref_ast_dict_helper(action_ref_uid),
+                    )
+                )
+                when_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=Spec(
+                            var_name=action_ref_uid,
+                            members=_create_member_ast_dict_helper("Finished", {}),
+                        ),
+                    )
+                )
+            elif when_element.spec_type == "event":
+                # It's an UMIM event
+                when_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=when_element,
+                    )
+                )
+        else:
+            # Element group
+            raise NotImplementedError()
+            # TODO: Fix this such that action are also supported using references for flows and actions
+            # normalized_group = normalize_element_groups(when_element)
+            # unique_group = convert_to_single_and_element_group(normalized_group)
+            # for and_group in unique_group["elements"]:
+            #     for match_element in and_group["elements"]:
+            #         if match_element.spec_type == "flow":
+            #             # It's a flow
+            #             new_elements.append(
+            #                 SpecOp(
+            #                     op="start",
+            #                     spec=match_element,
+            #                 )
+            #             )
+            #         else:
+            #             # It's an UMIM action
+            #             pass
+            # when_element.op = "match"
+            # new_elements.append(when_element)
+
+    new_elements: List[ElementType] = []
+    new_elements.extend(start_elements)
+    new_elements.append(fork_head_element)
+    for idx, when_group_label in enumerate(when_group_labels):
+        new_elements.append(when_group_label)
+        new_elements.append(when_elements[idx])
+        new_elements.append(MergeHeads())
+        new_elements.extend(expand_elements(element.then_elements[idx], flow_configs))
+        new_elements.append(goto_end_label)
+    new_elements.append(end_label)
+
+    return new_elements
 
 
 def normalize_element_groups(group: Union[Spec, dict]) -> dict:

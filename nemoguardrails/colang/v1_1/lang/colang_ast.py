@@ -185,6 +185,15 @@ class If(Element):
 
 @dataclass_json
 @dataclass
+class When(Element):
+    when_specs: List[Union[Spec, SpecAnd, SpecOr]] = field(default_factory=list)
+    then_elements: List[List[Element]] = field(default_factory=list)
+    else_elements: Optional[List[Element]] = None
+    _type: str = "when"
+
+
+@dataclass_json
+@dataclass
 class While(Element):
     expression: str = ""
     elements: List[Element] = field(default_factory=list)

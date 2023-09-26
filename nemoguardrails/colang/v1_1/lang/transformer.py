@@ -29,6 +29,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Source,
     Spec,
     SpecOp,
+    When,
     While,
 )
 
@@ -247,11 +248,16 @@ class ColangTransformer(Transformer):
         if members:
             spec.members = members
 
+        # This is a temporary solution until we have a better way of deriving spec types
+        # TODO: Support this by e.g. Colang UMIM action imports
         if spec.name is not None:
             if spec.name.islower():
                 spec.spec_type = "flow"
             elif spec.name.endswith("Action"):
-                spec.spec_type = "action"
+                if spec.members:
+                    spec.spec_type = "event"
+                else:
+                    spec.spec_type = "action"
             else:
                 spec.spec_type = "event"
         elif spec.var_name is not None:
@@ -340,6 +346,32 @@ class ColangTransformer(Transformer):
             elif_elements = elif_elements[1:]
 
         return main_if_element
+
+    def _when_stmt(self, children, meta):
+        """Processing for `spec` tree nodes.
+
+        Rule:
+            when_stmt: "when" spec_expr suite orwhens ["else" suite]
+        """
+        assert len(children) == 4
+        when_specs = []
+        then_elements = []
+        when_specs.append(children[0])
+        then_elements.append(children[1]["elements"])
+        if children[2]:
+            for _el in children[2]["elements"]:
+                assert _el["_type"] == "orwhen_"
+                when_specs.append(_el["elements"][0])
+                then_elements.append(_el["elements"][1]["elements"])
+        else_elements = children[3]["elements"] if children[3] else None
+
+        main_when_element = When(
+            when_specs=when_specs,
+            then_elements=then_elements,
+            else_elements=else_elements,
+        )
+
+        return main_when_element
 
     def _return_stmt(self, children, meta):
         assert len(children) == 1 and children[0]["_type"] == "expr"

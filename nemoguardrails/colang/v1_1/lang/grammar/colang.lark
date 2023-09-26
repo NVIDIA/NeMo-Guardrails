@@ -71,11 +71,13 @@ simple_arguments: simple_argvalue+
 
 // Compound statements
 ?compound_stmt: if_stmt | while_stmt | when_stmt
+while_stmt: "while" test suite
 if_stmt: "if" test suite elifs ["else" suite]
 elifs: elif_*
 elif_: _ELSE_IF test suite
-while_stmt: "while" test suite
-when_stmt: "when" spec_op suite ("else" "when" spec_op suite)* ("else" suite)?
+when_stmt: "when" spec_expr suite orwhens ["else" suite]
+orwhens: orwhen_*
+orwhen_: _OR_WHEN spec_expr suite
 
 // Test expression (used both for conditions and assignment)
 test: or_test
@@ -151,10 +153,12 @@ doc_string: LONG_STRING
 
 _ELSE_IF.1: /(elif|else\s+if)/
 
+_OR_WHEN.1: /(orwhen)/
+
 COMMENT: /#[^\n]*/
 
-_AND.1: /(and|(\r?\n[\t ]*)+and[ \t])/
-_OR.1: /(or|(\r?\n[\t ]*)+or[ \t])/
+_AND.1: /(and[ \t]|(\r?\n[\t ]*)+and[ \t])/
+_OR.1: /(or[ \t]|(\r?\n[\t ]*)+or[ \t])/
 
 _FLOW.1: /flow(?!(\s*\(|[a-zA-Z0-9_]))/
 

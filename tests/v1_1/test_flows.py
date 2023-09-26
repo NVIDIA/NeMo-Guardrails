@@ -1216,28 +1216,6 @@ def test_while_loop_mechanic():
     )
 
 
-# def test_while_loop_break_mechanic():
-#     """"""
-
-#     content = """
-#     flow main
-
-#       while $ref is None
-#         match UtteranceUserAction().Finished(final_transcript="End") as $ref
-#         break
-#         start UtteranceBotAction(script="Test")
-
-#       start UtteranceBotAction(script="Done")
-#     """
-
-#     config = _init_state(content)
-#     state = compute_next_state(config, start_main_flow_event)
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [],
-#     )
-
-
 def test_start_and_grouping():
     """"""
 
@@ -1920,5 +1898,115 @@ def test_break_continue_statement_b():
     )
 
 
+def test_when_or_mechanics():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow main
+      while True
+        when UtteranceBotAction(script="Happens immediately")
+          start UtteranceBotAction(script="A")
+        orwhen UtteranceUserActionFinished(final_transcript="B")
+          start UtteranceBotAction(script="B")
+        orwhen UtteranceUserAction().Finished(final_transcript="C")
+          start UtteranceBotAction(script="C")
+        orwhen user said "D"
+          start UtteranceBotAction(script="D")
+          break
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Happens immediately",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Happens immediately",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Happens immediately",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Happens immediately",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "C",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "C",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Happens immediately",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "D",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "D",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_break_continue_statement_b()
+    test_when_or_mechanics_with_actions()
