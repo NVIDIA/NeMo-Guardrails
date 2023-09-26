@@ -27,9 +27,10 @@ flow bot express greeting
 flow bot comment unsure how to respond
   bot say "I'm not sure how to respond."
 
-flow dynamic_1
-  bot say "Why don't scientists trust atoms? Because they make up everything!"
-  bot say "I'm smiling."
+# This needs to be generated dynamically
+#flow user instruction action
+#  bot say "Why don't scientists trust atoms? Because they make up everything!"
+#  bot say "I'm smiling."
 
 flow greeting
   user express greeting
@@ -40,18 +41,26 @@ flow user unknown intent
 
 
 flow fallback
-  user says something as $flow_ref
+  # user says something as $flow_ref
 
   # TODO: check why $flow_ref is None here
   # TODO: extract the last user message properly
-  $user_message = "hello there!"
+  # $user_message = "i want stuff"
+  #  $event = $flow_ref.event
+  #  $user_message = $event.final_transcript
+  match UtteranceUserAction().Finished() as $event_ref
+  $user_message = $event_ref.arguments.final_transcript
+  # $user_message = "i want a joke"
+
+  bot say "User message is"
+  bot say $user_message
 
   $intent = await GenerateUserIntentAction(user_message=$user_message)
   bot say "The intent is"
   bot say $intent
 
   # TODO: trigger the finishing of the event with the corresponding flow name
-  # send FinishFlow(flow_id=$intent)
+  send FinishFlow(flow_id=$intent)
 
 flow unknown intent
   user unknown intent
@@ -59,7 +68,9 @@ flow unknown intent
 
 flow do $instructions
   $flow_source = await GenerateFlowAction(instructions=$instructions, flow_name="user instruction action")
-  await AddFlowAction($flow_source)
+  await AddFlowsAction(config=$flow_source)
+  bot say "bla"
+
   await user instruction action
 
 flow custom instructions
