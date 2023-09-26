@@ -571,13 +571,15 @@ def expand_elements(
                 expanded_elems = _expand_while_stmt_element(element, flow_configs)
             elif isinstance(element, If):
                 expanded_elems = _expand_if_element(element, flow_configs)
+                elements_changed = True  # Makes sure to update continue/break elements
             elif element["_type"] == "when_stmt":
                 expanded_elems = _expand_when_stmt_element(element, flow_configs)
+                elements_changed = True  # Makes sure to update continue/break elements
             elif isinstance(element, Continue):
-                if continue_break_labels is not None:
+                if element.label is None and continue_break_labels is not None:
                     element.label = continue_break_labels[0]
             elif isinstance(element, Break):
-                if continue_break_labels is not None:
+                if element.label is None and continue_break_labels is not None:
                     element.label = continue_break_labels[1]
 
             if len(expanded_elems) > 0:

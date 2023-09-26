@@ -1831,7 +1831,7 @@ def test_flow_return_values():
     )
 
 
-def test_break_statement():
+def test_break_continue_statement_a():
     """"""
 
     content = """
@@ -1883,5 +1883,42 @@ def test_break_statement():
     )
 
 
+def test_break_continue_statement_b():
+    """"""
+
+    content = """
+    flow main
+      while True
+        start UtteranceBotAction(script="A")
+        while True
+          break
+          start UtteranceBotAction(script="E1")
+        start UtteranceBotAction(script="B")
+        break
+        start UtteranceBotAction(script="E2")
+      start UtteranceBotAction(script="C")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "C",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_break_statement()
+    test_break_continue_statement_b()
