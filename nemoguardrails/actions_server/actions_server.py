@@ -55,8 +55,15 @@ class ResponseBody(BaseModel):
     response_model=ResponseBody,
 )
 async def run_action(body: RequestBody):
-    """Execute action_name with action_parameters and return result."""
+    """
+    Execute action_name with action_parameters and return the result.
 
+    Args:
+        body (RequestBody): The request body containing the action name and parameters.
+
+    Returns:
+        ResponseBody: The response containing the status and result of the action execution.
+    """
     log.info(f"Request body: {body}")
     result, status = await app.action_dispatcher.execute_action(
         body.action_name, body.action_parameters
@@ -71,6 +78,9 @@ async def run_action(body: RequestBody):
     summary="List available actions",
 )
 async def get_actions_list():
-    """Returns the list of available actions."""
+    """
+    Returns:
+        List[str]: A list of available actions.
+    """
 
     return app.action_dispatcher.get_registered_actions()

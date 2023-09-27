@@ -31,7 +31,32 @@ async def check_facts(
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
-    """Checks the facts for the bot response."""
+    """
+    Checks the facts to determine the accuracy of the bot's response.
+
+    Args:
+        llm_task_manager (LLMTaskManager): An instance of the Language Model Task Manager.
+        context (Optional[dict], optional): A dictionary containing relevant context information.
+            Defaults to None.
+        llm (Optional[BaseLLM], optional): An instance of the Base Language Model. Defaults to None.
+
+    Returns:
+        bool: True if the bot's response is supported by evidence, False otherwise.
+
+    Note:
+        This function checks the facts by examining the evidence and the bot's response. If there is
+        relevant evidence, it uses the Language Model to determine if the response is supported by
+        the evidence.
+
+    Example:
+        ```python
+        evidence = ["The sky is blue.", "Water is wet"]
+        response = "The sky is green."
+
+        result = await check_facts(llm_task_manager, {"relevant_chunks": evidence, "last_bot_message": response}, llm)
+        # The result will be False since the response contradicts the evidence.
+        ```
+    """
 
     evidence = context.get("relevant_chunks", [])
     response = context.get("last_bot_message")

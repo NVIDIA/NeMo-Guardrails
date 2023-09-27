@@ -34,10 +34,31 @@ API_URL_BASE = f"https://api.wolframalpha.com/v2/result?appid={APP_ID}"
 async def wolfram_alpha_request(
     query: Optional[str] = None, context: Optional[dict] = None
 ):
-    """Makes a request to the Wolfram Alpha API
+    """
+    Makes a request to the Wolfram Alpha API to retrieve information.
 
-    :param context: The context for the execution of the action.
-    :param query: The query for Wolfram.
+    Args:
+        query (Optional[str], optional): The query to send to Wolfram Alpha. If not provided, the last user message is used.
+        context (Optional[dict], optional): A dictionary containing relevant context information. Defaults to None.
+
+    Returns:
+        str or ActionResult: The response from Wolfram Alpha as a string or an ActionResult in case of errors.
+
+    Raises:
+        Exception: Raised when no query is provided to Wolfram Alpha.
+
+    Note:
+        This action sends a query to the Wolfram Alpha API to fetch information based on the user's query.
+        It can return the Wolfram Alpha response or an ActionResult with error information if issues occur.
+
+    Example:
+        ```python
+        # Retrieving information from Wolfram Alpha with a specific query
+        result = await wolfram_alpha_request(query="What is the capital of France?")
+
+        # Using the last user message as the query
+        result = await wolfram_alpha_request(context={"last_user_message": "Who won the World Series in 2020?"})
+        ```
     """
     # If we don't have an explicit query, we take the last user message
     if query is None and context is not None:

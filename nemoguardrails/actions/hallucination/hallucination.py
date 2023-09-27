@@ -44,7 +44,16 @@ async def check_hallucination(
 ):
     """Checks if the last bot response is a hallucination by checking multiple completions for self-consistency.
 
-    :return: True if hallucination is detected, False otherwise.
+    Args:
+    --------
+        llm_task_manager (LLMTaskManager): The language model task manager.
+        context (Optional[dict]): Optional context dictionary containing information about the conversation.
+        llm (Optional[BaseLLM]): Optional language model to use for checking hallucination.
+        use_llm_checking (bool): Flag to indicate whether to use LLM-based hallucination checking.
+
+    Returns:
+    --------
+        bool: True if hallucination is detected, False otherwise.
     """
 
     bot_response = context.get("last_bot_message")

@@ -23,10 +23,18 @@ MAX_LEN = 50
 
 
 def validate_input(attribute: str, validators: List[str] = (), **validation_args):
-    """A generic decorator that can be used by any action (class method or function) for input validation.
-
-    Supported validation choices are: length and quote.
     """
+    A generic decorator for input validation.
+
+    Args:
+        attribute (str): The name of the attribute to validate.
+        validators (List[str]): A list of validation choices (e.g., "length", "quote").
+        validation_args: Additional validation arguments based on the chosen validators.
+
+    Returns:
+        decorator: The decorator function that can be applied to methods or functions.
+    """
+
 
     def _validate_input(f):
         def wrapper(*args, **kwargs):
@@ -81,9 +89,15 @@ def _is_default_resp(resp):
 
 
 def validate_response(validators: List[str] = [], **validation_args):
-    """A generic decorator that can be used by any action (class method or function) for response validation.
+    """
+    A generic decorator for response validation.
 
-    Supported validation choices are: length, ip_filter, is_default_resp
+    Args:
+        validators (List[str]): A list of validation choices (e.g., "length", "ip_filter").
+        validation_args: Additional validation arguments based on the chosen validators.
+
+    Returns:
+        decorator: The decorator function that can be applied to methods or functions.
     """
 
     def _validate_response(f):
