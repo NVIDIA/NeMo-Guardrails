@@ -1255,6 +1255,16 @@ def _create_event_reference(
     return {reference_name: new_event}
 
 
+def _context_log(flow_state: FlowState) -> str:
+    return str(
+        [
+            {key: value}
+            for key, value in flow_state.context.items()
+            if not isinstance(value, FlowEvent) and not isinstance(value, FlowState)
+        ]
+    )
+
+
 # Define a custom sorting key function for pairwise comparisons
 def _custom_sort_key(input_list):
     return tuple(input_list)
@@ -1344,7 +1354,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
                         if matching_score > 0.0:
                             heads_matching.append(head)
-                            log.info(f"Matching head: {head}")
+
+                            log.info(
+                                f"Matching head: {head} context={_context_log(flow_state)}"
+                            )
 
                             if element.ref is not None:
                                 flow_state.context.update(
@@ -1355,7 +1368,9 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
                         elif matching_score < 0.0:
                             heads_failing.append(head)
-                            log.info(f"Matching failure head: {head}")
+                            log.info(
+                                f"Matching failure head: {head} context={_context_log(flow_state)}"
+                            )
                         else:
                             heads_not_matching.append(head)
 
@@ -1508,10 +1523,10 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
 
         # TODO: Use additional element to finish flow
         if flow_finished:
-            log.debug(f"Flow {head.flow_state_uid} finished with last element")
+            log.debug(f"Flow finished: {head.flow_state_uid} with last element")
         else:
             log.debug(
-                f"Head in flow {head.flow_state_uid} advanced to element: {flow_config.elements[head.position]}"
+                f"Head advanced in flow {head.flow_state_uid} to element: {flow_config.elements[head.position]}"
             )
 
         # Check if all all flow heads at a match element
@@ -1738,12 +1753,12 @@ def _abort_flow(
     flow_state.status = FlowStatus.ABORTED
 
     log.info(
-        f"Flow '{_get_flow_parent_hierarchy(state, flow_state.uid)}' aborted/failed"
+        f"Flow aborted/failed: '{_get_flow_parent_hierarchy(state, flow_state.uid)}'"
     )
 
     if flow_state.activated:
         _restart_flow(state, flow_state, matching_scores)
-        log.info(f"Activated flow '{flow_state.flow_id}' restart")
+        log.info(f"Activated flow restart: '{flow_state.flow_id}'")
 
 
 def _finish_flow(
@@ -1770,11 +1785,13 @@ def _finish_flow(
 
     flow_state.status = FlowStatus.COMPLETED
 
-    log.info(f"Flow '{_get_flow_parent_hierarchy(state, flow_state.uid)}' finished")
+    log.info(
+        f"Flow finished: '{_get_flow_parent_hierarchy(state, flow_state.uid)}' context={_context_log(flow_state)}"
+    )
 
     if flow_state.activated:
         _restart_flow(state, flow_state, matching_scores)
-        log.info(f"Activated flow '{flow_state.flow_id}' restart")
+        log.info(f"Activated flow restart: '{flow_state.flow_id}'")
 
 
 def _restart_flow(
