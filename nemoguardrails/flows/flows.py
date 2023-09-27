@@ -113,7 +113,15 @@ class State:
 
 
 def _is_actionable(element: dict) -> bool:
-    """Checks if the given element is actionable."""
+    """
+    Checks if the given element is actionable.
+
+    Args:
+        element (dict): The element to check.
+
+    Returns:
+        bool: True if the element is actionable, False otherwise.
+    """
     if element["_type"] == "run_action":
         if (
             element["action_name"] == "utter"
@@ -127,8 +135,16 @@ def _is_actionable(element: dict) -> bool:
 
 
 def _is_match(element: dict, event: dict) -> bool:
-    """Checks if the given element matches the given event."""
+    """
+    Checks if the given element matches the given event.
 
+    Args:
+        element (dict): The element to check.
+        event (dict): The event to compare against.
+
+    Returns:
+        bool: True if the element matches the event, False otherwise.
+    """
     # The element type is the first key in the element dictionary
     element_type = element["_type"]
 
@@ -174,7 +190,7 @@ def _is_match(element: dict, event: dict) -> bool:
             return False
 
         # We need to match all properties used in the element. We also use the "..." wildcard
-        # to mach anything.
+        # to match anything.
         for key, value in element.items():
             # Skip potentially private keys.
             if key.startswith("_"):
@@ -193,7 +209,15 @@ def _record_next_step(
     flow_config: FlowConfig,
     priority_modifier: float = 1.0,
 ):
-    """Helper to record the next step."""
+    """
+    Helper to record the next step.
+
+    Args:
+        new_state (State): The new state to update.
+        flow_state (FlowState): The current flow state.
+        flow_config (FlowConfig): The flow configuration.
+        priority_modifier (float): The priority modifier for the next step (default is 1.0).
+    """
     if (
         new_state.next_step is None
         or new_state.next_step_priority < flow_config.priority
@@ -211,9 +235,17 @@ def _record_next_step(
 
 
 def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState]:
-    """Helper to call a subflow.
+    """
+    Helper to call a subflow.
 
     The head for `flow_state` is expected to be on a "flow" element.
+
+    Args:
+        new_state (State): The new state to update.
+        flow_state (FlowState): The current flow state.
+
+    Returns:
+        Optional[FlowState]: The subflow state if created, otherwise None.
     """
     flow_config = new_state.flow_configs[flow_state.flow_id]
     subflow_state = FlowState(
@@ -250,7 +282,16 @@ def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState
 
 
 def _slide_with_subflows(state: State, flow_state: FlowState) -> Optional[int]:
-    """Slides the provided flow and also calls subflows, if applicable."""
+    """
+    Slides the provided flow and also calls subflows, if applicable.
+
+    Args:
+        state (State): The current state.
+        flow_state (FlowState): The current flow state.
+
+    Returns:
+        Optional[int]: The new head position of the flow, or None if the flow is completed.
+    """
     flow_config = state.flow_configs[flow_state.flow_id]
 
     should_continue = True
@@ -271,14 +312,15 @@ def _slide_with_subflows(state: State, flow_state: FlowState) -> Optional[int]:
 
 
 def compute_next_state(state: State, event: dict) -> State:
-    """Computes the next state of the flow-driven system.
+    """
+    Computes the next state of the flow-driven system.
 
-    Currently, this is a very simplified implementation, with the following assumptions:
+    Args:
+        state (State): The current state.
+        event (dict): The event that triggered the computation.
 
-    - All flows are singleton i.e. you can't have multiple instances of the same flow.
-    - Flows can be interrupted by one flow at a time.
-    - Flows are resumed when the interruption flow completes.
-    - No prioritization between flows, the first one that can decide something will be used.
+    Returns:
+        State: The updated state.
     """
 
     # We don't advance flow on `StartInternalSystemAction`, but on `InternalSystemActionFinished`.
@@ -473,7 +515,15 @@ def compute_next_state(state: State, event: dict) -> State:
 
 
 def _step_to_event(step: dict) -> dict:
-    """Helper to convert a next step coming from a flow element into the actual event."""
+    """
+    Helper to convert a next step coming from a flow element into the actual event.
+
+    Args:
+        step (dict): The next step from a flow element.
+
+    Returns:
+        dict: The converted event.
+    """
     step_type = step["_type"]
 
     if step_type == "run_action":
@@ -501,7 +551,16 @@ def _step_to_event(step: dict) -> dict:
 def compute_next_steps(
     history: List[dict], flow_configs: Dict[str, FlowConfig]
 ) -> List[dict]:
-    """Computes the next step in a flow-driven system given a history of events."""
+    """
+    Computes the next step in a flow-driven system given a history of events.
+
+    Args:
+        history (List[dict]): The list of events in the history.
+        flow_configs (Dict[str, FlowConfig]): The flow configurations.
+
+    Returns:
+        List[dict]: The list of next steps as events.
+    """
     state = State(context={}, flow_states=[], flow_configs=flow_configs)
 
     # First, we process the history and apply any alterations e.g. 'hide_prev_turn'
@@ -554,11 +613,18 @@ def compute_next_steps(
 
 
 def compute_context(history: List[dict]):
-    """Computes the context given a history of events.
+    """
+    Computes the context given a history of events.
 
-    # We also include a few special context variables:
+     # We also include a few special context variables:
     - $last_user_message: the last message sent by the user.
     - $last_bot_message: the last message sent by the bot.
+
+    Args:
+        history (List[dict]): The list of events in the history.
+
+    Returns:
+        dict: The computed context.
     """
     context = {
         "last_user_message": None,

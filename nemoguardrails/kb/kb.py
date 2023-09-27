@@ -31,8 +31,41 @@ CACHE_FOLDER = os.path.join(os.getcwd(), ".cache")
 
 
 class KnowledgeBase:
-    """Basic implementation of a knowledge base."""
+    """
+    Basic implementation of a knowledge base.
 
+    This class allows you to initialize, build, and search for relevant chunks of information
+    within a collection of documents.
+
+    Usage:
+    ```python
+    kb = KnowledgeBase(documents, config, get_embedding_search_provider_instance)
+    kb.init()  # Initialize the knowledge base
+    await kb.build()  # Build the knowledge base index
+    results = await kb.search_relevant_chunks(query_text, max_results)
+    ```
+
+    Args:
+    - documents (List[str]): A list of documents in markdown format.
+    - config (KnowledgeBaseConfig): Configuration for the knowledge base.
+    - get_embedding_search_provider_instance (Callable): A function to get an instance of
+      the embedding search provider.
+
+    Attributes:
+    - documents (List[str]): The list of documents.
+    - chunks (List[dict]): The topic chunks extracted from the documents.
+    - index: The knowledge base index.
+    - config (KnowledgeBaseConfig): Configuration for the knowledge base.
+    - _get_embeddings_search_instance (Callable): Function to get the embedding search provider instance.
+
+    Methods:
+    - init(): Initialize the knowledge base by splitting documents into topic chunks.
+    - build(): Build the knowledge base index.
+    - search_relevant_chunks(text, max_results): Search for relevant chunks based on a query text.
+
+    Note: This is a simplified implementation and may not cover all use cases.
+    """
+    
     def __init__(
         self,
         documents: List[str],
