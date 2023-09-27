@@ -40,9 +40,22 @@ spec_operator: "match" -> match_spec
              | "activate" -> activate_spec
              | "send" -> send_spec
 
-spec_op: [spec_operator] spec_expr [capture_ref]
+spec_op: spec_operator spec_expr [capture_ref] |
+       | non_var_spec_expr [capture_ref]
+
 ?spec_op_stmt: spec_op _NEWLINE
 capture_ref: "as" var_name
+
+// TODO: find a more elegant solution.
+// NON-VAR branch
+?non_var_spec_expr: non_var_spec_or
+?non_var_spec_or: non_var_spec_and (_OR non_var_spec_and)+
+        | non_var_spec_and
+?non_var_spec_and: non_var_spec_atom (_AND non_var_spec_atom)+
+         | non_var_spec_atom
+?non_var_spec_atom: "(" non_var_spec_expr ")"
+         | non_var_spec
+?non_var_spec: spec_name [classic_arguments | simple_arguments] (spec_member)* -> spec
 
 // Arbitrary expressions with specs including "and" and "or" as operators
 ?spec_expr: spec_or
@@ -126,7 +139,7 @@ sliceop: ":" [test]
 // Setting the priority for this rule is imporant!
 // When using a variable in the right side of an assignment, it will be considered an expression
 // rather than a spec (both expressions and specs can be just a variable).
-?atom.1: var_name -> var
+?atom: var_name -> var
      | number
      | string
      | doc_string

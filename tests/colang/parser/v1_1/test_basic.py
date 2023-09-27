@@ -203,8 +203,7 @@ def test_3():
           user silent $duration="5s" or user agrees
           user silent "5s"
           user ask $text="what?" $times=3
-          user ask (text="what?", times=3)
-        """
+          user ask (text="what?", times=3)"""
     )
     assert flows == [
         {
@@ -566,10 +565,8 @@ def test_flow_assignment_1():
 def test_flow_assignment_2():
     assert (
         _flows(
-            """
-                flow main
-                  $name = $full_name
-            """
+            """flow main
+                  $name = $full_name"""
         )[0]["elements"][1]
         == {
             "_source": None,
@@ -589,8 +586,7 @@ def test_flow_if_1():
                   if $name == "John"
                     bot say "Hi, John!"
                   else
-                    bot say "Hello!"
-            """
+                    bot say "Hello!" """
         )[0]["elements"]
         == [
             {
@@ -673,8 +669,7 @@ def test_flow_if_2():
                   elif $name == "Mike"
                     bot say "Hi, Mike"
                   else
-                    bot say "Hello!"
-            """
+                    bot say "Hello!" """
         )[0]["elements"]
         == [
             {
@@ -789,6 +784,41 @@ def test_flow_if_2():
                         },
                     }
                 ],
+            },
+        ]
+    )
+
+
+def test_flow_assignment_1():
+    assert (
+        _flows(
+            """
+flow main
+  $user_message = $event_ref.arguments
+"""
+        )[0]["elements"]
+        == [
+            {
+                "_source": None,
+                "_type": "spec_op",
+                "op": "match",
+                "ref": None,
+                "return_var_name": None,
+                "spec": {
+                    "_source": None,
+                    "_type": "spec",
+                    "arguments": {"flow_id": '"main"'},
+                    "members": None,
+                    "name": "StartFlow",
+                    "spec_type": "event",
+                    "var_name": None,
+                },
+            },
+            {
+                "_source": None,
+                "_type": "assignment",
+                "expression": "$event_ref.arguments",
+                "key": "user_message",
             },
         ]
     )

@@ -41,25 +41,14 @@ flow user unknown intent
 
 
 flow fallback
+  # TODO: check why this is not working
+  #   (Attribute 'event' does not exist in expression 'var_flow_ref.event.arguments.final_transcript')
   # user says something as $flow_ref
+  # $user_message = $flow_ref.event.arguments.final_transcript
 
-  # TODO: check why $flow_ref is None here
-  # TODO: extract the last user message properly
-  # $user_message = "i want stuff"
-  #  $event = $flow_ref.event
-  #  $user_message = $event.final_transcript
   match UtteranceUserAction().Finished() as $event_ref
   $user_message = $event_ref.arguments.final_transcript
-  # $user_message = "i want a joke"
-
-  bot say "User message is"
-  bot say $user_message
-
   $intent = await GenerateUserIntentAction(user_message=$user_message)
-  bot say "The intent is"
-  bot say $intent
-
-  # TODO: trigger the finishing of the event with the corresponding flow name
   send FinishFlow(flow_id=$intent)
 
 flow unknown intent
@@ -69,8 +58,6 @@ flow unknown intent
 flow do $instructions
   $flow_source = await GenerateFlowAction(instructions=$instructions, flow_name="user instruction action")
   await AddFlowsAction(config=$flow_source)
-  bot say "bla"
-
   await user instruction action
 
 flow custom instructions
@@ -80,7 +67,6 @@ flow custom instructions
   $instructions = "I want you to tell a joke and smile."
 
   do $instructions
-
 
 flow main
   activate greeting

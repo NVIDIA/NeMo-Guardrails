@@ -154,8 +154,10 @@ class ColangTransformer(Transformer):
 
         Rule:
             spec_op: [spec_operator] spec_expr [capture_ref]
+                   | on_var_spec_expr [capture_ref]
         """
-        assert len(children) >= 3
+        if len(children) == 2:
+            children = [None] + children
 
         op = children[0] or "await"
         if isinstance(op, dict):
@@ -398,6 +400,24 @@ class ColangTransformer(Transformer):
             label=None,
             _source=self.__source(meta),
         )
+
+    def _non_var_spec_or(self, children, meta):
+        val = {
+            "_type": "spec_or",
+            "elements": children,
+        }
+        if self.include_source_mapping:
+            val["_source"] = self.__source(meta)
+        return val
+
+    def _non_var_spec_and(self, children, meta):
+        val = {
+            "_type": "spec_and",
+            "elements": children,
+        }
+        if self.include_source_mapping:
+            val["_source"] = self.__source(meta)
+        return val
 
     def __default__(self, data, children, meta):
         """Default function that is called if there is no attribute matching ``data``

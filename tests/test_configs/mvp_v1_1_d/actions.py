@@ -20,7 +20,7 @@ from nemoguardrails.actions import action
 async def generate_flow(instructions: str, flow_name: str):
     flow_source = f"""
         flow {flow_name}
-          bot say "Why don't scientists trust atoms? Because they make up everything!!"
+          bot say "Why don't scientists trust atoms? Because they make up everything!"
           bot say "I'm smiling."
         """
     return flow_source
