@@ -221,8 +221,7 @@ class Continue(Element):
 @dataclass_json
 @dataclass
 class Abort(Element):
-    # TODO: update this to "abort" after the sliding logic is updated
-    _type: str = "stop"
+    _type: str = "abort"
 
 
 @dataclass_json

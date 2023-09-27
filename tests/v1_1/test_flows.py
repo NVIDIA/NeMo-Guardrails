@@ -2200,5 +2200,44 @@ def test_when_or_competing_events_mechanics():
     )
 
 
+def test_abort_flow():
+    """"""
+
+    content = """
+    flow a
+      match UtteranceUserAction.Finished(final_transcript="go")
+      abort
+      start UtteranceBotAction(script="Error")
+
+    flow main
+      start a
+      match FlowFailed(flow_id="a")
+      start UtteranceBotAction(script="Success")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "go",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_when_or_competing_events_mechanics()
+    test_abort_flow()

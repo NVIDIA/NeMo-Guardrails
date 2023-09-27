@@ -29,6 +29,7 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 from dataclasses_json import dataclass_json
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    Abort,
     Assignment,
     Break,
     Continue,
@@ -1519,18 +1520,27 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
                 _advance_head_front(state, new_heads)
             )
 
-        flow_finished = head.position >= len(flow_config.elements)
+        flow_finished = False
+        flow_aborted = False
+        if head.position >= len(flow_config.elements):
+            if flow_state.status == FlowStatus.ABORTED:
+                flow_aborted = True
+            else:
+                flow_finished = True
 
         # TODO: Use additional element to finish flow
         if flow_finished:
             log.debug(f"Flow finished: {head.flow_state_uid} with last element")
+        elif flow_aborted:
+            log.debug(f"Flow aborted: {head.flow_state_uid} by 'abort' statement")
         else:
             log.debug(
                 f"Head advanced in flow {head.flow_state_uid} to element: {flow_config.elements[head.position]}"
             )
 
-        # Check if all all flow heads at a match element
-        if not flow_finished:
+        all_heads_at_match_elements = False
+        if not flow_finished and not flow_aborted:
+            # Check if all all flow heads at a match element
             all_heads_at_match_elements = True
             for temp_head in flow_state.heads:
                 if not _is_match_op_element(flow_config.elements[temp_head.position]):
@@ -1544,13 +1554,16 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
                     InternalEvents.FLOW_STARTED, flow_state, head.matching_scores
                 )
                 _push_internal_event(state, event)
-        elif _is_action_op_element(flow_config.elements[head.position]):
+        elif not flow_aborted and _is_action_op_element(
+            flow_config.elements[head.position]
+        ):
             actionable_heads.add(head)
 
-        # Check if flow has finished
-        # TODO: Refactor to properly finish flow and all its child flows
+        # Check if flow has finished or was aborted
         if flow_finished:
             _finish_flow(state, flow_state, head.matching_scores)
+        elif flow_aborted:
+            _abort_flow(state, flow_state, head.matching_scores)
 
     # Make sure that all actionable heads still exist in flows, otherwise remove them
     actionable_heads = set(
@@ -1686,6 +1699,10 @@ def slide(
                     )
                 }
             )
+            head_position = len(flow_config.elements)
+
+        elif isinstance(element, Abort):
+            flow_state.status = FlowStatus.ABORTED
             head_position = len(flow_config.elements)
 
         elif isinstance(element, Continue) or isinstance(element, Break):

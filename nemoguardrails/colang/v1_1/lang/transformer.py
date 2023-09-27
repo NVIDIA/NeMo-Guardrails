@@ -19,6 +19,7 @@ from lark import Token, Transformer, Tree
 from lark.tree import Meta
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    Abort,
     Assignment,
     Break,
     Continue,
@@ -379,6 +380,10 @@ class ColangTransformer(Transformer):
             expression=children[0]["elements"][0],
             _source=self.__source(meta),
         )
+
+    def _abort_stmt(self, children, meta):
+        assert len(children) == 0
+        return Abort(_source=self.__source(meta))
 
     def _break_stmt(self, children, meta):
         assert len(children) == 0

@@ -16,7 +16,7 @@ flow_param_def: var_name ("=" test)?
 ?flow_stmt: simple_stmt | spec_op_stmt | compound_stmt | doc_string_stmt
 
 // Simple statements
-?simple_stmt: set_stmt | return_stmt | break_stmt | continue_stmt
+?simple_stmt: set_stmt | return_stmt | abort_stmt | break_stmt | continue_stmt
 set_stmt: var_name set_op set_right_side _NEWLINE
 ?set_right_side: test | spec_op
 
@@ -28,6 +28,7 @@ set_op: "=" -> set
       | "-=" -> decrement
 
 return_stmt: "return" [test] _NEWLINE
+abort_stmt: "abort" _NEWLINE
 break_stmt: "break" _NEWLINE
 continue_stmt: "continue" _NEWLINE
 
