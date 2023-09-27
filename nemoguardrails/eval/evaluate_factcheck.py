@@ -29,7 +29,9 @@ from nemoguardrails.rails.llm.config import Model, RailsConfig
 
 class FactCheckEvaluation:
     """Helper class for running the fact checking evaluation for a Guardrails app.
-    It contains all the configuration parameters required to run the evaluation."""
+
+    It contains all the configuration parameters required to run the evaluation.
+    """
 
     def __init__(
         self,
@@ -42,14 +44,16 @@ class FactCheckEvaluation:
         write_outputs: bool = True,
     ):
         """
-        A fact checking evaluation has the following parameters:
-        - dataset_path: path to the dataset containing the prompts
-        - llm: the LLM provider to use
-        - model_name: the LLM model to use
-        - num_samples: number of samples to evaluate
-        - create_negatives: whether to create synthetic negative samples
-        - output_dir: directory to write the fact checking predictions
-        - write_outputs: whether to write the predictions to file
+        Initializes a fact-checking evaluation.
+
+        Args:
+            dataset_path (str): Path to the dataset containing the prompts for evaluation.
+            llm (str): LLM provider to use, e.g., "openai".
+            model_name (str): LLM model name, e.g., "text-davinci-003".
+            num_samples (int): Number of samples to evaluate.
+            create_negatives (bool): Whether to create synthetic negative samples.
+            output_dir (str): Directory to write the fact-checking predictions.
+            write_outputs (bool): Whether to write the predictions to files.
         """
 
         self.dataset_path = dataset_path
@@ -69,8 +73,16 @@ class FactCheckEvaluation:
 
     def create_negative_samples(self, dataset):
         """
-        Create synthetic negative samples for fact checking. The negative samples are created by an LLM that acts
+        Create synthetic negative samples for fact-checking.
+
+        The negative samples are created by an LLM that acts
         as an adversary and modifies the answer to make it incorrect.
+
+        Args:
+            dataset (list): List of samples in the dataset.
+
+        Returns:
+            list: List of samples with synthetic negative answers.
         """
 
         create_negatives_template = """You will play the role of an adversary to confuse people with answers
@@ -100,8 +112,14 @@ class FactCheckEvaluation:
 
     def check_facts(self, split="positive"):
         """
-        Check facts using the fact checking rail. The fact checking rail is a binary classifier that takes in
+        Check facts using the fact-checking rail. The fact checking rail is a binary classifier that takes in
         evidence and a response and predicts whether the response is grounded in the evidence or not.
+
+        Args:
+            split (str): Whether to check positive or negative entailment.
+
+        Returns:
+            tuple: A tuple containing fact-check predictions and the number of correct predictions.
         """
 
         fact_check_predictions = []
@@ -200,6 +218,18 @@ def main(
         True, help="Write outputs to the output directory"
     ),
 ):
+    """
+    This function serves as the entry point for running the fact-checking evaluation.
+    
+    Args:
+        data_path (str): Path to the folder containing the dataset for evaluation.
+        llm (str): LLM provider to be used for fact-checking, e.g., 'openai'.
+        model_name (str): Model name, e.g., 'text-davinci-003'.
+        num_samples (int): Number of samples to be evaluated.
+        create_negatives (bool): Whether to create synthetic negative samples.
+        output_dir (str): Path to the folder where the evaluation outputs will be written.
+        write_outputs (bool): Whether to write the evaluation predictions to the output directory.
+    """
     fact_check = FactCheckEvaluation(
         data_path,
         llm,

@@ -32,12 +32,14 @@ class ActionDispatcher:
     def __init__(
         self, load_all_actions: bool = True, config_path: Optional[str] = None
     ):
-        """Initializes an actions dispatcher.
+        """
+        Initializes an actions dispatcher.
 
-        :param load_all_actions: When set, it will load all actions in the `actions` folder
-          both in the current working directory and in the package.
-        :param config_path: The path from which the configuration was loaded. If there are
-          actions at the specified path, we load them as well.
+        Args:
+            load_all_actions (bool, optional): When set to True, it loads all actions in the
+                'actions' folder both in the current working directory and in the package.
+            config_path (str, optional): The path from which the configuration was loaded.
+                If there are actions at the specified path, it loads them as well.
         """
         log.info("Initializing action dispatcher")
 
@@ -63,13 +65,24 @@ class ActionDispatcher:
 
     @property
     def registered_actions(self):
+        """
+        Gets the dictionary of registered actions.
+
+        Returns:
+            dict: A dictionary where keys are action names and values are callable action functions.
+        """
+
         return self._registered_actions
 
     def load_actions_from_path(self, path: str):
-        """Loads all actions from the specified path.
+        """
+        Loads all actions from the specified path.
 
-        It will load all actions in the `actions.py` file if it exists and all actions
-        inside the `actions` folder if it exists.
+        It will load all actions in the 'actions.py' file if it exists and all actions
+        inside the 'actions' folder if it exists.
+
+        Args:
+            path (str): The path from which to load actions.
         """
         actions_path = os.path.join(path, "actions")
         if os.path.exists(actions_path):
@@ -84,11 +97,15 @@ class ActionDispatcher:
     def register_action(
         self, action: callable, name: Optional[str] = None, override: bool = True
     ):
-        """Registers an action with the given name.
+        """
+        Registers an action with the given name.
 
-        :param name: The name of the action.
-        :param action: The action function.
-        :param override: If an action already exists, whether it should be overriden or not.
+        Args:
+            action (callable): The action function to register.
+            name (str, optional): The name of the action. If None, it uses the name from
+                the action's metadata.
+            override (bool, optional): If an action with the same name already exists,
+                whether it should be overridden or not.
         """
         if name is None:
             action_meta = getattr(action, "action_meta", None)
@@ -101,8 +118,14 @@ class ActionDispatcher:
         self._registered_actions[name] = action
 
     def register_actions(self, actions_obj: any, override: bool = True):
-        """Registers all the actions from the given object."""
-        # Register the actions
+        """
+        Registers all the actions from the given object.
+
+        Args:
+            actions_obj (any): The object containing action functions to register.
+            override (bool, optional): If an action with the same name already exists,
+                whether it should be overridden or not.
+        """        # Register the actions
         for attr in dir(actions_obj):
             val = getattr(actions_obj, attr)
 
@@ -110,13 +133,30 @@ class ActionDispatcher:
                 self.register_action(val, override=override)
 
     def get_action(self, name: str) -> callable:
+        """
+        Gets a registered action by its name.
+
+        Args:
+            name (str): The name of the action to retrieve.
+
+        Returns:
+            callable: The registered action function.
+        """
         return self._registered_actions.get(name)
 
     async def execute_action(
         self, action_name: str, params: Dict[str, Any]
     ) -> Tuple[Union[str, Dict[str, Any]], str]:
-        """Endpoint called from action server to execute an action.
-        This endpoint interacts with different supported actions
+        """
+        Executes a registered action.
+
+        Args:
+            action_name (str): The name of the action to execute.
+            params (Dict[str, Any]): The parameters to pass to the action.
+
+        Returns:
+            Tuple[Union[str, Dict[str, Any]], str]: A tuple containing the action result and
+            a status message (either "success" or "failed").
         """
 
         if action_name in self._registered_actions:
@@ -165,12 +205,24 @@ class ActionDispatcher:
         return None, "failed"
 
     def get_registered_actions(self) -> List[str]:
-        """Endpoint called from action server to get the list of available actions"""
-        return list(self._registered_actions.keys())
+        """
+        Gets the list of available registered actions.
+
+        Returns:
+            List[str]: A list of action names.
+        """        return list(self._registered_actions.keys())
 
     @staticmethod
     def _load_actions_from_module(filepath: str):
-        """Loads the actions from the specified python module."""
+        """
+        Loads the actions from the specified Python module file.
+
+        Args:
+            filepath (str): The path to the Python module file.
+
+        Returns:
+            Dict: A dictionary where keys are action names and values are callable action functions.
+        """
         action_objects = {}
         filename = os.path.basename(filepath)
 
@@ -206,8 +258,14 @@ class ActionDispatcher:
 
     @staticmethod
     def _find_actions(directory) -> Dict:
-        """Loop through all the subdirectories and check for the class with @action
-        decorator and add in action_classes dict
+        """"
+        Finds and loads actions from the specified directory and its subdirectories.
+
+        Args:
+            directory: The root directory to search for action files.
+
+        Returns:
+            Dict: A dictionary where keys are action names and values are callable action functions.
         """
         action_objects = {}
 

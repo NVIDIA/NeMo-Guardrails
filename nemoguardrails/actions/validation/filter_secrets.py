@@ -15,11 +15,19 @@
 
 
 def contains_secrets(resp):
-    """Validate if response have any of the key present
+    """
+    Validate if response has any secrets present.
+
     Refer https://github.com/Yelp/detect-secrets for detection process
     response is string of format
     AWSKeyDetector         : False
     ArtifactoryDetector    : False
+    
+    Args:
+        resp (str): The response string to check for secrets.
+        
+    Returns:
+        bool: True if secrets are detected, False otherwise.
     """
     try:
         import detect_secrets

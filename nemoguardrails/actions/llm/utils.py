@@ -25,8 +25,17 @@ from nemoguardrails.logging.callbacks import logging_callbacks
 
 
 async def llm_call(llm: BaseLanguageModel, prompt: Union[str, List[dict]]) -> str:
-    """Calls the LLM with a prompt and returns the generated text."""
+    """
+    Calls the Language Model with a prompt and returns the generated text.
 
+    Args:
+        llm (BaseLanguageModel): The language model to use for generation.
+        prompt (Union[str, List[dict]]): The prompt for generation, either a
+            string or a list of message dictionaries.
+
+    Returns:
+        str: The generated text.
+    """
     if isinstance(prompt, str):
         result = await llm.agenerate_prompt(
             [StringPromptValue(text=prompt)], callbacks=logging_callbacks
@@ -58,7 +67,17 @@ def get_colang_history(
     include_texts: bool = True,
     remove_retrieval_events: bool = False,
 ):
-    """Creates a history of user messages and bot responses in colang format.
+    """
+    Creates a history of user messages and bot responses in a specified format.
+
+    Args:
+        events (List[dict]): List of events in the conversation.
+        include_texts (bool): Whether to include message texts in the history.
+        remove_retrieval_events (bool): Whether to remove retrieval events from the history.
+
+    Returns:
+        str: The formatted conversation history.
+
     user "Hi, how are you today?"
       express greeting
     bot express greeting
@@ -131,7 +150,14 @@ def get_colang_history(
 
 
 def flow_to_colang(flow: dict):
-    """Converts a flow to colang format.
+    """
+    Converts a flow to a colang format.
+
+    Args:
+        flow (dict): The flow dictionary to be converted.
+
+    Returns:
+        str: The flow in colang format.
 
     Example flow:
     ```
@@ -163,7 +189,14 @@ def flow_to_colang(flow: dict):
 
 
 def get_last_user_utterance(events: List[dict]):
-    """Returns the last user utterance from the events."""
+    """Returns the text of the last user utterance from a list of events.
+
+    Args:
+        events (List[dict]): List of events in the conversation.
+
+    Returns:
+        str or None: The text of the last user utterance or None if not found.
+    """
     for event in reversed(events):
         if event["type"] == "UtteranceUserActionFinished":
             return event["final_transcript"]
@@ -172,7 +205,15 @@ def get_last_user_utterance(events: List[dict]):
 
 
 def get_retrieved_relevant_chunks(events: List[dict]):
-    """Returns the retrieved chunks for current user utterance from the events."""
+    """
+    Returns the retrieved chunks for the current user utterance from a list of events.
+
+    Args:
+        events (List[dict]): List of events in the conversation.
+
+    Returns:
+        dict or None: The retrieved chunks or None if not found.
+    """
     for event in reversed(events):
         if event["type"] == "UtteranceUserActionFinished":
             break
@@ -185,48 +226,87 @@ def get_retrieved_relevant_chunks(events: List[dict]):
 
 
 def get_last_user_utterance_event(events: List[dict]):
-    """Returns the last user utterance from the events."""
+    """
+    Returns the last user utterance event from a list of events.
+
+    Args:
+        events (List[dict]): List of events in the conversation.
+
+    Returns:
+        dict or None: The last user utterance event or None if not found.
+    """
     for event in reversed(events):
         if event["type"] == "UtteranceUserActionFinished":
             return event
-
+        
     return None
 
 
 def get_last_user_intent_event(events: List[dict]):
-    """Returns the last user intent from the events."""
+    """
+    Returns the last user intent event from a list of events.
+
+    Args:
+        events (List[dict]): List of events in the conversation.
+
+    Returns:
+        dict or None: The last user intent event or None if not found.
+    """
     for event in reversed(events):
         if event["type"] == "UserIntent":
             return event
-
+        
     return None
 
 
 def get_last_bot_utterance_event(events: List[dict]):
-    """Returns the last bot utterance from the events."""
+    """
+    Returns the last bot utterance event from a list of events.
+
+    Args:
+        events (List[dict]): List of events in the conversation.
+
+    Returns:
+        dict or None: The last bot utterance event or None if not found.
+    """
     for event in reversed(events):
         if event["type"] == "StartUtteranceBotAction":
             return event
-
+        
     return None
 
 
 def get_last_bot_intent_event(events: List[dict]):
-    """Returns the last bot intent from the events."""
+    """
+    Returns the last bot intent event from a list of events.
+
+    Args:
+        events (List[dict]): List of events in the conversation.
+
+    Returns:
+        dict or None: The last bot intent event or None if not found.
+    """
     for event in reversed(events):
         if event["type"] == "BotIntent":
             return event
-
+        
     return None
 
 
 def remove_text_messages_from_history(history: str):
-    """Helper that given a history in colang format, removes all texts."""
+    """
+    Helper function that removes all text messages from a history in colang format.
 
+    Args:
+        history (str): The history in colang format.
+
+    Returns:
+        str: The history with text messages removed.
+    """
     # Get rid of messages from the user
     history = re.sub(r'user "[^\n]+"\n {2}', "user ", history)
 
-    # Get rid of one line user messages
+    # Get rid of one-line user messages
     history = re.sub(r"^\s*user [^\n]+\n\n", "", history)
 
     # Get rid of bot messages
@@ -236,7 +316,15 @@ def remove_text_messages_from_history(history: str):
 
 
 def get_first_nonempty_line(s: str):
-    """Helper that returns the first non-empty line from a string"""
+    """
+    Helper function that returns the first non-empty line from a string.
+
+    Args:
+        s (str): The input string.
+
+    Returns:
+        str or None: The first non-empty line or None if not found.
+    """
     if not s:
         return None
 
@@ -251,7 +339,15 @@ def get_first_nonempty_line(s: str):
 
 
 def strip_quotes(s: str):
-    """Helper that removes quotes from a string if the entire string is between quotes"""
+    """
+    Helper function that removes quotes from a string if the entire string is between quotes.
+
+    Args:
+        s (str): The input string.
+
+    Returns:
+        str: The string with quotes removed if applicable.
+    """   
     if s and s[0] == '"':
         if s[-1] == '"':
             s = s[1:-1]
@@ -261,10 +357,18 @@ def strip_quotes(s: str):
 
 
 def get_multiline_response(s: str):
-    """Helper that extracts multi-line responses from the LLM.
-    Stopping conditions: when a non-empty line ends with a quote or when the token "user" appears after a newline.
-    Empty lines at the begging of the string are skipped."""
+    """
+    Helper function that extracts multi-line responses from the LLM.
 
+    Stopping conditions: when a non-empty line ends with a quote or when the token "user" appears after a newline.
+    Empty lines at the beginning of the string are skipped.
+
+    Args:
+        s (str): The input string.
+
+    Returns:
+        str: The multi-line response extracted from the input string.
+    """
     # Check if the token "user" appears after a newline, as this would mark a new dialogue turn.
     # Remove everything after this marker.
     if "\nuser" in s:

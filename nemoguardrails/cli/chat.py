@@ -22,7 +22,27 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def run_chat(config_path: Optional[str] = None, verbose: bool = False):
-    """Runs a chat session in the terminal."""
+    """
+    Runs a chat session in the terminal using NemoGuardRails.
+
+    Args:
+        config_path (Optional[str], optional): The path to the configuration file for NemoGuardRails. Defaults to None.
+        verbose (bool, optional): Whether to enable verbose mode. Defaults to False.
+
+    Note:
+        This function sets up and runs a chat session in the terminal using NemoGuardRails. It allows
+        users to interact with a language model-based chatbot. User input is processed, and the bot's responses
+        are displayed in the terminal.
+
+    Example:
+        ```python
+        # Run a chat session with default configuration
+        run_chat()
+
+        # Run a chat session with a custom configuration file
+        run_chat("custom_config.yaml", verbose=True)
+        ```
+    """
 
     rails_config = RailsConfig.from_path(config_path)
 

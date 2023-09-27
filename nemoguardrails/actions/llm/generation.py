@@ -54,7 +54,7 @@ log = logging.getLogger(__name__)
 
 
 class LLMGenerationActions:
-    """A container objects for multiple related actions."""
+    """A container object for multiple related actions."""
 
     def __init__(
         self,
@@ -66,6 +66,16 @@ class LLMGenerationActions:
         ],
         verbose: bool = False,
     ):
+        """
+        Initialize the LLMGenerationActions object.
+
+        Args:
+            config (RailsConfig): The configuration for Rails.
+            llm (BaseLLM): The base language model to use.
+            llm_task_manager (LLMTaskManager): The language model task manager.
+            get_embedding_search_provider_instance (Callable): A callable to get an embedding search provider instance.
+            verbose (bool, optional): Flag to enable verbose mode. Defaults to False.
+        """
         self.config = config
         self.llm = llm
         self.verbose = verbose
@@ -92,6 +102,9 @@ class LLMGenerationActions:
         self.env = Environment()
 
     async def init(self):
+        """
+        Initialize the indices for user messages, bot messages, and flows.
+        """
         await asyncio.gather(
             self._init_user_message_index(),
             self._init_bot_message_index(),
@@ -451,7 +464,17 @@ class LLMGenerationActions:
     async def generate_bot_message(
         self, events: List[dict], context: dict, llm: Optional[BaseLLM] = None
     ):
-        """Generate a bot message based on the desired bot intent."""
+        """
+        Generate a bot message based on the desired bot intent.
+
+        Args:
+            events (List[dict]): The list of events in the conversation.
+            context (dict): The context for generating the bot message.
+            llm (Optional[BaseLLM]): Optional language model to use for generating the bot message.
+
+        Returns:
+            ActionResult: The action result containing the generated bot message.
+        """
         log.info("Phase 3 :: Generating bot message ...")
 
         # Use action specific llm if registered else fallback to main llm
@@ -552,11 +575,15 @@ class LLMGenerationActions:
     ):
         """Generate a value in the context of the conversation.
 
-        :param instructions: The instructions to generate the value.
-        :param events: The full stream of events so far.
-        :param var_name: The name of the variable to generate. If not specified, it will use
-          the `action_result_key` as the name of the variable.
-        :param llm: Custom llm model to generate_value
+        Args:
+            instructions (str): The instructions to generate the value.
+            events (List[dict]): The list of events in the conversation.
+            var_name (Optional[str]): The name of the variable to generate. If not specified, it will use
+                the `action_result_key` as the name of the variable.
+            llm (Optional[BaseLLM]): Optional language model to use for generating the value.
+
+        Returns:
+            Any: The generated value.
         """
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
