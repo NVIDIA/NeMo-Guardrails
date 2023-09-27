@@ -16,7 +16,7 @@ from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
 FORMAT = "%(message)s"
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format=FORMAT,
     datefmt="[%X,%f]",
     handlers=[RichHandler(markup=True)],
@@ -1898,7 +1898,81 @@ def test_break_continue_statement_b():
     )
 
 
-def test_when_or_mechanics():
+def test_when_or_core_mechanics():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow main
+      while True
+        when UtteranceUserActionFinished(final_transcript="A")
+          start UtteranceBotAction(script="A")
+        orwhen UtteranceUserAction().Finished(final_transcript="B")
+          start UtteranceBotAction(script="B")
+        orwhen user said "C"
+          start UtteranceBotAction(script="C")
+          break
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "A",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "C",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "C",
+            },
+        ],
+    )
+
+
+def test_when_or_bot_action_mechanics():
     """"""
 
     content = """
@@ -1911,14 +1985,6 @@ def test_when_or_mechanics():
           start UtteranceBotAction(script="A")
         orwhen UtteranceUserActionFinished(final_transcript="B")
           start UtteranceBotAction(script="B")
-        orwhen UtteranceUserAction().Finished(final_transcript="C")
-          start UtteranceBotAction(script="C")
-        orwhen user said "D"
-          start UtteranceBotAction(script="D")
-        orwhen (user said "E" and user said "F")
-          start UtteranceBotAction(script="EF")
-        orwhen (user said "G" or user said "H")
-          start UtteranceBotAction(script="GH")
           break
     """
 
@@ -1968,11 +2034,60 @@ def test_when_or_mechanics():
                 "type": "StartUtteranceBotAction",
                 "script": "B",
             },
+        ],
+    )
+
+
+def test_when_or_group_mechanics():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow main
+      while True
+        when UtteranceUserActionFinished(final_transcript="A")
+          start UtteranceBotAction(script="A")
+        orwhen (user said "B" and user said "C")
+          start UtteranceBotAction(script="BC")
+        orwhen (user said "D" or user said "E")
+          start UtteranceBotAction(script="DE")
+          break
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "A",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "Happens immediately",
+                "script": "A",
             },
         ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
     )
     state = run_to_completion(
         state,
@@ -1986,31 +2101,7 @@ def test_when_or_mechanics():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "C",
-            },
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Happens immediately",
-            },
-        ],
-    )
-    state = run_to_completion(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "D",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "D",
-            },
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Happens immediately",
+                "script": "BC",
             },
         ],
     )
@@ -2023,13 +2114,47 @@ def test_when_or_mechanics():
     )
     assert is_data_in_events(
         state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "DE",
+            },
+        ],
+    )
+
+
+def test_when_or_competing_events_mechanics():
+    """"""
+
+    content = """
+    flow user said something
+      match UtteranceUserAction.Finished()
+
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow main
+      while True
+        when user said "hello"
+          start UtteranceBotAction(script="A")
+        orwhen user said something
+          start UtteranceBotAction(script="B")
+        orwhen user said "hi"
+          start UtteranceBotAction(script="C")
+          break
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
         [],
     )
     state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
-            "final_transcript": "F",
+            "final_transcript": "hello",
         },
     )
     assert is_data_in_events(
@@ -2037,19 +2162,15 @@ def test_when_or_mechanics():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "EF",
-            },
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Happens immediately",
-            },
+                "script": "A",
+            }
         ],
     )
     state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
-            "final_transcript": "H",
+            "final_transcript": "something 123",
         },
     )
     assert is_data_in_events(
@@ -2057,11 +2178,27 @@ def test_when_or_mechanics():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "GH",
+                "script": "B",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "C",
             }
         ],
     )
 
 
 if __name__ == "__main__":
-    test_when_or_mechanics()
+    test_when_or_competing_events_mechanics()

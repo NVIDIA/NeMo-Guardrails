@@ -151,6 +151,9 @@ class SpecOr(Element):
     _type: str = "spec_or"
 
 
+SpecType = Union[Spec, SpecAnd, SpecOr]
+
+
 @dataclass_json
 @dataclass
 class SpecOp(Element):
@@ -160,7 +163,7 @@ class SpecOp(Element):
     """
 
     op: str = ""
-    spec: Union[Spec, SpecAnd, SpecOr] = Spec()
+    spec: SpecType = Spec()
 
     # The reference that should be captured.
     ref: Optional[str] = field(default=None)
@@ -186,7 +189,7 @@ class If(Element):
 @dataclass_json
 @dataclass
 class When(Element):
-    when_specs: List[Union[Spec, SpecAnd, SpecOr]] = field(default_factory=list)
+    when_specs: List[SpecType] = field(default_factory=list)
     then_elements: List[List[Element]] = field(default_factory=list)
     else_elements: Optional[List[Element]] = None
     _type: str = "when"

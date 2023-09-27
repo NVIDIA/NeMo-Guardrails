@@ -708,7 +708,7 @@ def _expand_spec_op_element(
                     element_ref = _create_ref_ast_dict_helper(action_event_ref_uid)
                 new_elements.append(
                     SpecOp(
-                        op="_new_instance",
+                        op="_new_action_instance",
                         spec=element.spec,
                         ref=element_ref,
                     )
@@ -1239,6 +1239,22 @@ def add_new_flow_instance(state, flow_state: FlowState) -> FlowState:
     return flow_state
 
 
+def _create_event_reference(
+    state: State, flow_state: FlowState, element: Element, event: Event
+) -> dict:
+    reference_name = element.ref["elements"][0]["elements"][0].lstrip("$")
+    new_event = _get_event_from_element(state, flow_state, element)
+    new_event.arguments.update(event.arguments)
+
+    if isinstance(new_event, FlowEvent):
+        new_event.flow = state.flow_states[event.arguments["source_flow_instance_uid"]]
+    elif isinstance(new_event, ActionEvent):
+        new_event.action_uid = event.action_uid
+        if event.action_uid is not None:
+            new_event.action = state.actions[event.action_uid]
+    return {reference_name: new_event}
+
+
 # Define a custom sorting key function for pairwise comparisons
 def _custom_sort_key(input_list):
     return tuple(input_list)
@@ -1331,34 +1347,22 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                             log.info(f"Matching head: {head}")
 
                             if element.ref is not None:
-                                # Create event and the reference
-                                # TODO: Encapsulate this section in a function
-                                reference_name = element.ref["elements"][0]["elements"][
-                                    0
-                                ].lstrip("$")
-                                new_event = _get_event_from_element(
-                                    state, flow_state, element
+                                flow_state.context.update(
+                                    _create_event_reference(
+                                        state, flow_state, element, event
+                                    )
                                 )
-                                new_event.arguments.update(event.arguments)
-
-                                if isinstance(new_event, FlowEvent):
-                                    new_event.flow = state.flow_states[
-                                        event.arguments["source_flow_instance_uid"]
-                                    ]
-                                elif isinstance(new_event, ActionEvent):
-                                    new_event.action_uid = event.action_uid
-                                    if event.action_uid is not None:
-                                        new_event.action = state.actions[
-                                            event.action_uid
-                                        ]
-
-                                flow_state.context.update({reference_name: new_event})
 
                         elif matching_score < 0.0:
                             heads_failing.append(head)
                             log.info(f"Matching failure head: {head}")
                         else:
                             heads_not_matching.append(head)
+
+            # Sort matching heads to prioritize better matches over the others
+            heads_matching = sorted(
+                heads_matching, key=lambda x: x.matching_scores, reverse=True
+            )
 
             # Handle internal event matching
             for head in heads_matching:
@@ -1375,13 +1379,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 # elif event.name == "PauseFlow":
                 #     pass
 
-            # Abort all flows that had a mismatch when there is no other match
-            # Not sure if we ever need this!
-            # if not heads_matching:
-            #     for head in heads_not_matching:
-            #         flow_state = _get_flow_state_from_head(new_state, head)
-            #         _abort_flow(new_state, flow_state, [])
-            # return new_state
+            # Abort all flows with a mismatch
             for head in heads_failing:
                 flow_state = _get_flow_state_from_head(state, head)
                 _abort_flow(state, flow_state, [])
@@ -1589,35 +1587,23 @@ def slide(
                 log.debug(f"Created internal event: {event}")
                 head_position += 1
 
-            elif element.op == "_new_instance":
-                if element.spec.name in state.flow_configs:
-                    # It's a flow
-                    raise NotImplementedError()
-                    # evaluated_arguments = _evaluate_arguments(
-                    #     element.spec.arguments, flow_state.context
-                    # )
-                    # flow_config = state.flow_configs[element.spec.name]
-                    # new_flow_state = _create_flow_instance(flow_config, flow_state)
-                    # reference_name = element.ref["elements"][0]["elements"][0].lstrip(
-                    #     "$"
-                    # )
-                    # flow_state.context.update({reference_name: action})
-                else:
-                    # It's an action
-                    evaluated_arguments = _evaluate_arguments(
-                        element.spec.arguments, flow_state.context
-                    )
-                    action = Action(
-                        name=element.spec.name,
-                        arguments=evaluated_arguments,
-                        flow_uid=head.flow_state_uid,
-                    )
-                    state.actions.update({action.uid: action})
-                    flow_state.action_uids.append(action.uid)
-                    reference_name = element.ref["elements"][0]["elements"][0].lstrip(
-                        "$"
-                    )
-                    flow_state.context.update({reference_name: action})
+            elif element.op == "_new_action_instance":
+                assert (
+                    element.spec.name not in state.flow_configs
+                ), "Flows cannot be instantiated!"
+
+                evaluated_arguments = _evaluate_arguments(
+                    element.spec.arguments, flow_state.context
+                )
+                action = Action(
+                    name=element.spec.name,
+                    arguments=evaluated_arguments,
+                    flow_uid=head.flow_state_uid,
+                )
+                state.actions.update({action.uid: action})
+                flow_state.action_uids.append(action.uid)
+                reference_name = element.ref["elements"][0]["elements"][0].lstrip("$")
+                flow_state.context.update({reference_name: action})
                 head_position += 1
             else:
                 # Not a sliding element
@@ -1652,6 +1638,9 @@ def slide(
 
         elif isinstance(element, MergeHeads):
             # Delete all heads from the flow except for the current on
+            for h in flow_state.heads:
+                if h != head:
+                    log.debug(f"Head merged: {h} with {head}")
             flow_state.heads = [head]
             head_position += 1
 
