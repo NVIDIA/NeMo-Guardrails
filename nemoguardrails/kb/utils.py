@@ -21,10 +21,15 @@ import yaml
 def split_markdown_in_topic_chunks(
     content: str, max_chunk_size: int = 400
 ) -> List[dict]:
-    """Splits a markdown content into topic chunks.
+    """
+    Splits a markdown content into topic chunks.
 
-    :param content: The markdown content to be split.
-    :param max_chunk_size: The maximum size of a chunk.
+    Args:
+    - content (str): The markdown content to be split.
+    - max_chunk_size (int): The maximum size of a chunk.
+
+    Returns:
+    - List[dict]: A list of topic chunks, each represented as a dictionary with 'title' and 'body'.
     """
 
     chunks = []
