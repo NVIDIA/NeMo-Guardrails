@@ -1,7 +1,17 @@
+# -----------------------------------
+# User UMIM event wrapper flows
+# -----------------------------------
+
+flow user said $text
+  match UtteranceUserAction.Finished(text=$text) as $event
+
+flow user said something
+  match UtteranceUserAction.Finished() as $event
 
 # ----------------------------------
-# Bot event wrapper flows
-# -----------------------------------
+# Bot UMIM event wrapper flows
+# ----------------------------------
+
 flow bot started saying $text
   match UtteranceBotAction(script=$text).Started() as $event
 
@@ -12,23 +22,101 @@ flow bot said something
   match UtteranceBotAction().Finished() as $event
 
 # ----------------------------------
-# Bot action wrapper flows
+# Bot UMIM action wrapper flows
 # -----------------------------------
+
 flow bot say $text
   await UtteranceBotAction(script=$text) as $action
 
 flow bot gesture $gesture
   await GestureBotAction($gesture) as $action
 
-flow ui $position
-  await PositionChangeBotAction($position) as $action
+flow scene show choice $prompt
+  await VisualChoiceSceneAction(prompt=$prompt,choice_type="selection", allow_multiple_choices=False) as $action
 
+flow scene show information $prompt
+  await VisualInformationSceneAction(prompt=$prompt) as $action
+
+flow scene show form $prompt
+  wait VisualInformationSceneAction(prompt=$prompt) as $action
+
+# ----------------------------------
+# Bot say action semantic wrapper flows
 # -----------------------------------
-# User event and action wrapper flows
+
+flow bot inform $information
+  bot say $information
+
+flow bot ask $question
+  bot say $question
+
+flow bot express $text
+  bot say $text
+
+flow bot respond $text
+  bot say $text
+
+# ----------------------------------
+# Bot action flows
 # -----------------------------------
 
-flow user said $text
-  match UtteranceUserAction.Finished(text=$text) as $event
+flow bot greet
+  bot express "Hi there!"
+    or bot express "Welcome!"
+    or bot express "Hello!"
+    or bot express "Hi!"
 
-flow user said something
-  match UtteranceUserAction.Finished() as $event
+flow bot inform about service
+  bot inform "You can ask or instruct me whatever you want and I will do it!"
+
+# ----------------------------------
+# User action flows
+# -----------------------------------
+
+flow user greeted
+  user said "Hi there!"
+    or user said "Welcome!"
+    or user said "Hello!"
+    or user said "Hi!"
+
+flow bot inform about service
+  bot inform "You can ask or instruct me whatever you want and I will do it!"
+
+flow user provide custom instructions
+  user said "do something" as $user_said_flow_ref
+  $instruction = $user_said_flow_ref.event.arguments.final_transcript
+
+# ----------------------------------
+# Helper flows
+# -----------------------------------
+
+flow wait
+  await NeverComingEvent()
+
+flow fallback
+  #match UtteranceUserAction().Finished() as $event_ref
+  #$user_message = $event_ref.arguments.final_transcript
+  #$intent = await GenerateUserIntentAction(user_message=$user_message)
+  #send FinishFlow(flow_id=$intent)
+  bot inform "Sorry, I have no answer for that!"
+
+flow do $instructions
+  #$flow_source = await GenerateFlowAction(instructions=$instructions, flow_name="user instruction action")
+  #await AddFlowsAction(config=$flow_source)
+  #await user instruction action
+  bot respond "I am doing the instruction..."
+
+flow custom instruction
+  user provide custom instructions as $custom_instructions_ref
+  do $custom_instructions_ref.instruction
+
+# ----------------------------------
+# Main demo story
+# -----------------------------------
+
+flow main
+  activate custom instruction
+  bot greet
+  user greeted
+  bot inform about service
+  wait
