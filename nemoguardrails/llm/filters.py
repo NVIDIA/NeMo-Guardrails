@@ -20,12 +20,32 @@ from nemoguardrails.actions.llm.utils import get_colang_history
 
 
 def colang(events: List[dict]) -> str:
-    """Filter that turns an array of events into a colang history."""
+    """
+    Convert an array of events into a CoLang history.
+
+    Args:
+        events (List[dict]): A list of events to be converted into CoLang history.
+
+    Returns:
+        str: The CoLang history generated from the input events.
+
+    """
     return get_colang_history(events)
 
 
 def to_messages(colang_history: str) -> List[dict]:
-    """Filter that given a history in colang format, returns all messages."""
+    """
+    Parse a CoLang history and extract individual messages.
+
+    Given a history in CoLang format, this function extracts and returns individual messages.
+
+    Args:
+        colang_history (str): The CoLang history to be parsed.
+
+    Returns:
+        List[dict]: A list of dictionaries, each representing a message with its type and content.
+
+    """
     messages = []
 
     # For now, we use a simple heuristic. The line `user "xxx"` gets translated to
@@ -66,7 +86,18 @@ def to_messages(colang_history: str) -> List[dict]:
 
 
 def verbose_v1(colang_history: str) -> str:
-    """Filter that given a history in colang format, returns a verbose version of the history."""
+    """
+    Generate a verbose version of a CoLang history.
+
+    This function takes a history in CoLang format and returns a verbose version of the same history.
+
+    Args:
+        colang_history (str): The input CoLang history.
+
+    Returns:
+        str: A verbose version of the CoLang history with expanded message types.
+
+    """
     lines = colang_history.split("\n")
     for i, line in enumerate(lines):
         if line.startswith('user "'):
@@ -97,6 +128,16 @@ def user_assistant_sequence(events: List[dict]) -> str:
        User: What can you do?
        Assistant: I can help with many things.
        ```
+    Convert an array of events into a sequence of user and assistant messages.
+
+    This function takes an array of events and converts them into a human-readable sequence of user and assistant messages.
+
+    Args:
+        events (List[dict]): A list of events to be converted into a message sequence.
+
+    Returns:
+        str: A formatted sequence of user and assistant messages.
+
     """
     history_items = []
     for event in events:
@@ -109,8 +150,18 @@ def user_assistant_sequence(events: List[dict]) -> str:
 
 
 def remove_text_messages(colang_history: str):
-    """Filters that given a history in colang format, removes all texts."""
+    """
+    Remove text messages from a CoLang history.
 
+    This function removes text messages (both user and bot) from a CoLang history.
+
+    Args:
+        colang_history (str): The input CoLang history.
+
+    Returns:
+        str: The CoLang history with text messages removed.
+
+    """
     # Get rid of messages from the user
     colang_history = re.sub(r'user "[^\n]+"\n {2}', "user ", colang_history)
 
@@ -124,7 +175,19 @@ def remove_text_messages(colang_history: str):
 
 
 def first_turns(colang_history: str, n: int) -> str:
-    """Returns the first n turns from a given colang history."""
+    """
+    Retrieve the first n turns from a CoLang history.
+
+    This function returns the first n turns from a CoLang history.
+
+    Args:
+        colang_history (str): The input CoLang history.
+        n (int): The number of turns to retrieve.
+
+    Returns:
+        str: The first n turns from the CoLang history.
+
+    """
     lines = colang_history.split("\n")
     turn_count = 0
     i = 0
@@ -139,7 +202,19 @@ def first_turns(colang_history: str, n: int) -> str:
 
 
 def last_turns(colang_history: str, n: int) -> str:
-    """Returns the last n turns from a given colang history."""
+    """
+    Retrieve the last n turns from a CoLang history.
+
+    This function returns the last n turns from a CoLang history.
+
+    Args:
+        colang_history (str): The input CoLang history.
+        n (int): The number of turns to retrieve.
+
+    Returns:
+        str: The last n turns from the CoLang history.
+
+    """
     lines = colang_history.split("\n")
     turn_count = 0
     i = len(lines) - 1

@@ -36,9 +36,12 @@ def parse_pattern(pattern):
         "user=CURRENT": "me"
     }
 
-    :param pattern: The pattern in Markdown-friendly format.
-    :return: A tuple (pattern, params) where pattern is a pattern containing only
-    text and {capture} tokens, params is a dict of 'implicit' parameter values.
+    Args:
+    - pattern (str): The pattern in Markdown-friendly format.
+
+    Returns:
+    - Tuple[str, dict]: A tuple containing the parsed pattern with only text and {capture} tokens
+      and a dictionary of 'implicit' parameter values.
     """
     params = {}
     for expr_param in re.findall(r"\[(.*?)\]\((.*?)\)", pattern):
@@ -56,12 +59,19 @@ def parse_pattern(pattern):
 
 
 def parse_md_lang(file_name, content=None):
-    """Returns the language of the .md file.
+    """
+    Returns the language of the .md file.
 
     The content can be also passed as a parameter to skip reading it.
 
-    It searches for `lang: XX` in a yaml code block.
-    By default it assumes the language is English.
+    It searches for `lang: XX` in a yaml code block. By default, it assumes the language is English.
+
+    Args:
+    - file_name (str): The name of the .md file.
+    - content (str, optional): The content of the .md file. If not provided, the file will be read.
+
+    Returns:
+    - str: The language code of the .md file (e.g., "en").
     """
     if content is None:
         file = open(file_name, "r")
@@ -98,20 +108,21 @@ def parse_md_lang(file_name, content=None):
 
 
 def _get_param_type(type_str):
-    """Helper to return the type of a parameter.
+    """
+    Helper to return the type of a parameter.
 
-    For now we use a simple heuristic:
+    For now, we use a simple heuristic:
     1. If it's a primitive type, we leave it as such.
-
     2. If it already has some sort of prefix with ":", we leave it as such.
+    3. If it starts with lowercase and it's not one of the primitive types,
+       then we map it to "type:...".
+    4. If it starts with an uppercase, then we map it to an "object:...".
 
-    3. If it starts with lower case and it's not one of the primitive types
-       then we map it to "type:..."
+    Args:
+    - type_str (str): A string representing the type.
 
-    2. If it starts with an upper case, then we map it to an "object:..."
-
-    :param type_str: A string representing the type.
-    :return: The actual type.
+    Returns:
+    - str: The actual type.
     """
     if type_str.lower() in [
         "string",
@@ -138,9 +149,14 @@ def _get_param_type(type_str):
 
 
 def _get_symbol_type(sym):
-    """Helper to determine if a symbol is prefixed with its type.
+    """
+    Helper to determine if a symbol is prefixed with its type.
 
-    :param sym: The name of the symbol.
+    Args:
+    - sym (str): The name of the symbol.
+
+    Returns:
+    - str or None: The type of the symbol if prefixed, otherwise None.
     """
 
     for symbol_type in SYMBOL_TYPES:
@@ -151,7 +167,16 @@ def _get_symbol_type(sym):
 
 
 def _get_typed_symbol_name(sym: str, symbol_type: str):
-    """Returns the symbol name prefixed with the type, if not already."""
+    """
+    Returns the symbol name prefixed with the type, if not already.
+
+    Args:
+    - sym (str): The name of the symbol.
+    - symbol_type (str): The type of the symbol.
+
+    Returns:
+    - str: The symbol name with type prefix.
+    """
     if _get_symbol_type(sym):
         return sym
 
@@ -167,19 +192,20 @@ def _record_utterance(
     symbol_context_meta: dict,
     data: Union[str, dict],
 ):
-    """Helper to record an utterance in the .md parsing result.
+    """
+    Helper to record an utterance in the .md parsing result.
 
     It supports both string utterances and rich utterances.
 
-    :param result: The result to append the utterance to.
-    :param sym: The current symbol e.g. "utterance:welcome"
-    :param symbol_params: Any additional symbol parameters.
-      It is an array like ["$role=admin", "channel.type=messenger"]
-    :param symbol_context: An additional contextual expression that must be evaluated to True/False.
-    :param symbol_meta: Meta information for the symbol in general.
-    :param symbol_meta: Meta information for the symbol in this context.
-    :param data: The data for the utterance, either string or something "rich"
-    :return:
+    Args:
+    - result (dict): The result to append the utterance to.
+    - sym (str): The current symbol e.g., "utterance:welcome".
+    - symbol_params (list): Any additional symbol parameters.
+      It is an array like ["$role=admin", "channel.type=messenger"].
+    - symbol_context (str or None): An additional contextual expression that must be evaluated to True/False.
+    - symbol_meta (dict): Meta information for the symbol in general.
+    - symbol_context_meta (dict): Meta information for the symbol in this context.
+    - data (str or dict): The data for the utterance, either a string or something "rich".
     """
     utterance_id = split_max(sym, ":", 1)[1]
 
@@ -237,13 +263,17 @@ def _record_utterance(
 
 
 def parse_md_file(file_name, content=None):
-    """Parse a Markdown file for patterns.
+    """
+    Parse a Markdown file for patterns.
 
     The content can be also passed as a parameter to skip reading it.
 
-    :param file_name: A markdown file
-    :param content: The content of the file.
-    :return: A list of patterns.
+    Args:
+        file_name (str): A markdown file.
+        content (str, optional): The content of the file.
+
+    Returns:
+        dict: A dictionary containing parsed patterns, mappings, and utterances.
     """
     if content is None:
         file = open(file_name, "r")
