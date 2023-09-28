@@ -1,0 +1,34 @@
+
+# ----------------------------------
+# Bot event wrapper flows
+# -----------------------------------
+flow bot started saying $text
+  match UtteranceBotAction(script=$text).Started() as $event
+
+flow bot said $text
+  match UtteranceBotAction(script=$text).Finished() as $event
+
+flow bot said something
+  match UtteranceBotAction().Finished() as $event
+
+# ----------------------------------
+# Bot action wrapper flows
+# -----------------------------------
+flow bot say $text
+  await UtteranceBotAction(script=$text) as $action
+
+flow bot gesture $gesture
+  await GestureBotAction($gesture) as $action
+
+flow ui $position
+  await PositionChangeBotAction($position) as $action
+
+# -----------------------------------
+# User event and action wrapper flows
+# -----------------------------------
+
+flow user said $text
+  match UtteranceUserAction.Finished(text=$text) as $event
+
+flow user said something
+  match UtteranceUserAction.Finished() as $event
