@@ -22,31 +22,23 @@ from nemoguardrails.actions import action
 
 log = logging.getLogger(__name__)
 
-API_URL = f"http://localhost:5000/alignscore_large"
-ALIGNSCORE_THRESHOLD = 0.6
-
 
 @action(name="alignscore request")
 async def alignscore_request(
-    context: Optional[str] = None
+    api_url: str = "http://localhost:5000/alignscore_large",
+    evidence: Optional[list] = None,
+    response: Optional[str] = None,
 ):
     """Checks the facts for the bot response by making a request to the AlignScore API."""
-    evidence = context.get("relevant_chunks", [])
-    response = context.get("last_bot_message")
-
     if not evidence:
-        return True
-
-    if response is None:
-        raise Exception("No claim or context was provided to AlignScore.")
+        return 1.0
     
     payload = {"evidence": evidence, "claim": response}
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(API_URL, json=payload) as resp:
-            
+        async with session.post(api_url, json=payload) as resp:
             if resp.status != 200:
-                print(f"AlignScore API request failed with status {resp.status}")
+                log.error(f"AlignScore API request failed with status {resp.status}")
                 return None
 
             result = await resp.text()
