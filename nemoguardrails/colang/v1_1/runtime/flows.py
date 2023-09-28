@@ -566,7 +566,16 @@ def expand_elements(
         for element in elements:
             expanded_elems: List[ElementType] = []
             if isinstance(element, SpecOp):
-                expanded_elems = _expand_spec_op_element(element, flow_configs)
+                if element.op == "await":
+                    expanded_elems = _expand_await_element(element)
+                elif element.op == "start":
+                    expanded_elems = _expand_start_element(element)
+                elif element.op == "stop":
+                    expanded_elems = _expand_stop_element(element)
+                elif element.op == "match":
+                    expanded_elems = _expand_match_element(element)
+                elif element.op == "activate":
+                    expanded_elems = _expand_activate_element(element)
                 if len(expanded_elems) > 0:
                     elements_changed = True
             elif isinstance(element, While):
@@ -593,328 +602,367 @@ def expand_elements(
     return elements
 
 
-def _expand_spec_op_element(
+def _expand_start_element(
     element: SpecOp,
-    flow_configs: Dict[str, FlowConfig],
 ) -> List[ElementType]:
     new_elements: List[ElementType] = []
-    if element.op == "await":
-        if isinstance(element.spec, Spec):
-            # Single element
-            if element.spec.spec_type == "flow":
-                # It's a flow
-                flow_ref_uid = f"_flow_ref_{new_var_uid()}"
-                new_elements.append(
-                    SpecOp(
-                        op="start",
-                        spec=element.spec,
-                        ref=_create_ref_ast_dict_helper(flow_ref_uid),
-                    )
+    if isinstance(element.spec, Spec):
+        # Single element
+        if element.spec.spec_type == "flow":
+            # It's a flow
+            # send StartFlow(flow_id="FLOW_NAME")
+            element.spec.arguments.update({"flow_id": f"'{element.spec.name}'"})
+            new_elements.append(
+                SpecOp(
+                    op="send",
+                    spec=Spec(
+                        name=InternalEvents.START_FLOW,
+                        arguments=element.spec.arguments,
+                        spec_type="event",
+                    ),
                 )
-                new_elements.append(
-                    SpecOp(
-                        op="match",
-                        spec=Spec(
-                            var_name=flow_ref_uid,
-                            members=_create_member_ast_dict_helper("Finished", {}),
-                        ),
-                        return_var_name=element.return_var_name,
-                    )
-                )
-            else:
-                # It's an UMIM action
-                action_ref_uid = f"_action_ref_{new_var_uid()}"
-                new_elements.append(
-                    SpecOp(
-                        op="start",
-                        spec=element.spec,
-                        ref=_create_ref_ast_dict_helper(action_ref_uid),
-                    )
-                )
-                new_elements.append(
-                    SpecOp(
-                        op="match",
-                        spec=Spec(
-                            var_name=action_ref_uid,
-                            members=_create_member_ast_dict_helper("Finished", {}),
-                        ),
-                        return_var_name=element.return_var_name,
-                    )
-                )
-        else:
-            # Element group
-            # TODO: Fix this such that action are also supported using references for flows and actions
-            normalized_group = normalize_element_groups(element.spec)
-            unique_group = convert_to_single_and_element_group(normalized_group)
-            for and_group in unique_group["elements"]:
-                for match_element in and_group["elements"]:
-                    if match_element.spec_type == "flow":
-                        # It's a flow
-                        new_elements.append(
-                            SpecOp(
-                                op="start",
-                                spec=match_element,
-                            )
-                        )
-                    else:
-                        # It's an UMIM action
-                        pass
-            element.op = "match"
-            new_elements.append(element)
-    elif element.op == "start":
-        if isinstance(element.spec, Spec):
-            # Single element
-            if element.spec.spec_type == "flow":
-                # It's a flow
-                # send StartFlow(flow_id="FLOW_NAME")
-                element.spec.arguments.update({"flow_id": f"'{element.spec.name}'"})
-                new_elements.append(
-                    SpecOp(
-                        op="send",
-                        spec=Spec(
-                            name=InternalEvents.START_FLOW,
-                            arguments=element.spec.arguments,
-                        ),
-                    )
-                )
-                # TODO: This could potential still be triggered from another flow start
-                # match FlowStarted(...) as $_flow_event_ref
-                flow_event_ref_uid = f"_flow_event_ref_{new_var_uid()}"
-                new_elements.append(
-                    SpecOp(
-                        op="match",
-                        spec=Spec(
-                            name=InternalEvents.FLOW_STARTED,
-                            arguments=element.spec.arguments,
-                        ),
+            )
+            # TODO: This could potential still be triggered from another flow start
+            # match FlowStarted(...) as $_flow_event_ref
+            flow_event_ref_uid = f"_flow_event_ref_{new_var_uid()}"
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=Spec(
+                        name=InternalEvents.FLOW_STARTED,
+                        arguments=element.spec.arguments,
                         ref=_create_ref_ast_dict_helper(flow_event_ref_uid),
+                        spec_type="event",
+                    ),
+                )
+            )
+            # $flow_ref = $_flow_event_ref.flow
+            element_ref = element.spec.ref
+            if element_ref is None:
+                flow_ref_uid = f"_flow_ref_{new_var_uid()}"
+                element_ref = _create_ref_ast_dict_helper(flow_ref_uid)
+            new_elements.append(
+                Assignment(
+                    key=element_ref["elements"][0]["elements"][0].lstrip("$"),
+                    expression=f"${flow_event_ref_uid}.flow",
+                )
+            )
+        else:
+            # It's an UMIM action
+            element_ref = element.spec.ref
+            if element_ref is None:
+                action_event_ref_uid = f"_action_ref_{new_var_uid()}"
+                element_ref = _create_ref_ast_dict_helper(action_event_ref_uid)
+            element.spec.ref = element_ref
+            new_elements.append(
+                SpecOp(
+                    op="_new_action_instance",
+                    spec=element.spec,
+                )
+            )
+            spec = element.spec
+            spec.members = _create_member_ast_dict_helper("Start", {})
+            spec.var_name = element_ref["elements"][0]["elements"][0].lstrip("$")
+            new_elements.append(SpecOp(op="send", spec=spec))
+    else:
+        # Element group
+        normalized_group = normalize_element_groups(element.spec)
+
+        random_goto_element = RandomGoto()
+        group_label_elements: List[Label] = []
+        end_label_name = f"end_label_{new_var_uid()}"
+        goto_end_element = Goto(label=end_label_name)
+        end_label_element = Label(name=end_label_name)
+
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            group_label_name = f"group_{group_idx}_{new_var_uid()}"
+            random_goto_element.labels.append(group_label_name)
+            group_label_elements.append(Label(name=group_label_name))
+
+        # Generate new element sequence
+        new_elements.append(random_goto_element)
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            new_elements.append(group_label_elements[group_idx])
+            for match_element in and_group["elements"]:
+                new_elements.append(
+                    SpecOp(
+                        op="start",
+                        spec=match_element,
                     )
                 )
-                # $flow_ref = $_flow_event_ref.flow
-                element_ref = element.ref
-                if element_ref is None:
-                    flow_ref_uid = f"_flow_ref_{new_var_uid()}"
-                    element_ref = _create_ref_ast_dict_helper(flow_ref_uid)
+            new_elements.append(goto_end_element)
+        new_elements.append(end_label_element)
+
+    return new_elements
+
+
+def _expand_stop_element(
+    element: SpecOp,
+) -> List[ElementType]:
+    # new_elements: List[ElementType] = []
+    raise NotImplementedError()
+
+
+def _expand_match_element(
+    element: SpecOp,
+) -> List[ElementType]:
+    new_elements: List[ElementType] = []
+    if isinstance(element.spec, Spec):
+        # Single match element
+        if element.spec.spec_type == "flow":
+            # It's a flow
+            element_ref = element.spec.ref
+            if element_ref is None:
+                element_ref = _create_ref_ast_dict_helper(
+                    f"_flow_event_ref_{new_var_uid()}"
+                )
+
+            arguments = {"flow_id": f"'{element.spec.name}'"}
+            for arg in element.spec.arguments:
+                arguments.update({arg: element.spec.arguments[arg]})
+
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=Spec(
+                        name=InternalEvents.FLOW_FINISHED,
+                        arguments=arguments,
+                        ref=element_ref,
+                        spec_type="event",
+                    ),
+                    return_var_name=element.return_var_name,
+                )
+            )
+            if element.return_var_name is not None:
                 new_elements.append(
                     Assignment(
-                        key=element_ref["elements"][0]["elements"][0].lstrip("$"),
-                        expression=f"${flow_event_ref_uid}.flow",
+                        key=element.return_var_name,
+                        expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
                     )
                 )
-            else:
-                # It's an UMIM action
-                element_ref = element.ref
-                if element_ref is None:
-                    action_event_ref_uid = f"_action_ref_{new_var_uid()}"
-                    element_ref = _create_ref_ast_dict_helper(action_event_ref_uid)
-                new_elements.append(
-                    SpecOp(
-                        op="_new_action_instance",
-                        spec=element.spec,
-                        ref=element_ref,
-                    )
-                )
-                spec = element.spec
-                spec.members = _create_member_ast_dict_helper("Start", {})
-                spec.var_name = element_ref["elements"][0]["elements"][0].lstrip("$")
-                new_elements.append(SpecOp(op="send", spec=spec))
-        else:
-            # Element group
-            normalized_group = normalize_element_groups(element.spec)
-
-            random_goto_element = RandomGoto()
-            group_label_elements: List[Label] = []
-            end_label_name = f"end_label_{new_var_uid()}"
-            goto_end_element = Goto(label=end_label_name)
-            end_label_element = Label(name=end_label_name)
-
-            for group_idx, and_group in enumerate(normalized_group["elements"]):
-                group_label_name = f"group_{group_idx}_{new_var_uid()}"
-                random_goto_element.labels.append(group_label_name)
-                group_label_elements.append(Label(name=group_label_name))
-
-            # Generate new element sequence
-            new_elements.append(random_goto_element)
-            for group_idx, and_group in enumerate(normalized_group["elements"]):
-                new_elements.append(group_label_elements[group_idx])
-                for match_element in and_group["elements"]:
-                    new_elements.append(
-                        SpecOp(
-                            op="start",
-                            spec=match_element,
-                        )
-                    )
-                new_elements.append(goto_end_element)
-            new_elements.append(end_label_element)
-
-    elif element.op == "match":
-        if isinstance(element.spec, Spec):
-            # Single match element
-            if element.spec.spec_type == "flow":
-                # It's a flow
-                element_ref = element.ref
+        elif element.spec.spec_type == "event":
+            # It's an event
+            if element.return_var_name is not None:
+                element_ref = element.spec.ref
                 if element_ref is None:
                     element_ref = _create_ref_ast_dict_helper(
-                        f"_flow_event_ref_{new_var_uid()}"
+                        f"_event_ref_{new_var_uid()}"
                     )
 
-                arguments = {"flow_id": f"'{element.spec.name}'"}
-                for arg in element.spec.arguments:
-                    arguments.update({arg: element.spec.arguments[arg]})
+                return_var_name = element.return_var_name
 
+                element.spec.ref = element_ref
+                element.return_var_name = None
+
+                new_elements.append(element)
                 new_elements.append(
-                    SpecOp(
-                        op="match",
-                        spec=Spec(
-                            name=InternalEvents.FLOW_FINISHED,
-                            arguments=arguments,
-                        ),
-                        ref=element_ref,
-                        return_var_name=element.return_var_name,
+                    Assignment(
+                        key=return_var_name,
+                        expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
                     )
                 )
-                if element.return_var_name is not None:
-                    new_elements.append(
-                        Assignment(
-                            key=element.return_var_name,
-                            expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
-                        )
-                    )
             else:
-                # It's an event
-                if element.return_var_name is not None:
-                    element_ref = element.ref
-                    if element_ref is None:
-                        element_ref = _create_ref_ast_dict_helper(
-                            f"_event_ref_{new_var_uid()}"
-                        )
+                pass
+        else:
+            raise ValueError(f"Unsupported spec type: '{element.spec.spec_type}'")
 
-                    return_var_name = element.return_var_name
+    elif isinstance(element.spec, dict):
+        # Multiple match elements
+        normalized_group = normalize_element_groups(element.spec)
 
-                    match_element = element
-                    match_element.ref = element_ref
-                    match_element.return_var_name = None
+        fork_element = ForkHead()
+        event_label_elements: List[Label] = []
+        event_match_elements: List[SpecOp] = []
+        goto_group_elements: List[Goto] = []
+        group_label_elements: List[Label] = []
+        wait_for_heads_elements: List[WaitForHeads] = []
+        end_label_name = f"end_label_{new_var_uid()}"
+        goto_end_element = Goto(label=end_label_name)
+        end_label_element = Label(name=end_label_name)
 
-                    new_elements.append(match_element)
-                    new_elements.append(
-                        Assignment(
-                            key=return_var_name,
-                            expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
+        element_idx = 0
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            group_label_name = f"group_{group_idx}_{new_var_uid()}"
+            group_label_elements.append(Label(name=group_label_name))
+            goto_group_elements.append(Goto(label=group_label_name))
+            wait_for_heads_elements.append(
+                WaitForHeads(number=len(and_group["elements"]))
+            )
+
+            for match_element in and_group["elements"]:
+                label_name = f"event_{element_idx}_{new_var_uid()}"
+                event_label_elements.append(Label(name=label_name))
+                fork_element.labels.append(label_name)
+                if match_element.spec_type == "flow":
+                    # It's a flow
+                    arguments = {"flow_id": f"'{match_element.name}'"}
+                    for arg in match_element.arguments:
+                        arguments.update({arg: match_element.arguments[arg]})
+
+                    event_match_elements.append(
+                        SpecOp(
+                            op="match",
+                            spec=Spec(
+                                name=InternalEvents.FLOW_FINISHED,
+                                arguments=arguments,
+                                spec_type="event",
+                            ),
                         )
                     )
                 else:
-                    pass
-        elif isinstance(element.spec, dict):
-            # Multiple match elements
-            normalized_group = normalize_element_groups(element.spec)
+                    # It's an UMIM event
+                    new_match_element = copy.copy(element)
+                    new_match_element.spec = match_element
+                    event_match_elements.append(new_match_element)
+                element_idx += 1
 
-            fork_element = ForkHead()
-            event_label_elements: List[Label] = []
-            event_match_elements: List[SpecOp] = []
-            goto_group_elements: List[Goto] = []
-            group_label_elements: List[Label] = []
-            wait_for_heads_elements: List[WaitForHeads] = []
-            end_label_name = f"end_label_{new_var_uid()}"
-            goto_end_element = Goto(label=end_label_name)
-            end_label_element = Label(name=end_label_name)
+        # Generate new element sequence
+        element_idx = 0
+        new_elements.append(fork_element)
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            for match_element in and_group["elements"]:
+                new_elements.append(event_label_elements[element_idx])
+                new_elements.append(event_match_elements[element_idx])
+                new_elements.append(goto_group_elements[group_idx])
+                element_idx += 1
+            new_elements.append(group_label_elements[group_idx])
+            new_elements.append(wait_for_heads_elements[group_idx])
+            new_elements.append(MergeHeads())
+            new_elements.append(goto_end_element)
+        new_elements.append(end_label_element)
 
-            element_idx = 0
-            for group_idx, and_group in enumerate(normalized_group["elements"]):
-                group_label_name = f"group_{group_idx}_{new_var_uid()}"
-                group_label_elements.append(Label(name=group_label_name))
-                goto_group_elements.append(Goto(label=group_label_name))
-                wait_for_heads_elements.append(
-                    WaitForHeads(number=len(and_group["elements"]))
+    else:
+        raise ValueError("Unknown element type")
+
+    return new_elements
+
+
+def _expand_await_element(
+    element: SpecOp,
+) -> List[ElementType]:
+    new_elements: List[ElementType] = []
+    if isinstance(element.spec, Spec):
+        # Single element
+        if element.spec.spec_type == "flow":
+            # It's a flow
+            flow_ref_uid = f"_flow_ref_{new_var_uid()}"
+            element.spec.ref = _create_ref_ast_dict_helper(flow_ref_uid)
+            new_elements.append(
+                SpecOp(
+                    op="start",
+                    spec=element.spec,
                 )
-
-                for match_element in and_group["elements"]:
-                    label_name = f"event_{element_idx}_{new_var_uid()}"
-                    event_label_elements.append(Label(name=label_name))
-                    fork_element.labels.append(label_name)
-                    if match_element.spec_type == "flow":
-                        # It's a flow
-                        arguments = {"flow_id": f"'{match_element.name}'"}
-                        for arg in match_element.arguments:
-                            arguments.update({arg: match_element.arguments[arg]})
-
-                        event_match_elements.append(
-                            SpecOp(
-                                op="match",
-                                spec=Spec(
-                                    name=InternalEvents.FLOW_FINISHED,
-                                    arguments=arguments,
-                                ),
-                            )
-                        )
-                    else:
-                        # It's an UMIM event
-                        new_match_element = copy.copy(element)
-                        new_match_element.spec = match_element
-                        event_match_elements.append(new_match_element)
-                    element_idx += 1
-
-            # Generate new element sequence
-            element_idx = 0
-            new_elements.append(fork_element)
-            for group_idx, and_group in enumerate(normalized_group["elements"]):
-                for match_element in and_group["elements"]:
-                    new_elements.append(event_label_elements[element_idx])
-                    new_elements.append(event_match_elements[element_idx])
-                    new_elements.append(goto_group_elements[group_idx])
-                    element_idx += 1
-                new_elements.append(group_label_elements[group_idx])
-                new_elements.append(wait_for_heads_elements[group_idx])
-                new_elements.append(MergeHeads())
-                new_elements.append(goto_end_element)
-            new_elements.append(end_label_element)
-
+            )
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=Spec(
+                        var_name=flow_ref_uid,
+                        members=_create_member_ast_dict_helper("Finished", {}),
+                        spec_type="event",
+                    ),
+                    return_var_name=element.return_var_name,
+                )
+            )
         else:
-            raise ValueError("Unknown element type")
+            # It's an UMIM action
+            action_ref_uid = f"_action_ref_{new_var_uid()}"
+            element.spec.ref = _create_ref_ast_dict_helper(action_ref_uid)
+            new_elements.append(
+                SpecOp(
+                    op="start",
+                    spec=element.spec,
+                )
+            )
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=Spec(
+                        var_name=action_ref_uid,
+                        members=_create_member_ast_dict_helper("Finished", {}),
+                        spec_type="event",
+                    ),
+                    return_var_name=element.return_var_name,
+                )
+            )
+    else:
+        # Element group
+        # TODO: Fix this such that action are also supported using references for flows and actions
+        normalized_group = normalize_element_groups(element.spec)
+        unique_group = convert_to_single_and_element_group(normalized_group)
+        element_references: Dict[int, str] = {}
 
-    elif element.op == "activate":
-        if isinstance(element.spec, Spec):
-            # Single match element
-            if element.spec.spec_type == "flow":
-                # It's a flow
-                element.spec.arguments.update(
-                    {
-                        "flow_id": f"'{element.spec.name}'",
-                        "activated": "True",
-                    }
+        start_group = copy.deepcopy(unique_group)
+        for and_group in start_group["elements"]:
+            for start_element in and_group["elements"]:
+                reference_name = f"_ref_{new_var_uid()}"
+                element_references[start_element.hash()] = reference_name
+                start_element.ref = _create_ref_ast_dict_helper(reference_name)
+
+        new_elements.append(SpecOp(op="start", spec=start_group))
+
+        match_group = copy.deepcopy(normalized_group)
+        for and_group in match_group["elements"]:
+            for match_element in and_group["elements"]:
+                reference_name = element_references[match_element.hash()]
+                match_element.var_name = reference_name
+                match_element.members = _create_member_ast_dict_helper("Finished", {})
+                match_element.spec_type = "event"
+
+        new_elements.append(SpecOp(op="match", spec=match_group))
+
+    return new_elements
+
+
+def _expand_activate_element(
+    element: SpecOp,
+) -> List[ElementType]:
+    new_elements: List[ElementType] = []
+    if isinstance(element.spec, Spec):
+        # Single match element
+        if element.spec.spec_type == "flow":
+            # It's a flow
+            element.spec.arguments.update(
+                {
+                    "flow_id": f"'{element.spec.name}'",
+                    "activated": "True",
+                }
+            )
+            new_elements.append(
+                SpecOp(
+                    op="send",
+                    spec=Spec(
+                        name=InternalEvents.START_FLOW,
+                        arguments=element.spec.arguments,
+                        spec_type="event",
+                    ),
                 )
-                new_elements.append(
-                    SpecOp(
-                        op="send",
-                        spec=Spec(
-                            name=InternalEvents.START_FLOW,
-                            arguments=element.spec.arguments,
-                        ),
-                    )
+            )
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=Spec(
+                        name=InternalEvents.FLOW_STARTED,
+                        arguments=element.spec.arguments,
+                        spec_type="event",
+                    ),
                 )
-                new_elements.append(
-                    SpecOp(
-                        op="match",
-                        spec=Spec(
-                            name=InternalEvents.FLOW_STARTED,
-                            arguments=element.spec.arguments,
-                        ),
-                    )
+            )
+        else:
+            # It's an UMIM event
+            raise NotImplementedError("Events cannot be activated!")
+    elif isinstance(element.spec, dict):
+        # Multiple match elements
+        normalized_group = normalize_element_groups(element.spec)
+        if len(normalized_group["elements"]) > 1:
+            raise NotImplementedError("Activating 'or' groups not implemented yet!")
+        for group_element in normalized_group["elements"][0]["elements"]:
+            new_elements.append(
+                SpecOp(
+                    op="activate",
+                    spec=group_element,
                 )
-            else:
-                # It's an UMIM event
-                raise NotImplementedError("Events cannot be activated!")
-        elif isinstance(element.spec, dict):
-            # Multiple match elements
-            normalized_group = normalize_element_groups(element.spec)
-            if len(normalized_group["elements"]) > 1:
-                raise NotImplementedError("Activating 'or' groups not implemented yet!")
-            for group_element in normalized_group["elements"][0]["elements"]:
-                new_elements.append(
-                    SpecOp(
-                        op="activate",
-                        spec=group_element,
-                    )
-                )
+            )
 
     return new_elements
 
@@ -993,11 +1041,11 @@ def _expand_when_stmt_element(
             if when_element.spec_type == "flow":
                 # It's a flow
                 flow_ref_uid = f"_flow_ref_{new_var_uid()}"
+                when_element.ref = _create_ref_ast_dict_helper(flow_ref_uid)
                 start_elements.append(
                     SpecOp(
                         op="start",
                         spec=when_element,
-                        ref=_create_ref_ast_dict_helper(flow_ref_uid),
                     )
                 )
                 when_elements.append(
@@ -1006,17 +1054,18 @@ def _expand_when_stmt_element(
                         spec=Spec(
                             var_name=flow_ref_uid,
                             members=_create_member_ast_dict_helper("Finished", {}),
+                            spec_type="event",
                         ),
                     )
                 )
             elif when_element.spec_type == "action":
                 # It's an UMIM action
                 action_ref_uid = f"_action_ref_{new_var_uid()}"
+                when_element.ref = _create_ref_ast_dict_helper(action_ref_uid)
                 start_elements.append(
                     SpecOp(
                         op="start",
                         spec=when_element,
-                        ref=_create_ref_ast_dict_helper(action_ref_uid),
                     )
                 )
                 when_elements.append(
@@ -1025,6 +1074,7 @@ def _expand_when_stmt_element(
                         spec=Spec(
                             var_name=action_ref_uid,
                             members=_create_member_ast_dict_helper("Finished", {}),
+                            spec_type="event",
                         ),
                     )
                 )
@@ -1128,6 +1178,7 @@ def normalize_element_groups(group: Union[Spec, dict]) -> dict:
 
 
 def flatten_or_group(group: dict):
+    """Flattens a group that has multiple or levels to a single one."""
     new_elements = []
     for elem in group["elements"]:
         if isinstance(elem, dict) and elem["_type"] == "spec_or":
@@ -1333,7 +1384,7 @@ def add_new_flow_instance(state, flow_state: FlowState) -> FlowState:
 def _create_event_reference(
     state: State, flow_state: FlowState, element: Element, event: Event
 ) -> dict:
-    reference_name = element.ref["elements"][0]["elements"][0].lstrip("$")
+    reference_name = element.spec.ref["elements"][0]["elements"][0].lstrip("$")
     new_event = _get_event_from_element(state, flow_state, element)
     new_event.arguments.update(event.arguments)
 
@@ -1429,9 +1480,8 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 if not _is_listening_flow(flow_state):
                     continue
 
-                flow_config = state.flow_configs[flow_state.flow_id]
                 for head in flow_state.heads:
-                    element = flow_config.elements[head.position]
+                    element = _get_element_from_head(state, head)
                     if _is_match_op_element(element):
                         # TODO: Assign matching score
                         matching_score = _compute_event_matching_score(
@@ -1445,18 +1495,9 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
                         if matching_score > 0.0:
                             heads_matching.append(head)
-
                             log.info(
                                 f"Matching head: {head} context={_context_log(flow_state)}"
                             )
-
-                            if element.ref is not None:
-                                flow_state.context.update(
-                                    _create_event_reference(
-                                        state, flow_state, element, event
-                                    )
-                                )
-
                         elif matching_score < 0.0:
                             heads_failing.append(head)
                             log.info(
@@ -1472,8 +1513,16 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
             # Handle internal event matching
             for head in heads_matching:
+                element = _get_element_from_head(state, head)
+                flow_state = _get_flow_state_from_head(state, head)
+
+                # Create a potential reference form the match
+                if element.spec.ref is not None:
+                    flow_state.context.update(
+                        _create_event_reference(state, flow_state, element, event)
+                    )
+
                 if event.name == InternalEvents.START_FLOW:
-                    flow_state = _get_flow_state_from_head(state, head)
                     _start_flow(state, flow_state, event.arguments)
                 # elif event.name == InternalEvents.FINISH_FLOW:
                 #     _finish_flow(new_state, flow_state)
@@ -1720,7 +1769,9 @@ def slide(
                 )
                 state.actions.update({action.uid: action})
                 flow_state.action_uids.append(action.uid)
-                reference_name = element.ref["elements"][0]["elements"][0].lstrip("$")
+                reference_name = element.spec.ref["elements"][0]["elements"][0].lstrip(
+                    "$"
+                )
                 flow_state.context.update({reference_name: action})
                 head_position += 1
             else:

@@ -78,6 +78,8 @@ def _make_hashable(obj: Any) -> Any:
         return tuple((k, _make_hashable(v)) for k, v in sorted(obj.items()))
     elif isinstance(obj, list):
         return tuple(_make_hashable(x) for x in obj)
+    elif isinstance(obj, tuple):
+        return tuple(_make_hashable(x) for x in obj)
     elif isinstance(obj, Element):
         return tuple((k, _make_hashable(v)) for k, v in sorted(vars(obj).items()))
     else:
@@ -128,8 +130,16 @@ class Spec(Element):
     name: Optional[str] = None
     spec_type: str = ""
     arguments: Dict[str, Any] = field(default_factory=dict)
+
+    # Members on the spec, e.g. ActionX().Member()
     members: Optional[List["Spec"]] = None
+
+    # Is set if it is a reference
     var_name: Optional[str] = None
+
+    # The reference that should be captured.
+    ref: Optional[str] = field(default=None)
+
     _type: str = "spec"
 
 
@@ -164,9 +174,6 @@ class SpecOp(Element):
 
     op: str = ""
     spec: SpecType = Spec()
-
-    # The reference that should be captured.
-    ref: Optional[str] = field(default=None)
 
     # If the return value of the spec needs to be captured. The return value only makes sense
     # for await on flows and actions.

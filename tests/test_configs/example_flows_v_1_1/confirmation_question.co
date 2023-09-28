@@ -7,20 +7,20 @@ flow bot ask confirmation question $utterance $max_repetition=2
   while $repetition_count < $max_repetition
     when user confirms
       return "confirmed"
-    else when user denies
+    orwhen user denies
       return "denied"
-    else when user said something as $user_said
+    orwhen user said something as $user_said
       $repetition_count += 1
       bot say """Respond to user saying '{$user said.event.utterance.text}' but remind user to either confirm or deny the question"""
-    else when user silent "5s"
+    orwhen user silent "5s"
       $repetition_count += 1
       bot say "Just say 'yes' to confirm!"
 
 flow main
   activate bot ask confirmation question "Do you want to pay now?" as $question
-  when match $question.Finished("confirmed")
+  when $question.Finished("confirmed")
     bot say "Great!"
-  else when match $question.Finished("denied")
+  orwhen $question.Finished("denied")
     bot say "No problem"
   else # In the case that the question is not answered and failed
     bot say "Never mind"

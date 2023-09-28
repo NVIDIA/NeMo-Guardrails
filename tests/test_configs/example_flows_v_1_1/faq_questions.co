@@ -60,9 +60,9 @@ flow faq question handling
 flow main
   activate faq question handling
   await bot say "How are you?"
-  when await user said "good"
+  when user said "good"
     await bot say "Great! Let's continue"
-  else when await user said "bad"
+  orwhen user said "bad"
     await bot say "Sorry to hear!"
 
 # This is the same as:
@@ -72,9 +72,9 @@ flow main
 
 flow main_flow
   await bot say "How are you?"
-  when await user said "good"
+  when user said "good"
     await bot say "Great! Let's continue"
-  else when await user said "bad"
+  orwhen user said "bad"
     await bot say "Sorry to hear!"
 
 # **Use case**
