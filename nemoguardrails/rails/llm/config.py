@@ -89,6 +89,10 @@ class TaskPrompt(BaseModel):
         default=None,
         description="The name of the output parser to use for this prompt.",
     )
+    max_length: Optional[int] = Field(
+        default=16000,
+        description="The maximum length of the prompt in number of characters."
+    )
 
     @root_validator(pre=True, allow_reuse=True)
     def check_fields(cls, values):
