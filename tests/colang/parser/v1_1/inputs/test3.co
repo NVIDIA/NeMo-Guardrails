@@ -8,7 +8,7 @@ flow x
 
   when x
     match A
-  else when y
+  orwhen y
     match B
   else
     match C

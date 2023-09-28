@@ -47,7 +47,6 @@ def test_basic():
                 "_source": None,
                 "_type": "spec_op",
                 "op": "match",
-                "ref": None,
                 "return_var_name": None,
                 "spec": {
                     "_source": None,
@@ -57,6 +56,7 @@ def test_basic():
                     "name": "user express greeting",
                     "spec_type": "",
                     "var_name": None,
+                    "ref": None,
                 },
             },
             {
@@ -69,7 +69,6 @@ def test_basic():
                         "_source": None,
                         "_type": "spec_op",
                         "op": "await",
-                        "ref": None,
                         "return_var_name": None,
                         "spec": {
                             "_source": None,
@@ -79,6 +78,7 @@ def test_basic():
                             "name": "bot express greeting",
                             "spec_type": "",
                             "var_name": None,
+                            "ref": None,
                         },
                     }
                 ],

@@ -48,7 +48,6 @@ def test_1():
                     "_source": None,
                     "_type": "spec_op",
                     "op": "match",
-                    "ref": None,
                     "return_var_name": None,
                     "spec": {
                         "_source": None,
@@ -58,13 +57,13 @@ def test_1():
                         "name": "StartFlow",
                         "spec_type": "event",
                         "var_name": None,
+                        "ref": None,
                     },
                 },
                 {
                     "_source": None,
                     "_type": "spec_op",
                     "op": "match",
-                    "ref": None,
                     "return_var_name": None,
                     "spec": {
                         "_source": None,
@@ -74,13 +73,13 @@ def test_1():
                         "name": "UserIntent",
                         "spec_type": "event",
                         "var_name": None,
+                        "ref": None,
                     },
                 },
                 {
                     "_source": None,
                     "_type": "spec_op",
                     "op": "await",
-                    "ref": None,
                     "return_var_name": None,
                     "spec": {
                         "_source": None,
@@ -90,6 +89,7 @@ def test_1():
                         "name": "bot express greeting",
                         "spec_type": "flow",
                         "var_name": None,
+                        "ref": None,
                     },
                 },
             ],
@@ -120,7 +120,6 @@ def test_2():
                     "_source": None,
                     "_type": "spec_op",
                     "op": "match",
-                    "ref": None,
                     "return_var_name": None,
                     "spec": {
                         "_source": None,
@@ -130,13 +129,13 @@ def test_2():
                         "name": "StartFlow",
                         "spec_type": "event",
                         "var_name": None,
+                        "ref": None,
                     },
                 },
                 {
                     "_source": None,
                     "_type": "spec_op",
                     "op": "match",
-                    "ref": None,
                     "return_var_name": None,
                     "spec": {
                         "_source": None,
@@ -146,6 +145,7 @@ def test_2():
                         "name": "user express greeting",
                         "spec_type": "flow",
                         "var_name": None,
+                        "ref": None,
                     },
                 },
                 {
@@ -156,7 +156,6 @@ def test_2():
                             "_source": None,
                             "_type": "spec_op",
                             "op": "await",
-                            "ref": None,
                             "return_var_name": None,
                             "spec": {
                                 "_source": None,
@@ -166,6 +165,7 @@ def test_2():
                                 "name": "bot express good " "afternoon",
                                 "spec_type": "flow",
                                 "var_name": None,
+                                "ref": None,
                             },
                         }
                     ],
@@ -175,7 +175,6 @@ def test_2():
                             "_source": None,
                             "_type": "spec_op",
                             "op": "await",
-                            "ref": None,
                             "return_var_name": None,
                             "spec": {
                                 "_source": None,
@@ -185,6 +184,7 @@ def test_2():
                                 "name": "bot express good morning",
                                 "spec_type": "flow",
                                 "var_name": None,
+                                "ref": None,
                             },
                         }
                     ],
@@ -214,7 +214,6 @@ def test_3():
                     "_source": None,
                     "_type": "spec_op",
                     "op": "match",
-                    "ref": None,
                     "return_var_name": None,
                     "spec": {
                         "_source": None,
@@ -224,13 +223,13 @@ def test_3():
                         "name": "StartFlow",
                         "spec_type": "event",
                         "var_name": None,
+                        "ref": None,
                     },
                 },
                 {
                     "_source": None,
                     "_type": "spec_op",
                     "op": "await",
-                    "ref": None,
                     "return_var_name": None,
                     "spec": {
                         "_type": "spec_or",
@@ -243,6 +242,7 @@ def test_3():
                                 "name": "user silent",
                                 "spec_type": "flow",
                                 "var_name": None,
+                                "ref": None,
                             },
                             {
                                 "_source": None,
@@ -252,6 +252,7 @@ def test_3():
                                 "name": "user agrees",
                                 "spec_type": "flow",
                                 "var_name": None,
+                                "ref": None,
                             },
                         ],
                     },
@@ -260,7 +261,6 @@ def test_3():
                     "_source": None,
                     "_type": "spec_op",
                     "op": "await",
-                    "ref": None,
                     "return_var_name": None,
                     "spec": {
                         "_source": None,
@@ -270,13 +270,13 @@ def test_3():
                         "name": "user silent",
                         "spec_type": "flow",
                         "var_name": None,
+                        "ref": None,
                     },
                 },
                 {
                     "_source": None,
                     "_type": "spec_op",
                     "op": "await",
-                    "ref": None,
                     "return_var_name": None,
                     "spec": {
                         "_source": None,
@@ -286,13 +286,13 @@ def test_3():
                         "name": "user ask",
                         "spec_type": "flow",
                         "var_name": None,
+                        "ref": None,
                     },
                 },
                 {
                     "_source": None,
                     "_type": "spec_op",
                     "op": "await",
-                    "ref": None,
                     "return_var_name": None,
                     "spec": {
                         "_source": None,
@@ -302,6 +302,7 @@ def test_3():
                         "name": "user ask",
                         "spec_type": "flow",
                         "var_name": None,
+                        "ref": None,
                     },
                 },
             ],
@@ -324,157 +325,162 @@ def test_4():
     )
     assert flows == [
         {
-            "_source": None,
             "_type": "flow",
-            "elements": [
-                {
-                    "_source": None,
-                    "_type": "spec_op",
-                    "op": "match",
-                    "ref": None,
-                    "return_var_name": None,
-                    "spec": {
-                        "_source": None,
-                        "_type": "spec",
-                        "arguments": {"flow_id": '"test"'},
-                        "members": None,
-                        "name": "StartFlow",
-                        "spec_type": "event",
-                        "var_name": None,
-                    },
-                },
-                {
-                    "_source": None,
-                    "_type": "spec_op",
-                    "op": "match",
-                    "ref": None,
-                    "return_var_name": None,
-                    "spec": {
-                        "_source": None,
-                        "_type": "spec",
-                        "arguments": {},
-                        "members": [
-                            {
-                                "_source": None,
-                                "_type": "spec",
-                                "arguments": {},
-                                "members": None,
-                                "name": "Finished",
-                                "spec_type": "",
-                                "var_name": None,
-                            }
-                        ],
-                        "name": "bot express greeting",
-                        "spec_type": "flow",
-                        "var_name": None,
-                    },
-                },
-                {
-                    "_source": None,
-                    "_type": "spec_op",
-                    "op": "match",
-                    "ref": None,
-                    "return_var_name": None,
-                    "spec": {
-                        "_source": None,
-                        "_type": "spec",
-                        "arguments": {},
-                        "members": [
-                            {
-                                "_source": None,
-                                "_type": "spec",
-                                "arguments": {"status": '"success"'},
-                                "members": None,
-                                "name": "Finished",
-                                "spec_type": "",
-                                "var_name": None,
-                            }
-                        ],
-                        "name": "bot express greeting",
-                        "spec_type": "flow",
-                        "var_name": None,
-                    },
-                },
-                {
-                    "_source": None,
-                    "_type": "spec_op",
-                    "op": "match",
-                    "ref": None,
-                    "return_var_name": None,
-                    "spec": {
-                        "_source": None,
-                        "_type": "spec",
-                        "arguments": {},
-                        "members": None,
-                        "name": None,
-                        "spec_type": "var",
-                        "var_name": "action",
-                    },
-                },
-                {
-                    "_source": None,
-                    "_type": "spec_op",
-                    "op": "match",
-                    "ref": None,
-                    "return_var_name": None,
-                    "spec": {
-                        "_source": None,
-                        "_type": "spec",
-                        "arguments": {},
-                        "members": [
-                            {
-                                "_source": None,
-                                "_type": "spec",
-                                "arguments": {},
-                                "members": None,
-                                "name": "Finished",
-                                "spec_type": "",
-                                "var_name": None,
-                            }
-                        ],
-                        "name": None,
-                        "spec_type": "var",
-                        "var_name": "action",
-                    },
-                },
-                {
-                    "_source": None,
-                    "_type": "spec_op",
-                    "op": "match",
-                    "ref": None,
-                    "return_var_name": None,
-                    "spec": {
-                        "_source": None,
-                        "_type": "spec",
-                        "arguments": {},
-                        "members": [
-                            {
-                                "_source": None,
-                                "_type": "spec",
-                                "arguments": {},
-                                "members": None,
-                                "name": "some_action",
-                                "spec_type": "",
-                                "var_name": None,
-                            },
-                            {
-                                "_source": None,
-                                "_type": "spec",
-                                "arguments": {"$0": '"success"'},
-                                "members": None,
-                                "name": "Finished",
-                                "spec_type": "",
-                                "var_name": None,
-                            },
-                        ],
-                        "name": None,
-                        "spec_type": "var",
-                        "var_name": "some_flow",
-                    },
-                },
-            ],
+            "_source": None,
             "name": "test",
             "parameters": [],
+            "elements": [
+                {
+                    "_type": "spec_op",
+                    "_source": None,
+                    "op": "match",
+                    "spec": {
+                        "_type": "spec",
+                        "_source": None,
+                        "name": "StartFlow",
+                        "spec_type": "event",
+                        "arguments": {"flow_id": '"test"'},
+                        "members": None,
+                        "var_name": None,
+                        "ref": None,
+                    },
+                    "return_var_name": None,
+                },
+                {
+                    "_type": "spec_op",
+                    "_source": None,
+                    "op": "match",
+                    "spec": {
+                        "_type": "spec",
+                        "_source": None,
+                        "name": "bot express greeting",
+                        "spec_type": "flow",
+                        "arguments": {},
+                        "members": [
+                            {
+                                "_type": "spec",
+                                "_source": None,
+                                "name": "Finished",
+                                "spec_type": "",
+                                "arguments": {},
+                                "members": None,
+                                "var_name": None,
+                                "ref": None,
+                            }
+                        ],
+                        "var_name": None,
+                        "ref": None,
+                    },
+                    "return_var_name": None,
+                },
+                {
+                    "_type": "spec_op",
+                    "_source": None,
+                    "op": "match",
+                    "spec": {
+                        "_type": "spec",
+                        "_source": None,
+                        "name": "bot express greeting",
+                        "spec_type": "flow",
+                        "arguments": {},
+                        "members": [
+                            {
+                                "_type": "spec",
+                                "_source": None,
+                                "name": "Finished",
+                                "spec_type": "",
+                                "arguments": {"status": '"success"'},
+                                "members": None,
+                                "var_name": None,
+                                "ref": None,
+                            }
+                        ],
+                        "var_name": None,
+                        "ref": None,
+                    },
+                    "return_var_name": None,
+                },
+                {
+                    "_type": "spec_op",
+                    "_source": None,
+                    "op": "match",
+                    "spec": {
+                        "_type": "spec",
+                        "_source": None,
+                        "name": None,
+                        "spec_type": "var",
+                        "arguments": {},
+                        "members": None,
+                        "var_name": "action",
+                        "ref": None,
+                    },
+                    "return_var_name": None,
+                },
+                {
+                    "_type": "spec_op",
+                    "_source": None,
+                    "op": "match",
+                    "spec": {
+                        "_type": "spec",
+                        "_source": None,
+                        "name": None,
+                        "spec_type": "event",
+                        "arguments": {},
+                        "members": [
+                            {
+                                "_type": "spec",
+                                "_source": None,
+                                "name": "Finished",
+                                "spec_type": "",
+                                "arguments": {},
+                                "members": None,
+                                "var_name": None,
+                                "ref": None,
+                            }
+                        ],
+                        "var_name": "action",
+                        "ref": None,
+                    },
+                    "return_var_name": None,
+                },
+                {
+                    "_type": "spec_op",
+                    "_source": None,
+                    "op": "match",
+                    "spec": {
+                        "_type": "spec",
+                        "_source": None,
+                        "name": None,
+                        "spec_type": "event",
+                        "arguments": {},
+                        "members": [
+                            {
+                                "_type": "spec",
+                                "_source": None,
+                                "name": "some_action",
+                                "spec_type": "",
+                                "arguments": {},
+                                "members": None,
+                                "var_name": None,
+                                "ref": None,
+                            },
+                            {
+                                "_type": "spec",
+                                "_source": None,
+                                "name": "Finished",
+                                "spec_type": "",
+                                "arguments": {"$0": '"success"'},
+                                "members": None,
+                                "var_name": None,
+                                "ref": None,
+                            },
+                        ],
+                        "var_name": "some_flow",
+                        "ref": None,
+                    },
+                    "return_var_name": None,
+                },
+            ],
         }
     ]
 
@@ -593,7 +599,6 @@ def test_flow_if_1():
                 "_source": None,
                 "_type": "spec_op",
                 "op": "match",
-                "ref": None,
                 "return_var_name": None,
                 "spec": {
                     "_source": None,
@@ -603,6 +608,7 @@ def test_flow_if_1():
                     "name": "StartFlow",
                     "spec_type": "event",
                     "var_name": None,
+                    "ref": None,
                 },
             },
             {
@@ -619,7 +625,6 @@ def test_flow_if_1():
                         "_source": None,
                         "_type": "spec_op",
                         "op": "await",
-                        "ref": None,
                         "return_var_name": None,
                         "spec": {
                             "_source": None,
@@ -629,6 +634,7 @@ def test_flow_if_1():
                             "name": "bot say",
                             "spec_type": "flow",
                             "var_name": None,
+                            "ref": None,
                         },
                     }
                 ],
@@ -638,7 +644,6 @@ def test_flow_if_1():
                         "_source": None,
                         "_type": "spec_op",
                         "op": "await",
-                        "ref": None,
                         "return_var_name": None,
                         "spec": {
                             "_source": None,
@@ -648,6 +653,7 @@ def test_flow_if_1():
                             "name": "bot say",
                             "spec_type": "flow",
                             "var_name": None,
+                            "ref": None,
                         },
                     }
                 ],
@@ -676,7 +682,6 @@ def test_flow_if_2():
                 "_source": None,
                 "_type": "spec_op",
                 "op": "match",
-                "ref": None,
                 "return_var_name": None,
                 "spec": {
                     "_source": None,
@@ -686,6 +691,7 @@ def test_flow_if_2():
                     "name": "StartFlow",
                     "spec_type": "event",
                     "var_name": None,
+                    "ref": None,
                 },
             },
             {
@@ -710,7 +716,6 @@ def test_flow_if_2():
                                         "_source": None,
                                         "_type": "spec_op",
                                         "op": "await",
-                                        "ref": None,
                                         "return_var_name": None,
                                         "spec": {
                                             "_source": None,
@@ -720,6 +725,7 @@ def test_flow_if_2():
                                             "name": "bot " "say",
                                             "spec_type": "flow",
                                             "var_name": None,
+                                            "ref": None,
                                         },
                                     }
                                 ],
@@ -729,7 +735,6 @@ def test_flow_if_2():
                                         "_source": None,
                                         "_type": "spec_op",
                                         "op": "await",
-                                        "ref": None,
                                         "return_var_name": None,
                                         "spec": {
                                             "_source": None,
@@ -739,6 +744,7 @@ def test_flow_if_2():
                                             "name": "bot " "say",
                                             "spec_type": "flow",
                                             "var_name": None,
+                                            "ref": None,
                                         },
                                     }
                                 ],
@@ -750,7 +756,6 @@ def test_flow_if_2():
                                 "_source": None,
                                 "_type": "spec_op",
                                 "op": "await",
-                                "ref": None,
                                 "return_var_name": None,
                                 "spec": {
                                     "_source": None,
@@ -760,6 +765,7 @@ def test_flow_if_2():
                                     "name": "bot say",
                                     "spec_type": "flow",
                                     "var_name": None,
+                                    "ref": None,
                                 },
                             }
                         ],
@@ -771,7 +777,6 @@ def test_flow_if_2():
                         "_source": None,
                         "_type": "spec_op",
                         "op": "await",
-                        "ref": None,
                         "return_var_name": None,
                         "spec": {
                             "_source": None,
@@ -781,6 +786,7 @@ def test_flow_if_2():
                             "name": "bot say",
                             "spec_type": "flow",
                             "var_name": None,
+                            "ref": None,
                         },
                     }
                 ],
@@ -802,7 +808,6 @@ flow main
                 "_source": None,
                 "_type": "spec_op",
                 "op": "match",
-                "ref": None,
                 "return_var_name": None,
                 "spec": {
                     "_source": None,
@@ -812,6 +817,7 @@ flow main
                     "name": "StartFlow",
                     "spec_type": "event",
                     "var_name": None,
+                    "ref": None,
                 },
             },
             {
