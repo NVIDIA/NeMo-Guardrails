@@ -845,8 +845,9 @@ def _expand_await_element(
         # Single element
         if element.spec.spec_type == "flow":
             # It's a flow
-            flow_ref_uid = f"_flow_ref_{new_var_uid()}"
-            element.spec.ref = _create_ref_ast_dict_helper(flow_ref_uid)
+            flow_ref = element.spec.ref
+            flow_event_ref_uid = f"_flow_event_ref_{new_var_uid()}"
+            element.spec.ref = _create_ref_ast_dict_helper(flow_event_ref_uid)
             new_elements.append(
                 SpecOp(
                     op="start",
@@ -857,15 +858,23 @@ def _expand_await_element(
                 SpecOp(
                     op="match",
                     spec=Spec(
-                        var_name=flow_ref_uid,
+                        var_name=flow_event_ref_uid,
                         members=_create_member_ast_dict_helper("Finished", {}),
                         spec_type="event",
                     ),
                     return_var_name=element.return_var_name,
                 )
             )
+            if flow_ref:
+                new_elements.append(
+                    Assignment(
+                        key=flow_ref["elements"][0]["elements"][0].lstrip("$"),
+                        expression=f"${flow_event_ref_uid}",
+                    )
+                )
         else:
             # It's an UMIM action
+            action_ref = element.spec.ref
             action_ref_uid = f"_action_ref_{new_var_uid()}"
             element.spec.ref = _create_ref_ast_dict_helper(action_ref_uid)
             new_elements.append(
@@ -885,6 +894,13 @@ def _expand_await_element(
                     return_var_name=element.return_var_name,
                 )
             )
+            if action_ref:
+                new_elements.append(
+                    Assignment(
+                        key=action_ref["elements"][0]["elements"][0].lstrip("$"),
+                        expression=f"${action_ref_uid}",
+                    )
+                )
     else:
         # Element group
         # TODO: Fix this such that action are also supported using references for flows and actions

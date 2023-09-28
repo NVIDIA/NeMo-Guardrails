@@ -7,11 +7,8 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (
-    ActionStatus,
-    State,
-    run_to_completion,
-)
+from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, State,
+                                                      run_to_completion)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -2233,5 +2230,46 @@ def test_abort_flow():
     )
 
 
+def test_multi_flow_level_member_access():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript) as $event
+      $final_transcript = $event.arguments.final_transcript
+
+    flow user instructed bot
+      user said "do something" as $user_said_flow
+      $instruction = $user_said_flow.context.final_transcript
+
+    flow main
+      await user instructed bot as $ref
+      start UtteranceBotAction(script=$ref.context.instruction)
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "do something",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "do something",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_match_and_grouping()
+    test_multi_flow_level_member_access()
