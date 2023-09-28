@@ -12,32 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from functools import lru_cache
 
-from lark import Lark
-from lark.indenter import PythonIndenter
+from nemoguardrails.actions import action
 
 
-@lru_cache
-def load_lark_parser(grammar_path: str):
-    """Helper to load a Lark parser.
+@action(name="GenerateFlowAction")
+async def generate_flow(instructions: str, flow_name: str):
+    flow_source = f"""
+        flow {flow_name}
+          bot say "Why don't scientists trust atoms? Because they make up everything!"
+          bot say "I'm smiling."
+        """
+    return flow_source
 
-    The result is cached so that it's faster in subsequent times.
 
-    Args:
-        grammar_path: The path to the .lark file with the grammar.
-
-    Returns:
-        A Lark parser instance.
-    """
-    with open(grammar_path, "r") as f:
-        grammar = f.read()
-
-    return Lark(
-        grammar,
-        start="start",
-        parser="lalr",
-        lexer="basic",
-        postlex=PythonIndenter(),
-        propagate_positions=True,
-    )
+@action(name="GenerateUserIntentAction")
+async def generate_user_intent_action(user_message: str):
+    if "hello" in user_message:
+        return "user express greeting"
+    elif "i want" in user_message:
+        return "user provide custom instructions"
+    else:
+        return "unknown"

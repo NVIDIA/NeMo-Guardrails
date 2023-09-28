@@ -126,6 +126,7 @@ class Spec(Element):
     """
 
     name: Optional[str] = None
+    spec_type: str = ""
     arguments: Dict[str, Any] = field(default_factory=dict)
     members: Optional[List["Spec"]] = None
     var_name: Optional[str] = None
@@ -150,6 +151,9 @@ class SpecOr(Element):
     _type: str = "spec_or"
 
 
+SpecType = Union[Spec, SpecAnd, SpecOr]
+
+
 @dataclass_json
 @dataclass
 class SpecOp(Element):
@@ -159,8 +163,17 @@ class SpecOp(Element):
     """
 
     op: str = ""
-    spec: Union[Spec, SpecAnd, SpecOr] = Spec()
+    spec: SpecType = Spec()
+
+    # The reference that should be captured.
     ref: Optional[str] = field(default=None)
+
+    # If the return value of the spec needs to be captured. The return value only makes sense
+    # for await on flows and actions.
+    # For compatibility, the return value in all other cases is the same value as the ref.
+    # TODO: or should it just be None?
+    return_var_name: Optional[str] = None
+
     _type: str = "spec_op"
 
 
@@ -175,45 +188,54 @@ class If(Element):
 
 @dataclass_json
 @dataclass
+class When(Element):
+    when_specs: List[SpecType] = field(default_factory=list)
+    then_elements: List[List[Element]] = field(default_factory=list)
+    else_elements: Optional[List[Element]] = None
+    _type: str = "when"
+
+
+@dataclass_json
+@dataclass
 class While(Element):
     expression: str = ""
-    do: List[Element] = field(default_factory=list)
+    elements: List[Element] = field(default_factory=list)
     _type: str = "while"
 
 
 @dataclass_json
 @dataclass
-class Set(Element):
+class Assignment(Element):
     key: str = ""
     expression: str = ""
-    _type: str = "set"
+    _type: str = "assignment"
 
 
 @dataclass_json
 @dataclass
 class Continue(Element):
+    label: Optional[str] = None
     _type: str = "continue"
 
 
 @dataclass_json
 @dataclass
 class Abort(Element):
-    # TODO: update this to "abort" after the sliding logic is updated
-    _type: str = "stop"
+    _type: str = "abort"
 
 
 @dataclass_json
 @dataclass
 class Break(Element):
+    label: Optional[str] = None
     _type: str = "break"
 
 
 @dataclass_json
 @dataclass
 class Return(Element):
+    expression: Optional[str] = None
     _type: str = "return"
-    _next = "-1"
-    _absolute = True
 
 
 @dataclass_json
@@ -226,6 +248,11 @@ class Label(Element):
 @dataclass_json
 @dataclass
 class Goto(Element):
+    """Element for navigating to a label.
+
+    If the expression is not True, just skips to the next element.
+    """
+
     label: str = ""
     expression: str = "True"
     _type: str = "goto"
@@ -241,6 +268,11 @@ class Meta(Element):
 @dataclass_json
 @dataclass
 class ForkHead(Element):
+    """Element to fork the current head into multiple heads.
+
+    For each label a new head.
+    """
+
     labels: List[str] = field(default_factory=list)
     _type: str = "_fork"
 
@@ -248,11 +280,31 @@ class ForkHead(Element):
 @dataclass_json
 @dataclass
 class MergeHeads(Element):
+    """Merge all heads from same flow.
+
+    Only one head will advance from this element.
+    """
+
     _type: str = "_merge"
 
 
 @dataclass_json
 @dataclass
 class WaitForHeads(Element):
+    """Wait for a number of heads.
+
+    Once enough heads have reached this element they will be merged
+    and only one head will advance.
+    """
+
     number: int = 1
     _type: str = "_wait_for_heads"
+
+
+@dataclass_json
+@dataclass
+class RandomGoto(Element):
+    """Randomly pick one label and jump to it"""
+
+    labels: List[str] = field(default_factory=list)
+    _type: str = "_random_goto"

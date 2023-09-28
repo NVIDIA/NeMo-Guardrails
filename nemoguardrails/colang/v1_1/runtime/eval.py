@@ -17,6 +17,7 @@ import re
 
 from simpleeval import simple_eval
 
+from nemoguardrails.colang.v1_1.runtime import system_functions
 from nemoguardrails.colang.v1_1.runtime.utils import AttributeDict
 
 
@@ -30,6 +31,18 @@ def eval_expression(expr, context):
         assert isinstance(expr, bool) or isinstance(expr, int)
 
         return expr
+
+    # We search for all expressions inside expressions mark inside curly brackets
+    # and evaluate them first
+    pattern = r"(\{.*?\})"
+    inner_expressions = re.findall(pattern, expr)
+    if inner_expressions:
+        inner_expression_values = []
+        for inner_expression in inner_expressions:
+            inner_expression_values.append(
+                eval_expression(inner_expression.strip("{}"), context)
+            )
+        expr = re.sub(pattern, lambda x: str(inner_expression_values.pop(0)), expr)
 
     # We search for all variable names starting with $, remove the $ and add
     # the value in the globals dict for eval
@@ -54,6 +67,14 @@ def eval_expression(expr, context):
     # Finally, just evaluate the expression
     try:
         # TODO: replace this with something even more restrictive.
-        return simple_eval(updated_expr, names=expr_locals, functions={"len": len})
+        return simple_eval(
+            updated_expr,
+            names=expr_locals,
+            functions={
+                "len": len,
+                "flow": system_functions.flow,
+                "action": system_functions.action,
+            },
+        )
     except Exception as ex:
         raise Exception(f"Error evaluating '{expr}': {str(ex)}")

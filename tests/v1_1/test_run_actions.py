@@ -48,3 +48,36 @@ def test_1():
 
     chat >> "hi"
     chat << "Hello world!"
+
+
+def test_2():
+    config = RailsConfig.from_content(
+        colang_content="""
+        flow user express greeting
+          match UtteranceUserActionFinished(final_transcript="hi")
+
+        flow bot say $text
+          await UtteranceBotAction(script=$text)
+
+        flow main
+          user express greeting
+          $name = FetchNameAction
+          bot say $name
+        """,
+        yaml_content="""
+        colang_version: "1.1"
+        """,
+    )
+
+    chat = TestChat(
+        config,
+        llm_completions=[],
+    )
+
+    async def fetch_name():
+        return "John"
+
+    chat.app.register_action(fetch_name, "FetchNameAction")
+
+    chat >> "hi"
+    chat << "John"

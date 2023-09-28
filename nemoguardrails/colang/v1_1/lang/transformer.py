@@ -19,13 +19,19 @@ from lark import Token, Transformer, Tree
 from lark.tree import Meta
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    Abort,
+    Assignment,
+    Break,
+    Continue,
     Flow,
     FlowParamDef,
     If,
-    Set,
+    Return,
     Source,
     Spec,
     SpecOp,
+    When,
+    While,
 )
 
 
@@ -128,7 +134,11 @@ class ColangTransformer(Transformer):
         elements[0:0] = [
             SpecOp(
                 op="match",
-                spec=Spec(name="StartFlow", arguments={"flow_id": f'"{name}"'}),
+                spec=Spec(
+                    name="StartFlow",
+                    spec_type="event",
+                    arguments={"flow_id": f'"{name}"'},
+                ),
             )
         ]
 
@@ -144,8 +154,10 @@ class ColangTransformer(Transformer):
 
         Rule:
             spec_op: [spec_operator] spec_expr [capture_ref]
+                   | on_var_spec_expr [capture_ref]
         """
-        assert len(children) >= 3
+        if len(children) == 2:
+            children = [None] + children
 
         op = children[0] or "await"
         if isinstance(op, dict):
@@ -239,6 +251,21 @@ class ColangTransformer(Transformer):
         if members:
             spec.members = members
 
+        # This is a temporary solution until we have a better way of deriving spec types
+        # TODO: Support this by e.g. Colang UMIM action imports
+        if spec.name is not None:
+            if spec.name.islower():
+                spec.spec_type = "flow"
+            elif spec.name.endswith("Action"):
+                if spec.members:
+                    spec.spec_type = "event"
+                else:
+                    spec.spec_type = "action"
+            else:
+                spec.spec_type = "event"
+        elif spec.var_name is not None:
+            spec.spec_type = "var"
+
         return spec
 
     def _spec_name(self, children, meta):
@@ -254,12 +281,31 @@ class ColangTransformer(Transformer):
         return self.element("expr", [self.source[meta.start_pos : meta.end_pos]], meta)
 
     def _set_stmt(self, children, meta):
+        """The set statement can result in either a Set operation, or a SpecOp with a
+        return value capturing."""
         assert children[0]["_type"] == "var_name"
-        assert children[2]["_type"] == "expr"
 
-        return Set(
-            key=children[0]["elements"][0],
-            expression=children[2]["elements"][0],
+        assert children[2]["_type"] in ["expr", "spec_op"]
+
+        # Extract the var name (getting rid of the $)
+        var_name = children[0]["elements"][0][1:]
+
+        if children[2]["_type"] == "expr":
+            return Assignment(
+                key=var_name,
+                expression=children[2]["elements"][0],
+                _source=self.__source(meta),
+            )
+        elif children[2]["_type"] == "spec_op":
+            spec_op = children[2]
+            spec_op.return_var_name = var_name
+            return spec_op
+
+    def _while_stmt(self, children, meta):
+        assert len(children) == 2
+        return While(
+            expression=children[0]["elements"][0],
+            elements=children[1]["elements"],
             _source=self.__source(meta),
         )
 
@@ -272,13 +318,106 @@ class ColangTransformer(Transformer):
         assert len(children) == 4
         expression = children[0]["elements"][0]
         then_elements = children[1]["elements"]
+        elif_elements = []
+        if children[2]:
+            for _el in children[2]["elements"]:
+                assert _el["_type"] == "elif_"
+                expr_el = _el["elements"][0]
+                suite_el = _el["elements"][1]
+                elif_elements.append(
+                    {"expr": expr_el["elements"][0], "body": suite_el["elements"]}
+                )
         else_elements = children[3]["elements"] if children[3] else None
 
-        return If(
+        main_if_element = if_element = If(
             expression=expression,
             then_elements=then_elements,
             else_elements=else_elements,
         )
+
+        # If we have elif elements, we need to add additional If elements.
+        while elif_elements:
+            # We create a new one which takes the else body from the current one
+            new_if_element = If(
+                expression=elif_elements[0]["expr"],
+                then_elements=elif_elements[0]["body"],
+                else_elements=if_element.else_elements,
+            )
+            # The new element becomes the "else body"
+            if_element.else_elements = [new_if_element]
+            if_element = new_if_element
+            elif_elements = elif_elements[1:]
+
+        return main_if_element
+
+    def _when_stmt(self, children, meta):
+        """Processing for `spec` tree nodes.
+
+        Rule:
+            when_stmt: "when" spec_expr suite orwhens ["else" suite]
+        """
+        assert len(children) == 4
+        when_specs = []
+        then_elements = []
+        when_specs.append(children[0])
+        then_elements.append(children[1]["elements"])
+        if children[2]:
+            for _el in children[2]["elements"]:
+                assert _el["_type"] == "orwhen_"
+                when_specs.append(_el["elements"][0])
+                then_elements.append(_el["elements"][1]["elements"])
+        else_elements = children[3]["elements"] if children[3] else None
+
+        main_when_element = When(
+            when_specs=when_specs,
+            then_elements=then_elements,
+            else_elements=else_elements,
+        )
+
+        return main_when_element
+
+    def _return_stmt(self, children, meta):
+        assert len(children) == 1 and children[0]["_type"] == "expr"
+        return Return(
+            expression=children[0]["elements"][0],
+            _source=self.__source(meta),
+        )
+
+    def _abort_stmt(self, children, meta):
+        assert len(children) == 0
+        return Abort(_source=self.__source(meta))
+
+    def _break_stmt(self, children, meta):
+        assert len(children) == 0
+        return Break(
+            label=None,
+            _source=self.__source(meta),
+        )
+
+    def _continue_stmt(self, children, meta):
+        assert len(children) == 0
+        return Continue(
+            label=None,
+            _source=self.__source(meta),
+        )
+
+    def _non_var_spec_or(self, children, meta):
+        val = {
+            "_type": "spec_or",
+            "elements": children,
+        }
+        if self.include_source_mapping:
+            val["_source"] = self.__source(meta)
+        return val
+
+    def _non_var_spec_and(self, children, meta):
+        val = {
+            "_type": "spec_and",
+            "elements": children,
+        }
+        if self.include_source_mapping:
+            val["_source"] = self.__source(meta)
+        return val
 
     def __default__(self, data, children, meta):
         """Default function that is called if there is no attribute matching ``data``
@@ -306,11 +445,19 @@ class ColangTransformer(Transformer):
             }
 
             if self.include_source_mapping:
-                value["_source"] = {
-                    "line": meta.line,
-                    "column": meta.column,
-                    "start_pos": meta.start_pos,
-                    "end_pos": meta.end_pos,
-                }
+                if not meta.empty:
+                    value["_source"] = {
+                        "line": meta.line,
+                        "column": meta.column,
+                        "start_pos": meta.start_pos,
+                        "end_pos": meta.end_pos,
+                    }
+                else:
+                    value["_source"] = {
+                        "line": 0,
+                        "column": 0,
+                        "start_pos": 0,
+                        "end_pos": 0,
+                    }
 
             return value

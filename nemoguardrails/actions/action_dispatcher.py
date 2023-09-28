@@ -133,7 +133,15 @@ class ActionDispatcher:
                 try:
                     # We support both functions and classes as actions
                     if inspect.isfunction(fn) or inspect.ismethod(fn):
-                        result = await fn(**params)
+                        # We support both sync and async actions.
+                        result = fn(**params)
+                        if inspect.iscoroutine(result):
+                            result = await result
+                        else:
+                            log.warning(
+                                f"Synchronous action `{action_name}` has been called."
+                            )
+
                     elif isinstance(fn, Chain):
                         try:
                             chain = fn

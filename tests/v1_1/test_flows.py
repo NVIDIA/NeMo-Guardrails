@@ -9,7 +9,7 @@ from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_1.runtime.flows import (
     ActionStatus,
     State,
-    compute_next_state,
+    run_to_completion,
 )
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
@@ -55,7 +55,7 @@ def test_send_umim_event():
       send StartUtteranceBotAction(script="Hello world")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -76,12 +76,12 @@ def test_match_umim_event():
       send StartUtteranceBotAction(script="Hello world")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -114,7 +114,7 @@ def test_start_action():
     flow main
       start UtteranceBotAction(script="Hello world")
     """
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -135,7 +135,7 @@ def test_start_match_action_on_action_parameter():
       match UtteranceBotAction(script="Hello world").Finished()
       start UtteranceBotAction(script="Done")
     """
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -145,7 +145,7 @@ def test_start_match_action_on_action_parameter():
             }
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceBotActionFinished",
@@ -173,7 +173,7 @@ def test_start_mismatch_action_on_action_parameter():
       match UtteranceBotAction(script="Hello").Finished()
       start UtteranceBotAction(script="Done")
     """
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -183,7 +183,7 @@ def test_start_mismatch_action_on_action_parameter():
             }
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceBotActionFinished",
@@ -206,7 +206,7 @@ def test_start_match_action_on_event_parameter():
       match UtteranceBotAction.Finished(final_script="Hello world")
       start UtteranceBotAction(script="Done")
     """
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -216,7 +216,7 @@ def test_start_match_action_on_event_parameter():
             }
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceBotActionFinished",
@@ -244,7 +244,7 @@ def test_start_mismatch_action_on_event_parameter():
       match UtteranceBotAction.Finished(final_script="Hello")
       start UtteranceBotAction(script="Done")
     """
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -254,7 +254,7 @@ def test_start_mismatch_action_on_event_parameter():
             }
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceBotActionFinished",
@@ -277,7 +277,7 @@ def test_start_match_action_with_reference():
       match $action_ref.Finished()
       start UtteranceBotAction(script="Done")
     """
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -287,7 +287,7 @@ def test_start_match_action_with_reference():
             }
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceBotActionFinished",
@@ -314,7 +314,7 @@ def test_await_action():
       await UtteranceBotAction(script="Hello world")
       start UtteranceBotAction(script="Done")
     """
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -324,7 +324,7 @@ def test_await_action():
             }
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceBotActionFinished",
@@ -352,7 +352,7 @@ def test_implicit_action_state_update():
       start UtteranceBotAction(script="Hi") as $action_ref2
       match $action_ref1.Finished()
     """
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -367,7 +367,7 @@ def test_implicit_action_state_update():
         ],
     )
     action_uid = state.outgoing_events[1]["action_uid"]
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceBotActionFinished",
@@ -391,7 +391,7 @@ def test_start_a_flow():
       match FlowStarted(flow_id="a")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -414,13 +414,54 @@ def test_start_a_flow_compact_notation():
       start a
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello world",
+            }
+        ],
+    )
+
+
+def test_start_match_flow_with_reference():
+    """Test to start and match an UMIM action based on action parameters"""
+
+    content = """
+    flow bot say hello
+      await UtteranceBotAction(script="Hello") as $action_ref
+
+    flow main
+      start bot say hello as $flow_ref
+      match $flow_ref.Finished()
+      start UtteranceBotAction(script="Done")
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
             }
         ],
     )
@@ -441,7 +482,7 @@ def test_await_a_flow():
       start UtteranceBotAction(script="Flow a finished")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -469,7 +510,7 @@ def test_await_a_flow_compact_notation():
       start UtteranceBotAction(script="Flow a finished")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -497,7 +538,7 @@ def test_start_child_flow_two_times():
       await a
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -529,7 +570,7 @@ def test_child_flow_abort():
       match FlowFailed(flow_id="b")
       start UtteranceBotAction(script="Done")
     """
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -561,9 +602,9 @@ def test_conflicting_actions_v_a():
       start UtteranceBotAction(script="Bye")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert state.outgoing_events == []
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -601,9 +642,9 @@ def test_conflicting_actions_v_b():
       start UtteranceBotAction(script="Bye")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert state.outgoing_events == []
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -644,9 +685,9 @@ def test_conflicting_actions_branching_length():
       start UtteranceBotAction(script="Bye")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert state.outgoing_events == []
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -690,9 +731,9 @@ def test_conflicting_actions_reference_sharing():
       match UtteranceUserAction.Finished()
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert state.outgoing_events == []
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -708,7 +749,7 @@ def test_conflicting_actions_reference_sharing():
             }
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceBotActionFinished",
@@ -729,7 +770,7 @@ def test_conflicting_actions_reference_sharing():
             },
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -758,7 +799,7 @@ def test_flow_parameters_action_wrapper():
       await bot say $script="Hi"
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -782,9 +823,9 @@ def test_flow_parameters_event_wrapper():
       start UtteranceBotAction(script="Yes")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert state.outgoing_events == []
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -813,7 +854,7 @@ def test_flow_parameters_positional_parameter():
       await bot say "Hi"
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -836,7 +877,7 @@ def test_flow_parameters_default_parameter():
       await bot say
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -874,9 +915,9 @@ def test_distributed_flow_matching():
       match UtteranceUserAction(final_transcript="wait")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert state.outgoing_events == []
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -908,7 +949,7 @@ def test_activate_flow_mechanism():
       match WaitAction().Finished()
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -918,7 +959,7 @@ def test_activate_flow_mechanism():
             }
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -938,7 +979,7 @@ def test_activate_flow_mechanism():
             },
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -979,7 +1020,7 @@ def test_finish_flow_event():
       match WaitAction().Finished()
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -989,7 +1030,7 @@ def test_finish_flow_event():
             },
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1030,12 +1071,12 @@ def test_match_failure_flow_abort():
       await UtteranceBotAction(script="Yes")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1077,7 +1118,7 @@ def test_abort_flow_propagation_v_a():
       match WaitAction().Finished()
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -1111,12 +1152,12 @@ def test_abort_flow_propagation_v_b():
       match WaitAction().Finished()
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1148,12 +1189,12 @@ def test_while_loop_mechanic():
     """
 
     config = _init_state(content)
-    state = compute_next_state(config, start_main_flow_event)
+    state = run_to_completion(config, start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1175,7 +1216,7 @@ def test_while_loop_mechanic():
     )
 
 
-def test_start_grouping():
+def test_start_and_grouping():
     """"""
 
     content = """
@@ -1189,7 +1230,7 @@ def test_start_grouping():
           and bot say "A"
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -1209,6 +1250,27 @@ def test_start_grouping():
     )
 
 
+def test_start_or_grouping():
+    """"""
+
+    content = """
+    flow bot say $script
+      await UtteranceBotAction(script=$script)
+
+    flow main
+        $number = 0
+        while $number < 10
+          start bot say "Hi"
+            or bot say "Hello"
+            or bot say "Welcome"
+          $number = $number + 1
+        await bot say "Done"
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert len(state.outgoing_events) == 11
+
+
 def test_match_or_grouping():
     """"""
 
@@ -1218,17 +1280,17 @@ def test_match_or_grouping():
 
     flow main
         await user said "A"
-          or UtteranceUserAction().Finished(final_transcript="B")
+          or user said "B"
           or user said "C"
         start UtteranceBotAction(script="Match")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1244,12 +1306,12 @@ def test_match_or_grouping():
             },
         ],
     )
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1265,12 +1327,12 @@ def test_match_or_grouping():
             },
         ],
     )
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1286,6 +1348,102 @@ def test_match_or_grouping():
             },
         ],
     )
+
+
+# TODO: Make this work rather than the one before
+# def test_match_or_grouping_fixed():
+#     """"""
+
+#     content = """
+#     flow user said $transcript
+#       match UtteranceUserAction().Finished(final_transcript=$transcript)
+
+#     flow main
+#         await user said "A"
+#           or UtteranceBotAction(script="B")
+#           or user said "C"
+#         start UtteranceBotAction(script="Match")
+#     """
+
+#     state = compute_next_state(_init_state(content), start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "B",
+#             }
+#         ],
+#     )
+#     state = compute_next_state(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "A",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "Match",
+#             },
+#         ],
+#     )
+#     state = compute_next_state(_init_state(content), start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "B",
+#             }
+#         ],
+#     )
+#     state = compute_next_state(
+#         state,
+#         {
+#             "type": "UtteranceBotActionFinished",
+#             "final_script": "B",
+#             "action_uid": state.outgoing_events[0]["action_uid"],
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "Match",
+#             },
+#         ],
+#     )
+#     state = compute_next_state(_init_state(content), start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "B",
+#             }
+#         ],
+#     )
+#     state = compute_next_state(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "C",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "Match",
+#             },
+#         ],
+#     )
 
 
 def test_match_and_or_grouping():
@@ -1301,12 +1459,12 @@ def test_match_and_or_grouping():
         start UtteranceBotAction(script="Match")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1317,7 +1475,7 @@ def test_match_and_or_grouping():
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1328,7 +1486,7 @@ def test_match_and_or_grouping():
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1345,12 +1503,12 @@ def test_match_and_or_grouping():
         ],
     )
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1361,7 +1519,7 @@ def test_match_and_or_grouping():
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1372,7 +1530,7 @@ def test_match_and_or_grouping():
         state.outgoing_events,
         [],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1407,7 +1565,7 @@ def test_activate_and_grouping():
         match UtteranceUserAction().Finished(final_transcript="end")
     """
 
-    state = compute_next_state(_init_state(content), start_main_flow_event)
+    state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -1421,7 +1579,7 @@ def test_activate_and_grouping():
             },
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1437,7 +1595,7 @@ def test_activate_and_grouping():
             },
         ],
     )
-    state = compute_next_state(
+    state = run_to_completion(
         state,
         {
             "type": "UtteranceUserActionFinished",
@@ -1455,65 +1613,631 @@ def test_activate_and_grouping():
     )
 
 
-# def test_if_branching_mechanic():
-#     """"""
+def test_if_branching_mechanic():
+    """"""
 
-#     content = """
-#     flow main
-#       while $action_ref is None
-#         if $event_ref_1 is None
-#           UtteranceUserAction().Finished(final_transcript="Event1") as $event_ref_1
-#           start UtteranceBotAction(script="Action1")
-#         else if $event_ref_2 is None
-#           UtteranceUserAction().Finished(final_transcript="Event2") as $event_ref_2
-#           start UtteranceBotAction(script="Action2")
-#         else
-#           start UtteranceBotAction(script="ActionElse") as $action_ref
-#     """
+    content = """
+    flow main
+      while $action_ref_3 is None
+        if $event_ref_1 is None
+          start UtteranceBotAction(script="Action1") as $event_ref_1
+        else if $event_ref_2 is None
+          start UtteranceBotAction(script="Action2") as $event_ref_2
+        else
+          start UtteranceBotAction(script="ActionElse") as $action_ref_3
+        start UtteranceBotAction(script="Next")
+    """
 
-#     config = _init_state(content)
-#     state = compute_next_state(config, start_main_flow_event)
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [],
-#     )
-#     state = compute_next_state(
-#         state,
-#         {
-#             "type": "UtteranceUserActionFinished",
-#             "final_transcript": "Event1",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "Action1",
-#             }
-#         ],
-#     )
-#     state = compute_next_state(
-#         state,
-#         {
-#             "type": "UtteranceUserActionFinished",
-#             "final_transcript": "Event2",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "Action2",
-#             },
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "ActionElse",
-#             },
-#         ],
-#     )
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Action1",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Next",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Action2",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Next",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "ActionElse",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Next",
+            },
+        ],
+    )
+
+
+def test_event_reference_member_access():
+    """"""
+
+    content = """
+    flow main
+      match UtteranceUserAction().Finished() as $ref
+      start UtteranceBotAction(script=$ref.arguments.final_transcript)
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi there!",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi there!",
+            }
+        ],
+    )
+
+
+def test_action_reference_member_access():
+    """"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Hello") as $ref
+      start UtteranceBotAction(script=$ref.start_event_arguments.script)
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+        ],
+    )
+
+
+def test_flow_references_member_access():
+    """"""
+
+    content = """
+    flow bot say $text
+      start UtteranceBotAction(script=$text) as $action_ref
+
+    flow main
+      start bot say "Hello" as $flow_ref
+      start UtteranceBotAction(script=$flow_ref.context.action_ref.start_event_arguments.script)
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+        ],
+    )
+
+
+def test_values_in_strings():
+    """"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="Roger") as $ref
+      start UtteranceBotAction(script="Hi {$ref.start_event_arguments.script}!")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Roger",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi Roger!",
+            },
+        ],
+    )
+
+
+def test_flow_return_values():
+    """"""
+
+    content = """
+    flow a
+      return "success"
+
+    flow b
+      return 100
+
+    flow c
+      $result = "failed"
+      return $result
+
+    flow main
+      $result_a = await a
+      $result_b = await b
+      $result_c = await c
+      start UtteranceBotAction(script="{$result_a} {$result_b} {$result_c}")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success 100 failed",
+            },
+        ],
+    )
+
+
+def test_break_continue_statement_a():
+    """"""
+
+    content = """
+    flow main
+      $count = -1
+      while True
+        $count = $count + 1
+        start UtteranceBotAction(script="S:{$count}")
+        if $count < 1
+          $count = $count
+        elif $count < 3
+          continue
+        elif $count == 3
+          break
+        start UtteranceBotAction(script="E:{$count}")
+      start UtteranceBotAction(script="Done")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "S:0",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "E:0",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "S:1",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "S:2",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "S:3",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            },
+        ],
+    )
+
+
+def test_break_continue_statement_b():
+    """"""
+
+    content = """
+    flow main
+      while True
+        start UtteranceBotAction(script="A")
+        while True
+          break
+          start UtteranceBotAction(script="E1")
+        start UtteranceBotAction(script="B")
+        break
+        start UtteranceBotAction(script="E2")
+      start UtteranceBotAction(script="C")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "C",
+            },
+        ],
+    )
+
+
+def test_when_or_core_mechanics():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow main
+      while True
+        when UtteranceUserActionFinished(final_transcript="A")
+          start UtteranceBotAction(script="A")
+        orwhen UtteranceUserAction().Finished(final_transcript="B")
+          start UtteranceBotAction(script="B")
+        orwhen user said "C"
+          start UtteranceBotAction(script="C")
+          break
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "A",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "C",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "C",
+            },
+        ],
+    )
+
+
+def test_when_or_bot_action_mechanics():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow main
+      while True
+        when UtteranceBotAction(script="Happens immediately")
+          start UtteranceBotAction(script="A")
+        orwhen UtteranceUserActionFinished(final_transcript="B")
+          start UtteranceBotAction(script="B")
+          break
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Happens immediately",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Happens immediately",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Happens immediately",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+        ],
+    )
+
+
+def test_when_or_group_mechanics():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow main
+      while True
+        when UtteranceUserActionFinished(final_transcript="A")
+          start UtteranceBotAction(script="A")
+        orwhen (user said "B" and user said "C")
+          start UtteranceBotAction(script="BC")
+        orwhen (user said "D" or user said "E")
+          start UtteranceBotAction(script="DE")
+          break
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "A",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "C",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "BC",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "E",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "DE",
+            },
+        ],
+    )
+
+
+def test_when_or_competing_events_mechanics():
+    """"""
+
+    content = """
+    flow user said something
+      match UtteranceUserAction.Finished()
+
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow main
+      while True
+        when user said "hello"
+          start UtteranceBotAction(script="A")
+        orwhen user said something
+          start UtteranceBotAction(script="B")
+        orwhen user said "hi"
+          start UtteranceBotAction(script="C")
+          break
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "hello",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "something 123",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "C",
+            }
+        ],
+    )
+
+
+def test_abort_flow():
+    """"""
+
+    content = """
+    flow a
+      match UtteranceUserAction.Finished(final_transcript="go")
+      abort
+      start UtteranceBotAction(script="Error")
+
+    flow main
+      start a
+      match FlowFailed(flow_id="a")
+      start UtteranceBotAction(script="Success")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "go",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
 
 
 if __name__ == "__main__":
-    test_activate_and_grouping()
+    test_abort_flow()

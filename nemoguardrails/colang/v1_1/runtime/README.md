@@ -2,6 +2,30 @@
 
 The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 
+## Questions
+
+- process_events alters the passed state, but also returns it, we should clean this up
+
+## Todos
+
+- References should belong to a Spec and not a SpecOp in order to support assigning references in action and flow groups
+- Implement match failing with the `not` keyword, also for internal flow events
+- Abort actions from flows that get aborted
+- Add support to stop a flow (e.g. with `stop $flow_ref` or `send $flow_ref.Stop()`) and the same for actions
+- Implement pause/resume mechanism for activated flows
+- Add support to `abort` a flow to fail it
+- Add support for multiline strings using triple quotes in Colang
+- We need to make sure that local system actions are non-blocking
+- Implement support for starting actions and flows assigned to variables, e.g. `start $flow_x`
+- Logical operators like `and` and `or` not working in if statements
+- Stop all flows that were started in the when-construct cases after one case triggered
+- Fix `send user say "how are you".Start() as $id` parsing
+- Support calling actions with positional arguments
+
+## To Discuss
+
+- Should the action parameters be under a separate key in the event? (currently using a black list to extract the actual action parameters from the `Start...Action` event).
+
 ## Events
 
 The following is the list of standard events:

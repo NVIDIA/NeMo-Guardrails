@@ -49,13 +49,16 @@ class ColangParser:
         # to avoid some issues arising from that is to append a new line at the end
         return self._lark_parser.parse(content + "\n")
 
-    def parse_content(self, content: str, print_tokens=False):
+    def parse_content(self, content: str, print_tokens=False, print_parsing_tree=False):
         if print_tokens:
             tokens = list(self._lark_parser.lex(content))
             for token in tokens:
                 print(token.__repr__())
 
         tree = self.get_parsing_tree(content)
+
+        if print_parsing_tree:
+            print(tree.pretty())
 
         transformer = ColangTransformer(
             source=content, include_source_mapping=self.include_source_mapping

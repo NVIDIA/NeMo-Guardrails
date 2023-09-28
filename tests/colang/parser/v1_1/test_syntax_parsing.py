@@ -32,6 +32,7 @@ tests_root = os.path.join(os.path.dirname(__file__), "../../..")
         "colang/parser/v1_1/inputs/test5.co",
         "colang/parser/v1_1/inputs/test6.co",
         "colang/parser/v1_1/inputs/test7.co",
+        "colang/parser/v1_1/inputs/test8.co",
         "test_configs/example_flows_v_1_1/faq_questions.co",
         "test_configs/example_flows_v_1_1/core_flows.co",
         "test_configs/example_flows_v_1_1/confirmation_question.co",
@@ -45,4 +46,4 @@ def test_parsing_syntax(filename):
         content = file.read()
 
     # We only check that there is no syntax error
-    colang_parser.parse_content(content)
+    colang_parser.parse_content(content, print_parsing_tree=True, print_tokens=True)

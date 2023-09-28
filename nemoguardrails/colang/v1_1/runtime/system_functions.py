@@ -12,32 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from functools import lru_cache
 
-from lark import Lark
-from lark.indenter import PythonIndenter
+from nemoguardrails.colang.v1_1.lang.colang_ast import Spec
 
 
-@lru_cache
-def load_lark_parser(grammar_path: str):
-    """Helper to load a Lark parser.
+def flow(name: str):
+    """Convert a flow name to a FlowConfig/Spec? object."""
 
-    The result is cached so that it's faster in subsequent times.
+    flow_spec = Spec(name=name, spec_type="flow", arguments=[], members=[])
 
-    Args:
-        grammar_path: The path to the .lark file with the grammar.
+    return flow_spec
 
-    Returns:
-        A Lark parser instance.
-    """
-    with open(grammar_path, "r") as f:
-        grammar = f.read()
 
-    return Lark(
-        grammar,
-        start="start",
-        parser="lalr",
-        lexer="basic",
-        postlex=PythonIndenter(),
-        propagate_positions=True,
-    )
+def action(name: str):
+    """Convert an action name to an ActionConfig?."""
+    raise NotImplementedError()
