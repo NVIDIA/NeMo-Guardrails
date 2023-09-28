@@ -153,10 +153,10 @@ class ColangTransformer(Transformer):
         """Processing for `spec_op` tree nodes.
 
         Rule:
-            spec_op: [spec_operator] spec_expr [capture_ref]
-                   | on_var_spec_expr [capture_ref]
+            spec_op: [spec_operator] spec_expr
+                   | on_var_spec_expr
         """
-        if len(children) == 2:
+        if len(children) == 1:
             children = [None] + children
 
         op = children[0] or "await"
@@ -164,9 +164,8 @@ class ColangTransformer(Transformer):
             op = op["_type"].split("_")[0]
 
         spec = children[1]
-        ref = children[2]
 
-        return SpecOp(op=op, spec=spec, ref=ref, _source=self.__source(meta))
+        return SpecOp(op=op, spec=spec, _source=self.__source(meta))
 
     def __parse_classical_arguments(self, arg_elements):
         arguments = {}
@@ -194,8 +193,8 @@ class ColangTransformer(Transformer):
         """Processing for `spec` tree nodes.
 
         Rule:
-            spec: spec_name [classic_arguments | simple_arguments] (spec_member)*
-                | var_name (spec_member)*"""
+            spec: spec_name [classic_arguments | simple_arguments] (spec_member)* [capture_ref]
+                | var_name (spec_member)* [capture_ref]"""
 
         assert len(children) >= 1
         if children[0]["_type"] == "spec_name":
@@ -233,20 +232,19 @@ class ColangTransformer(Transformer):
         members = []
         # Check if there are any members specified
         for child in children:
-            if (
-                not child
-                or not isinstance(child, dict)
-                or child["_type"] != "spec_member"
-            ):
+            if not child:
                 continue
 
-            name = child["elements"][0]
-            arguments = {}
-            if child["elements"][1]:
-                arg_elements = child["elements"][1]["elements"]
-                arguments = self.__parse_classical_arguments(arg_elements)
-            member_spec = Spec(name=name, arguments=arguments)
-            members.append(member_spec)
+            if child["_type"] == "capture_ref":
+                spec.ref = child
+            elif isinstance(child, dict) and child["_type"] == "spec_member":
+                name = child["elements"][0]
+                arguments = {}
+                if child["elements"][1]:
+                    arg_elements = child["elements"][1]["elements"]
+                    arguments = self.__parse_classical_arguments(arg_elements)
+                member_spec = Spec(name=name, arguments=arguments)
+                members.append(member_spec)
 
         if members:
             spec.members = members
@@ -264,7 +262,10 @@ class ColangTransformer(Transformer):
             else:
                 spec.spec_type = "event"
         elif spec.var_name is not None:
-            spec.spec_type = "var"
+            if spec.members:
+                spec.spec_type = "event"
+            else:
+                spec.spec_type = "var"
 
         return spec
 

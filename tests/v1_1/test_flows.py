@@ -1,4 +1,5 @@
 """Test the core flow mechanics"""
+import copy
 import json
 import logging
 import sys
@@ -912,7 +913,7 @@ def test_distributed_flow_matching():
       start b
       start user said "Hi"
       start user said "Hello"
-      match UtteranceUserAction(final_transcript="wait")
+      match UtteranceUserAction.Finished(final_transcript="wait")
     """
 
     state = run_to_completion(_init_state(content), start_main_flow_event)
@@ -1250,6 +1251,79 @@ def test_start_and_grouping():
     )
 
 
+def test_match_and_grouping():
+    """"""
+
+    content = """
+    flow bot say $script
+      await UtteranceBotAction(script=$script)
+
+    flow main
+        start bot say "A" as $ref_a
+          and bot say "B" as $ref_b
+          and UtteranceBotAction(script="C") as $ref_c
+        match $ref_a.Finished()
+          and $ref_b.Finished()
+          and $ref_c.Finished()
+        start bot say "Done"
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    events = copy.deepcopy(state.outgoing_events)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "C",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "A",
+            "action_uid": events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(state.outgoing_events, [])
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "B",
+            "action_uid": events[1]["action_uid"],
+        },
+    )
+    assert is_data_in_events(state.outgoing_events, [])
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "C",
+            "action_uid": events[2]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            },
+        ],
+    )
+
+
 def test_start_or_grouping():
     """"""
 
@@ -1271,7 +1345,7 @@ def test_start_or_grouping():
     assert len(state.outgoing_events) == 11
 
 
-def test_match_or_grouping():
+def test_await_or_grouping():
     """"""
 
     content = """
@@ -1280,7 +1354,7 @@ def test_match_or_grouping():
 
     flow main
         await user said "A"
-          or user said "B"
+          or UtteranceBotAction(script="B")
           or user said "C"
         start UtteranceBotAction(script="Match")
     """
@@ -1288,7 +1362,12 @@ def test_match_or_grouping():
     state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
-        [],
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            }
+        ],
     )
     state = run_to_completion(
         state,
@@ -1309,13 +1388,19 @@ def test_match_or_grouping():
     state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
-        [],
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            }
+        ],
     )
     state = run_to_completion(
         state,
         {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "B",
+            "type": "UtteranceBotActionFinished",
+            "final_script": "B",
+            "action_uid": state.outgoing_events[0]["action_uid"],
         },
     )
     assert is_data_in_events(
@@ -1330,7 +1415,12 @@ def test_match_or_grouping():
     state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
         state.outgoing_events,
-        [],
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            }
+        ],
     )
     state = run_to_completion(
         state,
@@ -1350,103 +1440,7 @@ def test_match_or_grouping():
     )
 
 
-# TODO: Make this work rather than the one before
-# def test_match_or_grouping_fixed():
-#     """"""
-
-#     content = """
-#     flow user said $transcript
-#       match UtteranceUserAction().Finished(final_transcript=$transcript)
-
-#     flow main
-#         await user said "A"
-#           or UtteranceBotAction(script="B")
-#           or user said "C"
-#         start UtteranceBotAction(script="Match")
-#     """
-
-#     state = compute_next_state(_init_state(content), start_main_flow_event)
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "B",
-#             }
-#         ],
-#     )
-#     state = compute_next_state(
-#         state,
-#         {
-#             "type": "UtteranceUserActionFinished",
-#             "final_transcript": "A",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "Match",
-#             },
-#         ],
-#     )
-#     state = compute_next_state(_init_state(content), start_main_flow_event)
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "B",
-#             }
-#         ],
-#     )
-#     state = compute_next_state(
-#         state,
-#         {
-#             "type": "UtteranceBotActionFinished",
-#             "final_script": "B",
-#             "action_uid": state.outgoing_events[0]["action_uid"],
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "Match",
-#             },
-#         ],
-#     )
-#     state = compute_next_state(_init_state(content), start_main_flow_event)
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "B",
-#             }
-#         ],
-#     )
-#     state = compute_next_state(
-#         state,
-#         {
-#             "type": "UtteranceUserActionFinished",
-#             "final_transcript": "C",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "Match",
-#             },
-#         ],
-#     )
-
-
-def test_match_and_or_grouping():
+def test_await_and_or_grouping():
     """"""
 
     content = """
@@ -2240,4 +2234,4 @@ def test_abort_flow():
 
 
 if __name__ == "__main__":
-    test_abort_flow()
+    test_match_and_grouping()
