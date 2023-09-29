@@ -52,16 +52,6 @@ from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 from nemoguardrails.colang.v1_1.runtime.utils import new_readable_uid, new_var_uid
 from nemoguardrails.utils import new_event_dict, new_uid
 
-# from rich.logging import RichHandler  # isort:skip
-
-# FORMAT = "%(message)s"
-# logging.basicConfig(
-#     level=logging.DEBUG,
-#     format=FORMAT,
-#     datefmt="[%X,%f]",
-#     handlers=[RichHandler(markup=True)],
-# )
-
 log = logging.getLogger(__name__)
 
 random_seed = int(time.time())
@@ -1236,6 +1226,96 @@ def convert_to_single_and_element_group(group: dict) -> dict:
     }
 
 
+def normalize_element_groups(group: Union[Spec, dict]) -> dict:
+    """
+    Normalize groups to the disjunctive normal form (DNF),
+    resulting in a single or group that contains multiple and groups.
+    """
+
+    if isinstance(group, Spec):
+        group = {"_type": "spec_and", "elements": [group]}
+
+    if group["_type"] == "spec_or":
+        return flatten_or_group(
+            {
+                "_type": "spec_or",
+                "elements": [
+                    normalize_element_groups(elem)
+                    if isinstance(elem, dict)
+                    else {"_type": "spec_and", "elements": [elem]}
+                    for elem in group["elements"]
+                ],
+            }
+        )
+    elif group["_type"] == "spec_and":
+        results = [{"_type": "spec_and", "elements": []}]
+        for elem in group["elements"]:
+            normalized = (
+                normalize_element_groups(elem)
+                if isinstance(elem, dict)
+                else {
+                    "_type": "spec_or",
+                    "elements": [{"_type": "spec_and", "elements": [elem]}],
+                }
+            )
+
+            # Distribute using the property: A and (B or C) = (A and B) or (A and C)
+            new_results = []
+            for res_elem in results:
+                for norm_elem in normalized["elements"]:
+                    new_elem = {
+                        "_type": "spec_and",
+                        "elements": res_elem["elements"] + norm_elem["elements"],
+                    }
+                    new_results.append(new_elem)
+            results = new_results
+
+        # Remove duplicate elements from groups
+        for idx, and_group in enumerate(results):
+            results[idx] = uniquify_element_group(and_group)
+
+        # TODO: Remove duplicated and groups
+        return flatten_or_group({"_type": "spec_or", "elements": results})
+
+
+def flatten_or_group(group: dict):
+    new_elements = []
+    for elem in group["elements"]:
+        if isinstance(elem, dict) and elem["_type"] == "spec_or":
+            new_elements.extend(elem["elements"])
+        else:
+            new_elements.append(elem)
+    return {"_type": "spec_or", "elements": new_elements}
+
+
+def uniquify_element_group(group: dict) -> dict:
+    """Remove all duplicate elements from group."""
+    unique_elements: Dict[Tuple[int, Spec]] = {}
+    for element in group["elements"]:
+        unique_elements.setdefault(element.hash(), element)
+    new_group = group.copy()
+    new_group["elements"] = [e for e in unique_elements.values()]
+    return new_group
+
+
+def convert_to_single_and_element_group(group: dict) -> dict:
+    """Convert element group into a single 'and' group with unique elements."""
+    unique_elements: Dict[Tuple[int, Spec]] = {}
+    for and_group in group["elements"]:
+        for element in and_group["elements"]:
+            # Makes sure that we add the same element only once
+            unique_elements.update({element.hash(): element})
+    return {
+        "_type": "spec_or",
+        "elements": [
+            {
+                "_type": "spec_and",
+                "elements": [elem for elem in unique_elements.values()],
+            }
+        ],
+    }
+
+
 def _create_ref_ast_dict_helper(ref_name: str) -> dict:
     return {
         "_type": "capture_ref",
@@ -1732,7 +1812,6 @@ def slide(
                     head_position += 1
             else:
                 head_position += 1
-
         elif isinstance(element, ForkHead):
             # We create new heads for
             for idx, label in enumerate(element.labels):
