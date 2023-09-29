@@ -175,6 +175,13 @@ class LLMTaskManager:
 
         return messages
 
+    def _get_messages_text_length(self, messages: List[dict]) -> int:
+        """Return the length of the text in the messages."""
+        text = ""
+        for message in messages:
+            text += message["content"] + "\n"
+        return len(text)
+
     def render_task_prompt(
         self,
         task: Union[str, Task],
@@ -202,16 +209,9 @@ class LLMTaskManager:
                 task_prompt = self._render_string(prompt.content, context=context, events=events)
             return task_prompt
         else:
-            
-            def get_text_from_messages(messages):
-                text = ""
-                for message in messages:
-                    text += message["content"] + "\n"
-                return text
-
             task_prompt = self._render_messages(prompt.messages, context=context, events=events)
-            prompt_text = get_text_from_messages(task_prompt)
-            while len(prompt_text) > prompt.max_length:
+            task_prompt_length = self._get_messages_text_length(task_prompt)
+            while task_prompt_length > prompt.max_length:
                 if not events:
                     raise Exception(
                         f"Prompt exceeds max length of {prompt.max_length} even without history"
@@ -219,7 +219,7 @@ class LLMTaskManager:
                 # Remove events from the beginning of the history until the prompt fits.
                 events.pop(0)
                 task_messages = self._render_messages(prompt.messages, context=context, events=events)
-                prompt_text = get_text_from_messages(task_messages)
+                task_prompt_length = self._get_messages_text_length(task_messages)
             return task_prompt
 
     def parse_task_output(self, task: Task, output: str):
