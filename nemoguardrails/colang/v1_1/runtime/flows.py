@@ -24,23 +24,32 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import (Any, Callable, Deque, Dict, List, Optional, Set, Tuple,
-                    Union)
+from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import (Abort, Assignment,
-                                                        Break, Continue,
-                                                        Element, FlowParamDef,
-                                                        ForkHead, Goto, If,
-                                                        Label, MergeHeads,
-                                                        RandomGoto, Return,
-                                                        Spec, SpecOp,
-                                                        WaitForHeads, When,
-                                                        While)
+from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    Abort,
+    Assignment,
+    Break,
+    Continue,
+    Element,
+    FlowParamDef,
+    ForkHead,
+    Goto,
+    If,
+    Label,
+    MergeHeads,
+    RandomGoto,
+    Return,
+    Spec,
+    SpecOp,
+    WaitForHeads,
+    When,
+    While,
+)
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
-from nemoguardrails.colang.v1_1.runtime.utils import (new_readable_uid,
-                                                      new_var_uid)
+from nemoguardrails.colang.v1_1.runtime.utils import new_readable_uid, new_var_uid
 from nemoguardrails.utils import new_event_dict, new_uid
 
 # from rich.logging import RichHandler  # isort:skip
