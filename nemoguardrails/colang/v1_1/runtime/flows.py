@@ -503,6 +503,10 @@ class State:
     # The next step of the flow-driven system
     outgoing_events: List[dict] = field(default_factory=list)
 
+    # The most recent N events that have been processed. Will be capped at a
+    # reasonable limit e.g. 100. The history is needed when prompting the LLM for example.
+    last_events: List[dict] = field(default_factory=list)
+
     # The comment is extract from the source code
     # next_steps_comment: List[str] = field(default_factory=list)
 
@@ -1440,7 +1444,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
     """
     log.info(f"Process event: {external_event}")
 
-    converted_external_event = ActionEvent.from_umim_event(external_event)
+    if isinstance(external_event, dict):
+        converted_external_event = ActionEvent.from_umim_event(external_event)
+    elif isinstance(external_event, Event):
+        converted_external_event = external_event
 
     # Initialize the new state
     state.internal_events = deque([converted_external_event])
@@ -1458,6 +1465,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
         while state.internal_events:
             event = state.internal_events.popleft()
             log.info(f"Process internal event: {event}")
+
+            # We also record the flow finished events in the history
+            if event.name == "FlowFinished":
+                state.last_events.append({"type": event.name, **event.arguments})
 
             # Handle internal events that have no default matchers in flows yet
             if event.name == InternalEvents.FINISH_FLOW:
@@ -1538,7 +1549,11 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         _create_event_reference(state, flow_state, element, event)
                     )
 
-                if event.name == InternalEvents.START_FLOW:
+                if (
+                    event.name == InternalEvents.START_FLOW
+                    and event.arguments["flow_id"]
+                    == _get_flow_state_from_head(state, head).flow_id
+                ):
                     _start_flow(state, flow_state, event.arguments)
                 # elif event.name == InternalEvents.FINISH_FLOW:
                 #     _finish_flow(new_state, flow_state)
@@ -2066,24 +2081,28 @@ def _compute_event_matching_score(
     assert _is_match_op_element(element), f"Element '{element}' is not a match element!"
 
     ref_event = _get_event_from_element(state, flow_state, element)
+    if not isinstance(ref_event, type(event)):
+        return 0.0
 
     # Compute matching score based on event argument matching
     if event.name == InternalEvents.START_FLOW:
-        for var in event.arguments:
-            if (
-                var in ref_event.arguments
-                and event.arguments[var] != ref_event.arguments[var]
-            ):
-                return 0.0
-
-        return float(
-            ref_event.name == InternalEvents.START_FLOW
-            and ref_event.arguments["flow_id"] == event.arguments["flow_id"]
+        match_score = _compute_arguments_dict_matching_score(
+            event.arguments, ref_event.arguments
         )
+
+        if "flow_id" not in ref_event.arguments:
+            match_score *= 0.9
+            return match_score
+        else:
+            return float(
+                ref_event.name == InternalEvents.START_FLOW
+                and ref_event.arguments["flow_id"] == event.arguments["flow_id"]
+            )
     elif event.name in InternalEvents.ALL and ref_event.name in InternalEvents.ALL:
         if (
-            ref_event.arguments["flow_id"]
-            == state.flow_states[event.arguments["source_flow_instance_uid"]].flow_id
+            "flow_id" not in ref_event.arguments
+            or "flow_id" not in event.arguments
+            or ref_event.arguments["flow_id"] == event.arguments["flow_id"]
         ):
             # TODO: Check if this is needed
             # if isinstance(event, FlowEvent) and event.flow is not None:
@@ -2255,10 +2274,7 @@ def _get_event_from_element(
             return action_event
     else:
         # Case 1)
-        if (
-            element_spec.name in state.flow_configs
-            or element_spec.name in InternalEvents.ALL
-        ):
+        if element_spec.name.islower() or element_spec.name in InternalEvents.ALL:
             # Flow event
             event_arguments = _evaluate_arguments(
                 element_spec.arguments, flow_state.context

@@ -27,6 +27,7 @@ from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v1_1.runtime.flows import (
     FlowConfig,
+    FlowEvent,
     State,
     add_new_flow_instance,
     create_flow_instance,
@@ -124,7 +125,12 @@ class RuntimeV1_1(Runtime):
         )
 
     async def _process_start_action(
-        self, action_name: str, action_params: dict, context: dict, events: List[dict]
+        self,
+        action_name: str,
+        action_params: dict,
+        context: dict,
+        events: List[dict],
+        state: "State",
     ) -> Tuple[Any, List[dict], dict]:
         """Starts the specified action, waits for it to finish and posts back the result."""
 
@@ -191,6 +197,9 @@ class RuntimeV1_1(Runtime):
 
                 if "llm_task_manager" in parameters:
                     kwargs["llm_task_manager"] = self.llm_task_manager
+
+                if "state" in parameters:
+                    kwargs["state"] = state
 
                 # Add any additional registered parameters
                 for k, v in self.registered_action_params.items():
@@ -308,13 +317,8 @@ class RuntimeV1_1(Runtime):
         if state is None:
             state = State(context={}, flow_states={}, flow_configs=self.flow_configs)
             state.initialize()
-            input_events = [
-                {
-                    "type": "StartFlow",
-                    "flow_id": "main",
-                },
-            ]
-            input_events.extend(events)
+            input_event = FlowEvent(name="StartFlow", arguments={"flow_id": "main"})
+            input_events.insert(0, input_event)
             log.info("Start of story!")
         else:
             if isinstance(state, dict):
@@ -329,6 +333,9 @@ class RuntimeV1_1(Runtime):
             for event in input_events:
                 log.info(f"Processing event {event}")
 
+                # Record the event that we're about to process
+                state.last_events.append(event)
+
                 run_to_completion(state, event)
 
                 # If we have context updates after this event, we first add that.
@@ -338,6 +345,9 @@ class RuntimeV1_1(Runtime):
                     )
 
                 for out_event in state.outgoing_events:
+                    # We also record the out events in the recent history.
+                    state.last_events.append(out_event)
+
                     # We need to check if we need to run a locally registered action
                     start_action_match = re.match(r"Start(.*Action)", out_event["type"])
                     if start_action_match:
@@ -349,7 +359,10 @@ class RuntimeV1_1(Runtime):
                             # Start the local action
                             local_action = asyncio.create_task(
                                 self._run_action(
-                                    action_name, start_action_event=out_event
+                                    action_name,
+                                    start_action_event=out_event,
+                                    events_history=state.last_events,
+                                    state=state,
                                 )
                             )
                             local_running_actions.append(local_action)
@@ -390,10 +403,26 @@ class RuntimeV1_1(Runtime):
                     input_events.append(action_finished_event)
 
         # TODO: serialize the state to dict
+
+        # We cap the recent history to the last 100
+        state.last_events = state.last_events[-100:]
+
         return output_events, state
 
-    async def _run_action(self, action_name: str, start_action_event: dict) -> dict:
-        """Runs the locally registered action."""
+    async def _run_action(
+        self,
+        action_name: str,
+        start_action_event: dict,
+        events_history: List[dict],
+        state: "State",
+    ) -> dict:
+        """Runs the locally registered action.
+
+        Args
+            action_name: The name of the action to be executed.
+            start_action_event: The event that triggered the action.
+            events_history: The recent history of events that led to the action being triggerd.
+        """
 
         # NOTE: To extract the actual parameters that should be passed to the local action,
         # we ignore all the keys from "an empty event" of the same type.
@@ -403,7 +432,11 @@ class RuntimeV1_1(Runtime):
         }
 
         return_value, new_events, context_updates = await self._process_start_action(
-            action_name, action_params=action_params, context={}, events=[]
+            action_name,
+            action_params=action_params,
+            context={},
+            events=events_history,
+            state=state,
         )
         return {
             "action_name": action_name,

@@ -14,6 +14,9 @@ flow bot say $text
 
 # Custom
 
+flow bot smile
+  bot say "I'm smiling."
+
 flow user express greeting
   user said "hi"
     or user said "hello"
@@ -27,50 +30,69 @@ flow bot express greeting
 flow bot comment unsure how to respond
   bot say "I'm not sure how to respond."
 
-# This needs to be generated dynamically
-#flow user instruction action
-#  bot say "Why don't scientists trust atoms? Because they make up everything!"
-#  bot say "I'm smiling."
-
 flow greeting
   user express greeting
   bot express greeting
 
+flow flows fallback
+  match StartFlow() as $event
+
+  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
+
+  if not $exists
+      bot say "The event is: {$event}"
+      bot say "I have a new flow"
+      $flow_source = 'flow bot say a joke\n  bot say "This is a joke."'
+      await AddFlowsAction(config=$flow_source)
+      send StartFlow(flow_id="bot say a joke")
+
 flow user unknown intent
   user said "xyz"
 
-
 flow fallback
-  # TODO: check why this is not working
-  #   (Attribute 'event' does not exist in expression 'var_flow_ref.event.arguments.final_transcript')
-  # user says something as $flow_ref
-  # $user_message = $flow_ref.event.arguments.final_transcript
+  user says something
+  $intent = await GenerateUserIntentAction
+  $exists = await CheckIfFlowExistsAction(flow_id=$intent)
 
-  match UtteranceUserAction().Finished() as $event_ref
-  $user_message = $event_ref.arguments.final_transcript
-  $intent = await GenerateUserIntentAction(user_message=$user_message)
-  send FinishFlow(flow_id=$intent)
+  if $exists
+    send FinishFlow(flow_id=$intent)
+  else
+    bot say "This is a new intent {$intent}."
 
 flow unknown intent
   user unknown intent
   bot comment unsure how to respond
 
+#flow do $instructions
+#  $flow_source = await GenerateFlowAction(instructions=$instructions, flow_name="user instruction action")
+#  await AddFlowsAction(config=$flow_source)
+#  await user instruction action
+
 flow do $instructions
-  $flow_source = await GenerateFlowAction(instructions=$instructions, flow_name="user instruction action")
-  await AddFlowsAction(config=$flow_source)
-  await user instruction action
+  $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
+  await AddFlowsAction(config=$flow_info.body)
+  send StartFlow(flow_id=$flow_info['name'])
+  match FlowStarted(flow_id=$flow_info['name'])
+  match FlowFinished(flow_id=$flow_info['name'])
 
 flow custom instructions
   user provide custom instructions
-
-  # Extract this in a hardcoded way, for testing.
-  $instructions = "I want you to tell a joke and smile."
+  $instructions = await GetLastUserMessageAction()
 
   do $instructions
+
+
 
 flow main
   activate greeting
   activate custom instructions
   activate unknown intent
   activate fallback
+  activate flows fallback
   wait
+
+
+# This needs to be generated dynamically
+#flow user instruction action
+#  bot say "Why don't scientists trust atoms? Because they make up everything!"
+#  bot say "I'm smiling."

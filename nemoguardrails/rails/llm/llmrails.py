@@ -32,6 +32,7 @@ from nemoguardrails.actions.llm.utils import get_colang_history
 from nemoguardrails.actions.math import wolfram_alpha_request
 from nemoguardrails.actions.output_moderation import output_moderation
 from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
+from nemoguardrails.actions.v1_1.generation import LLMGenerationActionsV1dot1
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
@@ -145,7 +146,12 @@ class LLMRails:
             self.runtime.register_action(action, name)
 
         # Next, we initialize the LLM Generate actions and register them.
-        self.llm_generation_actions = LLMGenerationActions(
+        llm_generation_actions_class = (
+            LLMGenerationActions
+            if config.colang_version == "1.0"
+            else LLMGenerationActionsV1dot1
+        )
+        self.llm_generation_actions = llm_generation_actions_class(
             config=config,
             llm=self.llm,
             llm_task_manager=self.runtime.llm_task_manager,
@@ -155,14 +161,6 @@ class LLMRails:
 
         # If there's already an action registered, we don't override.
         self.runtime.register_actions(self.llm_generation_actions, override=False)
-
-        # Quick hack for colang 1.1
-        if self.config.colang_version == "1.1":
-            # self.runtime.register_action(
-            #     self.llm_generation_actions.generate_user_intent,
-            #     "GenerateUserIntentAction",
-            # )
-            pass
 
         # Next, we initialize the Knowledge Base
         if check_sync_call_from_async_loop():

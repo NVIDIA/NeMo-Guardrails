@@ -38,10 +38,18 @@ def test_2():
 
     chat = TestChat(
         config,
-        llm_completions=[],
+        llm_completions=[
+            # The intent call
+            "user provide custom instructions",
+            # The flow generation call
+            """flow tell a joke
+                  bot say "Why don't scientists trust atoms? Because they make up everything!"
+                  bot say "I'm smiling."
+        """,
+        ],
     )
 
-    chat >> "do something"
+    chat >> "do something: tell me a joke"
     (
         chat << "Why don't scientists trust atoms?"
         " Because they make up everything!\n"
