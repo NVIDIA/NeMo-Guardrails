@@ -51,6 +51,13 @@ def verbose_v1_parser(s: str):
         express greeting
       bot express greeting
         "Hi"
+        
+    Args:
+        s (str): The input text in verbose format.
+
+    Returns:
+        str: The parsed text in the concise format.
+
     """
     lines = s.split("\n")
 

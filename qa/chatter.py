@@ -22,7 +22,20 @@ EXAMPLES_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), "exam
 
 
 def create_chatter(name, configname, logger):
-    """Create a NeMo Guardrails chatter specified with the configuration"""
+    """Create a NeMo Guardrails chatter specified with the configuration.
+
+    Args:
+        name (str): The name of the chatter.
+        configname (str): The name of the configuration.
+        logger: The logger object for logging information.
+
+    Returns:
+        subprocess.Popen or None: A subprocess representing the chatter or None if creation fails.
+
+    Note:
+        This function creates a NeMo Guardrails chatter process based on the specified name and configuration.
+        It logs information about the configuration and any errors encountered during the process creation.
+    """
     chatter = None
     cwd = os.path.join(EXAMPLES_FOLDER, name)
     config = os.path.join(EXAMPLES_FOLDER, configname)
@@ -51,7 +64,14 @@ def create_chatter(name, configname, logger):
 
 
 def close_chatter(chatter):
-    """Close the given chatter"""
+    """Close the given chatter.
+
+    Args:
+        chatter (subprocess.Popen or None): The chatter subprocess to be closed or None.
+
+    Note:
+        This function closes the specified chatter subprocess if it is not None.
+    """
     if chatter is not None:
         chatter.communicate()
         chatter.wait()

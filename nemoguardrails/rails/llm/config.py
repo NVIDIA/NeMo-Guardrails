@@ -285,16 +285,26 @@ class RailsConfig(BaseModel):
     ):
         """Loads a configuration from a given path.
 
-        Supports loading a from a single file, or from a directory.
+        Supports loading a from a single file, or from a directory.        
 
-        Also used for testing Guardrails apps, in which case the test_set is
-        randomly created from the intent samples in the config files.
-        In this situation test_set_percentage should be larger than 0.
+        This method supports loading from a single file or from a directory.
+        It can also be used for testing Guardrails apps, in which case the test_set
+        is randomly created from the intent samples in the config files.
+        If `test_set_percentage` is larger than 0, it will create a test set.
 
         If we want to limit the number of samples for an intent, set the
         max_samples_per_intent to a positive number. It is useful for testing apps, but
         also for limiting the number of samples for an intent in some scenarios.
         The chosen samples are selected randomly for each intent.
+
+        Args:
+            config_path (str): The path to the configuration file or directory.
+            test_set_percentage (Optional[float]): The percentage of samples to include in the test set (0 to 1).
+            test_set (Optional[Dict[str, List]]): A dictionary to store the test set samples.
+            max_samples_per_intent (Optional[int]): The maximum number of samples to include per intent.
+
+        Returns:
+            RailsConfig: A parsed RailsConfig object representing the loaded configuration.
         """
         # If the config path is a file, we load the YAML content.
         # Otherwise, if it's a folder, we iterate through all files.
@@ -371,7 +381,18 @@ class RailsConfig(BaseModel):
     def from_content(
         colang_content: Optional[str] = None, yaml_content: Optional[str] = None
     ):
-        """Loads a configuration from the provided colang/YAML content."""
+        """
+        Loads a configuration from the provided colang or YAML content.
+
+        This method allows you to load a configuration from either colang (conversation language) content or YAML content. You can provide either one or both.
+
+        Args:
+            colang_content (Optional[str]): The colang content to parse.
+            yaml_content (Optional[str]): The YAML content to parse.
+
+        Returns:
+            RailsConfig: A parsed RailsConfig object representing the loaded configuration.
+        """
         raw_config = {}
 
         if colang_content:
@@ -390,7 +411,17 @@ class RailsConfig(BaseModel):
 
     @classmethod
     def parse_object(cls, obj):
-        """Parses a configuration object from a given dictionary."""
+        """
+        Parses a configuration object from a given dictionary.
+
+        This method parses a configuration object from a dictionary representation. It processes flows, converting them from CoYML to CIL if necessary.
+
+        Args:
+            obj (dict): The dictionary representing the configuration object.
+
+        Returns:
+            RailsConfig: A parsed RailsConfig object representing the loaded configuration.
+        """
         # If we have flows, we need to process them further from CoYML to CIL.
         for flow_data in obj.get("flows", []):
             # If the first element in the flow does not have a "_type", we need to convert
