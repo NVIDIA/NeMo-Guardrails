@@ -60,11 +60,15 @@ flow bot respond $text
 # Bot action flows
 # -----------------------------------
 
-flow bot greet
+flow bot express greeting
   bot express "Hi there!"
     or bot express "Welcome!"
     or bot express "Hello!"
     or bot express "Hi!"
+    or bot express "hi"
+
+flow bot inform about service
+  bot inform "You can ask or instruct me whatever you want and I will do it!"
 
 flow bot inform about service
   bot inform "You can ask or instruct me whatever you want and I will do it!"
@@ -73,18 +77,15 @@ flow bot inform about service
 # User action flows
 # -----------------------------------
 
-flow user greeted
+flow user expressed greeted
   user said "Hi there!"
     or user said "Welcome!"
     or user said "Hello!"
     or user said "Hi!"
 
-flow bot inform about service
-  bot inform "You can ask or instruct me whatever you want and I will do it!"
-
 flow user provide custom instructions
   user said "do something" as $user_said_flow_ref
-  $instruction = $user_said_flow_ref.event.arguments.final_transcript
+  $instruction = $user_said_flow_ref.context.event.arguments.final_transcript
 
 # ----------------------------------
 # Helper flows
@@ -108,13 +109,17 @@ flow do $instructions
 
 flow custom instruction
   user provide custom instructions as $custom_instructions_ref
-  do $custom_instructions_ref.instruction
+  do $custom_instructions_ref.context.instruction
 
 # ----------------------------------
 # Main demo story
 # -----------------------------------
+flow greeting
+  user expressed greeted
+  bot express greeting
 
 flow main
+  activate greeting
   activate custom instruction
   bot greet
   user greeted
