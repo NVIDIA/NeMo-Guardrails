@@ -227,6 +227,24 @@ class LLMRails:
     def _get_embeddings_search_provider_instance(
         self, esp_config: Optional[EmbeddingSearchProvider] = None
     ) -> EmbeddingsIndex:
+        """Create and return an instance of an embeddings search provider.
+
+        Args:
+            esp_config (Optional[EmbeddingSearchProvider]): An optional configuration for
+                the embeddings search provider. If not provided, a default configuration
+                will be used.
+
+        Returns:
+            EmbeddingsIndex: An instance of an embeddings search provider.
+
+        Raises:
+            Exception: If the specified embeddings search provider name is not recognized.
+
+        Note:
+            This method is responsible for dynamically creating and configuring embeddings
+            search providers based on the provided configuration. It supports both default
+            and custom providers.
+        """
         if esp_config is None:
             esp_config = EmbeddingSearchProvider()
 
@@ -324,7 +342,8 @@ class LLMRails:
         Returns:
             The completion (when a prompt is provided) or the next message.
 
-        System messages are not yet supported."""
+        System messages are not yet supported.
+        """
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
             new_message = await self.generate_async(
@@ -377,7 +396,24 @@ class LLMRails:
     def generate(
         self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None
     ):
-        """Synchronous version of generate_async."""
+        """Generate a response synchronously based on the provided prompt and messages.
+
+        Args:
+            prompt (Optional[str]): The initial prompt to start the conversation.
+            messages (Optional[List[dict]]): A list of messages to include in the conversation.
+
+        Returns:
+            List[dict]: The generated response messages as a list of dictionaries.
+
+        Raises:
+            RuntimeError: If this synchronous method is used within an asynchronous context.
+
+        Note:
+            This method provides a synchronous version of `generate_async`. It generates a
+            response based on the input prompt and messages. If `prompt` is provided, it
+            starts the conversation with the user's prompt. If `messages` are provided, they
+            are treated as preceding messages in the conversation.
+        """
 
         if check_sync_call_from_async_loop():
             raise RuntimeError(
@@ -424,7 +460,22 @@ class LLMRails:
         return new_events
 
     def generate_events(self, events: List[dict]) -> List[dict]:
-        """Synchronous version of `LLMRails.generate_events_async`."""
+        """Generate the next events asynchronously based on the provided history.
+
+        Synchronous version of `LLMRails.generate_events_async`
+
+        Args:
+            events (List[dict]): The history of events to be used to generate the next events.
+
+        Returns:
+            List[dict]: The newly generated events as a list of dictionaries.
+
+        Note:
+            This method generates the next events in a conversation based on the provided
+            history of events. It takes a list of dictionaries as input, where each
+            dictionary represents an event in the conversation. The newly generated events
+            are returned as a list of dictionaries.
+        """
 
         if check_sync_call_from_async_loop():
             raise RuntimeError(
@@ -464,8 +515,12 @@ class LLMRails:
         """Register a new embedding search provider.
 
         Args:
-            name: The name of the embedding search provider that will be used.
-            cls: The class that will be used to generate and search embedding
+            name (str): The name of the embedding search provider.
+            cls (Type[EmbeddingsIndex]): The class that will be used to generate and search embeddings.
+
+        Note:
+            This method allows you to register a new embedding search provider with a specified name
+            and the corresponding class that will handle the generation and search of embeddings.
         """
 
         self.embedding_search_providers[name] = cls

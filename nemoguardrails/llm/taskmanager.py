@@ -42,8 +42,22 @@ from nemoguardrails.rails.llm.config import MessageTemplate, RailsConfig
 
 
 class LLMTaskManager:
-    """Interface for interacting with an LLM in a task-oriented way."""
+    """
+    Interface for interacting with an Language Model (LLM) in a task-oriented way.
 
+    This class allows you to manage tasks with a language model in a task-oriented manner.
+    It provides methods for rendering prompts, parsing outputs, and managing task-specific context.
+
+    Args:
+        config (RailsConfig): The configuration object containing instructions and sample conversations.
+
+    Attributes:
+        config (RailsConfig): The configuration object containing instructions and sample conversations.
+        env (Environment): The Jinja2 environment for rendering templates.
+        output_parsers (dict): A dictionary mapping output parser names to their respective functions.
+        prompt_context (dict): A dictionary to hold additional variables for the prompt context.
+
+    """
     def __init__(self, config: RailsConfig):
         # Save the config as we need access to instructions and sample conversations.
         self.config = config
@@ -205,10 +219,19 @@ class LLMTaskManager:
             )
 
     def parse_task_output(self, task: Task, output: str):
-        """Parses the output for the provided tasks.
+        """
+        Parses the output for the provided tasks.
 
         If an output parser is associated with the prompt, it will be used.
         Otherwise, the output is returned as is.
+
+        Args:
+            task (Task): The name of the task.
+            output (str): The output to be parsed.
+
+        Returns:
+            Any: The parsed output.
+
         """
         prompt = get_prompt(self.config, task)
 
@@ -224,18 +247,35 @@ class LLMTaskManager:
             return output
 
     def register_filter(self, filter_fn: callable, name: Optional[str] = None):
-        """Register a custom filter for the rails configuration."""
+        """
+        Register a custom filter for the Rails configuration.
+
+        Args:
+            filter_fn (callable): The filter function to register.
+            name (Optional[str]): The name to use for the filter. If not provided, the function name is used.
+
+        """
         name = name or filter_fn.__name__
         self.env.filters[name] = filter_fn
 
     def register_output_parser(self, output_parser: callable, name: str):
-        """Register a custom output parser for the rails configuration."""
+        """
+        Register a custom output parser for the Rails configuration.
+
+        Args:
+            output_parser (callable): The output parser function to register.
+            name (str): The name to use for the output parser.
+
+        """
         self.output_parsers[name] = output_parser
 
     def register_prompt_context(self, name: str, value_or_fn: Any):
-        """Register a value to be included in the prompt context.
+        """
+        Register a value to be included in the prompt context.
 
-        :name: The name of the variable or function that will be used.
-        :value_or_fn: The value or function that will be used to generate the value.
+        Args:
+            name (str): The name of the variable or function that will be used.
+            value_or_fn (Any): The value or function to generate the value.
+
         """
         self.prompt_context[name] = value_or_fn

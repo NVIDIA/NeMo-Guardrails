@@ -26,8 +26,16 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def _load_prompts() -> List[TaskPrompt]:
-    """Load the predefined prompts from the `prompts` directory."""
+    """
+    Load the predefined prompts from the `prompts` directory.
 
+    This function loads predefined prompts from the `prompts` directory, parses YAML files,
+    and returns a list of `TaskPrompt` objects.
+
+    Returns:
+        List[TaskPrompt]: A list of TaskPrompt objects representing the loaded prompts.
+
+    """
     # List of directory containing prompts
     prompts_dirs = [os.path.join(CURRENT_DIR, "prompts")]
 
@@ -54,10 +62,28 @@ _prompts = _load_prompts()
 
 
 def _get_prompt(task_name: str, model: str, prompts: List) -> TaskPrompt:
-    """Return the prompt for the given task.
+    """
 
     We intentionally update the matching model at equal score, to take the last one,
     basically allowing to override a prompt for a specific model.
+    
+    Return the prompt for the given task and model.
+
+    This function searches for a matching prompt based on the provided task name and model.
+    It calculates a score for each prompt based on the matching criteria and returns the
+    most suitable prompt.
+
+    Args:
+        task_name (str): The name of the task.
+        model (str): The name of the model.
+        prompts (List): A list of TaskPrompt objects to search within.
+
+    Returns:
+        TaskPrompt: The matching TaskPrompt object for the given task and model.
+
+    Raises:
+        ValueError: If no matching prompt is found.
+
     """
     matching_prompt = None
     matching_score = 0
