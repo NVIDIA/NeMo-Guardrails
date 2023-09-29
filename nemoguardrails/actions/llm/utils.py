@@ -22,6 +22,7 @@ from langchain.prompts.chat import ChatPromptValue
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import Flow
+from nemoguardrails.colang.v1_1.runtime.flows import FlowEvent
 from nemoguardrails.logging.callbacks import logging_callbacks
 
 
@@ -76,58 +77,118 @@ def get_colang_history(
     if not events:
         return history
 
-    # We compute the index of the last bot message. We need it so that we include
-    # the bot message instruction only for the last one.
-    last_bot_intent_idx = len(events) - 1
-    while last_bot_intent_idx >= 0:
-        if events[last_bot_intent_idx]["type"] == "BotIntent":
-            break
-        last_bot_intent_idx -= 1
+    # We try to automatically detect if we have a Colang 1.0 or a 1.1 history
+    colang_version = "1.0"
+    for event in events:
+        if isinstance(event, FlowEvent):
+            event = {"type": event.name, **event.arguments}
 
-    for idx, event in enumerate(events):
-        if event["type"] == "UtteranceUserActionFinished" and include_texts:
-            history += f'user "{event["final_transcript"]}"\n'
-        elif event["type"] == "UserIntent":
-            if include_texts:
-                history += f'  {event["intent"]}\n'
-            else:
-                history += f'user {event["intent"]}\n'
-        elif event["type"] == "BotIntent":
-            # If we have instructions, we add them before the bot message.
-            # But we only do that for the last bot message.
-            if "instructions" in event and idx == last_bot_intent_idx:
-                history += f"# {event['instructions']}\n"
-            history += f'bot {event["intent"]}\n'
-        elif event["type"] == "StartUtteranceBotAction" and include_texts:
-            history += f'  "{event["script"]}"\n'
-        # We skip system actions from this log
-        elif event["type"] == "StartInternalSystemAction" and not event.get(
-            "is_system_action"
-        ):
-            if (
-                remove_retrieval_events
-                and event["action_name"] == "retrieve_relevant_chunks"
-            ):
-                continue
-            history += f'execute {event["action_name"]}\n'
-        elif event["type"] == "InternalSystemActionFinished" and not event.get(
-            "is_system_action"
-        ):
-            if (
-                remove_retrieval_events
-                and event["action_name"] == "retrieve_relevant_chunks"
-            ):
-                continue
+        if event["type"] == "FlowFinished":
+            colang_version = "1.1"
 
-            # We make sure the return value is a string with no new lines
-            return_value = str(event["return_value"]).replace("\n", " ")
-            history += f"# The result was {return_value}\n"
-        elif event["type"] == "mask_prev_user_message":
-            utterance_to_replace = get_last_user_utterance(events[:idx])
-            # We replace the last user utterance that led to jailbreak rail trigger with a placeholder text
-            split_history = history.rsplit(utterance_to_replace, 1)
-            placeholder_text = "<<<This text is hidden because the assistant should not talk about this.>>>"
-            history = placeholder_text.join(split_history)
+    if colang_version == "1.0":
+        # We compute the index of the last bot message. We need it so that we include
+        # the bot message instruction only for the last one.
+        last_bot_intent_idx = len(events) - 1
+        while last_bot_intent_idx >= 0:
+            if events[last_bot_intent_idx]["type"] == "BotIntent":
+                break
+            last_bot_intent_idx -= 1
+
+        for idx, event in enumerate(events):
+            if event["type"] == "UtteranceUserActionFinished" and include_texts:
+                history += f'user "{event["final_transcript"]}"\n'
+            elif event["type"] == "UserIntent":
+                if include_texts:
+                    history += f'  {event["intent"]}\n'
+                else:
+                    history += f'user {event["intent"]}\n'
+            elif event["type"] == "BotIntent":
+                # If we have instructions, we add them before the bot message.
+                # But we only do that for the last bot message.
+                if "instructions" in event and idx == last_bot_intent_idx:
+                    history += f"# {event['instructions']}\n"
+                history += f'bot {event["intent"]}\n'
+            elif event["type"] == "StartUtteranceBotAction" and include_texts:
+                history += f'  "{event["script"]}"\n'
+            # We skip system actions from this log
+            elif event["type"] == "StartInternalSystemAction" and not event.get(
+                "is_system_action"
+            ):
+                if (
+                    remove_retrieval_events
+                    and event["action_name"] == "retrieve_relevant_chunks"
+                ):
+                    continue
+                history += f'execute {event["action_name"]}\n'
+            elif event["type"] == "InternalSystemActionFinished" and not event.get(
+                "is_system_action"
+            ):
+                if (
+                    remove_retrieval_events
+                    and event["action_name"] == "retrieve_relevant_chunks"
+                ):
+                    continue
+
+                # We make sure the return value is a string with no new lines
+                return_value = str(event["return_value"]).replace("\n", " ")
+                history += f"# The result was {return_value}\n"
+            elif event["type"] == "mask_prev_user_message":
+                utterance_to_replace = get_last_user_utterance(events[:idx])
+                # We replace the last user utterance that led to jailbreak rail trigger with a placeholder text
+                split_history = history.rsplit(utterance_to_replace, 1)
+                placeholder_text = "<<<This text is hidden because the assistant should not talk about this.>>>"
+                history = placeholder_text.join(split_history)
+
+    else:
+        history = []
+
+        for idx, event in enumerate(events):
+            if isinstance(event, FlowEvent):
+                event = {"type": event.name, **event.arguments}
+
+            if event["type"] == "FlowFinished":
+                flow_id = event["flow_id"]
+                if flow_id.startswith("bot "):
+                    if flow_id == "bot say":
+                        history.append(f"bot say \"{event['text']}\"")
+                    else:
+                        history.append(f"{flow_id}")
+                elif flow_id.startswith("user "):
+                    if flow_id == "user says something":
+                        continue
+                    elif flow_id.startswith("user said"):
+                        history.append(f"user said \"{event['text']}\"")
+                    else:
+                        history.append(f"{flow_id}")
+
+            elif event["type"] == "UtteranceUserActionFinished":
+                history.append(f'user said "{event["final_transcript"]}"')
+
+        # We also want to switch the "bot say" with "bot xxx" events
+        # and remove duplicate consecutive lines.
+        final_history = []
+        i = 0
+        while i < len(history):
+            if i < len(history) - 1:
+                # Skip duplicate line
+                if history[i] == history[i + 1]:
+                    i += 1
+                    continue
+
+                # if we have a "bot say" followed by a "bot xxx", we reverse
+                if history[i].startswith("bot say") and history[i + 1].startswith(
+                    "bot "
+                ):
+                    final_history.extend([history[i + 1], history[i]])
+                    i += 2
+                    continue
+
+            final_history.append(history[i])
+            i += 1
+
+        history = "\n".join(final_history)
+
     return history
 
 

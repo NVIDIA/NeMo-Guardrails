@@ -503,6 +503,10 @@ class State:
     # The next step of the flow-driven system
     outgoing_events: List[dict] = field(default_factory=list)
 
+    # The most recent N events that have been processed. Will be capped at a
+    # reasonable limit e.g. 100. The history is needed when prompting the LLM for example.
+    last_events: List[dict] = field(default_factory=list)
+
     # The comment is extract from the source code
     # next_steps_comment: List[str] = field(default_factory=list)
 
@@ -1371,6 +1375,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
         while state.internal_events:
             event = state.internal_events.popleft()
             log.info(f"Process internal event: {event}")
+
+            # We also record the flow finished events in the history
+            if event.name == "FlowFinished":
+                state.last_events.append({"type": event.name, **event.arguments})
 
             # Handle internal events that have no default matchers in flows yet
             if event.name == InternalEvents.FINISH_FLOW:
