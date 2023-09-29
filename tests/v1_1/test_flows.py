@@ -7,8 +7,8 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, State,
-                                                      run_to_completion)
+from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, FlowEvent,
+                                                      State, run_to_completion)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -20,10 +20,7 @@ logging.basicConfig(
     handlers=[RichHandler(markup=True)],
 )
 
-start_main_flow_event = {
-    "type": "StartFlow",
-    "flow_id": "main",
-}
+start_main_flow_event = FlowEvent(name="StartFlow", arguments={"flow_id": "main"})
 
 
 def _init_state(colang_content) -> State:
@@ -2271,5 +2268,37 @@ def test_multi_flow_level_member_access():
     )
 
 
+def test_FlowStart_event_fallback():
+    """"""
+
+    content = """
+    flow a
+      match StartFlow() as $ref
+      start UtteranceBotAction(script="Success")
+      send FlowStarted(flow_id=$ref.arguments.flow_id,param="test")
+
+    flow main
+      start a
+      start unknown fl $param="test"
+      start UtteranceBotAction(script="End")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "End",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_multi_flow_level_member_access()
+    test_await_and_or_grouping()

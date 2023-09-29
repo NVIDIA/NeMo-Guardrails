@@ -27,6 +27,7 @@ from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v1_1.runtime.flows import (
     FlowConfig,
+    FlowEvent,
     State,
     add_new_flow_instance,
     create_flow_instance,
@@ -308,13 +309,8 @@ class RuntimeV1_1(Runtime):
         if state is None:
             state = State(context={}, flow_states={}, flow_configs=self.flow_configs)
             state.initialize()
-            input_events = [
-                {
-                    "type": "StartFlow",
-                    "flow_id": "main",
-                },
-            ]
-            input_events.extend(events)
+            input_event = [FlowEvent(name="StartFlow", arguments={"flow_id": "main"})]
+            input_events.extend(input_event)
             log.info("Start of story!")
         else:
             if isinstance(state, dict):

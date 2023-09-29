@@ -24,32 +24,23 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
+from typing import (Any, Callable, Deque, Dict, List, Optional, Set, Tuple,
+                    Union)
 
 from dataclasses_json import dataclass_json
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import (
-    Abort,
-    Assignment,
-    Break,
-    Continue,
-    Element,
-    FlowParamDef,
-    ForkHead,
-    Goto,
-    If,
-    Label,
-    MergeHeads,
-    RandomGoto,
-    Return,
-    Spec,
-    SpecOp,
-    WaitForHeads,
-    When,
-    While,
-)
+from nemoguardrails.colang.v1_1.lang.colang_ast import (Abort, Assignment,
+                                                        Break, Continue,
+                                                        Element, FlowParamDef,
+                                                        ForkHead, Goto, If,
+                                                        Label, MergeHeads,
+                                                        RandomGoto, Return,
+                                                        Spec, SpecOp,
+                                                        WaitForHeads, When,
+                                                        While)
 from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
-from nemoguardrails.colang.v1_1.runtime.utils import new_readable_uid, new_var_uid
+from nemoguardrails.colang.v1_1.runtime.utils import (new_readable_uid,
+                                                      new_var_uid)
 from nemoguardrails.utils import new_event_dict, new_uid
 
 # from rich.logging import RichHandler  # isort:skip
@@ -1350,7 +1341,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
     """
     log.info(f"Process event: {external_event}")
 
-    converted_external_event = ActionEvent.from_umim_event(external_event)
+    if isinstance(external_event, dict):
+        converted_external_event = ActionEvent.from_umim_event(external_event)
+    elif isinstance(external_event, Event):
+        converted_external_event = external_event
 
     # Initialize the new state
     state.internal_events = deque([converted_external_event])
@@ -1448,7 +1442,11 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         _create_event_reference(state, flow_state, element, event)
                     )
 
-                if event.name == InternalEvents.START_FLOW:
+                if (
+                    event.name == InternalEvents.START_FLOW
+                    and event.arguments["flow_id"]
+                    == _get_flow_state_from_head(state, head).flow_id
+                ):
                     _start_flow(state, flow_state, event.arguments)
                 # elif event.name == InternalEvents.FINISH_FLOW:
                 #     _finish_flow(new_state, flow_state)
@@ -1977,24 +1975,28 @@ def _compute_event_matching_score(
     assert _is_match_op_element(element), f"Element '{element}' is not a match element!"
 
     ref_event = _get_event_from_element(state, flow_state, element)
+    if not isinstance(ref_event, type(event)):
+        return 0.0
 
     # Compute matching score based on event argument matching
     if event.name == InternalEvents.START_FLOW:
-        for var in event.arguments:
-            if (
-                var in ref_event.arguments
-                and event.arguments[var] != ref_event.arguments[var]
-            ):
-                return 0.0
-
-        return float(
-            ref_event.name == InternalEvents.START_FLOW
-            and ref_event.arguments["flow_id"] == event.arguments["flow_id"]
+        match_score = _compute_arguments_dict_matching_score(
+            event.arguments, ref_event.arguments
         )
+
+        if "flow_id" not in ref_event.arguments:
+            match_score *= 0.9
+            return match_score
+        else:
+            return float(
+                ref_event.name == InternalEvents.START_FLOW
+                and ref_event.arguments["flow_id"] == event.arguments["flow_id"]
+            )
     elif event.name in InternalEvents.ALL and ref_event.name in InternalEvents.ALL:
         if (
-            ref_event.arguments["flow_id"]
-            == state.flow_states[event.arguments["source_flow_instance_uid"]].flow_id
+            "flow_id" not in ref_event.arguments
+            or "flow_id" not in event.arguments
+            or ref_event.arguments["flow_id"] == event.arguments["flow_id"]
         ):
             # TODO: Check if this is needed
             # if isinstance(event, FlowEvent) and event.flow is not None:
@@ -2166,10 +2168,7 @@ def _get_event_from_element(
             return action_event
     else:
         # Case 1)
-        if (
-            element_spec.name in state.flow_configs
-            or element_spec.name in InternalEvents.ALL
-        ):
+        if element_spec.name.islower() or element_spec.name in InternalEvents.ALL:
             # Flow event
             event_arguments = _evaluate_arguments(
                 element_spec.arguments, flow_state.context
