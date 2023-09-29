@@ -150,18 +150,15 @@ class LLMGenerationActions:
             return
 
         el = flow.elements[1]
-        if not isinstance(el, SpecOp) or el.op != "await":
-            return
-
-        spec = cast(SpecOp, el).spec
-        if spec.name != "UtteranceBotAction":
-            return
-
-        if "script" not in spec.arguments:
+        if (
+            not isinstance(el.spec, SpecOp)
+            or el.spec.name != "UtteranceBotAction"
+            or "script" not in el.spec.arguments
+        ):
             return
 
         # Extract the message and remove the double quotes
-        message = spec.arguments["script"][1:-1]
+        message = el.spec.arguments["script"][1:-1]
 
         self.bot_messages[flow.name] = [message]
 
