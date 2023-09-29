@@ -52,16 +52,6 @@ from nemoguardrails.colang.v1_1.runtime.eval import eval_expression
 from nemoguardrails.colang.v1_1.runtime.utils import new_readable_uid, new_var_uid
 from nemoguardrails.utils import new_event_dict, new_uid
 
-# from rich.logging import RichHandler  # isort:skip
-
-# FORMAT = "%(message)s"
-# logging.basicConfig(
-#     level=logging.DEBUG,
-#     format=FORMAT,
-#     datefmt="[%X,%f]",
-#     handlers=[RichHandler(markup=True)],
-# )
-
 log = logging.getLogger(__name__)
 
 random_seed = int(time.time())
