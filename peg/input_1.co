@@ -1,0 +1,27 @@
+define user express greeting
+INDENT
+
+"hi there"
+"how are you"
+
+DEDENT
+
+define flow happy
+INDENT
+
+if $user
+INDENT
+
+bot express greeting
+user express fairwal
+
+DEDENT
+
+else
+INDENT
+
+user express dadwal
+
+DEDENT
+
+DEDENT
