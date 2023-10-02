@@ -72,8 +72,8 @@ flow do $instructions
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
   await AddFlowsAction(config=$flow_info.body)
   send StartFlow(flow_id=$flow_info['name'])
-  match FlowStarted(flow_id=$flow_info['name'])
-  match FlowFinished(flow_id=$flow_info['name'])
+  match FlowStarted(flow_id=$flow_info['name']) as $event_ref
+  match $event_ref.flow.Finished()
 
 flow custom instructions
   user provide custom instructions
