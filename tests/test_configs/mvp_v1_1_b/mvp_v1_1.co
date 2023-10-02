@@ -20,7 +20,7 @@ flow bot comment unsure how to respond
 # Flows
 
 flow wait
-  await SomeRandomEvent()
+  match SomeRandomEvent()
 
 flow greeting
   user express greeting

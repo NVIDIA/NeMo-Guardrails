@@ -44,6 +44,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Return,
     Spec,
     SpecOp,
+    SpecType,
     WaitForHeads,
     When,
     While,
@@ -602,7 +603,7 @@ def _expand_start_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single element
-        if element.spec.spec_type == "flow":
+        if element.spec.spec_type == SpecType.FLOW:
             # It's a flow
             # send StartFlow(flow_id="FLOW_NAME")
             element.spec.arguments.update({"flow_id": f"'{element.spec.name}'"})
@@ -612,7 +613,7 @@ def _expand_start_element(
                     spec=Spec(
                         name=InternalEvents.START_FLOW,
                         arguments=element.spec.arguments,
-                        spec_type="event",
+                        spec_type=SpecType.EVENT,
                     ),
                 )
             )
@@ -626,7 +627,7 @@ def _expand_start_element(
                         name=InternalEvents.FLOW_STARTED,
                         arguments=element.spec.arguments,
                         ref=_create_ref_ast_dict_helper(flow_event_ref_uid),
-                        spec_type="event",
+                        spec_type=SpecType.EVENT,
                     ),
                 )
             )
@@ -641,7 +642,7 @@ def _expand_start_element(
                     expression=f"${flow_event_ref_uid}.flow",
                 )
             )
-        else:
+        elif element.spec.spec_type == SpecType.ACTION:
             # It's an UMIM action
             element_ref = element.spec.ref
             if element_ref is None:
@@ -658,6 +659,8 @@ def _expand_start_element(
             spec.members = _create_member_ast_dict_helper("Start", {})
             spec.var_name = element_ref["elements"][0]["elements"][0].lstrip("$")
             new_elements.append(SpecOp(op="send", spec=spec))
+        else:
+            raise SyntaxError("'await' keyword cannot be used on an event")
     else:
         # Element group
         normalized_group = normalize_element_groups(element.spec)
@@ -703,7 +706,7 @@ def _expand_match_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single match element
-        if element.spec.spec_type == "flow":
+        if element.spec.spec_type == SpecType.FLOW:
             # It's a flow
             element_ref = element.spec.ref
             if element_ref is None:
@@ -722,7 +725,7 @@ def _expand_match_element(
                         name=InternalEvents.FLOW_FINISHED,
                         arguments=arguments,
                         ref=element_ref,
-                        spec_type="event",
+                        spec_type=SpecType.EVENT,
                     ),
                     return_var_name=element.return_var_name,
                 )
@@ -734,7 +737,14 @@ def _expand_match_element(
                         expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
                     )
                 )
-        elif element.spec.spec_type == "event":
+        elif (
+            (
+                element.spec.spec_type == SpecType.ACTION
+                or element.spec.spec_type == SpecType.REFERENCE
+            )
+            and element.spec.members is not None
+            or element.spec.spec_type == SpecType.EVENT
+        ):
             # It's an event
             if element.return_var_name is not None:
                 element_ref = element.spec.ref
@@ -755,8 +765,6 @@ def _expand_match_element(
                         expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
                     )
                 )
-            else:
-                pass
         else:
             raise ValueError(f"Unsupported spec type: '{element.spec.spec_type}'")
 
@@ -787,7 +795,7 @@ def _expand_match_element(
                 label_name = f"event_{element_idx}_{new_var_uid()}"
                 event_label_elements.append(Label(name=label_name))
                 fork_element.labels.append(label_name)
-                if match_element.spec_type == "flow":
+                if match_element.spec_type == SpecType.FLOW:
                     # It's a flow
                     arguments = {"flow_id": f"'{match_element.name}'"}
                     for arg in match_element.arguments:
@@ -799,15 +807,24 @@ def _expand_match_element(
                             spec=Spec(
                                 name=InternalEvents.FLOW_FINISHED,
                                 arguments=arguments,
-                                spec_type="event",
+                                spec_type=SpecType.EVENT,
                             ),
                         )
                     )
-                else:
+                elif (
+                    (
+                        match_element.spec_type == SpecType.ACTION
+                        or match_element.spec_type == SpecType.REFERENCE
+                    )
+                    and match_element.members is not None
+                    or match_element.spec_type == SpecType.EVENT
+                ):
                     # It's an UMIM event
                     new_match_element = copy.copy(element)
                     new_match_element.spec = match_element
                     event_match_elements.append(new_match_element)
+                else:
+                    raise SyntaxError(f"Unsupported spec type '{element.spec}'")
                 element_idx += 1
 
         # Generate new element sequence
@@ -837,7 +854,7 @@ def _expand_await_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single element
-        if element.spec.spec_type == "flow":
+        if element.spec.spec_type == SpecType.FLOW:
             # It's a flow
             flow_ref = element.spec.ref
             flow_event_ref_uid = f"_flow_event_ref_{new_var_uid()}"
@@ -854,7 +871,7 @@ def _expand_await_element(
                     spec=Spec(
                         var_name=flow_event_ref_uid,
                         members=_create_member_ast_dict_helper("Finished", {}),
-                        spec_type="event",
+                        spec_type=SpecType.REFERENCE,
                     ),
                     return_var_name=element.return_var_name,
                 )
@@ -866,7 +883,7 @@ def _expand_await_element(
                         expression=f"${flow_event_ref_uid}",
                     )
                 )
-        else:
+        elif element.spec.spec_type == SpecType.ACTION and element.spec.members is None:
             # It's an UMIM action
             action_ref = element.spec.ref
             action_ref_uid = f"_action_ref_{new_var_uid()}"
@@ -883,7 +900,7 @@ def _expand_await_element(
                     spec=Spec(
                         var_name=action_ref_uid,
                         members=_create_member_ast_dict_helper("Finished", {}),
-                        spec_type="event",
+                        spec_type=SpecType.REFERENCE,
                     ),
                     return_var_name=element.return_var_name,
                 )
@@ -895,6 +912,8 @@ def _expand_await_element(
                         expression=f"${action_ref_uid}",
                     )
                 )
+        else:
+            raise SyntaxError(f"Unsupported spec type '{element.spec}'")
     else:
         # Element group
         # TODO: Fix this such that action are also supported using references for flows and actions
@@ -917,7 +936,7 @@ def _expand_await_element(
                 reference_name = element_references[match_element.hash()]
                 match_element.var_name = reference_name
                 match_element.members = _create_member_ast_dict_helper("Finished", {})
-                match_element.spec_type = "event"
+                match_element.spec_type = SpecType.REFERENCE
 
         new_elements.append(SpecOp(op="match", spec=match_group))
 
@@ -930,7 +949,7 @@ def _expand_activate_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single match element
-        if element.spec.spec_type == "flow":
+        if element.spec.spec_type == SpecType.FLOW:
             # It's a flow
             element.spec.arguments.update(
                 {
@@ -944,7 +963,7 @@ def _expand_activate_element(
                     spec=Spec(
                         name=InternalEvents.START_FLOW,
                         arguments=element.spec.arguments,
-                        spec_type="event",
+                        spec_type=SpecType.EVENT,
                     ),
                 )
             )
@@ -954,13 +973,13 @@ def _expand_activate_element(
                     spec=Spec(
                         name=InternalEvents.FLOW_STARTED,
                         arguments=element.spec.arguments,
-                        spec_type="event",
+                        spec_type=SpecType.EVENT,
                     ),
                 )
             )
         else:
             # It's an UMIM event
-            raise NotImplementedError("Events cannot be activated!")
+            raise SyntaxError("Events cannot be activated!")
     elif isinstance(element.spec, dict):
         # Multiple match elements
         normalized_group = normalize_element_groups(element.spec)
@@ -1048,7 +1067,7 @@ def _expand_when_stmt_element(
         when_group_labels.append(Label(name=when_group_label_name))
         if isinstance(when_element, Spec):
             # Single element
-            if when_element.spec_type == "flow":
+            if when_element.spec_type == SpecType.FLOW:
                 # It's a flow
                 flow_ref_uid = f"_flow_ref_{new_var_uid()}"
                 when_element.ref = _create_ref_ast_dict_helper(flow_ref_uid)
@@ -1064,11 +1083,14 @@ def _expand_when_stmt_element(
                         spec=Spec(
                             var_name=flow_ref_uid,
                             members=_create_member_ast_dict_helper("Finished", {}),
-                            spec_type="event",
+                            spec_type=SpecType.REFERENCE,
                         ),
                     )
                 )
-            elif when_element.spec_type == "action":
+            elif (
+                when_element.spec_type == SpecType.ACTION
+                and when_element.members is None
+            ):
                 # It's an UMIM action
                 action_ref_uid = f"_action_ref_{new_var_uid()}"
                 when_element.ref = _create_ref_ast_dict_helper(action_ref_uid)
@@ -1084,11 +1106,21 @@ def _expand_when_stmt_element(
                         spec=Spec(
                             var_name=action_ref_uid,
                             members=_create_member_ast_dict_helper("Finished", {}),
-                            spec_type="event",
+                            spec_type=SpecType.REFERENCE,
                         ),
                     )
                 )
-            elif when_element.spec_type == "event":
+            elif (
+                (
+                    when_element.spec_type == SpecType.ACTION
+                    or when_element.spec_type == SpecType.ACTION
+                )
+                and when_element.members is not None
+                or (
+                    when_element.spec_type == SpecType.EVENT
+                    and when_element.members is None
+                )
+            ):
                 # It's an UMIM event
                 when_elements.append(
                     SpecOp(
@@ -1096,6 +1128,8 @@ def _expand_when_stmt_element(
                         spec=when_element,
                     )
                 )
+            else:
+                raise SyntaxError(f"Unsupported spec type '{element.spec}'")
         else:
             # Element group
             # TODO: Fix this such that action are also supported using references for flows and actions
@@ -1103,7 +1137,7 @@ def _expand_when_stmt_element(
             unique_group = convert_to_single_and_element_group(normalized_group)
             for and_group in unique_group["elements"]:
                 for match_element in and_group["elements"]:
-                    if match_element.spec_type == "flow":
+                    if match_element.spec_type == SpecType.FLOW:
                         # It's a flow
                         start_elements.append(
                             SpecOp(
@@ -1777,7 +1811,7 @@ def slide(
 
             elif element.op == "_new_action_instance":
                 assert (
-                    element.spec.name not in state.flow_configs
+                    element.spec.spec_type != SpecType.FLOW
                 ), "Flows cannot be instantiated!"
 
                 evaluated_arguments = _evaluate_arguments(
@@ -2198,37 +2232,43 @@ def _get_event_from_element(
         if variable_name not in flow_state.context:
             raise Exception((f"Unkown variable: '{variable_name}'!"))
 
-        # Resolve variable
-        context_variable = flow_state.context[variable_name]
-        if isinstance(context_variable, Event):
-            raise NotImplementedError
-        elif isinstance(context_variable, Action):
-            action = context_variable
-            action_event_name = element_spec.members[0]["name"]
-            action_event_arguments = element_spec.members[0]["arguments"]
-            action_event_arguments = _evaluate_arguments(
-                action_event_arguments, flow_state.context
-            )
-            action_event = action.get_event(action_event_name, action_event_arguments)
-            action_event.action_uid = action.uid
-            return action_event
-        elif isinstance(context_variable, FlowState):
-            flow = context_variable
-            flow_event_name = element_spec.members[0]["name"]
-            flow_event_arguments = element_spec.members[0]["arguments"]
-            flow_event_arguments = _evaluate_arguments(
-                flow_event_arguments, flow_state.context
-            )
-            flow_event = flow.get_event(flow_event_name, flow_event_arguments)
-            flow_event.flow = flow
-            return flow_event
-        else:
-            raise ValueError("Unknown type")
+        # Resolve variable and member attributes
+        obj = flow_state.context[variable_name]
+        member = None
+        for member in element_spec.members[:-1]:
+            if not hasattr(obj, member.name):
+                raise ValueError(f"No attribute '{member.name}' in {obj}")
+            obj = getattr(obj, member.name)
+        if element_spec.members is not None:
+            member = element_spec.members[-1]
 
-    if element_spec.members is not None:
+        if isinstance(obj, Event):
+            if element_spec.members is not None:
+                raise ValueError("Events have no event attributes!")
+            return obj
+        elif isinstance(obj, Action) or isinstance(obj, FlowState):
+            if element_spec.members is None:
+                raise ValueError(f"Missing event attribute in {obj.name}")
+            event_name = member["name"]
+            event_arguments = member["arguments"]
+            event_arguments = _evaluate_arguments(event_arguments, flow_state.context)
+            event = obj.get_event(event_name, event_arguments)
+
+            if isinstance(event, FlowEvent):
+                event.flow = obj
+            elif isinstance(event, ActionEvent):
+                event.action_uid = obj.uid
+                event.action = None
+
+            return event
+        else:
+            raise ValueError(f"Unsupported type '{type(obj)}'")
+
+    elif element_spec.members is not None:
         # Case 2)
-        if element_spec.name in state.flow_configs:
+        if element_spec.spec_type == SpecType.FLOW:
             # Flow object
+            raise NotImplementedError()
             flow_config = state.flow_configs[element_spec.name]
             temp_flow_state = create_flow_instance(flow_config)
             flow_event_name = element_spec.members[0]["name"]
@@ -2240,24 +2280,20 @@ def _get_event_from_element(
                 flow_event_name, flow_event_arguments
             )
             if element["op"] == "match":
-                # Delete action_uid from event since the action is only a helper object
+                # Delete flow reference from event since it is only a helper object
                 flow_event.flow = None
             return flow_event
-        else:
+        elif element_spec.spec_type == SpecType.ACTION:
             # Action object
             action_arguments = _evaluate_arguments(
                 element_spec.arguments, flow_state.context
             )
             action = Action(element_spec.name, action_arguments, flow_state.flow_id)
             # TODO: refactor the following repetition of code (see above)
-            action_event_name = element_spec.members[0]["name"]
-            action_event_arguments = element_spec.members[0]["arguments"]
-            action_event_arguments = _evaluate_arguments(
-                action_event_arguments, flow_state.context
-            )
-            action_event: ActionEvent = action.get_event(
-                action_event_name, action_event_arguments
-            )
+            event_name = element_spec.members[0]["name"]
+            event_arguments = element_spec.members[0]["arguments"]
+            event_arguments = _evaluate_arguments(event_arguments, flow_state.context)
+            action_event: ActionEvent = action.get_event(event_name, event_arguments)
             if element["op"] == "match":
                 # Delete action_uid from event since the action is only a helper object
                 action_event.action_uid = None

@@ -13,7 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import Flow, If, Return, Spec, SpecOp
+from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    Flow,
+    If,
+    Return,
+    Spec,
+    SpecOp,
+    SpecType,
+)
 from nemoguardrails.colang.v1_1.lang.utils import dataclass_to_dict
 
 
@@ -23,14 +30,14 @@ def test_basic():
         elements=[
             SpecOp(
                 op="match",
-                spec=Spec(name="user express greeting"),
+                spec=Spec(name="user express greeting", spec_type=SpecType.FLOW),
             ),
             If(
                 expression="$a > 2",
                 then_elements=[
                     SpecOp(
                         op="await",
-                        spec=Spec(name="bot express greeting"),
+                        spec=Spec(name="bot express greeting", spec_type=SpecType.FLOW),
                     ),
                 ],
             ),
@@ -54,7 +61,7 @@ def test_basic():
                     "arguments": {},
                     "members": None,
                     "name": "user express greeting",
-                    "spec_type": "",
+                    "spec_type": SpecType.FLOW,
                     "var_name": None,
                     "ref": None,
                 },
@@ -76,7 +83,7 @@ def test_basic():
                             "arguments": {},
                             "members": None,
                             "name": "bot express greeting",
-                            "spec_type": "",
+                            "spec_type": SpecType.FLOW,
                             "var_name": None,
                             "ref": None,
                         },

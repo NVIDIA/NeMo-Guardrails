@@ -10,7 +10,7 @@ flow bot say $text
   await UtteranceBotAction(script=$text)
 
 flow wait
-  await SomeRandomEvent()
+  match SomeRandomEvent()
 
 # Custom
 

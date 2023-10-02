@@ -16,6 +16,7 @@
 """The data types that are used when constructing the Abstract Syntax Tree after parsing."""
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from dataclasses_json import dataclass_json
@@ -115,6 +116,15 @@ class Flow(Element):
     _type: str = "flow"
 
 
+class SpecType(Enum):
+    """The type of a spec."""
+
+    EVENT = "event"
+    ACTION = "action"
+    FLOW = "flow"
+    REFERENCE = "reference"
+
+
 @dataclass_json
 @dataclass
 class Spec(Element):
@@ -128,7 +138,7 @@ class Spec(Element):
     """
 
     name: Optional[str] = None
-    spec_type: str = ""
+    spec_type: SpecType = SpecType.EVENT
     arguments: Dict[str, Any] = field(default_factory=dict)
 
     # Members on the spec, e.g. ActionX().Member()
@@ -161,7 +171,7 @@ class SpecOr(Element):
     _type: str = "spec_or"
 
 
-SpecType = Union[Spec, SpecAnd, SpecOr]
+SpecElementType = Union[Spec, SpecAnd, SpecOr]
 
 
 @dataclass_json
@@ -173,7 +183,7 @@ class SpecOp(Element):
     """
 
     op: str = ""
-    spec: SpecType = Spec()
+    spec: SpecElementType = Spec()
 
     # If the return value of the spec needs to be captured. The return value only makes sense
     # for await on flows and actions.
@@ -196,7 +206,7 @@ class If(Element):
 @dataclass_json
 @dataclass
 class When(Element):
-    when_specs: List[SpecType] = field(default_factory=list)
+    when_specs: List[SpecElementType] = field(default_factory=list)
     then_elements: List[List[Element]] = field(default_factory=list)
     else_elements: Optional[List[Element]] = None
     _type: str = "when"
