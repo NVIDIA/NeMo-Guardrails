@@ -209,8 +209,8 @@ class LLMTaskManager:
                 task_prompt = self._render_string(prompt.content, context=context, events=events)
             return task_prompt
         else:
-            task_prompt = self._render_messages(prompt.messages, context=context, events=events)
-            task_prompt_length = self._get_messages_text_length(task_prompt)
+            task_messages = self._render_messages(prompt.messages, context=context, events=events)
+            task_prompt_length = self._get_messages_text_length(task_messages)
             while task_prompt_length > prompt.max_length:
                 if not events:
                     raise Exception(
@@ -220,7 +220,7 @@ class LLMTaskManager:
                 events.pop(0)
                 task_messages = self._render_messages(prompt.messages, context=context, events=events)
                 task_prompt_length = self._get_messages_text_length(task_messages)
-            return task_prompt
+            return task_messages
 
     def parse_task_output(self, task: Task, output: str):
         """Parses the output for the provided tasks.
