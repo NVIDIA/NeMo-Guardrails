@@ -549,6 +549,18 @@ class State:
                 add_new_flow_instance(self, create_flow_instance(flow_config))
 
 
+class ColangSyntaxError(Exception):
+    """Raises when there is invalid Colang syntax detected"""
+
+    pass
+
+
+class ColangValueError(Exception):
+    """Raises when there is an invalid value detected in a Colang expression"""
+
+    pass
+
+
 def expand_elements(
     elements: List[ElementType],
     flow_configs: Dict[str, FlowConfig],
@@ -660,7 +672,7 @@ def _expand_start_element(
             spec.var_name = element_ref["elements"][0]["elements"][0].lstrip("$")
             new_elements.append(SpecOp(op="send", spec=spec))
         else:
-            raise SyntaxError("'await' keyword cannot be used on an event")
+            raise ColangSyntaxError("'await' keyword cannot be used on an event")
     else:
         # Element group
         normalized_group = normalize_element_groups(element.spec)
@@ -766,7 +778,9 @@ def _expand_match_element(
                     )
                 )
         else:
-            raise ValueError(f"Unsupported spec type: '{element.spec.spec_type}'")
+            raise ColangSyntaxError(
+                f"Unsupported spec type: '{element.spec.spec_type}'"
+            )
 
     elif isinstance(element.spec, dict):
         # Multiple match elements
@@ -824,7 +838,7 @@ def _expand_match_element(
                     new_match_element.spec = match_element
                     event_match_elements.append(new_match_element)
                 else:
-                    raise SyntaxError(f"Unsupported spec type '{element.spec}'")
+                    raise ColangSyntaxError(f"Unsupported spec type '{element.spec}'")
                 element_idx += 1
 
         # Generate new element sequence
@@ -843,7 +857,7 @@ def _expand_match_element(
         new_elements.append(end_label_element)
 
     else:
-        raise ValueError("Unknown element type")
+        raise ColangSyntaxError(f"Unknown element type '{type(element.spec)}'")
 
     return new_elements
 
@@ -913,7 +927,7 @@ def _expand_await_element(
                     )
                 )
         else:
-            raise SyntaxError(f"Unsupported spec type '{element.spec}'")
+            raise ColangSyntaxError(f"Unsupported spec type '{element.spec}'")
     else:
         # Element group
         # TODO: Fix this such that action are also supported using references for flows and actions
@@ -979,7 +993,7 @@ def _expand_activate_element(
             )
         else:
             # It's an UMIM event
-            raise SyntaxError("Events cannot be activated!")
+            raise ColangSyntaxError("Events cannot be activated!")
     elif isinstance(element.spec, dict):
         # Multiple match elements
         normalized_group = normalize_element_groups(element.spec)
@@ -1129,7 +1143,7 @@ def _expand_when_stmt_element(
                     )
                 )
             else:
-                raise SyntaxError(f"Unsupported spec type '{element.spec}'")
+                raise ColangSyntaxError(f"Unsupported spec type '{element.spec}'")
         else:
             # Element group
             # TODO: Fix this such that action are also supported using references for flows and actions
@@ -2237,18 +2251,18 @@ def _get_event_from_element(
         member = None
         for member in element_spec.members[:-1]:
             if not hasattr(obj, member.name):
-                raise ValueError(f"No attribute '{member.name}' in {obj}")
+                raise ColangValueError(f"No attribute '{member.name}' in {obj}")
             obj = getattr(obj, member.name)
         if element_spec.members is not None:
             member = element_spec.members[-1]
 
         if isinstance(obj, Event):
             if element_spec.members is not None:
-                raise ValueError("Events have no event attributes!")
+                raise ColangValueError("Events have no event attributes!")
             return obj
         elif isinstance(obj, Action) or isinstance(obj, FlowState):
             if element_spec.members is None:
-                raise ValueError(f"Missing event attribute in {obj.name}")
+                raise ColangValueError(f"Missing event attribute in {obj.name}")
             event_name = member["name"]
             event_arguments = member["arguments"]
             event_arguments = _evaluate_arguments(event_arguments, flow_state.context)
@@ -2262,7 +2276,7 @@ def _get_event_from_element(
 
             return event
         else:
-            raise ValueError(f"Unsupported type '{type(obj)}'")
+            raise ColangSyntaxError(f"Unsupported type '{type(obj)}'")
 
     elif element_spec.members is not None:
         # Case 2)
