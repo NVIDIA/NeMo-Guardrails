@@ -23,6 +23,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Fix `flow` keyword parsing when it is used not as a keyword in e.g. a variable name or reference member
 - Add support for timer action support in the runtime
 - Run run_to_completion once when CLI is started to allow bot to start the interaction
+- Find a better solution for separating the flow event arguments like `flow_id` or `activated` from the flow context variables.
 
 ## To Discuss
 

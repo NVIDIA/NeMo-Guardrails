@@ -1522,11 +1522,21 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 if "flow_id" in event.arguments:
                     for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
                         if _is_active_flow(flow_state):
-                            _abort_flow(state, flow_state, event.matching_scores)
+                            _abort_flow(
+                                state,
+                                flow_state,
+                                event.matching_scores,
+                                event.arguments["activated"],
+                            )
                 elif "flow_instance_uid" in event.arguments:
                     flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
                     if _is_active_flow(flow_state):
-                        _abort_flow(state, flow_state, event.matching_scores)
+                        _abort_flow(
+                            state,
+                            flow_state,
+                            event.matching_scores,
+                            event.arguments["activated"],
+                        )
                 # TODO: Add support for all flow instances of same flow with "flow_id"
             # elif event.name == "ResumeFlow":
             #     pass
@@ -1958,7 +1968,10 @@ def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
 
 
 def _abort_flow(
-    state: State, flow_state: FlowState, matching_scores: List[float]
+    state: State,
+    flow_state: FlowState,
+    matching_scores: List[float],
+    deactivate_flow: bool = False,
 ) -> None:
     """Aborts a flow instance and all its active child flows."""
     # Generate FlowFailed event
@@ -1982,7 +1995,7 @@ def _abort_flow(
         f"Flow aborted/failed: '{_get_flow_parent_hierarchy(state, flow_state.uid)}'"
     )
 
-    if flow_state.activated:
+    if not deactivate_flow and flow_state.activated:
         _restart_flow(state, flow_state, matching_scores)
         log.info(f"Activated flow restart: '{flow_state.flow_id}'")
 
@@ -2000,12 +2013,21 @@ def _finish_flow(
     )
     _push_internal_event(state, event)
 
+    # Deactivate all activated child flows
+    for child_flow_uid in flow_state.child_flow_uids:
+        child_flow_state = state.flow_states[child_flow_uid]
+        if child_flow_state.activated:
+            child_flow_state.activated = False
+            log.info(
+                f"Flow deactivated: {_get_flow_parent_hierarchy(state, child_flow_state.uid)}"
+            )
+
     # Abort all running child flows
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
             event = create_abort_flow_internal_event(
-                child_flow_state.uid, flow_state.uid, matching_scores
+                child_flow_state.uid, flow_state.uid, matching_scores, True
             )
             _push_internal_event(state, event)
 
@@ -2436,15 +2458,20 @@ def compute_context(history: List[dict]):
 
 
 def create_abort_flow_internal_event(
-    flow_instance_uid: str, source_flow_instance_uid: str, matching_scores: List[float]
+    flow_instance_uid: str,
+    source_flow_instance_uid: str,
+    matching_scores: List[float],
+    deactivate_flow: bool = False,
 ) -> Event:
     """Returns 'AbortFlow' internal event"""
+    arguments = {
+        "flow_instance_uid": flow_instance_uid,
+        "source_flow_instance_uid": source_flow_instance_uid,
+        "activated": deactivate_flow,
+    }
     return create_internal_event(
         InternalEvents.ABORT_FLOW,
-        {
-            "flow_instance_uid": flow_instance_uid,
-            "source_flow_instance_uid": source_flow_instance_uid,
-        },
+        arguments,
         matching_scores,
     )
 
@@ -2453,12 +2480,17 @@ def create_flow_internal_event(
     event_type: InternalEvents,
     source_flow_state: FlowState,
     matching_scores: List[float],
+    arguments: Optional[dict] = None,
 ) -> FlowEvent:
     """Creates and returns a internal flow event"""
-    arguments = {"source_flow_instance_uid": source_flow_state.uid}
-    arguments.update({"flow_id": source_flow_state.flow_id})
+    if arguments is None:
+        arguments = dict()
     arguments.update(
-        {"return_value": source_flow_state.context.get("_return_value", None)}
+        {
+            "source_flow_instance_uid": source_flow_state.uid,
+            "flow_id": source_flow_state.flow_id,
+            "return_value": source_flow_state.context.get("_return_value", None),
+        }
     )
     for arg in source_flow_state.arguments:
         if arg in source_flow_state.context:

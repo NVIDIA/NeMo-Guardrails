@@ -15,7 +15,6 @@
 
 """A set of actions for generating various types of completions using an LLMs."""
 import logging
-import textwrap
 from typing import List, Optional
 
 from langchain.llms import BaseLLM
@@ -27,14 +26,92 @@ from nemoguardrails.actions.llm.utils import (
     get_last_user_utterance_event,
     llm_call,
 )
+from nemoguardrails.colang.v1_1.lang.utils import new_uuid
+from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.types import Task
 
 log = logging.getLogger(__name__)
 
 
+def _remove_leading_empty_lines(s: str):
+    """Remove the leading empty lines if they exist.
+
+    A line is considered empty if it has only white spaces.
+    """
+    lines = s.split("\n")
+    while lines and lines[0].strip() == "":
+        lines = lines[1:]
+    return "\n".join(lines)
+
+
 class LLMGenerationActionsV1dot1(LLMGenerationActions):
-    """A container objects for multiple related actions."""
+    """Adapted version of LLMGenerationActions for Colang 1.1.
+
+    It overrides some methods.
+    """
+
+    async def _init_colang_flows_index(
+        self, flows: List[str]
+    ) -> Optional[EmbeddingsIndex]:
+        """Initialize an index with colang flows.
+
+        The flows are expected to have full definition.
+
+        Args
+            flows: The list of flows, i.e. the flow definition from the source code.
+
+        Returns
+            An initialized index.
+        """
+        items = []
+        for source_code in flows:
+            items.append(IndexItem(text=source_code, meta={"flow": source_code}))
+
+        # If we have no patterns, we stop.
+        if len(items) == 0:
+            return None
+
+        flows_index = self.get_embedding_search_provider_instance(
+            self.config.core.embedding_search_provider
+        )
+        await flows_index.add_items(items)
+        await flows_index.build()
+
+        return flows_index
+
+    async def _init_flows_index(self):
+        """Initializes the index of flows."""
+
+        if not self.config.flows:
+            return
+
+        # The list of all flows that will be added to the index
+        all_flows = []
+
+        # The list of flows that have instructions, i.e. docstring at the beginning.
+        instruction_flows = []
+
+        for flow in self.config.flows:
+            colang_flow = flow.get("source_code")
+
+            # Check if we need to exclude this flow.
+            if "# llm: exclude" in colang_flow:
+                continue
+
+            all_flows.append(colang_flow)
+
+            # If the first line is a comment, we consider it to be an instruction
+            lines = colang_flow.split("\n")
+            if len(lines) > 1:
+                first_line = lines[1].strip()
+                if first_line.startswith("#") or first_line.startswith('"""'):
+                    instruction_flows.append(colang_flow)
+
+        self.flows_index = await self._init_colang_flows_index(all_flows)
+        self.instruction_flows_index = await self._init_colang_flows_index(
+            instruction_flows
+        )
 
     @action(name="GetLastUserMessageAction", is_system_action=True)
     async def get_last_user_message(
@@ -120,47 +197,95 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
     ):
         """Generate a flow from the provided instructions."""
 
+        if self.instruction_flows_index is None:
+            raise RuntimeError("No instruction flows index has been created.")
+
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
 
         log.info(f"Generating flow for instructions: {instructions}")
 
-        prompt = textwrap.dedent(
-            f"""
-        # Please tell a joke
-        flow tell a joke
-          bot say "Why don't scientists trust atoms? Because they make up everything!"
-          bot smile
+        results = await self.instruction_flows_index.search(
+            text=instructions, max_results=5
+        )
 
-        # Count from 1 to 5
-        flow count
-          bot say "1"
-          bot say "2"
-          bot say "3"
-          bot say "4"
-          bot say "5"
+        examples = ""
+        for result in reversed(results):
+            examples += f"{result.meta['flow']}\n"
 
-        # Tell me the capital of France
-        flow answer question about france
-          bot say "The capital of France it's Paris."
+        flow_id = new_uuid()[0:4]
+        flow_name = f"dynamic_{flow_id}"
 
-        # {instructions}
-        """
+        prompt = self.llm_task_manager.render_task_prompt(
+            task=Task.GENERATE_FLOW_FROM_INSTRUCTIONS,
+            events=events,
+            context={
+                "examples": examples,
+                "flow_name": flow_name,
+                "instructions": instructions,
+            },
         )
 
         # We make this call with temperature 0 to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
             result = await llm_call(llm, prompt)
 
-        lines = result.split("\n")
-        if lines[0].startswith("flow "):
+        lines = _remove_leading_empty_lines(result).split("\n")
+
+        if lines[0].startswith("  "):
             print(f"Generated flow:\n{result}\n")
             return {
-                "name": lines[0][5:],
-                "body": result,
+                "name": flow_name,
+                "body": f"flow {flow_name}\n" + "\n".join(lines),
             }
         else:
             return {
                 "name": "bot express unsure",
                 "body": "flow bot express unsure\n  bot say 'I'm sure, I don't know how to do that.'",
             }
+
+    @action(name="GenerateFlowFromNameAction", is_system_action=True)
+    async def generate_flow_from_name(
+        self,
+        name: str,
+        events: List[dict],
+        llm: Optional[BaseLLM] = None,
+    ):
+        """Generate a flow from the provided NAME."""
+
+        if self.flows_index is None:
+            raise RuntimeError("No flows index has been created.")
+
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
+        log.info(f"Generating flow for name: {name}")
+
+        results = await self.instruction_flows_index.search(
+            text=f"flow {name}", max_results=5
+        )
+
+        examples = ""
+        for result in reversed(results):
+            examples += f"{result.meta['flow']}\n"
+
+        prompt = self.llm_task_manager.render_task_prompt(
+            task=Task.GENERATE_FLOW_FROM_NAME,
+            events=events,
+            context={
+                "examples": examples,
+                "flow_name": name,
+            },
+        )
+
+        # We make this call with temperature 0 to have it as deterministic as possible.
+        with llm_params(llm, temperature=self.config.lowest_temperature):
+            result = await llm_call(llm, prompt)
+
+        lines = _remove_leading_empty_lines(result).split("\n")
+
+        if lines[0].startswith("  "):
+            print(f"Generated flow:\n{result}\n")
+            return f"flow {name}\n" + "\n".join(lines)
+        else:
+            return "flow bot express unsure\n  bot say 'I'm sure, I don't know how to do that.'"

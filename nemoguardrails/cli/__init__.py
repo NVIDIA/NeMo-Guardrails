@@ -19,6 +19,7 @@ from typing import List
 
 import typer
 import uvicorn
+from rich.logging import RichHandler
 
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
@@ -44,6 +45,10 @@ def chat(
         default=False,
         help="If the chat should be verbose and output the prompts",
     ),
+    debug: bool = typer.Option(
+        default=False,
+        help="Enable debug mode which prints rich information about the flows execution.",
+    ),
 ):
     """Starts an interactive chat session."""
     if verbose:
@@ -53,6 +58,10 @@ def chat(
         typer.secho(f"Multiple configurations are not supported.", fg=typer.colors.RED)
         typer.echo("Please provide a single folder.")
         raise typer.Exit(1)
+
+    if debug:
+        root_logger = logging.getLogger()
+        root_logger.addHandler(RichHandler(markup=True))
 
     typer.echo("Starting the chat...")
     run_chat(config_path=config[0], verbose=verbose)

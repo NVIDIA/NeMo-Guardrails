@@ -43,16 +43,22 @@ def _run_chat_v1_1(rails_app: LLMRails):
     state = None
 
     # And go into the default listening loop.
+    first_time = True
     while True:
-        user_message = input("> ")
-        input_events = [
-            {
-                "type": "UtteranceUserActionFinished",
-                "final_transcript": user_message,
-            }
-        ]
+        if first_time:
+            input_events = []
+        else:
+            user_message = input("> ")
+            input_events = [
+                {
+                    "type": "UtteranceUserActionFinished",
+                    "final_transcript": user_message,
+                }
+            ]
 
-        while input_events:
+        while input_events or first_time:
+            first_time = False
+
             output_events, output_state = rails_app.process_events(input_events, state)
 
             # We detect any "StartUtteranceBotAction" events, show the message, and

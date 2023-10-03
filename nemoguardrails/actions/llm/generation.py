@@ -152,6 +152,7 @@ class LLMGenerationActions:
         el = flow.elements[1]
         if (
             not isinstance(el, SpecOp)
+            or not hasattr(el.spec, "name")
             or el.spec.name != "UtteranceBotAction"
             or "script" not in el.spec.arguments
         ):

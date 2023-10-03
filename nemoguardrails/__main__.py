@@ -12,16 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import logging
 
-from rich.logging import RichHandler
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    datefmt="[%X,%f]",
-    handlers=[RichHandler(markup=True)],
-)
 from nemoguardrails.cli import app
 
 if __name__ == "__main__":
