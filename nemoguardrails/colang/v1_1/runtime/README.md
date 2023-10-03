@@ -8,19 +8,21 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 
 ## Todos
 
-- References should belong to a Spec and not a SpecOp in order to support assigning references in action and flow groups
 - Implement match failing with the `not` keyword, also for internal flow events
 - Abort actions from flows that get aborted
 - Add support to stop a flow (e.g. with `stop $flow_ref` or `send $flow_ref.Stop()`) and the same for actions
 - Implement pause/resume mechanism for activated flows
-- Add support to `abort` a flow to fail it
 - Add support for multiline strings using triple quotes in Colang
 - We need to make sure that local system actions are non-blocking
 - Implement support for starting actions and flows assigned to variables, e.g. `start $flow_x`
+- Implement support for system functions in expression, e.g. convert a string into a flow with `flow()`
 - Logical operators like `and` and `or` not working in if statements
 - Stop all flows that were started in the when-construct cases after one case triggered
 - Fix `send user say "how are you".Start() as $id` parsing
 - Support calling actions with positional arguments
+- Fix `flow` keyword parsing when it is used not as a keyword in e.g. a variable name or reference member
+- Add support for timer action support in the runtime
+- Run run_to_completion once when CLI is started to allow bot to start the interaction
 
 ## To Discuss
 
