@@ -3,11 +3,11 @@
 The goal of the examples in this folder is to familiarize developers with the
 general methodologies that can be utilized to make the most out of NeMo Guardrails. The
 applications are largely binned into three categories:
-* **Topical/IRQA Applications (`Topical`):** The key concerns largely revolve
-around providing accurate and informed responses.
+* **Staying on topic (`Topical`):** The key concerns largely revolve
+around providing accurate, informed, and on-topic responses.
 * **Safe responses (`Safety`):** The responses given by the bot should be
 ethical and safe.
-* **Ensuring Security (`Security`):** Building structures to enhance the bot's
+* **Ensuring security (`Security`):** Building structures to enhance the bot's
 resilience against malicious actors trying to jailbreak, highjack
 functionalities, or otherwise break try to attack the bot.
 
@@ -21,7 +21,7 @@ doesn't deviate from a specified topic of conversation. This example covers:
     - Covers querying and using a Knowledge Base
     - Labels: `Topical`; `good first example`
     - [Link to example](./topical_rail/README.md)
-- **Factual QA:** The example largely focuses on two key aspects - ensuring that
+- **Factual Question Answering:** The example largely focuses on two key aspects - ensuring that
 the bot's response is accurate and mitigates hallucination issues. This example:
     - Covers querying and using a Knowledge Base
     - Ensures answers are factual
