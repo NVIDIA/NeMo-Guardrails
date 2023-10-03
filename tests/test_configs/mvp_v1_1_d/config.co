@@ -1,15 +1,38 @@
+# Example flows with instructions
+
+flow tell a joke
+  """Tell a joke."""
+  bot say "Why don't scientists trust atoms? Because they make up everything!"
+  bot smile
+
+flow count
+  """Count from 1 to 5."""
+  bot say "1"
+  bot say "2"
+  bot say "3"
+  bot say "4"
+  bot say "5"
+
+flow answer question about france
+  """Answer the following question: What is the capital of France."""
+  bot say "The capital of France it's Paris."
+
 # Common
 
 flow user said $text
+  # llm: exclude
   match UtteranceUserActionFinished(final_transcript=$text)
 
 flow user says something
+  # llm: exclude
   match UtteranceUserActionFinished() as $event
 
 flow bot say $text
+  # llm: exclude
   await UtteranceBotAction(script=$text)
 
 flow wait
+  # llm: exclude
   match SomeRandomEvent()
 
 # Custom
@@ -33,23 +56,25 @@ flow bot comment unsure how to respond
 flow greeting
   user express greeting
   bot express greeting
+  # bot say a fun random fact
 
 flow flows fallback
+  # llm: exclude
   match StartFlow() as $event
 
   $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
 
   if not $exists
-      bot say "The event is: {$event}"
-      bot say "I have a new flow"
-      $flow_source = 'flow bot say a joke\n  bot say "This is a joke."'
+      $flow_id = $event.arguments.flow_id
+      $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
       await AddFlowsAction(config=$flow_source)
-      send StartFlow(flow_id="bot say a joke")
+      send StartFlow(flow_id=$flow_id)
 
 flow user unknown intent
   user said "xyz"
 
 flow fallback
+  # llm: exclude
   user says something
   $intent = await GenerateUserIntentAction
   $exists = await CheckIfFlowExistsAction(flow_id=$intent)
@@ -63,12 +88,8 @@ flow unknown intent
   user unknown intent
   bot comment unsure how to respond
 
-#flow do $instructions
-#  $flow_source = await GenerateFlowAction(instructions=$instructions, flow_name="user instruction action")
-#  await AddFlowsAction(config=$flow_source)
-#  await user instruction action
-
 flow do $instructions
+  # llm: exclude
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
   await AddFlowsAction(config=$flow_info.body)
   send StartFlow(flow_id=$flow_info['name'])
@@ -80,8 +101,6 @@ flow custom instructions
   $instructions = await GetLastUserMessageAction()
 
   do $instructions
-
-
 
 flow main
   activate greeting

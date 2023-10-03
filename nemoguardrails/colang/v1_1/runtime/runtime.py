@@ -64,6 +64,7 @@ class RuntimeV1_1(Runtime):
             )
         except Exception as e:
             log.warning(f"Could not parse the colang content! {e}")
+            raise Exception(f"Could not parse the colang content! {e}")
 
         added_flows: List[str] = []
         for flow in parsed_flow["flows"]:

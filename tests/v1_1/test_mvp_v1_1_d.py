@@ -42,10 +42,8 @@ def test_2():
             # The intent call
             "user provide custom instructions",
             # The flow generation call
-            """flow tell a joke
-                  bot say "Why don't scientists trust atoms? Because they make up everything!"
-                  bot say "I'm smiling."
-        """,
+            '  bot say "Why don\'t scientists trust atoms? Because they make up everything!"\n'
+            + '  bot say "I\'m smiling." ',
         ],
     )
 

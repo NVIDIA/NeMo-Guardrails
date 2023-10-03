@@ -114,3 +114,22 @@ prompts:
       You are given a task to identify if the hypothesis is in agreement with the context below.
       You will only use the contents of the context and not rely on external knowledge.
       Answer with yes/no. "context": {{ paragraph }} "hypothesis": {{ statement }} "agreement":
+
+
+  # Colang 1.1 prompts below.
+
+  # Prompt for generating a flow from instructions.
+  - task: generate_flow_from_instructions
+    content: |-
+      {{ examples }}
+
+      flow {{ flow_name }}
+        """{{ instructions }}"""
+
+
+  # Prompt for generating a flow from name.
+  - task: generate_flow_from_name
+    content: |-
+      {{ examples }}
+
+      flow {{ flow_name }}

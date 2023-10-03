@@ -24,6 +24,8 @@ class Task(Enum):
     GENERATE_NEXT_STEPS = "generate_next_steps"
     GENERATE_BOT_MESSAGE = "generate_bot_message"
     GENERATE_VALUE = "generate_value"
+    GENERATE_FLOW_FROM_INSTRUCTIONS = "generate_flow_from_instructions"
+    GENERATE_FLOW_FROM_NAME = "generate_flow_from_name"
 
     FACT_CHECKING = "fact_checking"
     JAILBREAK_CHECK = "jailbreak_check"
