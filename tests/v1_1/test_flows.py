@@ -33,7 +33,7 @@ from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
 FORMAT = "%(message)s"
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format=FORMAT,
     datefmt="[%X,%f]",
     handlers=[RichHandler(markup=True)],
@@ -2357,5 +2357,122 @@ def test_multi_level_member_match_from_reference():
     )
 
 
+def test_flow_deactivation_on_parent_flow_finished():
+    """"""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="Started")
+      match UtteranceUserAction.Finished(final_transcript="too late")
+
+    flow main
+      start a
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Started",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "too late",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+
+
+def test_event_action_wrapper_abstraction():
+    """"""
+
+    content = """
+    flow user said $text
+      match UtteranceUserAction.Finished(final_transcript=$text) as $event
+
+    flow bot say $text
+      await UtteranceBotAction(script=$text) as $action
+
+    flow bot express $text
+      bot say $text
+
+    flow bot express greeting
+      bot express "hi"
+
+    flow user expressed greeting
+      user said "hi"
+        or user said "hello"
+
+    flow greeting
+      user expressed greeting
+      bot express greeting
+
+    flow main
+      activate greeting
+      match UtteranceUserAction.Finished(final_transcript="End")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "hi",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": "Hello",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "hi",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_multi_level_member_match_from_reference()
+    test_event_action_wrapper_abstraction()
