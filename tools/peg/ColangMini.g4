@@ -19,8 +19,7 @@ simple_stmt
 
 // Compound statement
 compound_stmt
-    : define_user
-    | define_bot
+    : define_message
     | define_flow
     | define_subflow
     | else_stmt
@@ -35,13 +34,13 @@ block
     ;
 
 samples: NEWLINE INDENT sample DEDENT ;
-sample: STRING (NEWLINE STRING)* ;
+sample:  STRING (NEWLINE STRING)* ;
+
 // messages and flows
 
-define_user:    DEFINE role intent samples ; 
-define_bot:     DEFINE role intent samples ; 
-define_flow:    DEFINE FLOW_KEYWORD flow_name block ;
-define_subflow: DEFINE SUBFLOW_KEYWORD flow_name block ;
+define_message:    DEFINE role intent samples ;
+define_flow:       DEFINE FLOW_KEYWORD flow_name block ;
+define_subflow:    DEFINE SUBFLOW_KEYWORD flow_name block ;
 
 if_stmt: IF expression block (else_stmt | elif_stmt)* ;
 elif_stmt: ELIF expression block ;
