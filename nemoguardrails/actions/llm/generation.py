@@ -38,6 +38,7 @@ from nemoguardrails.actions.llm.utils import (
     get_last_user_utterance_event,
     get_multiline_response,
     get_retrieved_relevant_chunks,
+    get_top_k_nonempty_lines,
     llm_call,
     strip_quotes,
 )
@@ -611,3 +612,145 @@ class LLMGenerationActions:
         log.info(f"Generated value for ${var_name}: {value}")
 
         return literal_eval(value)
+
+    @action(is_system_action=True)
+    async def generate_intent_steps_message(
+        self, events: List[dict], llm: Optional[BaseLLM] = None
+    ):
+        """Generate all three main Guardrails phases with a single LLM call.
+        The three phases are: user canonical from (user intent), next flow steps (i.e. bot canonical form)
+        and bot message.
+        """
+
+        # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
+        event = get_last_user_utterance_event(events)
+        assert event["type"] == "UtteranceUserActionFinished"
+
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
+        # TODO: check for an explicit way of enabling the canonical form detection
+
+        if self.config.user_messages:
+            # TODO: based on the config we can use a specific canonical forms model
+            #  or use the LLM to detect the canonical form. The below implementation
+            #  is for the latter.
+
+            log.info("Generate all three phases in one LLM call:")
+
+            # We search for the most relevant similar user utterance
+            examples = ""
+            potential_user_intents = []
+            intent_results = []
+            flow_results = {}
+
+            if self.user_message_index:
+                intent_results = await self.user_message_index.search(
+                    text=event["final_transcript"], max_results=5
+                )
+
+                # We fill in the list of potential user intents
+                for result in reversed(intent_results):
+                    potential_user_intents.append(result.meta["intent"])
+
+            if self.flows_index:
+                for intent in potential_user_intents:
+                    flow_results_intent = await self.flows_index.search(
+                        text=intent, max_results=2
+                    )
+                    flow_results[intent] = flow_results_intent
+
+            # We add the intent to the examples in reverse order
+            # so the most relevant is towards the end.
+            for result in reversed(intent_results):
+                intent = result.meta["intent"]
+                example = f'user "{result.text}"\n  {intent}\n'
+
+                flow_results_intent = flow_results.get(intent, [])
+                for result_flow in flow_results_intent:
+                    (flow_user_intent, flow_bot_intent) = result_flow.text.split("\n")
+                    flow_user_intent = flow_user_intent[5:]
+                    if flow_user_intent == intent:
+                        example += f"{flow_bot_intent}\n"
+                    # for now, only use the first flow for each intent
+                    break
+
+                example += "\n"
+                examples += example
+
+            prompt = self.llm_task_manager.render_task_prompt(
+                task=Task.GENERATE_INTENT_STEPS_MESSAGE,
+                events=events,
+                context={
+                    "examples": examples,
+                    "potential_user_intents": ", ".join(potential_user_intents),
+                },
+            )
+
+            # We make this call with temperature 0 to have it as deterministic as possible.
+            with llm_params(llm, temperature=self.config.lowest_temperature):
+                result = await llm_call(llm, prompt)
+
+            # Parse the output using the associated parser
+            result = self.llm_task_manager.parse_task_output(
+                Task.GENERATE_INTENT_STEPS_MESSAGE, output=result
+            )
+
+            # TODO: implement logic for generating more complex Colang next steps,
+            #  not just a single bot intent
+
+            # Get the next 3 non-empty lines, these should contain:
+            # line 1 - user intent, line 2 - bot intent, line 3 - bot message
+            next_three_lines = get_top_k_nonempty_lines(result, k=3)
+            user_intent = next_three_lines[0] if len(next_three_lines) > 0 else None
+            bot_intent = next_three_lines[1] if len(next_three_lines) > 1 else None
+            bot_message = next_three_lines[2] if len(next_three_lines) > 2 else None
+
+            if user_intent is None:
+                user_intent = "unknown message"
+
+            if user_intent and user_intent.startswith("user "):
+                user_intent = user_intent[5:]
+
+            log.info(
+                "Canonical form for user intent: "
+                + (user_intent if user_intent else "None")
+            )
+
+            if user_intent is None:
+                events = [new_event_dict("UserIntent", intent="unknown message")]
+            else:
+                events = [new_event_dict("UserIntent", intent=user_intent)]
+
+                # generat doar user intent-ul ca event + potential bot intent si mesaj
+                # si logica care proceseaza user intent-ul , sa extraga extra information si sa genereze bot intent
+
+                if bot_intent and bot_intent.startswith("bot "):
+                    events.append(new_event_dict("BotIntent", intent=bot_intent[4:]))
+                else:
+                    events.append(
+                        new_event_dict("BotIntent", intent="general response")
+                    )
+
+                # aici de extras mesajele statice
+
+                if bot_message:
+                    events.append(
+                        new_event_dict("StartUtteranceBotAction", script=bot_message)
+                    )
+
+            return ActionResult(events=events)
+
+        else:
+            prompt = self.llm_task_manager.render_task_prompt(
+                task=Task.GENERAL, events=events
+            )
+
+            # We make this call with temperature 0 to have it as deterministic as possible.
+            result = await llm_call(llm, prompt)
+
+            return ActionResult(
+                events=[
+                    new_event_dict("StartUtteranceBotAction", script=result.strip())
+                ]
+            )

@@ -250,6 +250,18 @@ def get_first_nonempty_line(s: str):
     return first_nonempty_line
 
 
+def get_top_k_nonempty_lines(s: str, k: int = 1):
+    """Helper that returns a list with the top k non-empty lines from a string.
+    If there are less than k non-empty lines, it returns a smaller number of lines."""
+    if not s:
+        return None
+
+    lines = [line.strip() for line in s.split("\n")]
+    lines = [line for line in lines if len(line) > 0]
+
+    return lines[:k]
+
+
 def strip_quotes(s: str):
     """Helper that removes quotes from a string if the entire string is between quotes"""
     if s and s[0] == '"':
