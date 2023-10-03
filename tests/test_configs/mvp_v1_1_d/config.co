@@ -108,10 +108,6 @@ flow main
   activate unknown intent
   activate fallback
   activate flows fallback
+
+  bot say "Welcome! I'm the MVP bot."
   wait
-
-
-# This needs to be generated dynamically
-#flow user instruction action
-#  bot say "Why don't scientists trust atoms? Because they make up everything!"
-#  bot say "I'm smiling."
