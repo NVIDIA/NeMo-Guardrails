@@ -148,6 +148,9 @@ class ColangTransformer(Transformer):
             elements=elements,
             parameters=param_defs,
             _source=self.__source(meta),
+            source_code=self.source[meta.start_pos : meta.end_pos]
+            if self.include_source_mapping
+            else None,
         )
 
     def _spec_op(self, children, meta):

@@ -113,6 +113,7 @@ class Flow(Element):
     name: str = ""
     parameters: List[FlowParamDef] = field(default_factory=list)
     elements: List[Element] = field(default_factory=list)
+    source_code: Optional[str] = None
     _type: str = "flow"
 
 

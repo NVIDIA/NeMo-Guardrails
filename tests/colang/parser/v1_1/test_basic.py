@@ -96,6 +96,7 @@ def test_1():
             ],
             "name": "test",
             "parameters": [],
+            "source_code": None,
         }
     ]
 
@@ -193,6 +194,7 @@ def test_2():
             ],
             "name": "test",
             "parameters": [],
+            "source_code": None,
         }
     ]
 
@@ -309,6 +311,7 @@ def test_3():
             ],
             "name": "test",
             "parameters": [],
+            "source_code": None,
         }
     ]
 
@@ -330,6 +333,7 @@ def test_4():
             "_source": None,
             "name": "test",
             "parameters": [],
+            "source_code": None,
             "elements": [
                 {
                     "_type": "spec_op",
