@@ -170,6 +170,11 @@ class CustomDumper(yaml.SafeDumper):
     def increase_indent(self, flow=False, indentless=False):
         return super(CustomDumper, self).increase_indent(flow, False)
 
+    def represent_data(self, data):
+        if isinstance(data, Enum):
+            return self.represent_data(data.value)
+        return super().represent_data(data)
+
 
 class EnhancedJSONEncoder(json.JSONEncoder):
     """Custom json encoder to handler dataclass and enum types"""

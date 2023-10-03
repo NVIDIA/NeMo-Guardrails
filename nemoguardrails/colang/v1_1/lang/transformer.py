@@ -30,6 +30,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Source,
     Spec,
     SpecOp,
+    SpecType,
     When,
     While,
 )
@@ -136,7 +137,7 @@ class ColangTransformer(Transformer):
                 op="match",
                 spec=Spec(
                     name="StartFlow",
-                    spec_type="event",
+                    spec_type=SpecType.EVENT,
                     arguments={"flow_id": f'"{name}"'},
                 ),
             )
@@ -253,19 +254,13 @@ class ColangTransformer(Transformer):
         # TODO: Support this by e.g. Colang UMIM action imports
         if spec.name is not None:
             if spec.name.islower():
-                spec.spec_type = "flow"
+                spec.spec_type = SpecType.FLOW
             elif spec.name.endswith("Action"):
-                if spec.members:
-                    spec.spec_type = "event"
-                else:
-                    spec.spec_type = "action"
+                spec.spec_type = SpecType.ACTION
             else:
-                spec.spec_type = "event"
+                spec.spec_type = SpecType.EVENT
         elif spec.var_name is not None:
-            if spec.members:
-                spec.spec_type = "event"
-            else:
-                spec.spec_type = "var"
+            spec.spec_type = SpecType.REFERENCE
 
         return spec
 
