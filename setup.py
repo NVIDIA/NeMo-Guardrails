@@ -76,6 +76,7 @@ setup(
         "typing-extensions==4.5.0",
         "Jinja2==3.1.2",
         "fastapi-utils==0.2.1",
+        "watchdog==3.0.0",
     ],
     extras_require={
         "eval": ["tqdm~=4.65", "numpy~=1.24"],

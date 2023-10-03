@@ -19,14 +19,17 @@ import json
 import logging
 import os.path
 from typing import List
+import time
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig
-from fastapi_utils.tasks import repeat_every
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -71,6 +74,8 @@ app.rails_config_path = os.path.join(os.path.dirname(__file__), "..", "..", "exa
 # Weather the chat UI is enabled or not.
 app.disable_chat_ui = False
 
+# stop signal for observer
+app.stop_signal = False
 
 class RequestBody(BaseModel):
     config_id: str = Field(description="The id of the configuration to be used.")
@@ -84,6 +89,38 @@ class ResponseBody(BaseModel):
         default=None, description="The new messages in the conversation"
     )
 
+class Handler(FileSystemEventHandler):
+ 
+    @staticmethod
+    def on_any_event(event):
+        if event.is_directory:
+            return None
+ 
+        elif event.event_type == 'created' or event.event_type == 'modified':
+            print(f"Watchdog received {event.event_type} event for file {event.src_path}")
+            tokens = event.src_path.split("/")
+            if not tokens[-1].startswith(".")  and ".ipynb_checkpoints" not in tokens and os.path.isfile(event.src_path):
+                for config_id in llm_rails_instances:
+                    if config_id in tokens:
+                        print (f"Update rail for {config_id}")
+                        time.sleep(1)
+                        _update_rails(config_id)
+
+
+
+def monitor_files():
+    observer = Observer()
+    event_handler = Handler()
+    observer.schedule(event_handler, 
+                      app.rails_config_path,
+                      recursive = True)
+    observer.start()
+    try:
+        while not app.stop_signal:
+            time.sleep(5)
+    finally:
+        observer.stop()
+        observer.join()
 
 @app.get(
     "/v1/rails/configs",
@@ -111,25 +148,24 @@ def get_rails_configs():
 
 # One instance of LLMRails per config id
 llm_rails_instances = {}
-# Config_ids for LLMs
-llm_configs = []
-
-@app.on_event("startup")
-@repeat_every(seconds = 1)
-async def update_rails():
-    llm_configs = await get_rails_configs()
-    for cfg in llm_configs:
-        rails_config = RailsConfig.from_path(os.path.join(app.rails_config_path, cfg["id"]))
-        if cfg['id'] in llm_rails_instances:
-            llm_rails_instances[cfg['id']].update_config(rails_config)
-            print ('updated rails config')
-        else:
-            llm_rails_instances[cfg['id']] = LLMRails(config=rails_config)
 
 
 def _get_rails(config_id: str) -> LLMRails:
     """Returns the rails instance for the given config id."""
-    return llm_rails_instances[config_id]
+    if config_id in llm_rails_instances:
+        return llm_rails_instances[config_id]
+
+    rails_config = RailsConfig.from_path(os.path.join(app.rails_config_path, config_id))
+    llm_rails = LLMRails(config=rails_config, verbose=True)
+    llm_rails_instances[config_id] = llm_rails
+
+    return llm_rails
+
+
+def _update_rails(config_id: str):
+    rails_config = RailsConfig.from_path(os.path.join(app.rails_config_path, config_id))
+    llm_rails = LLMRails(config=rails_config, verbose=True)
+    llm_rails_instances[config_id] = llm_rails
 
 
 @app.post(
@@ -236,6 +272,27 @@ async def startup_event():
             return {"status": "ok"}
 
 
+    app.loop = asyncio.get_running_loop()
+    # populating llm_rails_instances
+    configs = get_rails_configs()
+    for config_id in configs:
+        try:
+            llm_rails = _get_rails(config_id['id'])
+        except:
+            pass
+    try: 
+        app.task = app.loop.run_in_executor(None, monitor_files)
+    except: 
+        pass
+
+
 def register_logger(logger: callable):
     """Register an additional logger"""
     registered_loggers.append(logger)
+
+
+@app.on_event("shutdown")
+def shutdown_observer():
+    app.stop_signal = True
+    app.task.cancel()
+    print ("Shutting down observer")

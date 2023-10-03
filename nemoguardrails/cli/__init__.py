@@ -75,6 +75,10 @@ def server(
         default=False,
         help="Weather the ChatUI should be disabled",
     ),
+    auto_reload: bool = typer.Option(
+        default=False,
+        help ="enable auto reload option",
+    ),
 ):
     """Starts a NeMo Guardrails server."""
     if config:
@@ -92,6 +96,9 @@ def server(
 
     if disable_chat_ui:
         api.app.disable_chat_ui = True
+
+    if auto_reload:
+        api.app.auto_reload = True
 
     uvicorn.run(api.app, port=port, log_level="info", host="0.0.0.0")
 
