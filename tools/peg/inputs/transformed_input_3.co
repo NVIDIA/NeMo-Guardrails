@@ -1,0 +1,13 @@
+define bot remove last message
+INDENT
+
+"(remove last message)"
+
+DEDENT
+
+define bot inform cannot answer question
+INDENT
+
+"i cannot answer the question"
+
+DEDENT
