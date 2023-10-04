@@ -28,6 +28,7 @@ from nemoguardrails.actions.llm.utils import (
 )
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
+from nemoguardrails.llm.filters import colang
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.types import Task
 
@@ -288,4 +289,62 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
             print(f"Generated flow:\n{result}\n")
             return f"flow {name}\n" + "\n".join(lines)
         else:
-            return "flow bot express unsure\n  bot say 'I'm sure, I don't know how to do that.'"
+            return "flow bot express unsure\n  bot say 'I don't know how to do that.'"
+
+    @action(name="GenerateFlowContinuationAction", is_system_action=True)
+    async def generate_flow_continuation(
+        self,
+        events: List[dict],
+        llm: Optional[BaseLLM] = None,
+    ):
+        """Generate a continuation for the flow representing the current conversation."""
+
+        if self.instruction_flows_index is None:
+            raise RuntimeError("No instruction flows index has been created.")
+
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
+        log.info(f"Generating flow continuation.")
+
+        colang_history = colang(events)
+
+        # We use the last line from the history to search for relevant flows
+        search_text = colang_history.split("\n")[-1]
+
+        results = await self.flows_index.search(text=search_text, max_results=5)
+
+        examples = ""
+        for result in reversed(results):
+            examples += f"{result.meta['flow']}\n"
+
+        # TODO: add examples from the actual running flows
+
+        prompt = self.llm_task_manager.render_task_prompt(
+            task=Task.GENERATE_FLOW_CONTINUATION,
+            events=events,
+            context={
+                "examples": examples,
+            },
+        )
+
+        # We make this call with temperature 0 to have it as deterministic as possible.
+        with llm_params(llm, temperature=self.config.lowest_temperature):
+            result = await llm_call(llm, prompt)
+
+        lines = _remove_leading_empty_lines(result).split("\n")
+
+        flow_id = new_uuid()[0:4]
+        flow_name = f"dynamic_{flow_id}"
+
+        if lines[0].startswith("  "):
+            print(f"Generated flow:\n{result}\n")
+            return {
+                "name": flow_name,
+                "body": f"flow {flow_name}\n" + "\n".join(lines),
+            }
+        else:
+            return {
+                "name": "bot express unsure",
+                "body": 'flow bot express unsure\n  bot say "I\'m not sure what to do next."',
+            }

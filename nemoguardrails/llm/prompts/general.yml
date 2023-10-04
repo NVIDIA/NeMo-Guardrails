@@ -133,3 +133,11 @@ prompts:
       {{ examples }}
 
       flow {{ flow_name }}
+
+    # Prompt for generating the continuation for the current conversation.
+  - task: generate_flow_continuation
+    content: |-
+      {{ examples }}
+
+      flow conversation
+      {{ history | colang | indent(2) }}

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import re
+import textwrap
 from typing import List
 
 from nemoguardrails.actions.llm.utils import get_colang_history
@@ -151,3 +152,8 @@ def last_turns(colang_history: str, n: int) -> str:
         i -= 1
 
     return "\n".join(lines[i:])
+
+
+def indent(text: str, n_spaces: int) -> str:
+    """Indents the provided text with the provided number of spaces."""
+    return textwrap.indent(text, " " * n_spaces)

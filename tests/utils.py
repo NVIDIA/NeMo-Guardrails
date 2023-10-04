@@ -242,6 +242,7 @@ def convert_parsed_colang_to_flow_config(
                     loop_id=None,
                     elements=flow["elements"],
                     parameters=flow["parameters"],
+                    source_code=flow["source_code"],
                 ),
             )
             for flow in parsed_colang["flows"]

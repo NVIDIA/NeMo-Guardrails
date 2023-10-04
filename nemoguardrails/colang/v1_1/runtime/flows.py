@@ -282,9 +282,8 @@ class FlowConfig:
     loop_id: Optional[str] = None
     loop_type: InteractionLoopType = InteractionLoopType.PARENT
 
-    # The priority of the flow. Higher priority flows are executed first.
-    # TODO: Check for what this is used exactly
-    # priority: float = 1.0
+    # Whether there is always a new instance once the flow advances from the first match statement
+    enable_parallel_instances: bool = False
 
     # Whether it is an extension flow or not.
     # Extension flows can interrupt other flows on actionable steps.
@@ -392,6 +391,10 @@ class FlowState:
 
     # The UID of the flows that interrupted this one
     # interrupted_by = None
+
+    # Events that need to be send out before the flow advances the next time
+    # Currently, only used to start a new instance of a flow that was activated before
+    next_head_advance_events: List[FlowEvent] = field(default_factory=list)
 
     # The flow event name mapping
     _event_name_map: dict = field(init=False)
@@ -537,6 +540,13 @@ class State:
             for idx, element in enumerate(flow_config.elements):
                 if isinstance(element, Label):
                     flow_config.element_labels.update({element["name"]: idx})
+
+            # Mark flow as parallel flow based on source code comment
+            if (
+                flow_config.source_code is not None
+                and "# flow: parallel" in flow_config.source_code
+            ):
+                flow_config.enable_parallel_instances = True
 
         # Create main flow state first
         main_flow_config = self.flow_configs["main"]
@@ -1688,7 +1698,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
                         advancing_heads.append(head)
                         log.info(
-                            f"Winning action at head: {head} scores={head.matching_scores}"
+                            f"Co-winning action at head: {head} scores={head.matching_scores}"
                         )
                     else:
                         flow_state = _get_flow_state_from_head(state, head)
@@ -1731,9 +1741,15 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
         if flow_state.status == FlowStatus.WAITING:
             flow_state.status = FlowStatus.STARTING
 
+        # Add all scheduled events
+        internal_events = flow_state.next_head_advance_events.copy()
+        flow_state.next_head_advance_events.clear()
+
         head.position += 1
 
-        internal_events, new_heads = slide(state, flow_state, flow_config, head)
+        new_internal_events, new_heads = slide(state, flow_state, flow_config, head)
+        internal_events.extend(new_internal_events)
+
         state.internal_events.extend(internal_events)
 
         # Advance all new heads from a head fork
@@ -1776,6 +1792,14 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
                     InternalEvents.FLOW_STARTED, flow_state, head.matching_scores
                 )
                 _push_internal_event(state, event)
+                if not flow_finished:
+                    # Schedule the StartFlow event for the next head advancement if it is a "parallel" flow
+                    if flow_config.enable_parallel_instances:
+                        event = _create_restart_flow_internal_event(
+                            state, flow_state, head.matching_scores
+                        )
+                        flow_state.next_head_advance_events = [event]
+
         elif not flow_aborted and _is_action_op_element(
             flow_config.elements[head.position]
         ):
@@ -2008,8 +2032,8 @@ def _abort_flow(
     )
 
     if not deactivate_flow and flow_state.activated:
-        _restart_flow(state, flow_state, matching_scores)
-        log.info(f"Activated flow restart: '{flow_state.flow_id}'")
+        event = _create_restart_flow_internal_event(state, flow_state, matching_scores)
+        _push_internal_event(state, event)
 
 
 def _finish_flow(
@@ -2049,25 +2073,12 @@ def _finish_flow(
         f"Flow finished: '{_get_flow_parent_hierarchy(state, flow_state.uid)}' context={_context_log(flow_state)}"
     )
 
-    if flow_state.activated:
-        _restart_flow(state, flow_state, matching_scores)
-        log.info(f"Activated flow restart: '{flow_state.flow_id}'")
-
-
-def _restart_flow(
-    state: State, flow_state: FlowState, matching_scores: List[float]
-) -> None:
-    # TODO: Check if this creates unwanted side effects of arguments being passed and keeping their state
-    arguments = dict([(arg, flow_state.context[arg]) for arg in flow_state.arguments])
-    arguments.update(
-        {
-            "flow_id": flow_state.context["flow_id"],
-            "source_flow_instance_uid": flow_state.context["source_flow_instance_uid"],
-            "activated": flow_state.context["activated"],
-        }
-    )
-    event = create_internal_event(InternalEvents.START_FLOW, arguments, matching_scores)
-    _push_internal_event(state, event)
+    if (
+        flow_state.activated
+        and not state.flow_configs[flow_state.flow_id].enable_parallel_instances
+    ):
+        event = _create_restart_flow_internal_event(state, flow_state, matching_scores)
+        _push_internal_event(state, event)
 
 
 def _is_listening_flow(flow_state: FlowState) -> bool:
@@ -2466,12 +2477,27 @@ def compute_context(history: List[dict]):
     return context
 
 
+def _create_restart_flow_internal_event(
+    state: State, flow_state: FlowState, matching_scores: List[float]
+) -> FlowEvent:
+    # TODO: Check if this creates unwanted side effects of arguments being passed and keeping their state
+    arguments = dict([(arg, flow_state.context[arg]) for arg in flow_state.arguments])
+    arguments.update(
+        {
+            "flow_id": flow_state.context["flow_id"],
+            "source_flow_instance_uid": flow_state.context["source_flow_instance_uid"],
+            "activated": flow_state.context["activated"],
+        }
+    )
+    return create_internal_event(InternalEvents.START_FLOW, arguments, matching_scores)
+
+
 def create_abort_flow_internal_event(
     flow_instance_uid: str,
     source_flow_instance_uid: str,
     matching_scores: List[float],
     deactivate_flow: bool = False,
-) -> Event:
+) -> FlowEvent:
     """Returns 'AbortFlow' internal event"""
     arguments = {
         "flow_instance_uid": flow_instance_uid,

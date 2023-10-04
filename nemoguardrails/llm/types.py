@@ -26,6 +26,7 @@ class Task(Enum):
     GENERATE_VALUE = "generate_value"
     GENERATE_FLOW_FROM_INSTRUCTIONS = "generate_flow_from_instructions"
     GENERATE_FLOW_FROM_NAME = "generate_flow_from_name"
+    GENERATE_FLOW_CONTINUATION = "generate_flow_continuation"
 
     FACT_CHECKING = "fact_checking"
     JAILBREAK_CHECK = "jailbreak_check"

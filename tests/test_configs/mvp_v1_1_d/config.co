@@ -52,44 +52,64 @@ flow bot express greeting
 
 flow bot comment unsure how to respond
   bot say "I'm not sure how to respond."
+#
+#flow user ask question
+#  user said "What is the capital of France?"
+#    or user said "Who is the president of US?"
+
+#flow question
+#  user ask question
+#  bot respond to question
 
 flow greeting
   user expressed greeting
   bot express greeting
   # bot say a fun random fact
 
-flow flows fallback
-  # llm: exclude
-  match StartFlow() as $event
-
-  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
-
-  if not $exists
-      $flow_id = $event.arguments.flow_id
-      $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
-      await AddFlowsAction(config=$flow_source)
-      send StartFlow(flow_id=$flow_id)
-
 flow user unknown intent
   user said "xyz"
+
+flow unknown intent
+  user unknown intent
+  bot comment unsure how to respond
+
 
 flow fallback
   # llm: exclude
   user said something
   $intent = await GenerateUserIntentAction
   $exists = await CheckIfFlowExistsAction(flow_id=$intent)
+  # TODO: replace above with check if the flow (FlowFinished) advances something? is there an active matcher
 
   if $exists
     send FinishFlow(flow_id=$intent)
   else
-    $instructions = await GetLastUserMessageAction()
-    do $instructions
-    #bot say "This is a new intent {$intent}."
+    # bot say "This is a new intent {$intent}."
+    send DynamicFlowFinished(flow_id=$intent)
 
+    $flow_info = await GenerateFlowContinuationAction()
+    await AddFlowsAction(config=$flow_info['body'])
 
-flow unknown intent
-  user unknown intent
-  bot comment unsure how to respond
+    send StartFlow(flow_id=$flow_info['name'])
+    match FlowStarted(flow_id=$flow_info['name']) as $event_ref
+    match $event_ref.flow.Finished()
+
+flow flows fallback
+  """If we reach a point where we need to start a flow that does not exist, we generate it."""
+  # llm: exclude
+  # flow: parallel
+
+  match StartFlow() as $event
+
+  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
+
+  if not $exists
+      bot say "Need to generate from from name: {$flow_id}"
+      $flow_id = $event.arguments.flow_id
+      $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
+      await AddFlowsAction(config=$flow_source)
+      send StartFlow(flow_id=$flow_id)
+
 
 flow do $instructions
   # llm: exclude
@@ -111,6 +131,8 @@ flow main
   activate unknown intent
   activate fallback
   activate flows fallback
+  # activate question
+  # activate tell the user the weather
 
   bot say "Welcome! I'm the MVP bot."
   wait

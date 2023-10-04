@@ -29,7 +29,7 @@ from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
 FORMAT = "%(message)s"
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format=FORMAT,
     datefmt="[%X,%f]",
     handlers=[RichHandler(markup=True)],
@@ -43,7 +43,7 @@ def _init_state(colang_content) -> State:
         parse_colang_file(
             filename="",
             content=colang_content,
-            include_source_mapping=False,
+            include_source_mapping=True,
             version="1.1",
         )
     )
@@ -2534,5 +2534,93 @@ def test_event_action_wrapper_abstraction():
     )
 
 
+def test_event_action_wrapper_abstraction():
+    """"""
+
+    content = """
+    flow a
+      # flow: parallel
+      match UtteranceUserAction.Finished(final_transcript="1")
+      start UtteranceBotAction(script="A")
+      match UtteranceUserAction.Finished(final_transcript="2")
+      start UtteranceBotAction(script="B")
+
+    flow main
+      activate a
+      match UtteranceUserAction.Finished(final_transcript="End")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "2",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_flow_return_values()
+    test_event_action_wrapper_abstraction()

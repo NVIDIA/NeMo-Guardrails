@@ -147,7 +147,7 @@ def get_colang_history(
             if isinstance(event, FlowEvent):
                 event = {"type": event.name, **event.arguments}
 
-            if event["type"] == "FlowFinished":
+            if event["type"] in ["FlowFinished", "DynamicFlowFinished"]:
                 flow_id = event["flow_id"]
                 if flow_id.startswith("bot "):
                     if flow_id == "bot say":
