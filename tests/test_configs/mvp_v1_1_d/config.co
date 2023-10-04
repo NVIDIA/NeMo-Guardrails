@@ -58,20 +58,13 @@ flow greeting
   bot express greeting
   # bot say a fun random fact
 
-flow flows fallback
-  # llm: exclude
-  match StartFlow() as $event
-
-  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
-
-  if not $exists
-      $flow_id = $event.arguments.flow_id
-      $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
-      await AddFlowsAction(config=$flow_source)
-      send StartFlow(flow_id=$flow_id)
-
 flow user unknown intent
   user said "xyz"
+
+flow unknown intent
+  user unknown intent
+  bot comment unsure how to respond
+
 
 flow fallback
   # llm: exclude
@@ -82,14 +75,32 @@ flow fallback
   if $exists
     send FinishFlow(flow_id=$intent)
   else
-    $instructions = await GetLastUserMessageAction()
-    do $instructions
-    #bot say "This is a new intent {$intent}."
+    # bot say "This is a new intent {$intent}."
+    send DynamicFlowFinished(flow_id=$intent)
 
+    $flow_info = await GenerateFlowContinuationAction()
+    await AddFlowsAction(config=$flow_info['body'])
 
-flow unknown intent
-  user unknown intent
-  bot comment unsure how to respond
+    send StartFlow(flow_id=$flow_info['name'])
+    match FlowStarted(flow_id=$flow_info['name']) as $event_ref
+    match $event_ref.flow.Finished()
+
+flow flows fallback
+  """If we reach a point where we need to start a flow that does not exist, we generate it."""
+  # llm: exclude
+  # parallel
+
+  match StartFlow() as $event
+
+  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
+
+  if not $exists
+      bot say "Need to generate from from name: {$flow_id}"
+      $flow_id = $event.arguments.flow_id
+      $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
+      await AddFlowsAction(config=$flow_source)
+      send StartFlow(flow_id=$flow_id)
+
 
 flow do $instructions
   # llm: exclude
