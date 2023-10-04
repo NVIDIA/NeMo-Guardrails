@@ -16,7 +16,7 @@ flow_param_def: var_name ("=" test)?
 ?flow_stmt: simple_stmt | spec_op_stmt | compound_stmt | doc_string_stmt
 
 // Simple statements
-?simple_stmt: set_stmt | return_stmt | abort_stmt | break_stmt | continue_stmt
+?simple_stmt: set_stmt | return_stmt | abort_stmt | break_stmt | continue_stmt | priority_stmt
 set_stmt: var_name set_op set_right_side _NEWLINE
 ?set_right_side: test | spec_op
 
@@ -31,6 +31,7 @@ return_stmt: "return" [test] _NEWLINE
 abort_stmt: "abort" _NEWLINE
 break_stmt: "break" _NEWLINE
 continue_stmt: "continue" _NEWLINE
+priority_stmt: "priority" expr _NEWLINE
 
 // A "spec" is a unifying concept for flows, actions, events
 spec_operator: "match" -> match_spec
@@ -136,7 +137,7 @@ kwargs: "**" test ("," argvalue)*
 ?subscript: test | ([test] ":" [test] [sliceop]) -> slice
 sliceop: ":" [test]
 
-// Setting the priority for this rule is imporant!
+// Setting the priority for this rule is important!
 // When using a variable in the right side of an assignment, it will be considered an expression
 // rather than a spec (both expressions and specs can be just a variable).
 ?atom: var_name -> var

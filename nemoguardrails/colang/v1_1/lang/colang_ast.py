@@ -326,3 +326,12 @@ class RandomGoto(Element):
 
     labels: List[str] = field(default_factory=list)
     _type: str = "_random_goto"
+
+
+@dataclass_json
+@dataclass
+class Priority(Element):
+    """Set the priority of the flow in terms of action resolution"""
+
+    priority_expr: str = "1.0"
+    _type: str = "_priority"

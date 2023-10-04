@@ -40,6 +40,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     If,
     Label,
     MergeHeads,
+    Priority,
     RandomGoto,
     Return,
     Spec,
@@ -369,6 +370,9 @@ class FlowState:
 
     # The current set of variables in the flow state.
     context: dict
+
+    # The current priority of the flow instance that is used for action resolution.
+    priority: float = 1.0
 
     # Child flow ids
     arguments: List[str] = field(default_factory=list)
@@ -1929,6 +1933,15 @@ def slide(
             else:
                 head_position = flow_config.element_labels[element.label] + 1
 
+        elif isinstance(element, Priority):
+            priority = eval_expression(element.priority_expr, flow_state.context)
+            if not isinstance(priority, float) or priority < 0.0 or priority > 1.0:
+                raise ColangValueError(
+                    "priority must be a float number between 0.0 and 1.0!"
+                )
+            flow_state.priority = priority
+            head_position += 1
+
         else:
             # Ignore unknown element
             head_position += 1
@@ -2127,6 +2140,11 @@ def _compute_event_matching_score(
 ) -> float:
     """Checks if the given element matches the given event.
 
+    Factors that determine the final score:
+    - match event parameter specificity
+    - flow priority [0.0-1.0]
+    - definition order of flow
+
     Args:
     Returns:
         1.0: Exact match (all parameters match)
@@ -2142,6 +2160,7 @@ def _compute_event_matching_score(
         return 0.0
 
     # Compute matching score based on event argument matching
+    match_score: float = 1.0
     if event.name == InternalEvents.START_FLOW:
         match_score = _compute_arguments_dict_matching_score(
             event.arguments, ref_event.arguments
@@ -2157,50 +2176,48 @@ def _compute_event_matching_score(
             )
     elif event.name in InternalEvents.ALL and ref_event.name in InternalEvents.ALL:
         if (
-            "flow_id" not in ref_event.arguments
-            or "flow_id" not in event.arguments
-            or ref_event.arguments["flow_id"] == event.arguments["flow_id"]
+            "flow_id" in ref_event.arguments
+            and "flow_id" in event.arguments
+            and ref_event.arguments["flow_id"] != event.arguments["flow_id"]
         ):
-            # TODO: Check if this is needed
-            # if isinstance(event, FlowEvent) and event.flow is not None:
-            #     event.arguments["flow_arguments"] = event.flow.context
+            return 0.0
 
-            match_score = _compute_arguments_dict_matching_score(
-                event.arguments, ref_event.arguments
-            )
-            # TODO: Generalize this with mismatch using the 'not' keyword
-            if match_score > 0.0:
-                if (
-                    (
-                        ref_event.name == InternalEvents.FLOW_FINISHED
-                        and event.name == InternalEvents.FLOW_FAILED
+        # TODO: Check if this is needed
+        # if isinstance(event, FlowEvent) and event.flow is not None:
+        #     event.arguments["flow_arguments"] = event.flow.context
+
+        match_score = _compute_arguments_dict_matching_score(
+            event.arguments, ref_event.arguments
+        )
+
+        # TODO: Generalize this with mismatch using the 'not' keyword
+        if match_score > 0.0:
+            if (
+                (
+                    ref_event.name == InternalEvents.FLOW_FINISHED
+                    and event.name == InternalEvents.FLOW_FAILED
+                )
+                or (
+                    ref_event.name == InternalEvents.FLOW_FAILED
+                    and event.name == InternalEvents.FLOW_FINISHED
+                )
+                or (
+                    ref_event.name == InternalEvents.FLOW_STARTED
+                    and (
+                        event.name == InternalEvents.FLOW_FINISHED
+                        or event.name == InternalEvents.FLOW_FAILED
                     )
-                    or (
-                        ref_event.name == InternalEvents.FLOW_FAILED
-                        and event.name == InternalEvents.FLOW_FINISHED
-                    )
-                    or (
-                        ref_event.name == InternalEvents.FLOW_STARTED
-                        and (
-                            event.name == InternalEvents.FLOW_FINISHED
-                            or event.name == InternalEvents.FLOW_FAILED
-                        )
-                    )
-                ):
-                    # Match failure
-                    return -1.0
-                elif ref_event.name == event.name:
-                    # Match success
-                    return match_score
-        # No match
-        return 0.0
+                )
+            ):
+                # Match failure
+                return -1.0
+            elif ref_event.name != event.name:
+                # Match success
+                return 0.0
 
     else:
         # Its an UMIM event
-        if ref_event.name != event.name:
-            return 0.0
-
-        if (
+        if ref_event.name != event.name or (
             ref_event.action_uid is not None
             and ref_event.action_uid != event.action_uid
         ):
@@ -2210,19 +2227,14 @@ def _compute_event_matching_score(
             action_arguments = state.actions[event.action_uid].start_event_arguments
             event.arguments["action_arguments"] = action_arguments
 
-        # score = 1.0
-        # for key, value in element.items():
-        #     # Skip potentially private keys.
-        #     if key.startswith("_"):
-        #         continue
-        #     if value == "...":
-        #         score *= FUZZY_MATCH_FACTOR
-        #     if event.get(key) != value:
-        #         return float(False)
-
-        return _compute_arguments_dict_matching_score(
+        match_score = _compute_arguments_dict_matching_score(
             event.arguments, ref_event.arguments
         )
+
+    # Take into account the priority of the flow
+    match_score *= flow_state.priority
+
+    return match_score
 
 
 def _compute_arguments_dict_matching_score(args: dict, ref_args: dict) -> float:
