@@ -97,7 +97,7 @@ flow fallback
 flow flows fallback
   """If we reach a point where we need to start a flow that does not exist, we generate it."""
   # llm: exclude
-  # parallel
+  # flow: parallel
 
   match StartFlow() as $event
 
