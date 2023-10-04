@@ -21,11 +21,11 @@ flow answer question about france
 
 flow user said $text
   # llm: exclude
-  match UtteranceUserActionFinished(final_transcript=$text)
+  match UtteranceUserAction.Finished(final_transcript=$text)
 
-flow user says something
+flow user said something
   # llm: exclude
-  match UtteranceUserActionFinished() as $event
+  match UtteranceUserAction.Finished() as $event
 
 flow bot say $text
   # llm: exclude
@@ -40,11 +40,11 @@ flow wait
 flow bot smile
   bot say "I'm smiling."
 
-flow user express greeting
+flow user expressed greeting
   user said "hi"
     or user said "hello"
 
-flow user provide custom instructions
+flow user provided custom instructions
   user said "do something"
 
 flow bot express greeting
@@ -54,7 +54,7 @@ flow bot comment unsure how to respond
   bot say "I'm not sure how to respond."
 
 flow greeting
-  user express greeting
+  user expressed greeting
   bot express greeting
   # bot say a fun random fact
 
@@ -75,14 +75,17 @@ flow user unknown intent
 
 flow fallback
   # llm: exclude
-  user says something
+  user said something
   $intent = await GenerateUserIntentAction
   $exists = await CheckIfFlowExistsAction(flow_id=$intent)
 
   if $exists
     send FinishFlow(flow_id=$intent)
   else
-    bot say "This is a new intent {$intent}."
+    $instructions = await GetLastUserMessageAction()
+    do $instructions
+    #bot say "This is a new intent {$intent}."
+
 
 flow unknown intent
   user unknown intent
@@ -97,7 +100,7 @@ flow do $instructions
   match $event_ref.flow.Finished()
 
 flow custom instructions
-  user provide custom instructions
+  user provided custom instructions
   $instructions = await GetLastUserMessageAction()
 
   do $instructions

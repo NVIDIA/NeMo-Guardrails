@@ -1526,7 +1526,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                                 state,
                                 flow_state,
                                 event.matching_scores,
-                                event.arguments["activated"],
+                                event.arguments.get("activated", False),
                             )
                 elif "flow_instance_uid" in event.arguments:
                     flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
@@ -1535,7 +1535,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                             state,
                             flow_state,
                             event.matching_scores,
-                            event.arguments["activated"],
+                            event.arguments.get("activated", False),
                         )
                 # TODO: Add support for all flow instances of same flow with "flow_id"
             # elif event.name == "ResumeFlow":
@@ -1829,8 +1829,7 @@ def slide(
                 event = create_internal_event(
                     element.spec.name, event_arguments, head.matching_scores
                 )
-                internal_events.append(event)
-                log.debug(f"Created internal event: {event}")
+                _push_internal_event(state, event)
                 head_position += 1
 
             elif element.op == "_new_action_instance":
@@ -2055,9 +2054,7 @@ def _restart_flow(
         }
     )
     event = create_internal_event(InternalEvents.START_FLOW, arguments, matching_scores)
-    state.internal_events.append(event)
-
-    log.debug(f"Created internal event: {event}")
+    _push_internal_event(state, event)
 
 
 def _is_listening_flow(flow_state: FlowState) -> bool:
