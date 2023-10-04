@@ -155,7 +155,7 @@ def get_colang_history(
                     else:
                         history.append(f"{flow_id}")
                 elif flow_id.startswith("user "):
-                    if flow_id == "user says something":
+                    if flow_id == "user said something":
                         continue
                     elif flow_id.startswith("user said"):
                         history.append(f"user said \"{event['text']}\"")

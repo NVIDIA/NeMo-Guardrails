@@ -26,6 +26,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Flow,
     FlowParamDef,
     If,
+    Priority,
     Return,
     Source,
     Spec,
@@ -397,6 +398,13 @@ class ColangTransformer(Transformer):
         assert len(children) == 0
         return Continue(
             label=None,
+            _source=self.__source(meta),
+        )
+
+    def _priority_stmt(self, children, meta):
+        assert len(children) == 1
+        return Priority(
+            priority_expr=children[0]["elements"][0],
             _source=self.__source(meta),
         )
 

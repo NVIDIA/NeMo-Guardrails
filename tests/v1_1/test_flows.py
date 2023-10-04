@@ -22,12 +22,8 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (
-    ActionStatus,
-    FlowEvent,
-    State,
-    run_to_completion,
-)
+from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, FlowEvent,
+                                                      State, run_to_completion)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -675,6 +671,70 @@ def test_conflicting_actions_v_b():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "How are you",
+            },
+        ],
+    )
+
+
+def test_conflicting_actions_with_flow_priorities():
+    """Test the action conflict resolution"""
+
+    content = """
+    flow a $p
+      priority $p
+      match UtteranceUserAction.Finished(final_transcript="Go")
+      start UtteranceBotAction(script="A")
+
+    flow b $p
+      priority $p
+      match UtteranceUserAction.Finished(final_transcript="Go")
+      start UtteranceBotAction(script="B")
+
+    flow main
+      start a 1.0 as $ref_a
+      start b 0.9 as $ref_b
+      match $ref_a.Finished()
+      start a 0.9 as $ref_a
+      start b 1.0 as $ref_b
+      match $ref_b.Finished()
+      start UtteranceBotAction(script="End")
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert state.outgoing_events == []
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Go",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Go",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "End",
             },
         ],
     )
@@ -2475,4 +2535,4 @@ def test_event_action_wrapper_abstraction():
 
 
 if __name__ == "__main__":
-    test_event_action_wrapper_abstraction()
+    test_flow_return_values()

@@ -39,9 +39,10 @@ def eval_expression(expr, context):
     if inner_expressions:
         inner_expression_values = []
         for inner_expression in inner_expressions:
-            inner_expression_values.append(
-                eval_expression(inner_expression.strip("{}"), context)
-            )
+            value = eval_expression(inner_expression.strip("{}"), context)
+            if isinstance(value, str):
+                value = value.replace('"', '\\"')
+            inner_expression_values.append(value)
         expr = re.sub(pattern, lambda x: str(inner_expression_values.pop(0)), expr)
 
     # We search for all variable names starting with $, remove the $ and add
