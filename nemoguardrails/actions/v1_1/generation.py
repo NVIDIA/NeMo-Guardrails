@@ -318,6 +318,8 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         for result in reversed(results):
             examples += f"{result.meta['flow']}\n"
 
+        # TODO: add examples from the actual running flows
+
         prompt = self.llm_task_manager.render_task_prompt(
             task=Task.GENERATE_FLOW_CONTINUATION,
             events=events,

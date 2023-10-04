@@ -52,6 +52,14 @@ flow bot express greeting
 
 flow bot comment unsure how to respond
   bot say "I'm not sure how to respond."
+#
+#flow user ask question
+#  user said "What is the capital of France?"
+#    or user said "Who is the president of US?"
+
+#flow question
+#  user ask question
+#  bot respond to question
 
 flow greeting
   user expressed greeting
@@ -71,6 +79,7 @@ flow fallback
   user said something
   $intent = await GenerateUserIntentAction
   $exists = await CheckIfFlowExistsAction(flow_id=$intent)
+  # TODO: replace above with check if the flow (FlowFinished) advances something? is there an active matcher
 
   if $exists
     send FinishFlow(flow_id=$intent)
@@ -122,6 +131,8 @@ flow main
   activate unknown intent
   activate fallback
   activate flows fallback
+  # activate question
+  # activate tell the user the weather
 
   bot say "Welcome! I'm the MVP bot."
   wait
