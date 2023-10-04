@@ -1576,13 +1576,14 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         matching_score = _compute_event_matching_score(
                             state, flow_state, element, event
                         )
-                        # Make sure that we can always resolve conflicts, using the matching score
-                        matching_score *= match_order_score
-                        match_order_score *= 0.999999
-                        head.matching_scores = event.matching_scores.copy()
-                        head.matching_scores.append(matching_score)
 
                         if matching_score > 0.0:
+                            # Make sure that we can always resolve conflicts, using the matching score
+                            matching_score *= match_order_score
+                            match_order_score *= 0.999999
+                            head.matching_scores = event.matching_scores.copy()
+                            head.matching_scores.append(matching_score)
+
                             heads_matching.append(head)
                             log.info(
                                 f"Matching head: {head} context={_context_log(flow_state)}"
@@ -1668,7 +1669,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     state, flow_state, winning_element
                 )
                 log.info(
-                    f"Winning action at head: {ordered_heads[0]} scores={head.matching_scores}"
+                    f"Winning action at head: {ordered_heads[0]} scores={ordered_heads[0].matching_scores}"
                 )
 
                 advancing_heads.append(ordered_heads[0])
@@ -2179,9 +2180,8 @@ def _compute_event_matching_score(
 
         if "flow_id" not in ref_event.arguments:
             match_score *= 0.9
-            return match_score
         else:
-            return float(
+            match_score = float(
                 ref_event.name == InternalEvents.START_FLOW
                 and ref_event.arguments["flow_id"] == event.arguments["flow_id"]
             )
@@ -2249,9 +2249,13 @@ def _compute_event_matching_score(
 
 
 def _compute_arguments_dict_matching_score(args: dict, ref_args: dict) -> float:
+    # TODO: Find a better way of passing arguments to distinguish the ones that count for matching
+    argument_filter = ["return_value", "source_flow_instance_uid"]
     score = 1.0
     for key in args.keys():
-        if key in ref_args:
+        if key in argument_filter:
+            continue
+        elif key in ref_args:
             if isinstance(args[key], dict) and isinstance(ref_args[key], dict):
                 # If both values are dictionaries, recursively compare them
                 score *= _compute_arguments_dict_matching_score(
@@ -2392,89 +2396,6 @@ def _create_outgoing_event_from_actionable_element(
 
     # Extract the comment, if any
     # state.next_steps_comment = element.get("_source_mapping", {}).get("comment")
-
-
-# NOTE (schuellc): Are we going to replace this with a stateful approach
-def compute_next_events(
-    history: List[Union[dict, Event]], flow_configs: Dict[str, FlowConfig]
-) -> List[dict]:
-    """Computes the next step in a flow-driven system given a history of events."""
-    state = State(context={}, flow_states={}, flow_configs=flow_configs)
-    state.initialize()
-
-    # First, we process the history and apply any alterations e.g. 'hide_prev_turn'
-    processed_history = []
-    for event in history:
-        # First of all, we need to convert the input history to proper Event instances
-        if isinstance(event, dict):
-            event = ActionEvent.from_umim_event(event)
-
-        # NOTE (schuellc): Why is this needed?
-        if event.name == "hide_prev_turn":
-            # we look up the last `UtteranceUserActionFinished` event and remove everything after
-            end = len(processed_history) - 1
-            while (
-                end > 0 and processed_history[end].name != "UtteranceUserActionFinished"
-            ):
-                end -= 1
-
-            assert processed_history[end].name == "UtteranceUserActionFinished"
-            processed_history = processed_history[0:end]
-        else:
-            processed_history.append(event)
-
-    for event in processed_history:
-        state = run_to_completion(state, event)
-
-        # NOTE (Jul 24, Razvan): this is a quick fix. Will debug further.
-        if event.name == "bot_intent" and event["intent"] == "stop":
-            # Reset all flows
-            state.flow_states = {}
-
-    next_events = []
-
-    # If we have context updates after this event, we first add that.
-    if state.context_updates:
-        next_events.append(new_event_dict("ContextUpdate", data=state.context_updates))
-
-    # If we have a next step, we make sure to convert it to proper event structure.
-    for next_step_event in state.outgoing_events:
-        next_events.append(next_step_event)
-
-    # Finally, we check if there was an explicit "stop" request
-    if processed_history:
-        last_event = processed_history[-1]
-        # NOTE (schuellc): Why is this needed?
-        if last_event.name == "BotIntent" and last_event["intent"] == "stop":
-            # In this case, we remove any next steps
-            next_events = []
-
-    return next_events
-
-
-def compute_context(history: List[dict]):
-    """Computes the context given a history of events.
-
-    # We also include a few special context variables:
-    - $last_user_message: the last message sent by the user.
-    - $last_bot_message: the last message sent by the bot.
-    """
-    context = {
-        "last_user_message": None,
-        "last_bot_message": None,
-    }
-
-    for event in history:
-        if event.name == "ContextUpdate":
-            context.update(event["data"])
-
-        if event.name == "UtteranceUserActionFinished":
-            context["last_user_message"] = event["final_transcript"]
-
-        elif event.name == "StartUtteranceBotAction":
-            context["last_bot_message"] = event["script"]
-
-    return context
 
 
 def _create_restart_flow_internal_event(
