@@ -45,9 +45,9 @@ def chat(
         default=False,
         help="If the chat should be verbose and output the prompts",
     ),
-    debug: bool = typer.Option(
-        default=False,
-        help="Enable debug mode which prints rich information about the flows execution.",
+    debug_level: List[str] = typer.Option(
+        default=[],
+        help="Enable debug mode which prints rich information about the flows execution. Available levels: WARNING, INFO, DEBUG",
     ),
 ):
     """Starts an interactive chat session."""
@@ -59,9 +59,10 @@ def chat(
         typer.echo("Please provide a single folder.")
         raise typer.Exit(1)
 
-    if debug:
+    if len(debug_level) == 1:
         root_logger = logging.getLogger()
         root_logger.addHandler(RichHandler(markup=True))
+        logging.getLogger().setLevel(debug_level[0])
 
     typer.echo("Starting the chat...")
     run_chat(config_path=config[0], verbose=verbose)
