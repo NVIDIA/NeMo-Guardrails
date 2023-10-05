@@ -321,17 +321,19 @@ class WaitForHeads(Element):
 
 @dataclass_json
 @dataclass
-class RandomGoto(Element):
-    """Randomly pick one label and jump to it"""
+class Priority(Element):
+    """Set the priority of the flow in terms of action resolution."""
 
-    labels: List[str] = field(default_factory=list)
-    _type: str = "_random_goto"
+    priority_expr: str = "1.0"
+    _type: str = "_priority"
 
 
 @dataclass_json
 @dataclass
-class Priority(Element):
-    """Set the priority of the flow in terms of action resolution"""
+class CatchPatternFailure(Element):
+    """Set the pattern failure catcher to catch a failing pattern and forward it to the specified label.
+    If the label is not set the failure will be propagated to the parent flow.
+    """
 
-    priority_expr: str = "1.0"
-    _type: str = "_priority"
+    label: Optional[str] = None
+    _type: str = "_catch_pattern_failure"

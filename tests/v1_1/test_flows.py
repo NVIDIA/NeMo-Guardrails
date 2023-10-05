@@ -2623,4 +2623,4 @@ def test_event_action_wrapper_abstraction():
 
 
 if __name__ == "__main__":
-    test_event_action_wrapper_abstraction()
+    test_start_or_grouping()

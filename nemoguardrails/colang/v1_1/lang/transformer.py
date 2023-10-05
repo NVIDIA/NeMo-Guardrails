@@ -259,7 +259,12 @@ class ColangTransformer(Transformer):
         if spec.name is not None:
             if spec.name.islower():
                 spec.spec_type = SpecType.FLOW
-            elif spec.name.endswith("Action"):
+            elif (
+                spec.name.endswith("Action")
+                and not spec.name.startswith("Start")
+                and not spec.name.startswith("Change")
+                and not spec.name.startswith("Stop")
+            ):
                 spec.spec_type = SpecType.ACTION
             else:
                 spec.spec_type = SpecType.EVENT
