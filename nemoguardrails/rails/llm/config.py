@@ -179,6 +179,10 @@ def _join_config(dest_config: dict, additional_config: dict):
         "embedding_search_provider", {}
     ) or additional_config.get("embedding_search_provider", {})
 
+    dest_config["rails"] = dest_config.get("rails", {}) or additional_config.get(
+        "rails", {}
+    )
+
     additional_fields = [
         "sample_conversation",
         "lowest_temperature",
@@ -274,6 +278,11 @@ class RailsConfig(BaseModel):
     core: CoreConfig = Field(
         default_factory=CoreConfig,
         description="Configuration for core internal mechanics.",
+    )
+
+    rails: Dict[str, Dict[str, str]] = Field(
+        default_factory=dict,
+        description="Configuration parameters for the different types of rails.",
     )
 
     @staticmethod

@@ -70,6 +70,13 @@ class LLMRails:
         self.default_embedding_model = "all-MiniLM-L6-v2"
         self.default_embedding_engine = "SentenceTransformers"
 
+        # We set a flag if we use the rails with a single LLM call for topical/dialogue rails
+        self.topical_single_llm_call = False
+        if "topical" in self.config.rails and self.config.rails["topical"].get(
+            "single_call", False
+        ):
+            self.topical_single_llm_call = True
+
         # We keep a cache of the events history associated with a sequence of user messages.
         # TODO: when we update the interface to allow to return a "state object", this
         #   should be removed
@@ -77,12 +84,18 @@ class LLMRails:
 
         # We also load the default flows from the `default_flows.yml` file in the current folder.
         current_folder = os.path.dirname(__file__)
-        default_flows_path = os.path.join(current_folder, "llm_flows.co")
+        default_flows_file = (
+            "llm_flows_single_call.co"
+            if self.topical_single_llm_call
+            else "llm_flows.co"
+        )
+
+        default_flows_path = os.path.join(current_folder, default_flows_file)
         with open(default_flows_path, "r") as f:
             default_flows_content = f.read()
-            default_flows = parse_colang_file("llm_flows.co", default_flows_content)[
-                "flows"
-            ]
+            default_flows = parse_colang_file(
+                default_flows_file, default_flows_content
+            )["flows"]
 
         # We add the default flows to the config.
         self.config.flows.extend(default_flows)

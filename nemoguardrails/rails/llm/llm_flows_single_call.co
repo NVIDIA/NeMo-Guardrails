@@ -1,0 +1,5 @@
+define flow generate user intent steps message
+  """Generate the bot message from the user message, using canonical forms, in a single call."""
+
+  event UtteranceUserActionFinished(final_transcript="...")
+  execute generate_intent_steps_message
