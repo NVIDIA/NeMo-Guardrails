@@ -587,16 +587,18 @@ def expand_elements(
         for element in elements:
             expanded_elems: List[ElementType] = []
             if isinstance(element, SpecOp):
-                if element.op == "await":
-                    expanded_elems = _expand_await_element(element)
+                if element.op == "send":
+                    expanded_elems = _expand_send_element(element)
+                elif element.op == "match":
+                    expanded_elems = _expand_match_element(element)
                 elif element.op == "start":
                     expanded_elems = _expand_start_element(element)
                 elif element.op == "stop":
                     expanded_elems = _expand_stop_element(element)
-                elif element.op == "match":
-                    expanded_elems = _expand_match_element(element)
                 elif element.op == "activate":
                     expanded_elems = _expand_activate_element(element)
+                elif element.op == "await":
+                    expanded_elems = _expand_await_element(element)
                 if len(expanded_elems) > 0:
                     elements_changed = True
             elif isinstance(element, While):
@@ -724,6 +726,31 @@ def _expand_stop_element(
 ) -> List[ElementType]:
     # new_elements: List[ElementType] = []
     raise NotImplementedError()
+
+
+def _expand_send_element(
+    element: SpecOp,
+) -> List[ElementType]:
+    new_elements: List[ElementType] = []
+    if isinstance(element.spec, Spec):
+        # Single match element
+        if element.spec.spec_type != SpecType.EVENT:
+            raise ColangSyntaxError(
+                f"Cannot send a non-event type '{element.spec.spec_type}'"
+            )
+    elif isinstance(element.spec, dict):
+        # Multiple match elements
+        normalized_group = normalize_element_groups(element.spec)
+
+        fork_element = ForkHead()
+        event_label_elements: List[Label] = []
+        event_match_elements: List[SpecOp] = []
+        goto_group_elements: List[Goto] = []
+        group_label_elements: List[Label] = []
+        wait_for_heads_elements: List[WaitForHeads] = []
+        end_label_name = f"end_label_{new_var_uid()}"
+        goto_end_element = Goto(label=end_label_name)
+        end_label_element = Label(name=end_label_name)
 
 
 def _expand_match_element(
