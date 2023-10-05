@@ -1,11 +1,32 @@
+# Example flows with instructions
+
+flow tell a joke
+  """Tell a joke."""
+  bot say "Why don't scientists trust atoms? Because they make up everything!"
+  bot smile
+
+flow count
+  """Count from 1 to 5."""
+  bot say "1"
+  bot say "2"
+  bot say "3"
+  bot say "4"
+  bot say "5"
+
+flow answer question about france
+  """Answer the following question: What is the capital of France."""
+  bot say "The capital of France it's Paris."
+
 # -----------------------------------
 # User UMIM event wrapper flows
 # -----------------------------------
 
 flow user said $text
-  match UtteranceUserAction.Finished(text=$text) as $event
+  # llm: exclude
+  match UtteranceUserAction.Finished(final_transcript=$text) as $event
 
 flow user said something
+  # llm: exclude
   match UtteranceUserAction.Finished() as $event
 
 # ----------------------------------
@@ -13,12 +34,15 @@ flow user said something
 # ----------------------------------
 
 flow bot started saying $text
+  # llm: exclude
   match UtteranceBotAction(script=$text).Started() as $event
 
 flow bot said $text
+  # llm: exclude
   match UtteranceBotAction(script=$text).Finished() as $event
 
 flow bot said something
+  # llm: exclude
   match UtteranceBotAction().Finished() as $event
 
 # ----------------------------------
@@ -26,18 +50,23 @@ flow bot said something
 # -----------------------------------
 
 flow bot say $text
+  # llm: exclude
   await UtteranceBotAction(script=$text) as $action
 
 flow bot gesture $gesture
+  # llm: exclude
   await GestureBotAction($gesture) as $action
 
 flow scene show choice $prompt
+  # llm: exclude
   await VisualChoiceSceneAction(prompt=$prompt,choice_type="selection", allow_multiple_choices=False) as $action
 
 flow scene show information $prompt
+  # llm: exclude
   await VisualInformationSceneAction(prompt=$prompt) as $action
 
 flow scene show form $prompt
+  # llm: exclude
   wait VisualInformationSceneAction(prompt=$prompt) as $action
 
 # ----------------------------------
@@ -45,83 +74,134 @@ flow scene show form $prompt
 # -----------------------------------
 
 flow bot inform $information
-  bot say $information
+  # llm: exclude
+  await bot say $information
 
 flow bot ask $question
-  bot say $question
+  # llm: exclude
+  await bot say $question
 
 flow bot express $text
-  bot say $text
+  # llm: exclude
+  await bot say $text
 
 flow bot respond $text
-  bot say $text
+  # llm: exclude
+  await bot say $text
 
 # ----------------------------------
 # Bot action flows
 # -----------------------------------
 
 flow bot express greeting
-  bot express "Hi there!"
-    or bot express "Welcome!"
-    or bot express "Hello!"
-    or bot express "Hi!"
-    or bot express "hi"
+  start bot express "Hi there!" as $ref
+    or bot express "Welcome!" as $ref
+    or bot express "Hello!" as $ref
+  match $ref.Finished()
+
+flow bot express feeling well
+  start bot express "I am good!" as $ref
+    or bot express "I am great!" as $ref
+  match $ref.Finished()
+
+flow bot express feeling bad
+  start bot express "I am not good!" as $ref
+    or bot express "I am a bit under the weather!" as $ref
+  match $ref.Finished()
 
 flow bot inform about service
-  bot inform "You can ask or instruct me whatever you want and I will do it!"
-
-flow bot inform about service
-  bot inform "You can ask or instruct me whatever you want and I will do it!"
+  await bot inform "You can ask or instruct me whatever you want and I will do it!"
 
 # ----------------------------------
 # User action flows
 # -----------------------------------
 
-flow user expressed greeted
-  user said "Hi there!"
+flow user expressed greeting
+  await user said "hi"
     or user said "Welcome!"
     or user said "Hello!"
-    or user said "Hi!"
+
+flow user asked how are you
+  await user said "how are you"
 
 flow user provide custom instructions
-  user said "do something" as $user_said_flow_ref
-  $instruction = $user_said_flow_ref.context.event.arguments.final_transcript
+  user said "do something" as $ref
+  $instruction = $ref.context.event.arguments.final_transcript
 
 # ----------------------------------
 # Helper flows
 # -----------------------------------
 
 flow wait
-  await NeverComingEvent()
+  # llm: exclude
+  match NeverComingEvent()
 
 flow fallback
-  #match UtteranceUserAction().Finished() as $event_ref
-  #$user_message = $event_ref.arguments.final_transcript
-  #$intent = await GenerateUserIntentAction(user_message=$user_message)
-  #send FinishFlow(flow_id=$intent)
-  bot inform "Sorry, I have no answer for that!"
+  # llm: exclude
+  user said something
+  $intent = await GenerateUserIntentAction()
+  $exists = await CheckIfFlowExistsAction(flow_id=$intent)
+
+  if $exists
+    send FinishFlow(flow_id=$intent)
+  else
+    $instructions = await GetLastUserMessageAction()
+    do $instructions
+    #bot say "This is a new intent {$intent}."
 
 flow do $instructions
-  #$flow_source = await GenerateFlowAction(instructions=$instructions, flow_name="user instruction action")
-  #await AddFlowsAction(config=$flow_source)
-  #await user instruction action
-  bot respond "I am doing the instruction..."
+  # llm: exclude
+  $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
+  await AddFlowsAction(config=$flow_info.body)
+  send StartFlow(flow_id=$flow_info['name'])
+  match FlowStarted(flow_id=$flow_info['name']) as $event_ref
+  match $event_ref.flow.Finished()
 
-flow custom instruction
-  user provide custom instructions as $custom_instructions_ref
-  do $custom_instructions_ref.context.instruction
+flow flows fallback
+  # llm: exclude
+  match StartFlow() as $event
+
+  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
+
+  if not $exists
+      $flow_id = $event.arguments.flow_id
+      $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
+      await AddFlowsAction(config=$flow_source)
+      send StartFlow(flow_id=$flow_id)
 
 # ----------------------------------
-# Main demo story
+# FAQs
 # -----------------------------------
+
 flow greeting
-  user expressed greeted
+  user expressed greeting
   bot express greeting
 
-flow main
+flow how are you
+  user asked how are you
+  start bot express feeling well as $ref
+    or bot express feeling bad as $ref
+  match $ref.Finished()
+
+flow faq
   activate greeting
-  activate custom instruction
-  bot greet
-  user greeted
-  bot inform about service
+    and how are you
+  wait
+
+# ----------------------------------
+# Main story
+# -----------------------------------
+
+flow custom instruction
+  user provide custom instructions as $ref
+  do $ref.context.instruction
+
+flow main
+  activate faq
+  #activate fallback
+  activate flows fallback
+  #activate custom instruction
+  #bot express greeting
+  bot say "Welcome! I'm the MVP bot."
+  #bot inform about service
   wait
