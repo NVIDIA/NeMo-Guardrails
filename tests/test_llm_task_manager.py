@@ -125,7 +125,6 @@ def test_custom_task_prompts(task, expected_prompt):
 
     assert task_prompt == expected_prompt
 
-
 def test_prompt_length_exceeded_empty_events():
     """Test the prompts for the OpenAI GPT-3 5 Turbo model."""
     config = RailsConfig.from_content(
