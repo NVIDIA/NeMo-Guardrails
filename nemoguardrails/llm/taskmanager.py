@@ -25,7 +25,9 @@ from nemoguardrails.llm.filters import (
     last_turns,
     remove_text_messages,
     to_messages,
+    to_messages_nemollm,
     user_assistant_sequence,
+    user_assistant_sequence_nemollm,
     verbose_v1,
 )
 from nemoguardrails.llm.output_parsers import (
@@ -55,7 +57,11 @@ class LLMTaskManager:
         self.env.filters["first_turns"] = first_turns
         self.env.filters["last_turns"] = last_turns
         self.env.filters["user_assistant_sequence"] = user_assistant_sequence
+        self.env.filters[
+            "user_assistant_sequence_nemollm"
+        ] = user_assistant_sequence_nemollm
         self.env.filters["to_messages"] = to_messages
+        self.env.filters["to_messages_nemollm"] = to_messages_nemollm
         self.env.filters["verbose_v1"] = verbose_v1
 
         self.output_parsers = {

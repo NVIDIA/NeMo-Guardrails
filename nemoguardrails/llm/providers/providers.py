@@ -30,9 +30,12 @@ from langchain.llms.base import LLM
 
 from nemoguardrails.rails.llm.config import Model
 
+from .nemollm import NeMoLLM
+
 log = logging.getLogger(__name__)
 
-_providers: Dict[str, Type[BaseLanguageModel]] = {}
+# Initialize the providers with the default ones, for now only NeMo LLM.
+_providers: Dict[str, Type[BaseLanguageModel]] = {"nemollm": NeMoLLM}
 
 
 async def _acall(self, *args, **kwargs):
@@ -56,6 +59,7 @@ def discover_langchain_providers():
             provider_cls._acall = _acall
 
 
+# Discover all the additional providers from LangChain
 discover_langchain_providers()
 
 
