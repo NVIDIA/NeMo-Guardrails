@@ -154,8 +154,7 @@ def last_turns(colang_history: str, n: int) -> str:
 
 
 def user_assistant_sequence_nemollm(events: List[dict]) -> str:
-    """Filter that turns an array of events into a sequence of user/assistant messages,
-    with special tokens used by Marigold Badger NeMo LLM.
+    """Filter that turns an array of events into a sequence of user/assistant messages.
 
     The output will look like:
        ```

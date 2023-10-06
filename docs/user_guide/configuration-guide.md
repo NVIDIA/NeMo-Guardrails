@@ -97,7 +97,7 @@ models:
     model: gpt-43b-905
 ```
 
-You can also use the NeMo LLM models for specific tasks, e.g., jailbreak detection and output moderation. For example:
+You can also use customized NeMo LLM models for specific tasks, e.g., jailbreak detection and output moderation. For example:
 
 ```yaml
 models:
@@ -114,11 +114,11 @@ You can specify additional parameters when using NeMo LLM models using the `para
 
 - `temperature`: the temperature that should be used for making the calls;
 - `api_host`: points to the NeMo LLM Service host (default 'https://api.llm.ngc.nvidia.com');
-- `api_key`: the NeMo LLM Service key that should be used.
+- `api_key`: the NeMo LLM Service key that should be used;
 - `organization_id`: the NeMo LLM Service organization ID that should be used;
 - `tokens_to_generate`: the maximum number of tokens to generate;
 - `stop`: the list of stop words that should be used;
-- `customization_id`: [optional] if a customization is used, the id should be specified.
+- `customization_id`: if a customization is used, the id should be specified.
 
 The `api_host`, `api_key`, and `organization_id` are fetched automatically from the environment variables `NGC_API_HOST`, `NGC_API_KEY`, and `NGC_ORGANIZATION_ID`, respectively.
 
