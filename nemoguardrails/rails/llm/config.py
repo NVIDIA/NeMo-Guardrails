@@ -133,6 +133,24 @@ class CoreConfig(BaseModel):
     )
 
 
+class TopicalRailsConfig(BaseModel):
+    """Settings for topical rails."""
+
+    single_call: Optional[bool] = Field(
+        default=False,
+        description="Whether a single LLM call should be used for topical rails.",
+    )
+
+
+class RailsTypeConfig(BaseModel):
+    """Settings for specific rail types, e.g. topical."""
+
+    topical: TopicalRailsConfig = Field(
+        default_factory=TopicalRailsConfig,
+        description="Configuration parameters for the topical rails.",
+    )
+
+
 # Load the default config values from the file
 with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
     _default_config = yaml.safe_load(_fc)
@@ -280,8 +298,8 @@ class RailsConfig(BaseModel):
         description="Configuration for core internal mechanics.",
     )
 
-    rails: Dict[str, Dict[str, str]] = Field(
-        default_factory=dict,
+    rails: RailsTypeConfig = Field(
+        default_factory=RailsTypeConfig,
         description="Configuration parameters for the different types of rails.",
     )
 

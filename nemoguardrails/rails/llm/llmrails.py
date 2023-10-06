@@ -70,13 +70,6 @@ class LLMRails:
         self.default_embedding_model = "all-MiniLM-L6-v2"
         self.default_embedding_engine = "SentenceTransformers"
 
-        # We set a flag if we use the rails with a single LLM call for topical/dialogue rails
-        self.topical_single_llm_call = False
-        if "topical" in self.config.rails and self.config.rails["topical"].get(
-            "single_call", False
-        ):
-            self.topical_single_llm_call = True
-
         # We keep a cache of the events history associated with a sequence of user messages.
         # TODO: when we update the interface to allow to return a "state object", this
         #   should be removed
@@ -86,7 +79,7 @@ class LLMRails:
         current_folder = os.path.dirname(__file__)
         default_flows_file = (
             "llm_flows_single_call.co"
-            if self.topical_single_llm_call
+            if self.config.rails.topical.single_call
             else "llm_flows.co"
         )
 
