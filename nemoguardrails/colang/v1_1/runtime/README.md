@@ -24,6 +24,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Add support for timer action support in the runtime
 - Run run_to_completion once when CLI is started to allow bot to start the interaction
 - Find a better solution for separating the flow event arguments like `flow_id` or `activated` from the flow context variables.
+- Fix unit test helper function to work with stories that generate bot messages when started
 
 ## To Discuss
 

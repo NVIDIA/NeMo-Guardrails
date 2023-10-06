@@ -67,5 +67,38 @@ def test_add_new_flow_action():
     chat << "message a!\nmessage b!"  # "message a!\nmessage b!\nmessage a!\nmessage b!"
 
 
+def test_check_for_active_flow_finished_match_action():
+    config = RailsConfig.from_content(
+        colang_content="""
+        flow a
+          await b "test"
+
+        flow b $param
+          match UtteranceUserAction().Finished(final_transcript="b")
+
+        flow main
+          match UtteranceUserAction().Finished(final_transcript="start")
+          start a
+          $ready = await CheckForActiveFlowFinishedMatchAction(flow_id="b", param="test")
+          await UtteranceBotAction(script="message {$ready}")
+          $ready = await CheckForActiveFlowFinishedMatchAction(flow_id="b", param="test1")
+          await UtteranceBotAction(script="message {$ready}")
+          $ready = await CheckForActiveFlowFinishedMatchAction(flow_id="a")
+          await UtteranceBotAction(script="message {$ready}")
+        """,
+        yaml_content="""
+        colang_version: "1.1"
+        """,
+    )
+
+    chat = TestChat(
+        config,
+        llm_completions=[],
+    )
+
+    chat >> "start"
+    chat << "message True\nmessage False\nmessage False"
+
+
 if __name__ == "__main__":
-    test_add_new_flow_action()
+    test_check_for_active_flow_finished_match_action()

@@ -15,7 +15,7 @@
 
 """A set of actions for generating various types of completions using an LLMs."""
 import logging
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from langchain.llms import BaseLLM
 
@@ -27,6 +27,10 @@ from nemoguardrails.actions.llm.utils import (
     llm_call,
 )
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
+from nemoguardrails.colang.v1_1.runtime.flows import (
+    FlowEvent,
+    find_all_active_event_matchers,
+)
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.filters import colang
 from nemoguardrails.llm.params import llm_params
@@ -188,6 +192,14 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
     @action(name="CheckIfFlowExistsAction", is_system_action=True)
     async def check_if_flow_exists(self, state: "State", flow_id: str):
         return flow_id in state.flow_id_states
+
+    @action(name="CheckForActiveFlowFinishedMatchAction", is_system_action=True)
+    async def check_for_active_flow_finished_match(
+        self, state: "State", **arguments: Any
+    ):
+        event = FlowEvent(name="FlowFinished", arguments=arguments)
+        heads = find_all_active_event_matchers(state, event)
+        return len(heads) > 0
 
     @action(name="GenerateFlowFromInstructionsAction", is_system_action=True)
     async def generate_flow_from_instructions(
