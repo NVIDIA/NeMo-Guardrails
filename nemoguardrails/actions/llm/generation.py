@@ -629,14 +629,12 @@ class LLMGenerationActions:
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
 
-        # TODO: check for an explicit way of enabling the canonical form detection
-
         if self.config.user_messages:
             # TODO: based on the config we can use a specific canonical forms model
             #  or use the LLM to detect the canonical form. The below implementation
             #  is for the latter.
 
-            log.info("Generate all three phases in one LLM call:")
+            log.info("Generate all three phases in one LLM call...")
 
             # We search for the most relevant similar user utterance
             examples = ""
@@ -645,8 +643,9 @@ class LLMGenerationActions:
             flow_results = {}
 
             if self.user_message_index:
+                # Get the top 10 intents even if we use less in the selected examples
                 intent_results = await self.user_message_index.search(
-                    text=event["final_transcript"], max_results=5
+                    text=event["final_transcript"], max_results=10
                 )
 
                 # We fill in the list of potential user intents
@@ -667,15 +666,60 @@ class LLMGenerationActions:
                 example = f'user "{result.text}"\n  {intent}\n'
 
                 flow_results_intent = flow_results.get(intent, [])
+                found_flow_for_intent = False
                 for result_flow in flow_results_intent:
-                    (flow_user_intent, flow_bot_intent) = result_flow.text.split("\n")
+                    # Assumption: each flow should contain at least two lines, the first is the user intent.
+                    # Just in case there are some flows with only one line
+                    if "\n" not in result_flow.text:
+                        continue
+                    (flow_user_intent, flow_continuation) = result_flow.text.split(
+                        "\n", 1
+                    )
                     flow_user_intent = flow_user_intent[5:]
                     if flow_user_intent == intent:
-                        example += f"{flow_bot_intent}\n"
-                    # for now, only use the first flow for each intent
-                    break
+                        found_flow_for_intent = True
+                        example += f"{flow_continuation}\n"
+
+                        # Also add the bot message if the last line in the flow is a bot canonical form
+                        last_flow_line = flow_continuation
+                        if "\n" in flow_continuation:
+                            (_, last_flow_line) = flow_continuation.rsplit("\n", 1)
+                        if last_flow_line.startswith("bot "):
+                            bot_canonical_form = last_flow_line[4:]
+
+                            found_bot_message = False
+                            if self.bot_message_index:
+                                bot_messages_results = (
+                                    await self.bot_message_index.search(
+                                        text=bot_canonical_form, max_results=1
+                                    )
+                                )
+
+                                for bot_message_result in bot_messages_results:
+                                    if bot_message_result.text == bot_canonical_form:
+                                        found_bot_message = True
+                                        example += (
+                                            f"  \"{bot_message_result.meta['text']}\"\n"
+                                        )
+                                        # Only use the first bot message for now
+                                        break
+
+                            if not found_bot_message:
+                                # This is for canonical forms that do not have an associated message.
+                                # Create a simple message for the bot canonical form.
+                                # In a later version we could generate a message with the LLM at app initialization.
+                                example += (
+                                    f'  "This is a message for {bot_canonical_form}"\n'
+                                )
+
+                        # For now, only use the first flow for each intent.
+                        break
+                if not found_flow_for_intent:
+                    # Skip intents that do not have an associated flow.
+                    continue
 
                 example += "\n"
+
                 examples += example
 
             prompt = self.llm_task_manager.render_task_prompt(
