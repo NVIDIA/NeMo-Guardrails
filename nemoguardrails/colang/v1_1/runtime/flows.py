@@ -137,7 +137,7 @@ class FlowEvent(Event):
     """The flow event class."""
 
     # An event can belong to a flow
-    flow: Optional[str] = None
+    flow: Optional[FlowState] = None
 
 
 class ActionStatus(Enum):
@@ -2220,6 +2220,28 @@ def _compute_event_matching_score(
     match_score *= flow_state.priority
 
     return match_score
+
+
+def find_all_active_event_matchers(state: State, event: Event) -> List[FlowHead]:
+    event_matchers: List[FlowHead] = []
+    for flow_state in state.flow_states.values():
+        if not _is_listening_flow(flow_state):
+            continue
+
+        flow_config = state.flow_configs[flow_state.flow_id]
+
+        for head in flow_state.heads:
+            element = flow_config.elements[head.position]
+            score = _compute_event_matching_score(
+                state,
+                flow_state,
+                element,
+                event,
+            )
+            if score > 0.0:
+                event_matchers.append(head)
+
+    return event_matchers
 
 
 def _compute_arguments_dict_matching_score(args: dict, ref_args: dict) -> float:

@@ -78,7 +78,7 @@ flow fallback
   # llm: exclude
   user said something
   $intent = await GenerateUserIntentAction
-  $exists = await CheckIfFlowExistsAction(flow_id=$intent)
+  $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
   # TODO: replace above with check if the flow (FlowFinished) advances something? is there an active matcher
 
   if $exists
