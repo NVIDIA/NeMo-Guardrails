@@ -52,7 +52,7 @@ def discover_langchain_providers():
     for provider_cls in _providers.values():
         # If the "_acall" method is not defined, we add it.
         if issubclass(provider_cls, LLM) and "_acall" not in provider_cls.__dict__:
-            log.debug(f"Adding async support to {provider_cls.__name__}")
+            log.debug("Adding async support to %s", provider_cls.__name__)
             provider_cls._acall = _acall
 
 
