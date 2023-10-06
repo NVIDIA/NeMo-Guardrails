@@ -79,11 +79,11 @@ def test_check_for_active_flow_finished_match_action():
         flow main
           match UtteranceUserAction().Finished(final_transcript="start")
           start a
-          $ready = await CheckForActiveFlowFinishedMatchAction(flow_id="b", param="test")
+          $ready = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id="b", param="test")
           await UtteranceBotAction(script="message {$ready}")
-          $ready = await CheckForActiveFlowFinishedMatchAction(flow_id="b", param="test1")
+          $ready = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id="b", param="test1")
           await UtteranceBotAction(script="message {$ready}")
-          $ready = await CheckForActiveFlowFinishedMatchAction(flow_id="a")
+          $ready = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id="a")
           await UtteranceBotAction(script="message {$ready}")
         """,
         yaml_content="""

@@ -28,7 +28,7 @@ from nemoguardrails.actions.llm.utils import (
 )
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
 from nemoguardrails.colang.v1_1.runtime.flows import (
-    FlowEvent,
+    Event,
     find_all_active_event_matchers,
 )
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
@@ -193,11 +193,11 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
     async def check_if_flow_exists(self, state: "State", flow_id: str):
         return flow_id in state.flow_id_states
 
-    @action(name="CheckForActiveFlowFinishedMatchAction", is_system_action=True)
+    @action(name="CheckForActiveEventMatchAction", is_system_action=True)
     async def check_for_active_flow_finished_match(
-        self, state: "State", **arguments: Any
+        self, state: "State", name: str, **arguments: Any
     ):
-        event = FlowEvent(name="FlowFinished", arguments=arguments)
+        event = Event(name=name, arguments=arguments)
         heads = find_all_active_event_matchers(state, event)
         return len(heads) > 0
 
