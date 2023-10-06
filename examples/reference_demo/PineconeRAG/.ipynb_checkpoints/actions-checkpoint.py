@@ -184,11 +184,7 @@ def create_embedding(texts):
     from langchain.embeddings.openai import OpenAIEmbeddings
     model_name = 'text-embedding-ada-002'
     embed = OpenAIEmbeddings(model=model_name,openai_api_key=OPENAI_API_KEY)
-    texts = [
-    'this is the first chunk of text',
-    'then another second chunk of text is here']
-    res = embed.embed_documents(texts)
-    print(len(res), len(res[0]))
+    return embed.embed_documents(texts)
 
 
 def pinecone_init():
