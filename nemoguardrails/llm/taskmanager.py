@@ -177,7 +177,7 @@ class LLMTaskManager:
 
     def render_task_prompt(
         self,
-        task: Task,
+        task: Union[str, Task],
         context: Optional[dict] = None,
         events: Optional[List[dict]] = None,
     ) -> Union[str, List[dict]]:

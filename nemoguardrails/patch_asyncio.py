@@ -25,7 +25,7 @@ nest_asyncio_patch_applied = False
 def apply():
     global nest_asyncio_patch_applied
 
-    if os.environ.get("DISABLE_NEST_ASYNCIO", "false").lower() not in [
+    if os.environ.get("DISABLE_NEST_ASYNCIO", "true").lower() not in [
         "true",
         "1",
         "yes",

@@ -19,6 +19,7 @@ import logging
 import random
 import re
 import sys
+import threading
 import uuid
 from ast import literal_eval
 from functools import lru_cache
@@ -45,6 +46,7 @@ from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
+from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.utils import new_event_dict
 
@@ -77,7 +79,13 @@ class LLMGenerationActions:
             get_embedding_search_provider_instance
         )
 
-        asyncio.run(self.init())
+        if check_sync_call_from_async_loop():
+            t = threading.Thread(target=asyncio.run, args=(self.init(),))
+            t.start()
+            t.join()
+        else:
+            asyncio.run(self.init())
+
         self.llm_task_manager = llm_task_manager
 
         # We also initialize the environment for rendering bot messages

@@ -15,7 +15,7 @@
 
 """Prompts for the various steps in the interaction."""
 import os
-from typing import List
+from typing import List, Union
 
 import yaml
 
@@ -99,7 +99,7 @@ def _get_prompt(task_name: str, model: str, prompts: List) -> TaskPrompt:
     raise ValueError(f"Could not find prompt for task {task_name} and model {model}")
 
 
-def get_prompt(config: RailsConfig, task: Task) -> TaskPrompt:
+def get_prompt(config: RailsConfig, task: Union[str, Task]) -> TaskPrompt:
     """Return the prompt for the given task."""
     # Currently, we use the main model for all tasks
     # TODO: add support to use different models for different tasks
@@ -108,7 +108,7 @@ def get_prompt(config: RailsConfig, task: Task) -> TaskPrompt:
         task_model = config.models[0].engine
         if config.models[0].model:
             task_model += "/" + config.models[0].model
-    task_name = str(task.value)
+    task_name = str(task.value) if isinstance(task, Task) else task
 
     prompts = _prompts + (config.prompts or [])
     prompt = _get_prompt(task_name, task_model, prompts)
