@@ -1122,6 +1122,94 @@ def test_finish_flow_event():
     )
 
 
+def test_match_specificity_mechanic():
+    """Test the FinishFlow event that will immediately finish a flow"""
+
+    content = """
+    flow user said something
+      match UtteranceUserAction().Finished()
+
+    flow user said $transcript
+      match UtteranceUserAction().Finished(final_transcript=$transcript)
+
+    flow something
+      user said something
+      start UtteranceBotAction(script="something")
+
+    flow hello
+      await user said "hello"
+      start UtteranceBotAction(script="hi")
+
+    flow goodbye
+      await user said "goodbye"
+      start UtteranceBotAction(script="bye")
+
+    flow something failed
+      match something.Failed()
+      start UtteranceBotAction(script="something failed")
+
+    flow hello failed
+      match hello.Failed()
+      start UtteranceBotAction(script="hello failed")
+
+    flow goodbye failed
+      match goodbye.Failed()
+      start UtteranceBotAction(script="goodbye failed")
+
+    flow main
+      activate something and something failed
+      activate hello and hello failed
+      activate goodbye and goodbye failed
+      match WaitAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "hello",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "hi",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "something failed",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "goodbye",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "bye",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "something failed",
+            },
+        ],
+    )
+
+
 def test_match_failure_flow_abort():
     """Test the mechanism where a match statement FlowFinished/FlowFailed will abort the flow
     if it fails to be satisfied"""
@@ -2623,4 +2711,4 @@ def test_event_action_wrapper_abstraction():
 
 
 if __name__ == "__main__":
-    test_start_or_grouping()
+    test_match_specificity_mechanic()

@@ -677,7 +677,7 @@ def _expand_start_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single element
-        if element.spec.spec_type == SpecType.FLOW:
+        if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
             # send StartFlow(flow_id="FLOW_NAME")
             element.spec.arguments.update({"flow_id": f"'{element.spec.name}'"})
@@ -765,7 +765,7 @@ def _expand_send_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single send element
-        if element.spec.spec_type != SpecType.EVENT:
+        if element.spec.spec_type != SpecType.EVENT and element.spec.members is None:
             raise ColangSyntaxError(
                 f"Cannot send a non-event type: '{element.spec.spec_type}'"
             )
@@ -782,7 +782,7 @@ def _expand_match_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single match element
-        if element.spec.spec_type == SpecType.FLOW:
+        if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
             element_ref = element.spec.ref
             if element_ref is None:
@@ -814,12 +814,7 @@ def _expand_match_element(
                     )
                 )
         elif (
-            (
-                element.spec.spec_type == SpecType.ACTION
-                or element.spec.spec_type == SpecType.REFERENCE
-            )
-            and element.spec.members is not None
-            or element.spec.spec_type == SpecType.EVENT
+            element.spec.spec_type == SpecType.EVENT or element.spec.members is not None
         ):
             # It's an event
             if element.return_var_name is not None:
@@ -908,9 +903,10 @@ def _expand_await_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single element
-        if element.spec.spec_type == SpecType.FLOW or (
-            element.spec.spec_type == SpecType.ACTION and element.spec.members is None
-        ):
+        if (
+            element.spec.spec_type == SpecType.FLOW
+            or element.spec.spec_type == SpecType.ACTION
+        ) and element.spec.members is None:
             # It's a flow or an UMIM action
             element_ref = element.spec.ref
             if element_ref is None:
@@ -949,7 +945,7 @@ def _expand_activate_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single match element
-        if element.spec.spec_type == SpecType.FLOW:
+        if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
             element.spec.arguments.update(
                 {
@@ -2324,7 +2320,6 @@ def _get_event_from_element(
         # Case 2)
         if element_spec.spec_type == SpecType.FLOW:
             # Flow object
-            raise NotImplementedError()
             flow_config = state.flow_configs[element_spec.name]
             temp_flow_state = create_flow_instance(flow_config)
             flow_event_name = element_spec.members[0]["name"]
