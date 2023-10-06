@@ -74,8 +74,12 @@ app.rails_config_path = os.path.join(os.path.dirname(__file__), "..", "..", "exa
 # Weather the chat UI is enabled or not.
 app.disable_chat_ui = False
 
+# auto reload flag
+app.auto_reload = False
+
 # stop signal for observer
 app.stop_signal = False
+
 
 class RequestBody(BaseModel):
     config_id: str = Field(description="The id of the configuration to be used.")
@@ -271,19 +275,19 @@ async def startup_event():
         async def root_handler():
             return {"status": "ok"}
 
-
-    app.loop = asyncio.get_running_loop()
-    # populating llm_rails_instances
-    configs = get_rails_configs()
-    for config_id in configs:
-        try:
-            llm_rails = _get_rails(config_id['id'])
-        except:
+    if app.auto_reload:
+        app.loop = asyncio.get_running_loop()
+        # populating llm_rails_instances
+        configs = get_rails_configs()
+        for config_id in configs:
+            try:
+                llm_rails = _get_rails(config_id['id'])
+            except:
+                pass
+        try: 
+            app.task = app.loop.run_in_executor(None, monitor_files)
+        except: 
             pass
-    try: 
-        app.task = app.loop.run_in_executor(None, monitor_files)
-    except: 
-        pass
 
 
 def register_logger(logger: callable):
@@ -293,6 +297,9 @@ def register_logger(logger: callable):
 
 @app.on_event("shutdown")
 def shutdown_observer():
-    app.stop_signal = True
-    app.task.cancel()
-    print ("Shutting down observer")
+    if app.auto_reload:
+        app.stop_signal = True
+        app.task.cancel()
+        print ("Shutting down observer")
+    else:
+        pass
