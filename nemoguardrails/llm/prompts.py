@@ -126,7 +126,24 @@ def _get_prompt(task_name: str, model: str, prompts: List) -> TaskPrompt:
 
 
 def get_prompt(config: RailsConfig, task: Union[str, Task]) -> TaskPrompt:
-    """Return the prompt for the given task."""
+    """
+    Return the prompt for the given task and configuration.
+
+    This function retrieves the most suitable prompt for a given task and configuration.
+    It takes into account the task type available prompts, and the configuration's models
+    to find an appropriate TaskPrompt object.
+
+    Args:
+        config (RailsConfig): The configuration object that includes model and prompt information.
+        task (Union[str, Task]): The task for which to retrieve the prompt. It can be a Task enum
+          value or a string representing the task.
+
+    Returns:
+        TaskPrompt: The matching TaskPrompt object for the specified task and configuration.
+
+    Raises:
+        ValueError: If no matching prompt is found for the task in the given configuration.
+    """
     # Currently, we use the main model for all tasks
     # TODO: add support to use different models for different tasks
     task_model = "unknown"
