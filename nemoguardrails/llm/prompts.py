@@ -15,7 +15,7 @@
 
 """Prompts for the various steps in the interaction."""
 import os
-from typing import List
+from typing import List, Union
 
 import yaml
 
@@ -125,23 +125,24 @@ def _get_prompt(task_name: str, model: str, prompts: List) -> TaskPrompt:
     raise ValueError(f"Could not find prompt for task {task_name} and model {model}")
 
 
-def get_prompt(config: RailsConfig, task: Task) -> TaskPrompt:
+def get_prompt(config: RailsConfig, task: Union[str, Task]) -> TaskPrompt:
     """
     Return the prompt for the given task and configuration.
 
-    This function returns the appropriate prompt for a given task and configuration.
-    It considers the task type and the available prompts to find the most suitable one.
+    This function retrieves the most suitable prompt for a given task and configuration.
+    It takes into account the task type available prompts, and the configuration's models
+    to find an appropriate TaskPrompt object.
 
     Args:
-        config (RailsConfig): The configuration object.
-        task (Task): The task for which to retrieve the prompt.
+        config (RailsConfig): The configuration object that includes model and prompt information.
+        task (Union[str, Task]): The task for which to retrieve the prompt. It can be a Task enum
+          value or a string representing the task.
 
     Returns:
-        TaskPrompt: The matching TaskPrompt object for the given task and configuration.
+        TaskPrompt: The matching TaskPrompt object for the specified task and configuration.
 
     Raises:
-        ValueError: If no matching prompt is found for the task.
-
+        ValueError: If no matching prompt is found for the task in the given configuration.
     """
     # Currently, we use the main model for all tasks
     # TODO: add support to use different models for different tasks
@@ -150,7 +151,7 @@ def get_prompt(config: RailsConfig, task: Task) -> TaskPrompt:
         task_model = config.models[0].engine
         if config.models[0].model:
             task_model += "/" + config.models[0].model
-    task_name = str(task.value)
+    task_name = str(task.value) if isinstance(task, Task) else task
 
     prompts = _prompts + (config.prompts or [])
     prompt = _get_prompt(task_name, task_model, prompts)

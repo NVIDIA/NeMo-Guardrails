@@ -270,7 +270,7 @@ def get_last_bot_utterance_event(events: List[dict]):
         dict or None: The last bot utterance event or None if not found.
     """
     for event in reversed(events):
-        if event["type"] == "StartInternalSystemAction":
+        if event["type"] == "StartUtteranceBotAction":
             return event
         
     return None

@@ -35,8 +35,11 @@ def sync_wrapper(async_func):
     """Wrapper for the evaluate_topical_rails method which is async."""
 
     def wrapper(*args, **kwargs):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(async_func(*args, **kwargs))
+        try:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(async_func(*args, **kwargs))
+        except RuntimeError:
+            return asyncio.run(async_func(*args, **kwargs))
 
     return wrapper
 
@@ -287,7 +290,7 @@ class TopicalRailsEvaluation:
                         )
 
                     generated_bot_utterance = get_last_bot_utterance_event(new_events)[
-                        "content"
+                        "script"
                     ]
                     prediction["generated_bot_said"] = generated_bot_utterance
                     found_utterance = False
