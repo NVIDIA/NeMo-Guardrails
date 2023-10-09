@@ -62,38 +62,98 @@ async def test_action_execution_with_result(rails_config):
 
     expected_events = [
         {
+            "data": {"user_message": "Hello!"},
+            "source_uid": "NeMoGuardrails",
+            "type": "ContextUpdate",
+        },
+        {
+            "action_name": "create_event",
+            "action_params": {
+                "event": {"_type": "UserMessage", "text": "$user_message"}
+            },
+            "action_result_key": None,
+            "is_system_action": True,
+            "source_uid": "NeMoGuardrails",
+            "type": "StartInternalSystemAction",
+        },
+        {
+            "action_name": "create_event",
+            "action_params": {
+                "event": {"_type": "UserMessage", "text": "$user_message"}
+            },
+            "action_result_key": None,
+            "events": [
+                {
+                    "source_uid": "NeMoGuardrails",
+                    "text": "Hello!",
+                    "type": "UserMessage",
+                }
+            ],
+            "is_success": True,
+            "is_system_action": True,
+            "return_value": None,
+            "source_uid": "NeMoGuardrails",
+            "status": "success",
+            "type": "InternalSystemActionFinished",
+        },
+        {
+            "source_uid": "NeMoGuardrails",
+            "text": "Hello!",
+            "type": "UserMessage",
+        },
+        {
             "action_name": "generate_user_intent",
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
+            "source_uid": "NeMoGuardrails",
             "type": "StartInternalSystemAction",
         },
         {
             "action_name": "generate_user_intent",
             "action_params": {},
             "action_result_key": None,
-            "events": [{"intent": "express greeting", "type": "UserIntent"}],
+            "events": [
+                {
+                    "intent": "express greeting",
+                    "source_uid": "NeMoGuardrails",
+                    "type": "UserIntent",
+                }
+            ],
+            "is_success": True,
             "is_system_action": True,
             "return_value": None,
+            "source_uid": "NeMoGuardrails",
             "status": "success",
             "type": "InternalSystemActionFinished",
         },
-        {"intent": "express greeting", "type": "UserIntent"},
+        {
+            "intent": "express greeting",
+            "source_uid": "NeMoGuardrails",
+            "type": "UserIntent",
+        },
         {
             "action_name": "fetch_profile",
             "action_params": {},
             "action_result_key": "account",
             "is_system_action": False,
+            "source_uid": "NeMoGuardrails",
             "type": "StartInternalSystemAction",
         },
-        {"data": {"account": {"name": "John"}}, "type": "ContextUpdate"},
+        {
+            "data": {"account": {"name": "John"}},
+            "source_uid": "NeMoGuardrails",
+            "type": "ContextUpdate",
+        },
         {
             "action_name": "fetch_profile",
             "action_params": {},
             "action_result_key": "account",
             "events": [],
+            "is_success": True,
             "is_system_action": False,
             "return_value": {"name": "John"},
+            "source_uid": "NeMoGuardrails",
             "status": "success",
             "type": "InternalSystemActionFinished",
         },
@@ -103,40 +163,97 @@ async def test_action_execution_with_result(rails_config):
             "action_params": {},
             "action_result_key": None,
             "is_system_action": True,
+            "source_uid": "NeMoGuardrails",
             "type": "StartInternalSystemAction",
         },
-        {"data": {"relevant_chunks": ""}, "type": "ContextUpdate"},
+        {
+            "data": {"relevant_chunks": ""},
+            "source_uid": "NeMoGuardrails",
+            "type": "ContextUpdate",
+        },
         {
             "action_name": "retrieve_relevant_chunks",
             "action_params": {},
             "action_result_key": None,
             "events": None,
+            "is_success": True,
             "is_system_action": True,
             "return_value": "",
+            "source_uid": "NeMoGuardrails",
             "status": "success",
             "type": "InternalSystemActionFinished",
         },
         {
             "action_name": "generate_bot_message",
             "action_params": {},
-            "action_result_key": None,
+            "action_result_key": "bot_message",
             "is_system_action": True,
+            "source_uid": "NeMoGuardrails",
             "type": "StartInternalSystemAction",
         },
         {
+            "data": {"bot_message": "Hello!"},
+            "source_uid": "NeMoGuardrails",
+            "type": "ContextUpdate",
+        },
+        {
             "action_name": "generate_bot_message",
             "action_params": {},
-            "action_result_key": None,
-            "events": [{"script": "Hello!", "type": "StartUtteranceBotAction"}],
+            "action_result_key": "bot_message",
+            "events": None,
+            "is_success": True,
             "is_system_action": True,
-            "return_value": None,
+            "return_value": "Hello!",
+            "source_uid": "NeMoGuardrails",
             "status": "success",
             "type": "InternalSystemActionFinished",
         },
-        {"script": "Hello!", "type": "StartUtteranceBotAction"},
-        {"type": "Listen"},
+        {
+            "action_name": "create_event",
+            "action_params": {
+                "event": {"_type": "StartUtteranceBotAction", "script": "$bot_message"}
+            },
+            "action_result_key": None,
+            "is_system_action": True,
+            "source_uid": "NeMoGuardrails",
+            "type": "StartInternalSystemAction",
+        },
+        {
+            "action_name": "create_event",
+            "action_params": {
+                "event": {"_type": "StartUtteranceBotAction", "script": "$bot_message"}
+            },
+            "action_result_key": None,
+            "events": [
+                {
+                    "action_info_modality": "bot_speech",
+                    "action_info_modality_policy": "replace",
+                    "script": "Hello!",
+                    "source_uid": "NeMoGuardrails",
+                    "type": "StartUtteranceBotAction",
+                }
+            ],
+            "is_success": True,
+            "is_system_action": True,
+            "return_value": None,
+            "source_uid": "NeMoGuardrails",
+            "status": "success",
+            "type": "InternalSystemActionFinished",
+        },
+        {
+            "action_info_modality": "bot_speech",
+            "action_info_modality_policy": "replace",
+            "script": "Hello!",
+            "source_uid": "NeMoGuardrails",
+            "type": "StartUtteranceBotAction",
+        },
+        {
+            "source_uid": "NeMoGuardrails",
+            "type": "Listen",
+        },
     ]
 
+    # assert expected_events == new_events
     assert event_sequence_conforms(expected_events, new_events)
 
 
