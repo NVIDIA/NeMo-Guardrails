@@ -189,7 +189,9 @@ class Runtime:
 
     async def compute_next_steps(self, events: List[dict]) -> List[dict]:
         """Computes the next step based on the current flow."""
-        next_steps = compute_next_steps(events, self.flow_configs)
+        next_steps = compute_next_steps(
+            events, self.flow_configs, rails_config=self.config
+        )
 
         # If there are any StartInternalSystemAction events, we mark if they are system actions or not
         for event in next_steps:

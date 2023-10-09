@@ -101,6 +101,9 @@ class State:
     # The configuration of all the flows that are available.
     flow_configs: Dict[str, FlowConfig]
 
+    # The full rails configuration object
+    rails_config: Optional["RailsConfig"] = None
+
     # The next step of the flow-driven system
     next_step: Optional[dict] = None
     next_step_by_flow_uid: Optional[str] = None
@@ -309,9 +312,15 @@ def compute_next_state(state: State, event: dict) -> State:
     elif event["type"] == "StartUtteranceBotAction":
         state.context["last_bot_message"] = event["script"]
 
+    state.context["event"] = event
+    state.context["config"] = state.rails_config
+
     # Initialize the new state
     new_state = State(
-        context=state.context, flow_states=[], flow_configs=state.flow_configs
+        context=state.context,
+        flow_states=[],
+        flow_configs=state.flow_configs,
+        rails_config=state.rails_config,
     )
 
     # The UID of the flow that will determine the next step
@@ -512,10 +521,14 @@ def _step_to_event(step: dict) -> dict:
 
 
 def compute_next_steps(
-    history: List[dict], flow_configs: Dict[str, FlowConfig]
+    history: List[dict],
+    flow_configs: Dict[str, FlowConfig],
+    rails_config: "RailsConfig",
 ) -> List[dict]:
     """Computes the next step in a flow-driven system given a history of events."""
-    state = State(context={}, flow_states=[], flow_configs=flow_configs)
+    state = State(
+        context={}, flow_states=[], flow_configs=flow_configs, rails_config=rails_config
+    )
 
     # First, we process the history and apply any alterations e.g. 'hide_prev_turn'
     actual_history = []
@@ -582,10 +595,13 @@ def compute_context(history: List[dict]):
         if event["type"] == "ContextUpdate":
             context.update(event["data"])
 
-        if event["type"] == "UtteranceUserActionFinished":
-            context["last_user_message"] = event["final_transcript"]
+        if event["type"] == "UserMessage":
+            context["last_user_message"] = event["text"]
 
         elif event["type"] == "StartUtteranceBotAction":
             context["last_bot_message"] = event["script"]
+
+    if history:
+        context["event"] = history[-1]
 
     return context
