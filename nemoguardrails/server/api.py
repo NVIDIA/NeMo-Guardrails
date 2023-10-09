@@ -101,7 +101,7 @@ class Handler(FileSystemEventHandler):
             return None
  
         elif event.event_type == 'created' or event.event_type == 'modified':
-            print(f"Watchdog received {event.event_type} event for file {event.src_path}")
+            log.info(f"Watchdog received {event.event_type} event for file {event.src_path}")
             tokens = event.src_path.split("/")
             if not tokens[-1].startswith(".")  and ".ipynb_checkpoints" not in tokens and os.path.isfile(event.src_path):
                 for config_id in llm_rails_instances:
@@ -300,6 +300,6 @@ def shutdown_observer():
     if app.auto_reload:
         app.stop_signal = True
         app.task.cancel()
-        print ("Shutting down observer")
+        log.info("Shutting down file observer")
     else:
         pass
