@@ -66,7 +66,7 @@ class InternalEvents:
 
     START_FLOW = "StartFlow"
     FINISH_FLOW = "FinishFlow"
-    ABORT_FLOW = "AbortFlow"
+    STOP_FLOW = "StopFlow"
     FLOW_STARTED = "FlowStarted"
     FLOW_FINISHED = "FlowFinished"
     FLOW_FAILED = "FlowFailed"
@@ -74,7 +74,7 @@ class InternalEvents:
     ALL = {
         START_FLOW,
         FINISH_FLOW,
-        ABORT_FLOW,
+        STOP_FLOW,
         FLOW_STARTED,
         FLOW_FINISHED,
         FLOW_FAILED,
@@ -323,7 +323,7 @@ class FlowHead:
     # Matching score history of previous matches that resulted in this head to be advanced
     matching_scores: List[float]
 
-    # If set any abort will be diverted to the label, otherwise it will abort the flow
+    # If set a flow failure will be diverted to the label, otherwise it will abort the flow
     # Mainly used to simplify inner flow logic
     catch_pattern_failure_label: Optional[str] = None
 
@@ -755,8 +755,33 @@ def _expand_start_element(
 def _expand_stop_element(
     element: SpecOp,
 ) -> List[ElementType]:
-    # new_elements: List[ElementType] = []
-    raise NotImplementedError()
+    new_elements: List[ElementType] = []
+    if isinstance(element.spec, Spec):
+        # Single element
+        if (
+            element.spec.spec_type == SpecType.REFERENCE
+            and element.spec.members is None
+        ):
+            # It's a reference to a flow or action
+            new_elements.append(
+                SpecOp(
+                    op="send",
+                    spec=Spec(
+                        name=InternalEvents.STOP_FLOW,
+                        arguments=element.spec.arguments,
+                        spec_type=SpecType.EVENT,
+                    ),
+                )
+            )
+        else:
+            raise ColangSyntaxError(
+                f"'stop' keyword cannot yet be used on '{element.spec.spec_type}'"
+            )
+    else:
+        # Element group
+        new_elements = _expand_element_group(element)
+
+    return new_elements
 
 
 def _expand_send_element(
@@ -1473,7 +1498,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
                     if _is_active_flow(flow_state):
                         _finish_flow(state, flow_state, event.matching_scores)
-            elif event.name == InternalEvents.ABORT_FLOW:
+            elif event.name == InternalEvents.STOP_FLOW:
                 if "flow_id" in event.arguments:
                     for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
                         if _is_active_flow(flow_state):
@@ -1991,7 +2016,7 @@ def _abort_flow(
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
-            event = create_abort_flow_internal_event(
+            event = create_spot_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, matching_scores
             )
             _push_internal_event(state, event)
@@ -2033,7 +2058,7 @@ def _finish_flow(
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
-            event = create_abort_flow_internal_event(
+            event = create_spot_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, matching_scores, True
             )
             _push_internal_event(state, event)
@@ -2404,20 +2429,20 @@ def _create_restart_flow_internal_event(
     return create_internal_event(InternalEvents.START_FLOW, arguments, matching_scores)
 
 
-def create_abort_flow_internal_event(
+def create_spot_flow_internal_event(
     flow_instance_uid: str,
     source_flow_instance_uid: str,
     matching_scores: List[float],
     deactivate_flow: bool = False,
 ) -> FlowEvent:
-    """Returns 'AbortFlow' internal event"""
+    """Returns 'StopFlow' internal event"""
     arguments = {
         "flow_instance_uid": flow_instance_uid,
         "source_flow_instance_uid": source_flow_instance_uid,
         "activated": deactivate_flow,
     }
     return create_internal_event(
-        InternalEvents.ABORT_FLOW,
+        InternalEvents.STOP_FLOW,
         arguments,
         matching_scores,
     )

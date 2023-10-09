@@ -9,7 +9,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 ## Todos
 
 - Implement match failing with the `not` keyword, also for internal flow events
-- Abort actions from flows that get aborted
+- Stop actions from flows that get aborted/stopped
 - Add support to stop a flow (e.g. with `stop $flow_ref` or `send $flow_ref.Stop()`) and the same for actions
 - Implement pause/resume mechanism for activated flows
 - Add support for multiline strings using triple quotes in Colang
@@ -25,6 +25,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Run run_to_completion once when CLI is started to allow bot to start the interaction
 - Find a better solution for separating the flow event arguments like `flow_id` or `activated` from the flow context variables.
 - Fix unit test helper function to work with stories that generate bot messages when started
+- Cleanup abort/stop naming convention
 
 ## To Discuss
 
