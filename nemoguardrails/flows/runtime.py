@@ -73,6 +73,8 @@ class Runtime:
                 flow["is_extension"] = meta_data["is_extension"]
             if "interruptable" in meta_data:
                 flow["is_interruptible"] = meta_data["interruptable"]
+            if meta_data.get("subflow"):
+                flow["is_subflow"] = True
 
             # Finally, remove the meta element
             elements = elements[1:]
@@ -86,6 +88,7 @@ class Runtime:
             priority=flow.get("priority", 1.0),
             is_extension=flow.get("is_extension", False),
             is_interruptible=flow.get("is_interruptible", True),
+            is_subflow=flow.get("is_subflow", False),
             source_code=flow.get("source_code"),
         )
 
