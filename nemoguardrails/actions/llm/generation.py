@@ -226,7 +226,7 @@ class LLMGenerationActions:
 
         # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
-        assert event["type"] == "UtteranceUserActionFinished"
+        assert event["type"] == "UserMessage"
 
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
@@ -246,7 +246,7 @@ class LLMGenerationActions:
 
             if self.user_message_index:
                 results = await self.user_message_index.search(
-                    text=event["final_transcript"], max_results=5
+                    text=event["text"], max_results=5
                 )
 
                 # We add these in reverse order so the most relevant is towards the end.
@@ -527,18 +527,12 @@ class LLMGenerationActions:
 
         if bot_utterance:
             return ActionResult(
-                events=[
-                    new_event_dict("StartUtteranceBotAction", script=bot_utterance)
-                ],
+                return_value=bot_utterance,
                 context_updates=context_updates,
             )
         else:
             return ActionResult(
-                events=[
-                    new_event_dict(
-                        "StartUtteranceBotAction", script="I'm not sure what to say."
-                    )
-                ],
+                return_value="I'm not sure what to say.",
                 context_updates=context_updates,
             )
 

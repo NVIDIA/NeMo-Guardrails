@@ -36,7 +36,7 @@ async def check_jailbreak(
 ):
     """Checks if the user response is malicious and should be masked."""
 
-    user_input = context.get("last_user_message")
+    user_input = context.get("user_message")
 
     if user_input:
         prompt = llm_task_manager.render_task_prompt(

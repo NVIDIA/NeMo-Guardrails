@@ -305,9 +305,9 @@ def compute_next_state(state: State, event: dict) -> State:
         return state
 
     # Update the default context variables
-    # TODO: refactor this logic in a single lace
-    if event["type"] == "UtteranceUserActionFinished":
-        state.context["last_user_message"] = event["final_transcript"]
+    # TODO: refactor this logic in a single place
+    if event["type"] == "UserMessage":
+        state.context["last_user_message"] = event["text"]
 
     elif event["type"] == "StartUtteranceBotAction":
         state.context["last_bot_message"] = event["script"]

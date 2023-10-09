@@ -84,8 +84,8 @@ def get_colang_history(
         last_bot_intent_idx -= 1
 
     for idx, event in enumerate(events):
-        if event["type"] == "UtteranceUserActionFinished" and include_texts:
-            history += f'user "{event["final_transcript"]}"\n'
+        if event["type"] == "UserMessage" and include_texts:
+            history += f'user "{event["text"]}"\n'
         elif event["type"] == "UserIntent":
             if include_texts:
                 history += f'  {event["intent"]}\n'
@@ -165,7 +165,7 @@ def flow_to_colang(flow: dict):
 def get_last_user_utterance(events: List[dict]):
     """Returns the last user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "UtteranceUserActionFinished":
+        if event["type"] == "UserMessage":
             return event["final_transcript"]
 
     return None
@@ -174,7 +174,7 @@ def get_last_user_utterance(events: List[dict]):
 def get_retrieved_relevant_chunks(events: List[dict]):
     """Returns the retrieved chunks for current user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "UtteranceUserActionFinished":
+        if event["type"] == "UserMessage":
             break
         if event["type"] == "ContextUpdate" and "relevant_chunks" in event.get(
             "data", {}
@@ -187,7 +187,7 @@ def get_retrieved_relevant_chunks(events: List[dict]):
 def get_last_user_utterance_event(events: List[dict]):
     """Returns the last user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "UtteranceUserActionFinished":
+        if event["type"] == "UserMessage":
             return event
 
     return None
