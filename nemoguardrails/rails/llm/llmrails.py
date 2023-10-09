@@ -106,20 +106,6 @@ class LLMRails:
         if config_module is not None and hasattr(config_module, "init"):
             config_module.init(self)
 
-        # Register any default actions that have not yet been registered in the custom
-        # init function from config.py.
-        default_actions = {
-            "wolfram alpha request": wolfram_alpha_request,
-            "check_facts": check_facts,
-            "check_jailbreak": check_jailbreak,
-            "output_moderation": output_moderation,
-            "check_hallucination": check_hallucination,
-            "retrieve_relevant_chunks": retrieve_relevant_chunks,
-        }
-
-        for action_name, action_fn in default_actions.items():
-            self.runtime.register_action(action_fn, action_name, override=False)
-
         # If we have a customized embedding model, we'll use it.
         for model in self.config.models:
             if model.type == "embeddings":
