@@ -1,0 +1,6 @@
+# Using OpenAI
+colang_version: "1.1"
+models:
+    - type: main
+      engine: openai
+      model: text-davinci-003

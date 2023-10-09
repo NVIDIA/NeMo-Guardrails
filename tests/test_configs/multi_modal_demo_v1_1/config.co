@@ -1,0 +1,207 @@
+# Example flows with instructions
+
+flow tell a joke
+  """Tell a joke."""
+  bot say "Why don't scientists trust atoms? Because they make up everything!"
+  bot smile
+
+flow count
+  """Count from 1 to 5."""
+  bot say "1"
+  bot say "2"
+  bot say "3"
+  bot say "4"
+  bot say "5"
+
+flow answer question about france
+  """Answer the following question: What is the capital of France."""
+  bot say "The capital of France it's Paris."
+
+# -----------------------------------
+# User UMIM event wrapper flows
+# -----------------------------------
+
+flow user said $text
+  # llm: exclude
+  match UtteranceUserAction.Finished(final_transcript=$text) as $event
+
+flow user said something
+  # llm: exclude
+  match UtteranceUserAction.Finished() as $event
+
+# ----------------------------------
+# Bot UMIM event wrapper flows
+# ----------------------------------
+
+flow bot started saying $text
+  # llm: exclude
+  match UtteranceBotAction(script=$text).Started() as $event
+
+flow bot said $text
+  # llm: exclude
+  match UtteranceBotAction(script=$text).Finished() as $event
+
+flow bot said something
+  # llm: exclude
+  match UtteranceBotAction().Finished() as $event
+
+# ----------------------------------
+# Bot UMIM action wrapper flows
+# -----------------------------------
+
+flow bot say $text
+  # llm: exclude
+  await UtteranceBotAction(script=$text) as $action
+
+flow bot gesture $gesture
+  # llm: exclude
+  await GestureBotAction($gesture) as $action
+
+flow scene show choice $prompt
+  # llm: exclude
+  await VisualChoiceSceneAction(prompt=$prompt,choice_type="selection", allow_multiple_choices=False) as $action
+
+flow scene show information $prompt
+  # llm: exclude
+  await VisualInformationSceneAction(prompt=$prompt) as $action
+
+flow scene show form $prompt
+  # llm: exclude
+  wait VisualInformationSceneAction(prompt=$prompt) as $action
+
+# ----------------------------------
+# Bot say action semantic wrapper flows
+# -----------------------------------
+
+flow bot inform $information
+  # llm: exclude
+  await bot say $information
+
+flow bot ask $question
+  # llm: exclude
+  await bot say $question
+
+flow bot express $text
+  # llm: exclude
+  await bot say $text
+
+flow bot respond $text
+  # llm: exclude
+  await bot say $text
+
+# ----------------------------------
+# Bot action flows
+# -----------------------------------
+
+flow bot express greeting
+  start bot express "Hi there!" as $ref
+    or bot express "Welcome!" as $ref
+    or bot express "Hello!" as $ref
+  match $ref.Finished()
+
+flow bot express feeling well
+  start bot express "I am good!" as $ref
+    or bot express "I am great!" as $ref
+  match $ref.Finished()
+
+flow bot express feeling bad
+  start bot express "I am not good!" as $ref
+    or bot express "I am a bit under the weather!" as $ref
+  match $ref.Finished()
+
+flow bot inform about service
+  await bot inform "You can ask or instruct me whatever you want and I will do it!"
+
+# ----------------------------------
+# User action flows
+# -----------------------------------
+
+flow user expressed greeting
+  await user said "hi"
+    or user said "Welcome!"
+    or user said "Hello!"
+
+flow user asked how are you
+  await user said "how are you"
+
+flow user provide custom instructions
+  user said "do something" as $ref
+  $instruction = $ref.context.event.arguments.final_transcript
+
+# ----------------------------------
+# Helper flows
+# -----------------------------------
+
+flow wait
+  # llm: exclude
+  match NeverComingEvent()
+
+flow fallback
+  # llm: exclude
+  user said something
+  $intent = await GenerateUserIntentAction()
+  $exists = await CheckIfFlowExistsAction(flow_id=$intent)
+
+  if $exists
+    send FinishFlow(flow_id=$intent)
+  else
+    $instructions = await GetLastUserMessageAction()
+    do $instructions
+    #bot say "This is a new intent {$intent}."
+
+flow do $instructions
+  # llm: exclude
+  $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
+  await AddFlowsAction(config=$flow_info.body)
+  send StartFlow(flow_id=$flow_info['name'])
+  match FlowStarted(flow_id=$flow_info['name']) as $event_ref
+  match $event_ref.flow.Finished()
+
+flow flows fallback
+  # llm: exclude
+  match StartFlow() as $event
+
+  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
+
+  if not $exists
+      $flow_id = $event.arguments.flow_id
+      $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
+      await AddFlowsAction(config=$flow_source)
+      send StartFlow(flow_id=$flow_id)
+
+# ----------------------------------
+# FAQs
+# -----------------------------------
+
+flow greeting
+  user expressed greeting
+  bot express greeting
+
+flow how are you
+  user asked how are you
+  start bot express feeling well as $ref
+    or bot express feeling bad as $ref
+  match $ref.Finished()
+
+flow faq
+  activate greeting
+    and how are you
+  wait
+
+# ----------------------------------
+# Main story
+# -----------------------------------
+
+flow custom instruction
+  user provide custom instructions as $ref
+  do $ref.context.instruction
+
+flow main
+  activate faq
+  #activate fallback
+  activate flows fallback
+  #activate custom instruction
+  #bot express greeting
+  bot say "Welcome! I'm the MVP bot."
+  #bot inform about service
+  wait

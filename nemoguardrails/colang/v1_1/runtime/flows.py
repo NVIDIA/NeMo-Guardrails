@@ -24,6 +24,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
+from itertools import groupby
 from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
@@ -32,6 +33,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Abort,
     Assignment,
     Break,
+    CatchPatternFailure,
     Continue,
     Element,
     FlowParamDef,
@@ -41,7 +43,6 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Label,
     MergeHeads,
     Priority,
-    RandomGoto,
     Return,
     Spec,
     SpecOp,
@@ -65,7 +66,7 @@ class InternalEvents:
 
     START_FLOW = "StartFlow"
     FINISH_FLOW = "FinishFlow"
-    ABORT_FLOW = "AbortFlow"
+    STOP_FLOW = "StopFlow"
     FLOW_STARTED = "FlowStarted"
     FLOW_FINISHED = "FlowFinished"
     FLOW_FAILED = "FlowFailed"
@@ -73,7 +74,7 @@ class InternalEvents:
     ALL = {
         START_FLOW,
         FINISH_FLOW,
-        ABORT_FLOW,
+        STOP_FLOW,
         FLOW_STARTED,
         FLOW_FINISHED,
         FLOW_FAILED,
@@ -321,6 +322,10 @@ class FlowHead:
 
     # Matching score history of previous matches that resulted in this head to be advanced
     matching_scores: List[float]
+
+    # If set a flow failure will be diverted to the label, otherwise it will abort the flow
+    # Mainly used to simplify inner flow logic
+    catch_pattern_failure_label: Optional[str] = None
 
     def __eq__(self, other: FlowHead) -> bool:
         if isinstance(other, FlowHead):
@@ -587,16 +592,18 @@ def expand_elements(
         for element in elements:
             expanded_elems: List[ElementType] = []
             if isinstance(element, SpecOp):
-                if element.op == "await":
-                    expanded_elems = _expand_await_element(element)
+                if element.op == "send":
+                    expanded_elems = _expand_send_element(element)
+                elif element.op == "match":
+                    expanded_elems = _expand_match_element(element)
                 elif element.op == "start":
                     expanded_elems = _expand_start_element(element)
                 elif element.op == "stop":
                     expanded_elems = _expand_stop_element(element)
-                elif element.op == "match":
-                    expanded_elems = _expand_match_element(element)
                 elif element.op == "activate":
                     expanded_elems = _expand_activate_element(element)
+                elif element.op == "await":
+                    expanded_elems = _expand_await_element(element)
                 if len(expanded_elems) > 0:
                     elements_changed = True
             elif isinstance(element, While):
@@ -623,13 +630,54 @@ def expand_elements(
     return elements
 
 
+def _expand_element_group(element: SpecOp) -> List[ElementType]:
+    new_elements: List[ElementType] = []
+
+    normalized_group = normalize_element_groups(element.spec)
+
+    fork_element = ForkHead()
+    group_label_elements: List[Label] = []
+    failure_label_name = f"failure_label_{new_var_uid()}"
+    failure_label_element = Label(name=failure_label_name)
+    end_label_name = f"end_label_{new_var_uid()}"
+    goto_end_element = Goto(label=end_label_name)
+    end_label_element = Label(name=end_label_name)
+
+    for group_idx, and_group in enumerate(normalized_group["elements"]):
+        group_label_name = f"group_{group_idx}_{new_var_uid()}"
+        group_label_elements.append(Label(name=group_label_name))
+        fork_element.labels.append(group_label_name)
+
+    # Generate new element sequence
+    new_elements.append(CatchPatternFailure(label=failure_label_name))
+    new_elements.append(fork_element)
+    for group_idx, and_group in enumerate(normalized_group["elements"]):
+        new_elements.append(group_label_elements[group_idx])
+        for group_element in and_group["elements"]:
+            new_elements.append(
+                SpecOp(
+                    op=element.op,
+                    spec=group_element,
+                )
+            )
+        new_elements.append(goto_end_element)
+    new_elements.append(failure_label_element)
+    new_elements.append(WaitForHeads(number=len(normalized_group["elements"])))
+    new_elements.append(CatchPatternFailure(label=None))
+    new_elements.append(Abort())
+    new_elements.append(end_label_element)
+    new_elements.append(MergeHeads())
+
+    return new_elements
+
+
 def _expand_start_element(
     element: SpecOp,
 ) -> List[ElementType]:
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single element
-        if element.spec.spec_type == SpecType.FLOW:
+        if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
             # send StartFlow(flow_id="FLOW_NAME")
             element.spec.arguments.update({"flow_id": f"'{element.spec.name}'"})
@@ -674,47 +722,32 @@ def _expand_start_element(
             if element_ref is None:
                 action_event_ref_uid = f"_action_ref_{new_var_uid()}"
                 element_ref = _create_ref_ast_dict_helper(action_event_ref_uid)
-            element.spec.ref = element_ref
+                element.spec.ref = element_ref
             new_elements.append(
                 SpecOp(
                     op="_new_action_instance",
                     spec=element.spec,
                 )
             )
-            spec = element.spec
-            spec.members = _create_member_ast_dict_helper("Start", {})
-            spec.var_name = element_ref["elements"][0]["elements"][0].lstrip("$")
-            new_elements.append(SpecOp(op="send", spec=spec))
+            new_elements.append(
+                SpecOp(
+                    op="send",
+                    spec=Spec(
+                        name=element.spec.name,
+                        arguments=element.spec.arguments,
+                        members=_create_member_ast_dict_helper("Start", {}),
+                        var_name=element_ref["elements"][0]["elements"][0].lstrip("$"),
+                        spec_type=SpecType.EVENT,
+                    ),
+                )
+            )
         else:
-            raise ColangSyntaxError("'await' keyword cannot be used on an event")
+            raise ColangSyntaxError(
+                f"'await' keyword cannot be used on '{element.spec.spec_type}'"
+            )
     else:
         # Element group
-        normalized_group = normalize_element_groups(element.spec)
-
-        random_goto_element = RandomGoto()
-        group_label_elements: List[Label] = []
-        end_label_name = f"end_label_{new_var_uid()}"
-        goto_end_element = Goto(label=end_label_name)
-        end_label_element = Label(name=end_label_name)
-
-        for group_idx, and_group in enumerate(normalized_group["elements"]):
-            group_label_name = f"group_{group_idx}_{new_var_uid()}"
-            random_goto_element.labels.append(group_label_name)
-            group_label_elements.append(Label(name=group_label_name))
-
-        # Generate new element sequence
-        new_elements.append(random_goto_element)
-        for group_idx, and_group in enumerate(normalized_group["elements"]):
-            new_elements.append(group_label_elements[group_idx])
-            for match_element in and_group["elements"]:
-                new_elements.append(
-                    SpecOp(
-                        op="start",
-                        spec=match_element,
-                    )
-                )
-            new_elements.append(goto_end_element)
-        new_elements.append(end_label_element)
+        new_elements = _expand_element_group(element)
 
     return new_elements
 
@@ -722,8 +755,51 @@ def _expand_start_element(
 def _expand_stop_element(
     element: SpecOp,
 ) -> List[ElementType]:
-    # new_elements: List[ElementType] = []
-    raise NotImplementedError()
+    new_elements: List[ElementType] = []
+    if isinstance(element.spec, Spec):
+        # Single element
+        raise NotImplementedError()
+        if (
+            element.spec.spec_type == SpecType.REFERENCE
+            and element.spec.members is None
+        ):
+            # It's a reference to a flow or action
+            new_elements.append(
+                SpecOp(
+                    op="send",
+                    spec=Spec(
+                        name=InternalEvents.STOP_FLOW,
+                        arguments=element.spec.arguments,
+                        spec_type=SpecType.EVENT,
+                    ),
+                )
+            )
+        else:
+            raise ColangSyntaxError(
+                f"'stop' keyword cannot yet be used on '{element.spec.spec_type}'"
+            )
+    else:
+        # Element group
+        new_elements = _expand_element_group(element)
+
+    return new_elements
+
+
+def _expand_send_element(
+    element: SpecOp,
+) -> List[ElementType]:
+    new_elements: List[ElementType] = []
+    if isinstance(element.spec, Spec):
+        # Single send element
+        if element.spec.spec_type != SpecType.EVENT and element.spec.members is None:
+            raise ColangSyntaxError(
+                f"Cannot send a non-event type: '{element.spec.spec_type}'"
+            )
+    elif isinstance(element.spec, dict):
+        # Element group
+        new_elements = _expand_element_group(element)
+
+    return new_elements
 
 
 def _expand_match_element(
@@ -732,7 +808,7 @@ def _expand_match_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single match element
-        if element.spec.spec_type == SpecType.FLOW:
+        if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
             element_ref = element.spec.ref
             if element_ref is None:
@@ -764,12 +840,7 @@ def _expand_match_element(
                     )
                 )
         elif (
-            (
-                element.spec.spec_type == SpecType.ACTION
-                or element.spec.spec_type == SpecType.REFERENCE
-            )
-            and element.spec.members is not None
-            or element.spec.spec_type == SpecType.EVENT
+            element.spec.spec_type == SpecType.EVENT or element.spec.members is not None
         ):
             # It's an event
             if element.return_var_name is not None:
@@ -797,7 +868,7 @@ def _expand_match_element(
             )
 
     elif isinstance(element.spec, dict):
-        # Multiple match elements
+        # Element group
         normalized_group = normalize_element_groups(element.spec)
 
         fork_element = ForkHead()
@@ -823,36 +894,12 @@ def _expand_match_element(
                 label_name = f"event_{element_idx}_{new_var_uid()}"
                 event_label_elements.append(Label(name=label_name))
                 fork_element.labels.append(label_name)
-                if match_element.spec_type == SpecType.FLOW:
-                    # It's a flow
-                    arguments = {"flow_id": f"'{match_element.name}'"}
-                    for arg in match_element.arguments:
-                        arguments.update({arg: match_element.arguments[arg]})
-
-                    event_match_elements.append(
-                        SpecOp(
-                            op="match",
-                            spec=Spec(
-                                name=InternalEvents.FLOW_FINISHED,
-                                arguments=arguments,
-                                spec_type=SpecType.EVENT,
-                            ),
-                        )
-                    )
-                elif (
-                    (
-                        match_element.spec_type == SpecType.ACTION
-                        or match_element.spec_type == SpecType.REFERENCE
-                    )
-                    and match_element.members is not None
-                    or match_element.spec_type == SpecType.EVENT
-                ):
-                    # It's an UMIM event
-                    new_match_element = copy.copy(element)
-                    new_match_element.spec = match_element
-                    event_match_elements.append(new_match_element)
-                else:
-                    raise ColangSyntaxError(f"Unsupported spec type '{element.spec}'")
+                event_match_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=match_element,
+                    ),
+                )
                 element_idx += 1
 
         # Generate new element sequence
@@ -882,11 +929,16 @@ def _expand_await_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single element
-        if element.spec.spec_type == SpecType.FLOW:
-            # It's a flow
-            flow_ref = element.spec.ref
-            flow_event_ref_uid = f"_flow_event_ref_{new_var_uid()}"
-            element.spec.ref = _create_ref_ast_dict_helper(flow_event_ref_uid)
+        if (
+            element.spec.spec_type == SpecType.FLOW
+            or element.spec.spec_type == SpecType.ACTION
+        ) and element.spec.members is None:
+            # It's a flow or an UMIM action
+            element_ref = element.spec.ref
+            if element_ref is None:
+                element_ref = _create_ref_ast_dict_helper(f"_ref_{new_var_uid()}")
+
+            element.spec.ref = element_ref
             new_elements.append(
                 SpecOp(
                     op="start",
@@ -897,76 +949,88 @@ def _expand_await_element(
                 SpecOp(
                     op="match",
                     spec=Spec(
-                        var_name=flow_event_ref_uid,
+                        var_name=element_ref["elements"][0]["elements"][0].lstrip("$"),
                         members=_create_member_ast_dict_helper("Finished", {}),
                         spec_type=SpecType.REFERENCE,
                     ),
                     return_var_name=element.return_var_name,
                 )
             )
-            if flow_ref:
-                new_elements.append(
-                    Assignment(
-                        key=flow_ref["elements"][0]["elements"][0].lstrip("$"),
-                        expression=f"${flow_event_ref_uid}",
-                    )
-                )
-        elif element.spec.spec_type == SpecType.ACTION and element.spec.members is None:
-            # It's an UMIM action
-            action_ref = element.spec.ref
-            action_ref_uid = f"_action_ref_{new_var_uid()}"
-            element.spec.ref = _create_ref_ast_dict_helper(action_ref_uid)
-            new_elements.append(
-                SpecOp(
-                    op="start",
-                    spec=element.spec,
-                )
-            )
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        var_name=action_ref_uid,
-                        members=_create_member_ast_dict_helper("Finished", {}),
-                        spec_type=SpecType.REFERENCE,
-                    ),
-                    return_var_name=element.return_var_name,
-                )
-            )
-            if action_ref:
-                new_elements.append(
-                    Assignment(
-                        key=action_ref["elements"][0]["elements"][0].lstrip("$"),
-                        expression=f"${action_ref_uid}",
-                    )
-                )
         else:
             raise ColangSyntaxError(f"Unsupported spec type '{element.spec}'")
     else:
         # Element group
-        # TODO: Fix this such that action are also supported using references for flows and actions
         normalized_group = normalize_element_groups(element.spec)
-        unique_group = convert_to_single_and_element_group(normalized_group)
-        element_references: Dict[int, str] = {}
 
-        start_group = copy.deepcopy(unique_group)
-        for and_group in start_group["elements"]:
-            for start_element in and_group["elements"]:
+        fork_element = ForkHead()
+        group_label_elements: List[Label] = []
+        start_elements: List[List[SpecOp]] = []
+        match_elements: List[List[Spec]] = []
+        stop_elements: List[List[Spec]] = []
+        failure_label_name = f"failure_label_{new_var_uid()}"
+        failure_label_element = Label(name=failure_label_name)
+        end_label_name = f"end_label_{new_var_uid()}"
+        goto_end_element = Goto(label=end_label_name)
+        end_label_element = Label(name=end_label_name)
+
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            group_label_name = f"group_{group_idx}_{new_var_uid()}"
+            group_label_elements.append(Label(name=group_label_name))
+            fork_element.labels.append(group_label_name)
+            start_elements.append([])
+            match_elements.append([])
+            stop_elements.append([])
+            for group_element in and_group["elements"]:
                 reference_name = f"_ref_{new_var_uid()}"
-                element_references[start_element.hash()] = reference_name
-                start_element.ref = _create_ref_ast_dict_helper(reference_name)
+                group_element.ref = _create_ref_ast_dict_helper(reference_name)
+                start_elements[-1].append(
+                    SpecOp(
+                        op="start",
+                        spec=group_element,
+                    )
+                )
+                match_elements[-1].append(
+                    Spec(
+                        var_name=reference_name,
+                        members=_create_member_ast_dict_helper("Finished", {}),
+                        spec_type=SpecType.REFERENCE,
+                    )
+                )
+                stop_elements[-1].append(
+                    Spec(
+                        var_name=reference_name,
+                        members=_create_member_ast_dict_helper("Stop", {}),
+                        spec_type=SpecType.REFERENCE,
+                    )
+                )
 
-        new_elements.append(SpecOp(op="start", spec=start_group))
-
-        match_group = copy.deepcopy(normalized_group)
-        for and_group in match_group["elements"]:
-            for match_element in and_group["elements"]:
-                reference_name = element_references[match_element.hash()]
-                match_element.var_name = reference_name
-                match_element.members = _create_member_ast_dict_helper("Finished", {})
-                match_element.spec_type = SpecType.REFERENCE
-
-        new_elements.append(SpecOp(op="match", spec=match_group))
+        # Generate new element sequence
+        new_elements.append(CatchPatternFailure(label=failure_label_name))
+        new_elements.append(fork_element)
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            stop_group = {
+                "_type": "spec_and",
+                "elements": [
+                    elem
+                    for idx, sublist in enumerate(stop_elements)
+                    for elem in sublist
+                    if idx != group_idx
+                ],
+            }
+            new_elements.append(group_label_elements[group_idx])
+            for idx, group_element in enumerate(and_group["elements"]):
+                new_elements.append(start_elements[group_idx][idx])
+            match_group = {"_type": "spec_and", "elements": match_elements[group_idx]}
+            new_elements.append(SpecOp(op="match", spec=match_group))
+            new_elements.append(MergeHeads())
+            new_elements.append(SpecOp(op="send", spec=stop_group))
+            new_elements.append(goto_end_element)
+        new_elements.append(failure_label_element)
+        new_elements.append(WaitForHeads(number=len(normalized_group["elements"])))
+        new_elements.append(CatchPatternFailure(label=None))
+        new_elements.append(Abort())
+        new_elements.append(end_label_element)
+        new_elements.append(CatchPatternFailure(label=None))
 
     return new_elements
 
@@ -977,7 +1041,7 @@ def _expand_activate_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single match element
-        if element.spec.spec_type == SpecType.FLOW:
+        if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
             element.spec.arguments.update(
                 {
@@ -1007,7 +1071,9 @@ def _expand_activate_element(
             )
         else:
             # It's an UMIM event
-            raise ColangSyntaxError("Events cannot be activated!")
+            raise ColangSyntaxError(
+                f"Only flows can be activated but not '{element.spec.spec_type}'!"
+            )
     elif isinstance(element.spec, dict):
         # Multiple match elements
         normalized_group = normalize_element_groups(element.spec)
@@ -1270,24 +1336,6 @@ def uniquify_element_group(group: dict) -> dict:
     return new_group
 
 
-def convert_to_single_and_element_group(group: dict) -> dict:
-    """Convert element group into a single 'and' group with unique elements."""
-    unique_elements: Dict[Tuple[int, Spec]] = {}
-    for and_group in group["elements"]:
-        for element in and_group["elements"]:
-            # Makes sure that we add the same element only once
-            unique_elements.update({element.hash(): element})
-    return {
-        "_type": "spec_or",
-        "elements": [
-            {
-                "_type": "spec_and",
-                "elements": [elem for elem in unique_elements.values()],
-            }
-        ],
-    }
-
-
 def normalize_element_groups(group: Union[Spec, dict]) -> dict:
     """
     Normalize groups to the disjunctive normal form (DNF),
@@ -1479,17 +1527,6 @@ def _context_log(flow_state: FlowState) -> str:
     )
 
 
-# Define a custom sorting key function for pairwise comparisons
-def _custom_sort_key(input_list):
-    return tuple(input_list)
-
-
-def _sort_heads_from_matching_scores(heads: List[FlowHead]) -> List[FlowHead]:
-    score_lists = [(head.matching_scores, head) for head in heads]
-    sorted_lists = sorted(score_lists, key=_custom_sort_key, reverse=True)
-    return [e[1] for e in sorted_lists]
-
-
 def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
     """
     Computes the next state of the flow-driven system.
@@ -1532,7 +1569,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
                     if _is_active_flow(flow_state):
                         _finish_flow(state, flow_state, event.matching_scores)
-            elif event.name == InternalEvents.ABORT_FLOW:
+            elif event.name == InternalEvents.STOP_FLOW:
                 if "flow_id" in event.arguments:
                     for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
                         if _is_active_flow(flow_state):
@@ -1591,7 +1628,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         elif matching_score < 0.0:
                             heads_failing.append(head)
                             log.info(
-                                f"Matching failure head: {head} context={_context_log(flow_state)}"
+                                f"Matching head failed: {head} context={_context_log(flow_state)}"
                             )
                         else:
                             heads_not_matching.append(head)
@@ -1630,8 +1667,14 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
             # Abort all flows with a mismatch
             for head in heads_failing:
-                flow_state = _get_flow_state_from_head(state, head)
-                _abort_flow(state, flow_state, [])
+                if head.catch_pattern_failure_label:
+                    head.position = _get_flow_config_from_head(
+                        state, head
+                    ).element_labels[head.catch_pattern_failure_label]
+                    heads_matching.append(head)
+                else:
+                    flow_state = _get_flow_state_from_head(state, head)
+                    _abort_flow(state, flow_state, [])
 
             # Advance front of all matching heads to actionable or match statements
             actionable_heads = actionable_heads.union(
@@ -1660,20 +1703,28 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
             # Find winning and loosing heads for each group
             for group in head_groups.values():
-                ordered_heads = _sort_heads_from_matching_scores(group)
+                ordered_heads = sorted(
+                    group, key=lambda head: head.matching_scores, reverse=True
+                )
+                # Check if we have heads with the exact same matching scores and pick one at random (or-group)
+                groups = groupby(ordered_heads, key=lambda head: head.matching_scores)
+                first_group = next(groups, None)
+                winning_heads = list(first_group[1])
+                # TODO: Fix the random head selection, at the moment unit test 'test_start_or_grouping' can fail
+                picked_head = ordered_heads[0]  # random.choice(winning_heads)
                 winning_element = _get_flow_config_from_head(
-                    state, ordered_heads[0]
-                ).elements[ordered_heads[0].position]
-                flow_state = _get_flow_state_from_head(state, ordered_heads[0])
+                    state, picked_head
+                ).elements[picked_head.position]
+                flow_state = _get_flow_state_from_head(state, picked_head)
                 winning_event: ActionEvent = _get_event_from_element(
                     state, flow_state, winning_element
                 )
                 log.info(
-                    f"Winning action at head: {ordered_heads[0]} scores={ordered_heads[0].matching_scores}"
+                    f"Winning action at head: {picked_head} scores={picked_head.matching_scores}"
                 )
 
-                advancing_heads.append(ordered_heads[0])
-                _create_outgoing_event_from_actionable_element(state, ordered_heads[0])
+                advancing_heads.append(picked_head)
+                _create_outgoing_event_from_actionable_element(state, picked_head)
                 for head in ordered_heads[1:]:
                     competing_element = _get_flow_config_from_head(
                         state, head
@@ -1701,7 +1752,18 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         log.info(
                             f"Co-winning action at head: {head} scores={head.matching_scores}"
                         )
+                    elif head.catch_pattern_failure_label:
+                        # If a head defines a pattern failure catch label,
+                        # it will forward the head to the label rather the aborting the flow
+                        head.position = _get_flow_config_from_head(
+                            state, head
+                        ).element_labels[head.catch_pattern_failure_label]
+                        advancing_heads.append(head)
+                        log.info(
+                            f"Caught loosing action head: {head} scores={head.matching_scores}"
+                        )
                     else:
+                        # Loosing heads will abort the flow
                         flow_state = _get_flow_state_from_head(state, head)
                         log.info(
                             f"Loosing action at head: {head} scores={head.matching_scores}"
@@ -1828,8 +1890,6 @@ def slide(
     state: State, flow_state: FlowState, flow_config: FlowConfig, head: FlowHead
 ) -> Tuple[Deque[dict], List[FlowHead]]:
     """Tries to slide a flow with the provided head."""
-    head_position = head.position
-
     internal_events: Deque[dict] = deque()
     new_heads: List[FlowHead] = []
 
@@ -1839,27 +1899,29 @@ def slide(
 
     while True:
         # if we reached the end, we stop
-        if head_position == len(flow_config.elements) or head_position < 0:
+        if head.position == len(flow_config.elements) or head.position < 0:
             break
 
-        # prev_head = head_position
-        element = flow_config.elements[head_position]
+        # prev_head = head.position
+        element = flow_config.elements[head.position]
         log.debug(f"Sliding element: '{element}'")
 
         if isinstance(element, SpecOp):
-            if element.op == "send" and element.spec.name in InternalEvents.ALL:
-                # Evaluate expressions (eliminate all double quotes)
-                event_arguments = _evaluate_arguments(
-                    element.spec.arguments, flow_state.context
-                )
+            if element.op == "send":
+                event = _get_event_from_element(state, flow_state, element)
+
+                if event.name not in InternalEvents.ALL:
+                    break
+
+                event_arguments = event.arguments
                 event_arguments.update(
                     {"source_flow_instance_uid": head.flow_state_uid}
                 )
-                event = create_internal_event(
-                    element.spec.name, event_arguments, head.matching_scores
+                new_event = create_internal_event(
+                    event.name, event_arguments, head.matching_scores
                 )
-                _push_internal_event(state, event)
-                head_position += 1
+                _push_internal_event(state, new_event)
+                head.position += 1
 
             elif element.op == "_new_action_instance":
                 assert (
@@ -1880,33 +1942,37 @@ def slide(
                     "$"
                 )
                 flow_state.context.update({reference_name: action})
-                head_position += 1
+                head.position += 1
             else:
                 # Not a sliding element
                 break
 
         elif isinstance(element, Label):
-            head_position += 1
+            head.position += 1
 
         elif isinstance(element, Goto):
             if eval_expression(element.expression, flow_state.context):
                 if element.label in flow_config.element_labels:
-                    head_position = flow_config.element_labels[element.label] + 1
+                    head.position = flow_config.element_labels[element.label] + 1
                 else:
                     # Still advance by one on invalid label
                     log.warning(f"Invalid label `{element.label}`.")
-                    head_position += 1
+                    head.position += 1
             else:
-                head_position += 1
+                head.position += 1
         elif isinstance(element, ForkHead):
             # We create new heads for
             for idx, label in enumerate(element.labels):
                 pos = flow_config.element_labels[label]
                 if idx == 0:
-                    head_position = pos
+                    head.position = pos
                 else:
                     new_head = FlowHead(
-                        new_uid(), pos, flow_state.uid, head.matching_scores
+                        new_uid(),
+                        pos,
+                        flow_state.uid,
+                        head.matching_scores,
+                        head.catch_pattern_failure_label,
                     )
                     flow_state.heads.append(new_head)
                     new_heads.append(new_head)
@@ -1917,14 +1983,14 @@ def slide(
                 if h != head:
                     log.debug(f"Head merged: {h} with {head}")
             flow_state.heads = [head]
-            head_position += 1
+            head.position += 1
 
         elif isinstance(element, WaitForHeads):
             # Check if enough heads are on this element to continue
-            waiting_heads = [h for h in flow_state.heads if h.position == head_position]
-            if len(waiting_heads) >= element.number - 1:
+            waiting_heads = [h for h in flow_state.heads if h.position == head.position]
+            if len(waiting_heads) >= element.number:
                 flow_state.heads = [head]
-                head_position += 1
+                head.position += 1
             else:
                 break
 
@@ -1932,11 +1998,7 @@ def slide(
             # We need to first evaluate the expression
             expr_val = eval_expression(element.expression, flow_state.context)
             flow_state.context.update({element.key: expr_val})
-            head_position += 1
-
-        elif isinstance(element, RandomGoto):
-            idx = random.randint(0, len(element.labels) - 1)
-            head_position = flow_config.element_labels[element.labels[idx]] + 1
+            head.position += 1
 
         elif isinstance(element, Return):
             flow_state.context.update(
@@ -1946,17 +2008,21 @@ def slide(
                     )
                 }
             )
-            head_position = len(flow_config.elements)
+            head.position = len(flow_config.elements)
 
         elif isinstance(element, Abort):
-            flow_state.status = FlowStatus.ABORTED
-            head_position = len(flow_config.elements)
+            if head.catch_pattern_failure_label:
+                head.catch_pattern_failure_label = element.label
+                head.position += 1
+            else:
+                flow_state.status = FlowStatus.ABORTED
+                head.position = len(flow_config.elements)
 
         elif isinstance(element, Continue) or isinstance(element, Break):
             if element.label is None:
-                head_position += 1
+                head.position += 1
             else:
-                head_position = flow_config.element_labels[element.label] + 1
+                head.position = flow_config.element_labels[element.label] + 1
 
         elif isinstance(element, Priority):
             priority = eval_expression(element.priority_expr, flow_state.context)
@@ -1965,14 +2031,17 @@ def slide(
                     "priority must be a float number between 0.0 and 1.0!"
                 )
             flow_state.priority = priority
-            head_position += 1
+            head.position += 1
+
+        elif isinstance(element, CatchPatternFailure):
+            head.catch_pattern_failure_label = element.label
+            head.position += 1
 
         else:
             # Ignore unknown element
-            head_position += 1
+            head.position += 1
 
     # If we got this far, it means we had a match and the flow advanced
-    head.position = head_position
     return internal_events, new_heads
 
 
@@ -2021,7 +2090,7 @@ def _abort_flow(
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
-            event = create_abort_flow_internal_event(
+            event = create_spot_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, matching_scores
             )
             _push_internal_event(state, event)
@@ -2063,7 +2132,7 @@ def _finish_flow(
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
-            event = create_abort_flow_internal_event(
+            event = create_spot_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, matching_scores, True
             )
             _push_internal_event(state, event)
@@ -2350,7 +2419,6 @@ def _get_event_from_element(
         # Case 2)
         if element_spec.spec_type == SpecType.FLOW:
             # Flow object
-            raise NotImplementedError()
             flow_config = state.flow_configs[element_spec.name]
             temp_flow_state = create_flow_instance(flow_config)
             flow_event_name = element_spec.members[0]["name"]
@@ -2435,20 +2503,20 @@ def _create_restart_flow_internal_event(
     return create_internal_event(InternalEvents.START_FLOW, arguments, matching_scores)
 
 
-def create_abort_flow_internal_event(
+def create_spot_flow_internal_event(
     flow_instance_uid: str,
     source_flow_instance_uid: str,
     matching_scores: List[float],
     deactivate_flow: bool = False,
 ) -> FlowEvent:
-    """Returns 'AbortFlow' internal event"""
+    """Returns 'StopFlow' internal event"""
     arguments = {
         "flow_instance_uid": flow_instance_uid,
         "source_flow_instance_uid": source_flow_instance_uid,
         "activated": deactivate_flow,
     }
     return create_internal_event(
-        InternalEvents.ABORT_FLOW,
+        InternalEvents.STOP_FLOW,
         arguments,
         matching_scores,
     )

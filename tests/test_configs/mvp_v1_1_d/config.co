@@ -77,7 +77,7 @@ flow unknown intent
 flow fallback
   # llm: exclude
   user said something
-  $intent = await GenerateUserIntentAction
+  $intent = await GenerateUserIntentAction()
   $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
   # TODO: replace above with check if the flow (FlowFinished) advances something? is there an active matcher
 

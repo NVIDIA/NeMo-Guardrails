@@ -1122,6 +1122,94 @@ def test_finish_flow_event():
     )
 
 
+def test_match_specificity_mechanic():
+    """Test the FinishFlow event that will immediately finish a flow"""
+
+    content = """
+    flow user said something
+      match UtteranceUserAction().Finished()
+
+    flow user said $transcript
+      match UtteranceUserAction().Finished(final_transcript=$transcript)
+
+    flow something
+      user said something
+      start UtteranceBotAction(script="something")
+
+    flow hello
+      await user said "hello"
+      start UtteranceBotAction(script="hi")
+
+    flow goodbye
+      await user said "goodbye"
+      start UtteranceBotAction(script="bye")
+
+    flow something failed
+      match something.Failed()
+      start UtteranceBotAction(script="something failed")
+
+    flow hello failed
+      match hello.Failed()
+      start UtteranceBotAction(script="hello failed")
+
+    flow goodbye failed
+      match goodbye.Failed()
+      start UtteranceBotAction(script="goodbye failed")
+
+    flow main
+      activate something and something failed
+      activate hello and hello failed
+      activate goodbye and goodbye failed
+      match WaitAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "hello",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "hi",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "something failed",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "goodbye",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "bye",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "something failed",
+            },
+        ],
+    )
+
+
 def test_match_failure_flow_abort():
     """Test the mechanism where a match statement FlowFinished/FlowFailed will abort the flow
     if it fails to be satisfied"""
@@ -1136,7 +1224,7 @@ def test_match_failure_flow_abort():
 
     flow c
       match UtteranceUserAction().Finished(final_transcript="Start")
-      send AbortFlow(flow_id="b")
+      send StopFlow(flow_id="b")
 
     flow main
       start a
@@ -1188,7 +1276,7 @@ def test_abort_flow_propagation_v_a():
     flow main
       start a
       start c
-      send AbortFlow(flow_id="b")
+      send StopFlow(flow_id="b")
       match WaitAction().Finished()
     """
 
@@ -1453,6 +1541,9 @@ def test_await_or_grouping():
         state.outgoing_events,
         [
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "Match",
             },
@@ -1505,6 +1596,9 @@ def test_await_or_grouping():
     assert is_data_in_events(
         state.outgoing_events,
         [
+            {
+                "type": "StopUtteranceBotAction",
+            },
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Match",
@@ -2534,7 +2628,7 @@ def test_event_action_wrapper_abstraction():
     )
 
 
-def test_event_action_wrapper_abstraction():
+def test_parallel_flow_mechanism():
     """"""
 
     content = """
@@ -2622,5 +2716,90 @@ def test_event_action_wrapper_abstraction():
     )
 
 
+# def test_stop_flow():
+#     """"""
+
+#     content = """
+#     flow user said $transcript
+#       match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+#     flow user said failed $transcript
+#       match (user said $transcript).Failed()
+#       start UtteranceBotAction(script="flow user said {$transcript} failed")
+
+#     flow main
+#       activate user said failed "hi" and user said failed "bye"
+#       start user said "hi" and user said "bye"
+
+#       match UtteranceUserAction.Finished(final_transcript="step 1")
+#       stop user said "hi"
+#       match UtteranceUserAction.Finished(final_transcript="step 2")
+#       stop user said "bye"
+
+#       start user said "hi" and user said "bye"
+#       match UtteranceUserAction.Finished(final_transcript="step 3")
+#       stop user said
+#     """
+
+#     config = _init_state(content)
+#     state = run_to_completion(config, start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [],
+#     )
+#     state = run_to_completion(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "step 1",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "flow user said hi failed",
+#             },
+#         ],
+#     )
+#     state = run_to_completion(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "step 2",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "flow user said bye failed",
+#             },
+#         ],
+#     )
+#     state = run_to_completion(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "step 3",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "flow user said hi failed",
+#             },
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "flow user said bye failed",
+#             },
+#         ],
+#     )
+
+
 if __name__ == "__main__":
-    test_event_action_wrapper_abstraction()
+    test_start_or_grouping()
