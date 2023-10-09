@@ -430,19 +430,28 @@ class FlowState:
 
     def finish(self, args: dict) -> FlowEvent:
         """Finishes the flow. Takes no arguments."""
-        return FlowEvent(InternalEvents.FINISH_FLOW, {"flow_id": self.flow_id})
+        return FlowEvent(
+            InternalEvents.FINISH_FLOW,
+            {"flow_id": self.flow_id, "flow_instance_uid": self.uid},
+        )
 
     def stop(self, args: dict) -> FlowEvent:
         """Stops the flow. Takes no arguments."""
-        return FlowEvent("StopFlow", {"flow_id": self.flow_id})
+        return FlowEvent(
+            "StopFlow", {"flow_id": self.flow_id, "flow_instance_uid": self.uid}
+        )
 
     def pause(self, args: dict) -> FlowEvent:
         """Pauses the flow. Takes no arguments."""
-        return FlowEvent("PauseFlow", {"flow_id": self.flow_id})
+        return FlowEvent(
+            "PauseFlow", {"flow_id": self.flow_id, "flow_instance_uid": self.uid}
+        )
 
     def resume(self, args: dict) -> FlowEvent:
         """Resumes the flow. Takes no arguments."""
-        return FlowEvent("ResumeFlow", {"flow_id": self.flow_id})
+        return FlowEvent(
+            "ResumeFlow", {"flow_id": self.flow_id, "flow_instance_uid": self.uid}
+        )
 
     # Flow events to match
     def started_event(self, args: dict) -> FlowEvent:
@@ -1561,25 +1570,16 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
             # Handle internal events that have no default matchers in flows yet
             if event.name == InternalEvents.FINISH_FLOW:
-                if "flow_id" in event.arguments:
-                    for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
-                        if _is_active_flow(flow_state):
-                            _finish_flow(state, flow_state, event.matching_scores)
-                elif "flow_instance_uid" in event.arguments:
+                if "flow_instance_uid" in event.arguments:
                     flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
                     if _is_active_flow(flow_state):
                         _finish_flow(state, flow_state, event.matching_scores)
-            elif event.name == InternalEvents.STOP_FLOW:
-                if "flow_id" in event.arguments:
+                elif "flow_id" in event.arguments:
                     for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
                         if _is_active_flow(flow_state):
-                            _abort_flow(
-                                state,
-                                flow_state,
-                                event.matching_scores,
-                                event.arguments.get("activated", False),
-                            )
-                elif "flow_instance_uid" in event.arguments:
+                            _finish_flow(state, flow_state, event.matching_scores)
+            elif event.name == InternalEvents.STOP_FLOW:
+                if "flow_instance_uid" in event.arguments:
                     flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
                     if _is_active_flow(flow_state):
                         _abort_flow(
@@ -1588,6 +1588,15 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                             event.matching_scores,
                             event.arguments.get("activated", False),
                         )
+                elif "flow_id" in event.arguments:
+                    for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
+                        if _is_active_flow(flow_state):
+                            _abort_flow(
+                                state,
+                                flow_state,
+                                event.matching_scores,
+                                event.arguments.get("activated", False),
+                            )
                 # TODO: Add support for all flow instances of same flow with "flow_id"
             # elif event.name == "ResumeFlow":
             #     pass
@@ -2096,7 +2105,7 @@ def _abort_flow(
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
-            event = create_spot_flow_internal_event(
+            event = create_stop_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, matching_scores
             )
             _push_internal_event(state, event)
@@ -2138,7 +2147,7 @@ def _finish_flow(
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
-            event = create_spot_flow_internal_event(
+            event = create_stop_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, matching_scores, True
             )
             _push_internal_event(state, event)
@@ -2509,7 +2518,7 @@ def _create_restart_flow_internal_event(
     return create_internal_event(InternalEvents.START_FLOW, arguments, matching_scores)
 
 
-def create_spot_flow_internal_event(
+def create_stop_flow_internal_event(
     flow_instance_uid: str,
     source_flow_instance_uid: str,
     matching_scores: List[float],
