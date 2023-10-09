@@ -17,14 +17,12 @@
 
 from __future__ import annotations
 
-import copy
 import logging
 import random
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from itertools import groupby
 from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
@@ -545,22 +543,7 @@ class State:
 
         # TODO: Think about where to put this
         for flow_config in self.flow_configs.values():
-            # Transform and resolve flow configuration element notation (actions, flows, ...)
-            flow_config.elements = expand_elements(
-                flow_config.elements, self.flow_configs
-            )
-
-            # Extract all the label elements
-            for idx, element in enumerate(flow_config.elements):
-                if isinstance(element, Label):
-                    flow_config.element_labels.update({element["name"]: idx})
-
-            # Mark flow as parallel flow based on source code comment
-            if (
-                flow_config.source_code is not None
-                and "# flow: parallel" in flow_config.source_code
-            ):
-                flow_config.enable_parallel_instances = True
+            initialize_flow(self, flow_config)
 
         # Create main flow state first
         main_flow_config = self.flow_configs["main"]
@@ -587,6 +570,23 @@ class ColangValueError(Exception):
     """Raises when there is an invalid value detected in a Colang expression"""
 
     pass
+
+
+def initialize_flow(state: State, flow_config: FlowConfig) -> None:
+    # Transform and resolve flow configuration element notation (actions, flows, ...)
+    flow_config.elements = expand_elements(flow_config.elements, state.flow_configs)
+
+    # Extract all the label elements
+    for idx, element in enumerate(flow_config.elements):
+        if isinstance(element, Label):
+            flow_config.element_labels.update({element["name"]: idx})
+
+    # Mark flow as parallel flow based on source code comment
+    if (
+        flow_config.source_code is not None
+        and "# flow: parallel" in flow_config.source_code
+    ):
+        flow_config.enable_parallel_instances = True
 
 
 def expand_elements(

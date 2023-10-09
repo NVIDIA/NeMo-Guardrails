@@ -32,6 +32,7 @@ from nemoguardrails.colang.v1_1.runtime.flows import (
     add_new_flow_instance,
     create_flow_instance,
     expand_elements,
+    initialize_flow,
     run_to_completion,
 )
 from nemoguardrails.rails.llm.config import RailsConfig
@@ -72,19 +73,18 @@ class RuntimeV1_1(Runtime):
                 log.warning(f"Flow '{flow.name}' already exists!")
                 break
 
-            # Add flow config to state.flow_configs
-            self.state.flow_configs.update(
-                {
-                    flow.name: FlowConfig(
-                        id=flow.name,
-                        loop_id=None,
-                        elements=expand_elements(
-                            flow.elements, self.state.flow_configs
-                        ),
-                        parameters=flow.parameters,
-                    )
-                }
+            flow_config = FlowConfig(
+                id=flow.name,
+                loop_id=None,
+                elements=expand_elements(flow.elements, self.state.flow_configs),
+                parameters=flow.parameters,
             )
+
+            initialize_flow(self, flow_config)
+
+            # Add flow config to state.flow_configs
+            self.state.flow_configs.update({flow.name: flow_config})
+
             # Create an instance of the flow in flow_states
             add_new_flow_instance(
                 self.state, create_flow_instance(self.state.flow_configs[flow.name])

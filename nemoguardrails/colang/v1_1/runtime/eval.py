@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import re
 
 from simpleeval import simple_eval
+
+log = logging.getLogger(__name__)
 
 from nemoguardrails.colang.v1_1.runtime import system_functions
 from nemoguardrails.colang.v1_1.runtime.utils import AttributeDict
@@ -39,7 +42,10 @@ def eval_expression(expr, context):
     if inner_expressions:
         inner_expression_values = []
         for inner_expression in inner_expressions:
-            value = eval_expression(inner_expression.strip("{}"), context)
+            try:
+                value = eval_expression(inner_expression.strip("{}"), context)
+            except Exception as ex:
+                log.warning(f"Error evaluating inner expression: '{expr}': {str(ex)}")
             if isinstance(value, str):
                 value = value.replace('"', '\\"')
             inner_expression_values.append(value)

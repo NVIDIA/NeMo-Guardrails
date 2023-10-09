@@ -94,35 +94,32 @@ flow bot respond $text
 # -----------------------------------
 
 flow bot express greeting
-  start bot express "Hi there!" as $ref
-    or bot express "Welcome!" as $ref
-    or bot express "Hello!" as $ref
-  match $ref.Finished()
+  bot express "Hi there!"
+    or bot express "Welcome!"
+    or bot express "Hello!"
 
 flow bot express feeling well
-  start bot express "I am good!" as $ref
-    or bot express "I am great!" as $ref
-  match $ref.Finished()
+  bot express "I am good!"
+    or bot express "I am great!"
 
 flow bot express feeling bad
-  start bot express "I am not good!" as $ref
-    or bot express "I am a bit under the weather!" as $ref
-  match $ref.Finished()
+  bot express "I am not good!"
+    or bot express "I am a bit under the weather!"
 
 flow bot inform about service
-  await bot inform "You can ask or instruct me whatever you want and I will do it!"
+  bot inform "You can ask or instruct me whatever you want and I will do it!"
 
 # ----------------------------------
 # User action flows
 # -----------------------------------
 
 flow user expressed greeting
-  await user said "hi"
+  user said "hi"
     or user said "Welcome!"
     or user said "Hello!"
 
 flow user asked how are you
-  await user said "how are you"
+  user said "how are you"
 
 flow user provide custom instructions
   user said "do something" as $ref

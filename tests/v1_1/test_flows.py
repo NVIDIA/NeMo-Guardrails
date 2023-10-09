@@ -2802,4 +2802,4 @@ def test_parallel_flow_mechanism():
 
 
 if __name__ == "__main__":
-    test_start_or_grouping()
+    test_await_or_grouping()
