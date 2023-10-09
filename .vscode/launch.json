@@ -25,8 +25,7 @@
                 "--debug-level=DEBUG"
             ],
             "env": {
-                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}",
-                "OPENAI_API_KEY": "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"
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
             }
         },
         {
@@ -37,8 +36,7 @@
             "program": "nemoguardrails",
             "args": ["chat", "--config=${fileDirname}", "--verbose"],
             "env": {
-                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}",
-                "OPENAI_API_KEY": "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"
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
             }
         },
         {
