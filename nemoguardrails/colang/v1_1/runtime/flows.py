@@ -758,6 +758,7 @@ def _expand_stop_element(
     new_elements: List[ElementType] = []
     if isinstance(element.spec, Spec):
         # Single element
+        raise NotImplementedError()
         if (
             element.spec.spec_type == SpecType.REFERENCE
             and element.spec.members is None
@@ -959,7 +960,77 @@ def _expand_await_element(
             raise ColangSyntaxError(f"Unsupported spec type '{element.spec}'")
     else:
         # Element group
-        new_elements = _expand_element_group(element)
+        normalized_group = normalize_element_groups(element.spec)
+
+        fork_element = ForkHead()
+        group_label_elements: List[Label] = []
+        start_elements: List[List[SpecOp]] = []
+        match_elements: List[List[Spec]] = []
+        stop_elements: List[List[Spec]] = []
+        failure_label_name = f"failure_label_{new_var_uid()}"
+        failure_label_element = Label(name=failure_label_name)
+        end_label_name = f"end_label_{new_var_uid()}"
+        goto_end_element = Goto(label=end_label_name)
+        end_label_element = Label(name=end_label_name)
+
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            group_label_name = f"group_{group_idx}_{new_var_uid()}"
+            group_label_elements.append(Label(name=group_label_name))
+            fork_element.labels.append(group_label_name)
+            start_elements.append([])
+            match_elements.append([])
+            stop_elements.append([])
+            for group_element in and_group["elements"]:
+                reference_name = f"_ref_{new_var_uid()}"
+                group_element.ref = _create_ref_ast_dict_helper(reference_name)
+                start_elements[-1].append(
+                    SpecOp(
+                        op="start",
+                        spec=group_element,
+                    )
+                )
+                match_elements[-1].append(
+                    Spec(
+                        var_name=reference_name,
+                        members=_create_member_ast_dict_helper("Finished", {}),
+                        spec_type=SpecType.REFERENCE,
+                    )
+                )
+                stop_elements[-1].append(
+                    Spec(
+                        var_name=reference_name,
+                        members=_create_member_ast_dict_helper("Stop", {}),
+                        spec_type=SpecType.REFERENCE,
+                    )
+                )
+
+        # Generate new element sequence
+        new_elements.append(CatchPatternFailure(label=failure_label_name))
+        new_elements.append(fork_element)
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            stop_group = {
+                "_type": "spec_and",
+                "elements": [
+                    elem
+                    for idx, sublist in enumerate(stop_elements)
+                    for elem in sublist
+                    if idx != group_idx
+                ],
+            }
+            new_elements.append(group_label_elements[group_idx])
+            for idx, group_element in enumerate(and_group["elements"]):
+                new_elements.append(start_elements[group_idx][idx])
+            match_group = {"_type": "spec_and", "elements": match_elements[group_idx]}
+            new_elements.append(SpecOp(op="match", spec=match_group))
+            new_elements.append(MergeHeads())
+            new_elements.append(SpecOp(op="send", spec=stop_group))
+            new_elements.append(goto_end_element)
+        new_elements.append(failure_label_element)
+        new_elements.append(WaitForHeads(number=len(normalized_group["elements"])))
+        new_elements.append(CatchPatternFailure(label=None))
+        new_elements.append(Abort())
+        new_elements.append(end_label_element)
+        new_elements.append(CatchPatternFailure(label=None))
 
     return new_elements
 
@@ -1639,7 +1710,8 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 groups = groupby(ordered_heads, key=lambda head: head.matching_scores)
                 first_group = next(groups, None)
                 winning_heads = list(first_group[1])
-                picked_head = random.choice(winning_heads)
+                # TODO: Fix the random head selection, at the moment unit test 'test_start_or_grouping' can fail
+                picked_head = ordered_heads[0]  # random.choice(winning_heads)
                 winning_element = _get_flow_config_from_head(
                     state, picked_head
                 ).elements[picked_head.position]
@@ -1835,18 +1907,20 @@ def slide(
         log.debug(f"Sliding element: '{element}'")
 
         if isinstance(element, SpecOp):
-            if element.op == "send" and element.spec.name in InternalEvents.ALL:
-                # Evaluate expressions (eliminate all double quotes)
-                event_arguments = _evaluate_arguments(
-                    element.spec.arguments, flow_state.context
-                )
+            if element.op == "send":
+                event = _get_event_from_element(state, flow_state, element)
+
+                if event.name not in InternalEvents.ALL:
+                    break
+
+                event_arguments = event.arguments
                 event_arguments.update(
                     {"source_flow_instance_uid": head.flow_state_uid}
                 )
-                event = create_internal_event(
-                    element.spec.name, event_arguments, head.matching_scores
+                new_event = create_internal_event(
+                    event.name, event_arguments, head.matching_scores
                 )
-                _push_internal_event(state, event)
+                _push_internal_event(state, new_event)
                 head.position += 1
 
             elif element.op == "_new_action_instance":
