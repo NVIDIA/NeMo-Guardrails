@@ -1707,11 +1707,15 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     group, key=lambda head: head.matching_scores, reverse=True
                 )
                 # Check if we have heads with the exact same matching scores and pick one at random (or-group)
-                groups = groupby(ordered_heads, key=lambda head: head.matching_scores)
-                first_group = next(groups, None)
-                winning_heads = list(first_group[1])
-                # TODO: Fix the random head selection, at the moment unit test 'test_start_or_grouping' can fail
-                picked_head = ordered_heads[0]  # random.choice(winning_heads)
+                equal_heads_index = next(
+                    (
+                        i
+                        for i, h in enumerate(ordered_heads)
+                        if h.matching_scores != ordered_heads[0].matching_scores
+                    ),
+                    len(ordered_heads) - 1,
+                )
+                picked_head = random.choice(ordered_heads[:equal_heads_index])
                 winning_element = _get_flow_config_from_head(
                     state, picked_head
                 ).elements[picked_head.position]
@@ -1725,7 +1729,9 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
                 advancing_heads.append(picked_head)
                 _create_outgoing_event_from_actionable_element(state, picked_head)
-                for head in ordered_heads[1:]:
+                for head in ordered_heads:
+                    if head == picked_head:
+                        continue
                     competing_element = _get_flow_config_from_head(
                         state, head
                     ).elements[head.position]
