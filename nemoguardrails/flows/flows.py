@@ -453,28 +453,34 @@ def compute_next_state(state: State, event: dict) -> State:
                 flow_state.interrupted_by = new_state.next_step_by_flow_uid
 
     # If there are flows that were waiting on completed flows, we reactivate them
-    for flow_state in new_state.flow_states:
-        if flow_state.status == FlowStatus.INTERRUPTED:
-            # TODO: optimize this with a dict of statuses
-            # If already there are no more flows to interrupt, we should resume
-            should_resume = flow_state.interrupted_by is None
+    changes = True
+    while changes:
+        changes = False
 
-            # Check if it was waiting on a completed flow
-            if not should_resume:
-                for _flow_state in new_state.flow_states:
-                    if _flow_state.uid == flow_state.interrupted_by:
-                        if _flow_state.status == FlowStatus.COMPLETED:
-                            should_resume = True
-                        break
+        for flow_state in new_state.flow_states:
+            if flow_state.status == FlowStatus.INTERRUPTED:
+                # TODO: optimize this with a dict of statuses
+                # If already there are no more flows to interrupt, we should resume
+                should_resume = flow_state.interrupted_by is None
 
-            if should_resume:
-                flow_state.status = FlowStatus.ACTIVE
-                flow_state.interrupted_by = None
+                # Check if it was waiting on a completed flow
+                if not should_resume:
+                    for _flow_state in new_state.flow_states:
+                        if _flow_state.uid == flow_state.interrupted_by:
+                            if _flow_state.status == FlowStatus.COMPLETED:
+                                should_resume = True
+                            break
 
-                _slide_with_subflows(new_state, flow_state)
+                if should_resume:
+                    flow_state.status = FlowStatus.ACTIVE
+                    flow_state.interrupted_by = None
 
-                if flow_state.head < 0:
-                    flow_state.status = FlowStatus.COMPLETED
+                    _slide_with_subflows(new_state, flow_state)
+
+                    if flow_state.head < 0:
+                        flow_state.status = FlowStatus.COMPLETED
+
+                    changes = True
 
     return new_state
 
