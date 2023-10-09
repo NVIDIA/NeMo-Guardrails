@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
 
+from nemoguardrails.flows.eval import eval_expression
 from nemoguardrails.flows.sliding import slide
 from nemoguardrails.utils import new_event_dict
 
@@ -216,8 +217,14 @@ def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState
     The head for `flow_state` is expected to be on a "flow" element.
     """
     flow_config = new_state.flow_configs[flow_state.flow_id]
+    subflow_id = flow_config.elements[flow_state.head]["flow_name"]
+
+    # Basic support for referring a subflow using a variable
+    if subflow_id.startswith("$"):
+        subflow_id = eval_expression(subflow_id, new_state.context)
+
     subflow_state = FlowState(
-        flow_id=flow_config.elements[flow_state.head]["flow_name"],
+        flow_id=subflow_id,
         status=FlowStatus.ACTIVE,
         head=0,
         uid=str(uuid.uuid4()),
