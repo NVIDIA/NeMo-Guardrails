@@ -708,9 +708,7 @@ class LLMGenerationActions:
                                 # This is for canonical forms that do not have an associated message.
                                 # Create a simple message for the bot canonical form.
                                 # In a later version we could generate a message with the LLM at app initialization.
-                                example += (
-                                    f'  "This is a message for {bot_canonical_form}"\n'
-                                )
+                                example += f"  # On the next line generate a bot message related to {bot_canonical_form}\n"
 
                         # For now, only use the first flow for each intent.
                         break
