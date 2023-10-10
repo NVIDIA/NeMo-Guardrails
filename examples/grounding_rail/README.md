@@ -130,7 +130,7 @@ That certainly sounds reasonable, but there's a problem! If you look over the re
 
 ## Fact Checking Rail
 
-The fact checking rail enables you to check the validity of the bot response based on the knowledge base. It takes as inputs the bot response and the relevant chunk from the knowledge base, and makes a call to the LLM asking if the response is true based on the retrieved chunk. The actual format of the LLM call can be seen in [`actions/fact_checking.py`](../../nemoguardrails/actions/fact_checking.py).
+The fact checking rail enables you to check the validity of the bot response based on the knowledge base. It takes as inputs the bot response and the relevant chunk from the knowledge base, and makes a call to the LLM asking if the response is true based on the retrieved chunk. The actual format of the LLM call can be seen in [`actions/fact_checking.py`](../../nemoguardrails/library/factchecking/actions.py).
 
 Let's modify our flow from before to add the fact checking rail. Now, when the bot provides its answer, we'll execute the `check_facts` action, and store the response in the `accurate` variable. If the fact checking action deems the response to be false, we'll remove that message from the response and let the user know that the bot doesn't know the answer.
 
@@ -201,11 +201,11 @@ Everything up until `Finished chain.` is part of the bot's "internal reasoning",
 
 ## Hallucination Rail
 
-While the fact checking action works well when we have a relevant knowledge base to check against, we'd also like to guard against hallucination when we don't have a pre-configured knowledge base. For this use case, we can use the [`check_hallucination`](../../nemoguardrails/actions/hallucination/hallucination.py) action.
+While the fact checking action works well when we have a relevant knowledge base to check against, we'd also like to guard against hallucination when we don't have a pre-configured knowledge base. For this use case, we can use the [`check_hallucination`](../../nemoguardrails/library/hallucination/actions.py) action.
 
 The hallucination rail uses a self-checking mechanism inspired by the [SelfCheckGPT](https://arxiv.org/abs/2303.08896) technique. Similar to the fact-checking rail, we ask the LLM itself to determine whether the most recent output is consistent with a piece of context. However, since we don't have a knowledge base to pull the context from, we use the LLM to generate multiple additional completions to serve as the context. The assumption is that if the LLM produces multiple completions that are inconsistent with each other, the original completion is likely to be a hallucination.
 
-You can view [`actions/hallucination/hallucination.py`](../../nemoguardrails/actions/hallucination/hallucination.py) to see the format of the the extra generations and the hallucination check call.
+You can view [`actions/hallucination/hallucination.py`](../../nemoguardrails/library/hallucination/actions.py) to see the format of the the extra generations and the hallucination check call.
 
 The current implementation only supports OpenAI LLM Engines.
 
