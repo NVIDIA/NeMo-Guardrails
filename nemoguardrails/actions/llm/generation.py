@@ -224,6 +224,9 @@ class LLMGenerationActions:
         self, events: List[dict], llm: Optional[BaseLLM] = None
     ):
         """Generate the canonical form for what the user said i.e. user intent."""
+        # If using a single LLM call, use the specific action defined for this task.
+        if self.config.rails.topical.single_call:
+            return await self.generate_intent_steps_message(events=events, llm=llm)
 
         # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
