@@ -325,6 +325,11 @@ class LLMGenerationActions:
 
         # Currently, we only predict next step after a user intent using LLM
         if event["type"] == "UserIntent":
+            # If using a single LLM call, use the results computed in the first call.
+            if self.config.rails.topical.single_call:
+                bot_intent_event = event["additional_info"]["bot_intent_event"]
+                return ActionResult(events=[bot_intent_event])
+
             user_intent = event["intent"]
 
             # We search for the most relevant similar flows
@@ -482,6 +487,15 @@ class LLMGenerationActions:
             bot_utterance = context[bot_intent[1:]]
 
         else:
+            # Generate the bot message using an LLM call
+
+            # If using a single LLM call, use the results computed in the first call.
+            if self.config.rails.topical.single_call:
+                event = get_last_user_intent_event(events)
+                if event["type"] == "UserIntent":
+                    bot_message_event = event["additional_info"]["bot_message_event"]
+                    return ActionResult(events=[bot_message_event])
+
             # We search for the most relevant similar bot utterance
             examples = ""
             # NOTE: disabling bot message index when there are no user messages
@@ -643,7 +657,9 @@ class LLMGenerationActions:
             flow_results = {}
 
             if self.user_message_index:
-                # Get the top 10 intents even if we use less in the selected examples
+                # Get the top 10 intents even if we use less in the selected examples.
+                # Some of these intents might not have an associated flow and will be
+                # skipped from the few-shot examples.
                 intent_results = await self.user_message_index.search(
                     text=event["final_transcript"], max_results=10
                 )
@@ -661,7 +677,13 @@ class LLMGenerationActions:
 
             # We add the intent to the examples in reverse order
             # so the most relevant is towards the end.
+            num_examples = 0
             for result in reversed(intent_results):
+                # Stop after the first 5 flow examples, in case more than 5 intents
+                # have been selected from the index.
+                if num_examples >= 5:
+                    break
+
                 intent = result.meta["intent"]
                 example = f'user "{result.text}"\n  {intent}\n'
 
@@ -719,6 +741,7 @@ class LLMGenerationActions:
                 example += "\n"
 
                 examples += example
+                num_examples += 1
 
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERATE_INTENT_STEPS_MESSAGE,
@@ -730,6 +753,7 @@ class LLMGenerationActions:
             )
 
             # We make this call with temperature 0 to have it as deterministic as possible.
+            # This is important for canonical forms, but not a great choice for bot messages.
             with llm_params(llm, temperature=self.config.lowest_temperature):
                 result = await llm_call(llm, prompt)
 
@@ -738,48 +762,64 @@ class LLMGenerationActions:
                 Task.GENERATE_INTENT_STEPS_MESSAGE, output=result
             )
 
-            # TODO: implement logic for generating more complex Colang next steps,
-            #  not just a single bot intent
+            # TODO: Implement logic for generating more complex Colang next steps (multi-step),
+            #  not just a single bot intent.
 
-            # Get the next 3 non-empty lines, these should contain:
-            # line 1 - user intent, line 2 - bot intent, line 3 - bot message
-            next_three_lines = get_top_k_nonempty_lines(result, k=3)
+            # Get the next 2 non-empty lines, these should contain:
+            # line 1 - user intent, line 2 - bot intent.
+            # Afterwards we have the bot message.
+            next_three_lines = get_top_k_nonempty_lines(result, k=2)
             user_intent = next_three_lines[0] if len(next_three_lines) > 0 else None
             bot_intent = next_three_lines[1] if len(next_three_lines) > 1 else None
-            bot_message = next_three_lines[2] if len(next_three_lines) > 2 else None
+            bot_message = None
+            if bot_intent:
+                pos = result.find(bot_intent)
+                if pos != -1:
+                    # The bot message could be multiline
+                    bot_message = result[pos + len(bot_intent) :]
+                    bot_message = get_multiline_response(bot_message)
+                    bot_message = strip_quotes(bot_message)
+                    # Quick hack for degenerated / empty bot messages
+                    if bot_message and len(bot_message.strip()) == 0:
+                        bot_message = None
 
-            if user_intent is None:
+            if user_intent:
+                if user_intent.startswith("user "):
+                    user_intent = user_intent[5:]
+            else:
                 user_intent = "unknown message"
 
-            if user_intent and user_intent.startswith("user "):
-                user_intent = user_intent[5:]
+            if bot_intent and bot_intent.startswith("bot "):
+                bot_intent = bot_intent[4:]
+            else:
+                bot_intent = "general response"
+
+            if not bot_message:
+                bot_message = "I'm not sure what to say."
 
             log.info(
                 "Canonical form for user intent: "
                 + (user_intent if user_intent else "None")
             )
+            log.info(
+                "Canonical form for bot intent: "
+                + (bot_intent if bot_intent else "None")
+            )
+            log.info(
+                f"Generated bot message: " + (bot_message if bot_message else "None")
+            )
 
-            if user_intent is None:
-                events = [new_event_dict("UserIntent", intent="unknown message")]
-            else:
-                events = [new_event_dict("UserIntent", intent=user_intent)]
-
-                # generat doar user intent-ul ca event + potential bot intent si mesaj
-                # si logica care proceseaza user intent-ul , sa extraga extra information si sa genereze bot intent
-
-                if bot_intent and bot_intent.startswith("bot "):
-                    events.append(new_event_dict("BotIntent", intent=bot_intent[4:]))
-                else:
-                    events.append(
-                        new_event_dict("BotIntent", intent="general response")
-                    )
-
-                # aici de extras mesajele statice
-
-                if bot_message:
-                    events.append(
-                        new_event_dict("StartUtteranceBotAction", script=bot_message)
-                    )
+            additional_info = {
+                "bot_intent_event": new_event_dict("BotIntent", intent=bot_intent),
+                "bot_message_event": new_event_dict(
+                    "StartUtteranceBotAction", script=bot_message
+                ),
+            }
+            events = [
+                new_event_dict(
+                    "UserIntent", intent=user_intent, additional_info=additional_info
+                )
+            ]
 
             return ActionResult(events=events)
 
