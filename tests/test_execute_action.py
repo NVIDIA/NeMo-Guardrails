@@ -192,7 +192,7 @@ async def test_action_execution_with_result(rails_config):
             "type": "StartInternalSystemAction",
         },
         {
-            "data": {"bot_message": "Hello!"},
+            "data": {"bot_message": "Hello!", "skip_output_rails": True},
             "source_uid": "NeMoGuardrails",
             "type": "ContextUpdate",
         },
@@ -207,6 +207,11 @@ async def test_action_execution_with_result(rails_config):
             "source_uid": "NeMoGuardrails",
             "status": "success",
             "type": "InternalSystemActionFinished",
+        },
+        {
+            "data": {"skip_output_rails": False},
+            "source_uid": "NeMoGuardrails",
+            "type": "ContextUpdate",
         },
         {
             "action_name": "create_event",
@@ -252,7 +257,6 @@ async def test_action_execution_with_result(rails_config):
             "type": "Listen",
         },
     ]
-
     # assert expected_events == new_events
     assert event_sequence_conforms(expected_events, new_events)
 

@@ -189,7 +189,7 @@ async def test_1(rails_config):
             "type": "StartInternalSystemAction",
         },
         {
-            "data": {"bot_message": "Hello! How are you?"},
+            "data": {"bot_message": "Hello! How are you?", "skip_output_rails": True},
             "source_uid": "NeMoGuardrails",
             "type": "ContextUpdate",
         },
@@ -204,6 +204,11 @@ async def test_1(rails_config):
             "source_uid": "NeMoGuardrails",
             "status": "success",
             "type": "InternalSystemActionFinished",
+        },
+        {
+            "data": {"skip_output_rails": False},
+            "source_uid": "NeMoGuardrails",
+            "type": "ContextUpdate",
         },
         {
             "action_name": "create_event",
