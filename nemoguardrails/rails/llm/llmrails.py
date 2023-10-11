@@ -69,7 +69,7 @@ class LLMRails:
         #   should be removed
         self.events_history_cache = {}
 
-        # We also load the default flows from the `default_flows.yml` file in the current folder.
+        # We also load the default flows from the `llm_flows.yml` file in the current folder.
         current_folder = os.path.dirname(__file__)
         default_flows_path = os.path.join(current_folder, "llm_flows.co")
         with open(default_flows_path, "r") as f:
@@ -80,6 +80,26 @@ class LLMRails:
 
         # We add the default flows to the config.
         self.config.flows.extend(default_flows)
+
+        # We also need to load the content from the components library.
+        library_path = os.path.join(os.path.dirname(__file__), "../../library")
+        for root, dirs, files in os.walk(library_path):
+            for file in files:
+                # Extract the full path for the file
+                full_path = os.path.join(root, file)
+                if file.endswith(".co"):
+                    with open(full_path, "r", encoding="utf-8") as f:
+                        content = parse_colang_file(file, content=f.read())
+
+                        # We load all the flows
+                        self.config.flows.extend(content["flows"])
+
+                        # And all the messages as well, if they have not been overwritten
+                        for message_id, utterances in content.get(
+                            "bot_messages", {}
+                        ).items():
+                            if message_id not in self.config.bot_messages:
+                                self.config.bot_messages[message_id] = utterances
 
         # We check if the configuration has a config.py module associated with it.
         config_module = None
