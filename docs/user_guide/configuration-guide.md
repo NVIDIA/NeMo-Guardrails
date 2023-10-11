@@ -124,6 +124,35 @@ The `api_host`, `api_key`, and `organization_id` are fetched automatically from 
 
 For more details, please refer to the NeMo LLM Service documentation and check out the [NeMo LLM example configuration](../../examples/llm/nemollm).
 
+#### TRT-LLM
+
+NeMo Guardrails also supports connecting to a TRT-LLM server.
+
+```yaml
+models:
+  - type: main
+    engine: trt_llm
+    model: <MODEL_NAME>
+```
+
+Below is the list of supported parameters with their default values. Please refer to TRT-LLM documentation for more details.
+
+```yaml
+models:
+  - type: main
+    engine: trt_llm
+    model: <MODEL_NAME>
+    parameters:
+      server_url: <SERVER_URL>
+      temperature: 1.0
+      top_p: 0
+      top_k: 1
+      tokens: 100
+      beam_width: 1
+      repetition_penalty: 1.0
+      length_penalty: 1.0
+```
+
 #### Custom LLM Models
 
 To register a custom LLM provider, you need to create a class that inherits from `BaseLanguageModel` and register it using `register_llm_provider`.

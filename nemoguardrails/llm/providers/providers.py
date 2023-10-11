@@ -31,11 +31,12 @@ from langchain.llms.base import LLM
 from nemoguardrails.rails.llm.config import Model
 
 from .nemollm import NeMoLLM
+from .trtllm.llm import TRTLLM
 
 log = logging.getLogger(__name__)
 
 # Initialize the providers with the default ones, for now only NeMo LLM.
-_providers: Dict[str, Type[BaseLanguageModel]] = {"nemollm": NeMoLLM}
+_providers: Dict[str, Type[BaseLanguageModel]] = {"nemollm": NeMoLLM, "trt_llm": TRTLLM}
 
 
 async def _acall(self, *args, **kwargs):
