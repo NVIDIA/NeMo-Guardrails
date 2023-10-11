@@ -47,6 +47,9 @@ class FlowConfig:
     # Weather this flow is a subflow
     is_subflow: bool = False
 
+    # Weather to allow multiple instances of the same flow
+    allow_multiple: bool = False
+
     # The events that can trigger this flow to advance.
     trigger_event_types = [
         "UserIntent",
@@ -401,8 +404,11 @@ def compute_next_state(state: State, event: dict) -> State:
         if flow_config.is_subflow:
             continue
 
-        # If a flow with the same id is started, we skip
-        if flow_config.id in [fs.flow_id for fs in new_state.flow_states]:
+        # If the flow can't be started multiple times in parallel and
+        # a flow with the same id is started, we skip.
+        if not flow_config.allow_multiple and flow_config.id in [
+            fs.flow_id for fs in new_state.flow_states
+        ]:
             continue
 
         # We try to slide first, just in case a flow starts with sliding logic

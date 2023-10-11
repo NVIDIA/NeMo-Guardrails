@@ -54,6 +54,17 @@ class Runtime:
 
     def _load_flow_config(self, flow: dict):
         """Loads a flow into the list of flow configurations."""
+
+        # If we don't have an id, we generate a random UID.
+        flow_id = flow.get("id") or str(uuid.uuid4())
+
+        # If the flow already exists, we stop.
+        # This allows us to override flows. The order in which the flows
+        # are in the config is such that the first ones are the ones that
+        # should be kept.
+        if flow_id in self.flow_configs:
+            return
+
         elements = flow["elements"]
 
         # If we have an element with meta information, we move the relevant properties
@@ -69,12 +80,11 @@ class Runtime:
                 flow["is_interruptible"] = meta_data["interruptable"]
             if meta_data.get("subflow"):
                 flow["is_subflow"] = True
+            if meta_data.get("allow_multiple"):
+                flow["allow_multiple"] = True
 
             # Finally, remove the meta element
             elements = elements[1:]
-
-        # If we don't have an id, we generate a random UID.
-        flow_id = flow.get("id") or str(uuid.uuid4())
 
         self.flow_configs[flow_id] = FlowConfig(
             id=flow_id,
@@ -84,6 +94,7 @@ class Runtime:
             is_interruptible=flow.get("is_interruptible", True),
             is_subflow=flow.get("is_subflow", False),
             source_code=flow.get("source_code"),
+            allow_multiple=flow.get("allow_multiple", False),
         )
 
         # We also compute what types of events can trigger this flow, in addition
