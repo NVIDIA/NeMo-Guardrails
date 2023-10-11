@@ -6,7 +6,8 @@ models:
 rails:
   input:
     flows:
-      - check jailbreak
+      # - check jailbreak
+      - active fence moderation detailed
   output:
     flows:
       - check facts

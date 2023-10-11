@@ -29,3 +29,37 @@ Output rails process a bot message. The message to be processed is available in 
 ## Retrieval Rails
 
 Retrieval rails process the retrieved chunks, i.e., the `$relevant_chunks` variable.
+
+
+NOTE: this section will be moved in a different place when the documentation is reviewed.
+
+## 3rd Party Rails
+
+### Active Fence
+
+NeMo Guardrails supports using the [ActiveFence ActiveScore API](https://docs.activefence.com/index.html) as an input rail out-of-the-box (you need to have the `ACTIVE_FENCE_API_KEY` environment variable set).
+
+```yaml
+rails:
+  input:
+    flows:
+      # The simplified version
+      - active fence moderation
+
+      # The detailed version with individual risk scores
+      # - active fence moderation detailed
+```
+
+The `active fence moderation` flow uses the maximum risk score with the 0.7 threshold to decide if the input should be allowed or not (i.e., if the risk score is above the threshold, it is considered a violation). The `active fence moderation detailed` has individual scores per category of violations.
+
+To customize the scores, you have to overwrite the [default flows](../nemoguardrails/library/active_fence/flows.co) in your config. For example, to change the threshold for `active fence moderation` you can add the following flow to your config:
+
+```colang
+define subflow active fence moderation
+  """Guardrail based on the maximum risk score."""
+  $result = execute call active fence api
+
+  if $result.max_risk_score > 0.9
+    bot inform cannot answer
+    stop
+```
