@@ -9,10 +9,12 @@ The Guardrails Server loads a predefined set of guardrails configurations at sta
 To launch the server:
 
 ```
-> nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT] [--disable-chat-ui]
+> nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT] [--prefix PREFIX] [--disable-chat-ui]
 ```
 
 If no `--config` option is specified, the server will try to load the configurations from the `config` folder in the current directory. If no configurations are found, it will load all the example guardrails configurations.
+
+If a `--prefix` option is specified, the root path for the guardrails server will be at the specified prefix.
 
 **Note**: Since the server is designed to server multiple guardrails configurations, the `path/to/configs` must be a folder with sub-folders for each individual config. For example:
 
