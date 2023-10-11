@@ -122,7 +122,7 @@ You can specify additional parameters when using NeMo LLM models using the `para
 
 The `api_host`, `api_key`, and `organization_id` are fetched automatically from the environment variables `NGC_API_HOST`, `NGC_API_KEY`, and `NGC_ORGANIZATION_ID`, respectively.
 
-For more details, please refer to the NeMo LLM Service documentation and check out the [NeMo LLM example configuration](../../examples/llm/nemollm).
+For more details, please refer to the NeMo LLM Service documentation and check out the [NeMo LLM example configuration](../../examples/configs/llm/nemollm).
 
 #### Custom LLM Models
 

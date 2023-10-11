@@ -28,7 +28,7 @@ def test_basic():
 
     Mocks the calls to the service.
     """
-    config = RailsConfig.from_path(os.path.join(EXAMPLES_FOLDER, "llm/nemollm"))
+    config = RailsConfig.from_path(os.path.join(EXAMPLES_FOLDER, "configs/llm/nemollm"))
     chat = TestChat(config)
 
     with aioresponses() as m:

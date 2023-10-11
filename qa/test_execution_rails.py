@@ -23,6 +23,7 @@ QA_MODE = os.environ.get("QA")
 
 class TestExecutionRails(ExampleConfigChatterTestCase):
     example_name = "execution_rails"
+    config_name = "_deprecated/execution_rails"
 
     @pytest.mark.skipif(not QA_MODE, reason="Not in QA mode.")
     @pytest.mark.unit

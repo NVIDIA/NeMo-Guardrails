@@ -5,7 +5,7 @@ rails:
   # Input rails are invoked when a new message is received.
   input:
     flows:
-      - jailbreak check
+      - check jailbreak
       - check sensitive data
       - active fence moderation v2
       - check toxicity
