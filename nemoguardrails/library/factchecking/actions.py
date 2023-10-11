@@ -18,6 +18,7 @@ from typing import Optional
 
 from langchain.llms.base import BaseLLM
 
+from nemoguardrails.actions import action
 from nemoguardrails.actions.llm.utils import llm_call
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -26,6 +27,7 @@ from nemoguardrails.llm.types import Task
 log = logging.getLogger(__name__)
 
 
+@action()
 async def check_facts(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
@@ -34,7 +36,7 @@ async def check_facts(
     """Checks the facts for the bot response."""
 
     evidence = context.get("relevant_chunks", [])
-    response = context.get("last_bot_message")
+    response = context.get("bot_message")
 
     if evidence:
         prompt = llm_task_manager.render_task_prompt(

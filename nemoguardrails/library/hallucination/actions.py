@@ -20,6 +20,7 @@ from langchain import LLMChain, PromptTemplate
 from langchain.llms import OpenAI
 from langchain.llms.base import BaseLLM
 
+from nemoguardrails.actions import action
 from nemoguardrails.actions.llm.utils import (
     get_multiline_response,
     llm_call,
@@ -29,13 +30,13 @@ from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
 from nemoguardrails.logging.callbacks import logging_callback_manager_for_chain
-from nemoguardrails.rails.llm.config import RailsConfig
 
 log = logging.getLogger(__name__)
 
 HALLUCINATION_NUM_EXTRA_RESPONSES = 2
 
 
+@action()
 async def check_hallucination(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
@@ -47,7 +48,7 @@ async def check_hallucination(
     :return: True if hallucination is detected, False otherwise.
     """
 
-    bot_response = context.get("last_bot_message")
+    bot_response = context.get("bot_message")
     last_bot_prompt_string = context.get("_last_bot_prompt")
 
     if bot_response and last_bot_prompt_string:

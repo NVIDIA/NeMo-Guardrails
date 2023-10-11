@@ -1,15 +1,18 @@
-define bot remove last message
-  "(remove last message)"
-
 define bot inform cannot answer question
  "I cannot answer the question."
 
-define extension flow check bot response
-  priority 2
-  bot ...
+
+define subflow output moderation
   $allowed = execute output_moderation
 
   if not $allowed
-    bot remove last message
+    bot inform cannot answer question
+    stop
+
+
+define subflow output moderation v2
+  $allowed = execute output_moderation_v2
+
+  if not $allowed
     bot inform cannot answer question
     stop
