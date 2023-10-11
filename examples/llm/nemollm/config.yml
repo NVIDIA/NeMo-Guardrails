@@ -1,0 +1,18 @@
+models:
+  - type: main
+    engine: "nemollm"
+    model: "gpt-43b-905"
+
+  - type: check_jailbreak
+    engine: nemollm
+    model: gpt-43b-002
+    parameters:
+      tokens_to_generate: 10
+#      customization_id: 6e5361fa-f878-4f00-8bc6-d7fbaaada915
+
+  - type: output_moderation_v2
+    engine: nemollm
+    model: gpt-43b-002
+    parameters:
+      tokens_to_generate: 10
+#      customization_id: 0fc1a2ee-a37a-4f25-8b7f-bd3963b36c0c

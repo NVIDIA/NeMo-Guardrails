@@ -62,7 +62,7 @@ def main(
             output_file_name="./chitchat/user.co",
             num_samples_per_intent=max_samples_intent,
         )
-        print("Created user.co file for banking dataset.")
+        print("Created user.co file for chitchat dataset.")
     else:
         print(f"Unknown dataset {dataset_name}, cannot create user.co file!")
 

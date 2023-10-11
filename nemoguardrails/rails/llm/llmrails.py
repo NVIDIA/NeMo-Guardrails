@@ -200,12 +200,11 @@ class LLMRails:
         is to allow for flexibility in using specialized LLM engines for specific actions.
         """
 
-        # If we already have a pre-configured one, we do nothing.
+        # If we already have a pre-configured one,
+        # we just need to register the LLM as an action param.
         if self.llm is not None:
+            self.runtime.register_action_param("llm", self.llm)
             return
-
-        # TODO: Currently we assume the first model is the main one. Add proper support
-        #  to search for the main model config.
 
         for llm_config in self.config.models:
             if llm_config.type == "embeddings":

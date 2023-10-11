@@ -271,7 +271,7 @@ def get_last_user_intent_event(events: List[dict]):
 def get_last_bot_utterance_event(events: List[dict]):
     """Returns the last bot utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "StartInternalSystemAction":
+        if event["type"] == "StartUtteranceBotAction":
             return event
 
     return None

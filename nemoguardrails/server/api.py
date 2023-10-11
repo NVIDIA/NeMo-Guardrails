@@ -76,6 +76,7 @@ class RequestBody(BaseModel):
     messages: List[dict] = Field(
         default=None, description="The list of messages in the current conversation."
     )
+    context: dict
 
 
 class ResponseBody(BaseModel):
@@ -156,7 +157,12 @@ async def chat_completion(body: RequestBody, request: Request):
         }
 
     try:
-        bot_message = await llm_rails.generate_async(messages=body.messages)
+        messages = body.messages
+        if body.context:
+            messages.insert(0, {"role": "context", "content": body.context})
+
+        bot_message = await llm_rails.generate_async(messages=messages)
+
     except Exception as ex:
         log.exception(ex)
         return {
