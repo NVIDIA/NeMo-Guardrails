@@ -13,4 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .hallucination import check_hallucination
+from typing import Optional
+
+from nemoguardrails.actions import action
+
+
+@action(name="call active fence api")
+async def call_active_fence_api(context: Optional[dict] = None):
+    user_message = context.get("user_message")
+
+    # TODO: call the API and return the result
+    return {}
