@@ -91,7 +91,7 @@ class TaskPrompt(BaseModel):
     )
     max_length: Optional[int] = Field(
         default=16000,
-        description="The maximum length of the prompt in number of characters."
+        description="The maximum length of the prompt in number of characters.",
     )
 
     @root_validator(pre=True, allow_reuse=True)

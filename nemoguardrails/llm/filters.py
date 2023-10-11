@@ -230,3 +230,42 @@ def remove_trailing_new_line(s: str):
     if s.endswith("\n"):
         s = s[:-1]
     return s
+
+
+def conversation_to_events(conversation: List) -> List[dict]:
+    """Filter that given a conversation, returns a list of events."""
+    events = []
+    for turn in conversation:
+        if "user" in turn:
+            events.append(
+                {
+                    "type": "UtteranceUserActionFinished",
+                    "final_transcript": turn["user"],
+                }
+            )
+
+        if "user_intent" in turn:
+            events.append(
+                {
+                    "type": "UserIntent",
+                    "intent": turn["user_intent"],
+                }
+            )
+
+        if "bot" in turn:
+            events.append(
+                {
+                    "type": "StartUtteranceBotAction",
+                    "script": turn["bot"],
+                }
+            )
+
+        if "bot_intent" in turn:
+            events.append(
+                {
+                    "type": "BotIntent",
+                    "intent": turn["bot_intent"],
+                }
+            )
+
+    return events

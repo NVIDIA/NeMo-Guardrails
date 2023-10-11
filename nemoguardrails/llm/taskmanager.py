@@ -204,27 +204,35 @@ class LLMTaskManager:
         """
         prompt = get_prompt(self.config, task)
         if prompt.content:
-            task_prompt = self._render_string(prompt.content, context=context, events=events)
+            task_prompt = self._render_string(
+                prompt.content, context=context, events=events
+            )
             while len(task_prompt) > prompt.max_length:
                 if not events:
                     raise Exception(
-                        f"Prompt exceeds max length of {prompt.max_length} even without history"
+                        f"Prompt exceeds max length of {prompt.max_length} characters even without history"
                     )
                 # Remove events from the beginning of the history until the prompt fits.
-                events.pop(0)
-                task_prompt = self._render_string(prompt.content, context=context, events=events)
+                events = events[1:]
+                task_prompt = self._render_string(
+                    prompt.content, context=context, events=events
+                )
             return task_prompt
         else:
-            task_messages = self._render_messages(prompt.messages, context=context, events=events)
+            task_messages = self._render_messages(
+                prompt.messages, context=context, events=events
+            )
             task_prompt_length = self._get_messages_text_length(task_messages)
             while task_prompt_length > prompt.max_length:
                 if not events:
                     raise Exception(
-                        f"Prompt exceeds max length of {prompt.max_length} even without history"
+                        f"Prompt exceeds max length of {prompt.max_length} characters even without history"
                     )
                 # Remove events from the beginning of the history until the prompt fits.
-                events.pop(0)
-                task_messages = self._render_messages(prompt.messages, context=context, events=events)
+                events = events[1:]
+                task_messages = self._render_messages(
+                    prompt.messages, context=context, events=events
+                )
                 task_prompt_length = self._get_messages_text_length(task_messages)
             return task_messages
 
