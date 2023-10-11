@@ -93,6 +93,10 @@ class TaskPrompt(BaseModel):
         default=16000,
         description="The maximum length of the prompt in number of characters.",
     )
+    mode: Optional[str] = Field(
+        default='standard',
+        description="Corresponds to the `prompting_mode` for which this prompt is fetched. Default is 'standard'.",
+    )
 
     @root_validator(pre=True, allow_reuse=True)
     def check_fields(cls, values):
@@ -292,6 +296,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "lowest_temperature",
         "enable_multi_step_generation",
         "custom_data",
+        "prompting_mode",
         "knowledge_base",
         "core",
         "rails",
@@ -350,6 +355,11 @@ class RailsConfig(BaseModel):
     prompts: Optional[List[TaskPrompt]] = Field(
         default=None,
         description="The prompts that should be used for the various LLM tasks.",
+    )
+
+    prompting_mode: Optional[str] = Field(
+        default=None,
+        description="Allows choosing between different prompting strategies.",
     )
 
     config_path: Optional[str] = Field(

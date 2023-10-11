@@ -1,0 +1,6 @@
+models:
+  - type: main
+    engine: nemollm
+    model: gpt-43b-905
+
+prompting_mode: compact
