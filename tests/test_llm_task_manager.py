@@ -18,6 +18,8 @@ import textwrap
 import pytest
 
 from nemoguardrails import RailsConfig
+from nemoguardrails.llm.filters import conversation_to_events
+from nemoguardrails.llm.prompts import get_prompt
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
 
@@ -122,3 +124,101 @@ def test_custom_task_prompts(task, expected_prompt):
     )
 
     assert task_prompt == expected_prompt
+
+
+def test_prompt_length_exceeded_empty_events():
+    """Test the prompts for the OpenAI GPT-3 5 Turbo model."""
+    config = RailsConfig.from_content(
+        yaml_content=textwrap.dedent(
+            """
+            models:
+             - type: main
+               engine: openai
+               model: text-davinci-003
+            prompts:
+            - task: generate_user_intent
+              max_length: 2000
+              content: |-
+                {{ general_instruction }}
+
+                # This is how a conversation between a user and the bot can go:
+                {{ sample_conversation }}
+
+                # This is how the user talks:
+                {{ examples }}
+
+                # This is the current conversation between the user and the bot:
+                {{ sample_conversation | first_turns(2) }}
+                {{ history | colang }}
+                    )
+                )"""
+        )
+    )
+
+    assert config.models[0].engine == "openai"
+    llm_task_manager = LLMTaskManager(config)
+
+    with pytest.raises(Exception):
+        generate_user_intent_prompt = llm_task_manager.render_task_prompt(
+            task=Task.GENERATE_USER_INTENT,
+            context={"examples": 'user "Hello there!"\n  express greeting'},
+            events=[],
+        )
+
+
+def test_prompt_length_exceeded_compressed_history():
+    """Test the prompts for the OpenAI GPT-3 5 Turbo model."""
+    config = RailsConfig.from_content(
+        yaml_content=textwrap.dedent(
+            """
+            models:
+             - type: main
+               engine: openai
+               model: text-davinci-003
+            prompts:
+            - task: generate_user_intent
+              max_length: 3000
+              content: |-
+                {{ general_instruction }}
+
+                # This is how a conversation between a user and the bot can go:
+                {{ sample_conversation }}
+
+                # This is how the user talks:
+                {{ examples }}
+
+                # This is the current conversation between the user and the bot:
+                {{ sample_conversation | first_turns(2) }}
+                {{ history | colang }}
+                    )
+                )"""
+        )
+    )
+
+    max_task_prompt_length = get_prompt(config, Task.GENERATE_USER_INTENT).max_length
+    assert config.models[0].engine == "openai"
+    llm_task_manager = LLMTaskManager(config)
+
+    conversation = [
+        {
+            "user": "Hello there!",
+            "user_intent": "express greeting",
+            "bot": "Greetings! How can I help you?",
+            "bot_intent": "ask how can help",
+        }
+        for _ in range(100)
+    ]
+
+    conversation.append(
+        {
+            "user": "I would like to know the unemployment rate for July 2023.",
+        }
+    )
+
+    events = conversation_to_events(conversation)
+    generate_user_intent_prompt = llm_task_manager.render_task_prompt(
+        task=Task.GENERATE_USER_INTENT,
+        context={"examples": 'user "Hello there!"\n  express greeting'},
+        events=events,
+    )
+    assert len(generate_user_intent_prompt) <= max_task_prompt_length

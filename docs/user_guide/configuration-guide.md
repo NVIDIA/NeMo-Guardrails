@@ -86,6 +86,43 @@ You can use any LLM provider that is supported by LangChain, e.g., `ai21`, `alep
 
 **IMPORTANT**: while from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g. openai). For others, you can optimize the prompts yourself see [LLM Prompts](#llm-prompts) section.
 
+#### NeMo LLM Service
+
+In addition to the LLM providers supported by LangChain, NeMo Guardrails also supports NeMo LLM Service. For example, to use the GPT-43B-905 model as the main LLM, you should use the following configuration:
+
+```yaml
+models:
+  - type: main
+    engine: nemollm
+    model: gpt-43b-905
+```
+
+You can also use customized NeMo LLM models for specific tasks, e.g., jailbreak detection and output moderation. For example:
+
+```yaml
+models:
+  # ...
+  - type: check_jailbreak
+    engine: nemollm
+    model: gpt-43b-002
+    parameters:
+      tokens_to_generate: 10
+      customization_id: 6e5361fa-f878-4f00-8bc6-d7fbaaada915
+```
+
+You can specify additional parameters when using NeMo LLM models using the `parameters` key. The supported parameters are:
+
+- `temperature`: the temperature that should be used for making the calls;
+- `api_host`: points to the NeMo LLM Service host (default 'https://api.llm.ngc.nvidia.com');
+- `api_key`: the NeMo LLM Service key that should be used;
+- `organization_id`: the NeMo LLM Service organization ID that should be used;
+- `tokens_to_generate`: the maximum number of tokens to generate;
+- `stop`: the list of stop words that should be used;
+- `customization_id`: if a customization is used, the id should be specified.
+
+The `api_host`, `api_key`, and `organization_id` are fetched automatically from the environment variables `NGC_API_HOST`, `NGC_API_KEY`, and `NGC_ORGANIZATION_ID`, respectively.
+
+For more details, please refer to the NeMo LLM Service documentation and check out the [NeMo LLM example configuration](../../examples/llm/nemollm).
 
 #### Custom LLM Models
 
@@ -202,9 +239,11 @@ prompts:
   - task: generate_user_intent
     models:
       - openai/gpt-3.5-turbo
+    max_length: 3000
     content: |-
       <<This is a placeholder for a custom prompt for generating the user intent>>
 ```
+For each task, you can also specify the maximum length of the prompt to be used for the LLM call in terms of the number of characters. This is useful if you want to limit the number of tokens used by the LLM or when you want to make sure that the prompt length does not exceed the maximum context length. When the maximum length is exceeded, the prompt is truncated by removing older turns from the conversation history until length of the prompt is less than or equal to the maximum length. The default maximum length is 16000 characters.
 
 The full list of tasks used by the NeMo Guardrails toolkit is the following:
 

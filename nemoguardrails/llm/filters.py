@@ -151,3 +151,121 @@ def last_turns(colang_history: str, n: int) -> str:
         i -= 1
 
     return "\n".join(lines[i:])
+
+
+def user_assistant_sequence_nemollm(events: List[dict]) -> str:
+    """Filter that turns an array of events into a sequence of user/assistant messages.
+
+    The output will look like:
+       ```
+       <extra_id_1>User
+       hi
+       <extra_id_1>Assistant
+       Hello there!
+       <extra_id_1>User
+       What can you do?
+       <extra_id_1>Assistant
+       I can help with many things.
+       ```
+    """
+    history_items = []
+    for event in events:
+        if event["type"] == "UtteranceUserActionFinished":
+            history_items.append("<extra_id_1>User\n" + event["final_transcript"])
+        elif event["type"] == "StartUtteranceBotAction":
+            history_items.append("<extra_id_1>Assistant\n" + event["script"])
+
+    return "\n".join(history_items)
+
+
+def to_messages_nemollm(colang_history: str) -> str:
+    """Filter that given a history in colang format, returns a messages string
+    in the chat format used by NeMo LLM models."""
+    messages = []
+
+    # For now, we use a simple heuristic. The line `user "xxx"` gets translated to
+    # a message from the user, and the rest gets translated to messages from the assistant.
+    lines = colang_history.split("\n")
+
+    bot_lines = []
+    for i, line in enumerate(lines):
+        if line.startswith('user "'):
+            # If we have bot lines in the buffer, we first add a bot message.
+            if bot_lines:
+                messages.append({"type": "assistant", "content": "\n".join(bot_lines)})
+                bot_lines = []
+
+            messages.append({"type": "user", "content": line[6:-1]})
+
+        elif line.strip() == "":
+            # On empty lines, we also reset the bot buffer.
+            if bot_lines:
+                messages.append({"type": "assistant", "content": "\n".join(bot_lines)})
+                bot_lines = []
+        else:
+            if i > 0 and lines[i - 1].startswith('user "'):
+                line = "User intent: " + line.strip()
+            elif line.startswith("user "):
+                line = "User intent: " + line[5:].strip()
+            elif line.startswith("bot "):
+                line = "Bot intent: " + line[4:].strip()
+            elif line.startswith('  "'):
+                line = "Bot message: " + line[2:].strip()
+            bot_lines.append(line)
+
+    # Check if there is a last message from the bot.
+    if bot_lines:
+        messages.append({"type": "bot", "content": "\n".join(bot_lines)})
+
+    messages_string = ""
+    for m in messages:
+        if m["type"] == "assistant" or m["type"] == "bot":
+            messages_string += "<extra_id_1>Assistant\n" + m["content"] + "\n"
+        elif m["type"] == "user":
+            messages_string += "<extra_id_1>User\n" + m["content"] + "\n"
+    return messages_string
+
+
+def remove_trailing_new_line(s: str):
+    if s.endswith("\n"):
+        s = s[:-1]
+    return s
+
+
+def conversation_to_events(conversation: List) -> List[dict]:
+    """Filter that given a conversation, returns a list of events."""
+    events = []
+    for turn in conversation:
+        if "user" in turn:
+            events.append(
+                {
+                    "type": "UtteranceUserActionFinished",
+                    "final_transcript": turn["user"],
+                }
+            )
+
+        if "user_intent" in turn:
+            events.append(
+                {
+                    "type": "UserIntent",
+                    "intent": turn["user_intent"],
+                }
+            )
+
+        if "bot" in turn:
+            events.append(
+                {
+                    "type": "StartUtteranceBotAction",
+                    "script": turn["bot"],
+                }
+            )
+
+        if "bot_intent" in turn:
+            events.append(
+                {
+                    "type": "BotIntent",
+                    "intent": turn["bot_intent"],
+                }
+            )
+
+    return events

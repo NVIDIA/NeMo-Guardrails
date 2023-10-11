@@ -30,9 +30,12 @@ from langchain.llms.base import LLM
 
 from nemoguardrails.rails.llm.config import Model
 
+from .nemollm import NeMoLLM
+
 log = logging.getLogger(__name__)
 
-_providers: Dict[str, Type[BaseLanguageModel]] = {}
+# Initialize the providers with the default ones, for now only NeMo LLM.
+_providers: Dict[str, Type[BaseLanguageModel]] = {"nemollm": NeMoLLM}
 
 
 async def _acall(self, *args, **kwargs):
@@ -52,10 +55,11 @@ def discover_langchain_providers():
     for provider_cls in _providers.values():
         # If the "_acall" method is not defined, we add it.
         if issubclass(provider_cls, LLM) and "_acall" not in provider_cls.__dict__:
-            log.debug(f"Adding async support to {provider_cls.__name__}")
+            log.debug("Adding async support to %s", provider_cls.__name__)
             provider_cls._acall = _acall
 
 
+# Discover all the additional providers from LangChain
 discover_langchain_providers()
 
 
@@ -69,7 +73,7 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
         raise RuntimeError(f"Could not find LLM provider '{model_config.engine}'")
 
     # For OpenAI, we use a different provider depending on whether it's a chat model or not
-    if model_config.model == "openai" and (
+    if model_config.engine == "openai" and (
         "gpt-3.5" in model_config.model or "gpt-4" in model_config.model
     ):
         return ChatOpenAI
