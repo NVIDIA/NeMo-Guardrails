@@ -166,7 +166,7 @@ def get_last_user_utterance(events: List[dict]):
     """Returns the last user utterance from the events."""
     for event in reversed(events):
         if event["type"] == "UserMessage":
-            return event["final_transcript"]
+            return event["text"]
 
     return None
 
