@@ -476,6 +476,9 @@ class LLMGenerationActions:
             # We also need to render
             bot_utterance = self._render_string(bot_utterance, context)
 
+            # We skip output rails for predefined messages.
+            context_updates["skip_output_rails"] = True
+
         # Check if the output is supposed to be the content of a context variable
         elif bot_intent[0] == "$" and bot_intent[1:] in context:
             bot_utterance = context[bot_intent[1:]]
