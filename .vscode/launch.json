@@ -17,7 +17,7 @@
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
-            "program": "nemoguardrails",
+            "module": "nemoguardrails",
             "args": [
                 "chat",
                 "--config=${fileDirname}",
@@ -33,7 +33,7 @@
             "type": "python",
             "request": "launch",
             "console": "integratedTerminal",
-            "program": "nemoguardrails",
+            "module": "nemoguardrails",
             "args": ["chat", "--config=${fileDirname}", "--verbose"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
