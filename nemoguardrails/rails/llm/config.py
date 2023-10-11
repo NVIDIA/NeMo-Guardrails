@@ -26,6 +26,11 @@ from nemoguardrails.language.coyml_parser import parse_flow_elements
 from nemoguardrails.language.parser import parse_colang_file
 
 
+# Load the default config values from the file
+with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
+    _default_config = yaml.safe_load(_fc)
+
+
 class Model(BaseModel):
     """Configuration of a model used by the rails engine.
 
@@ -94,7 +99,7 @@ class TaskPrompt(BaseModel):
         description="The maximum length of the prompt in number of characters.",
     )
     mode: Optional[str] = Field(
-        default='standard',
+        default=_default_config["prompting_mode"],
         description="Corresponds to the `prompting_mode` for which this prompt is fetched. Default is 'standard'.",
     )
 
@@ -141,6 +146,7 @@ class CoreConfig(BaseModel):
     )
 
 
+<<<<<<< HEAD
 class InputRails(BaseModel):
     """Configuration of input rails."""
 
@@ -250,6 +256,8 @@ with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
     _default_config = yaml.safe_load(_fc)
 
 
+=======
+>>>>>>> d6020b9... minor fixes as per MR comments
 def _join_config(dest_config: dict, additional_config: dict):
     """Helper to join two configuration."""
 
@@ -358,7 +366,7 @@ class RailsConfig(BaseModel):
     )
 
     prompting_mode: Optional[str] = Field(
-        default=None,
+        default=_default_config["prompting_mode"],
         description="Allows choosing between different prompting strategies.",
     )
 

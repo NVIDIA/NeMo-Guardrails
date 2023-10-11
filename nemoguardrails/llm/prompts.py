@@ -92,7 +92,13 @@ def _get_prompt(task_name: str, model: str, prompting_mode: str, prompts: List) 
         if prompt.mode != prompting_mode:
             # Penalize matching score for being in an incorrect mode.
             # This way, if a prompt with the correct mode (say "compact") is found, it will be preferred over a prompt with another mode (say "standard").
-            _score *= 0.5  # why 0.5? why not <0.2? To give preference to matching model or provider over matching mode.
+            if prompt.mode == "standard":
+                # why 0.5? why not <0.2? To give preference to matching model or provider over matching mode.
+                # This way, standard mode with matching provider at gets a score of 0.5 * 0.5 = 0.25 
+                # (> 0.2 for a matching mode but without a matching provider or model).
+                _score *= 0.5
+            else:
+                continue  # if it's the mode doesn't match AND it's not standard too, discard this match
 
         if _score >= matching_score:
             matching_score = _score
