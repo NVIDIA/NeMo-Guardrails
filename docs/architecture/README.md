@@ -176,10 +176,8 @@ For example, in the [grounding rail](../../examples/grounding_rail/README.md) ex
 define flow answer report question
   user ask about report
   bot provide report answer
-
-  $accurate = execute check_facts
-
-  if not $accurate
+  $accuracy = execute check_facts
+  if $accuracy < 0.5
     bot remove last message
     bot inform answer unknown
 ```
