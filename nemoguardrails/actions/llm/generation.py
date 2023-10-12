@@ -655,6 +655,7 @@ class LLMGenerationActions:
 
             # We search for the most relevant similar user utterance
             examples = ""
+            examples_list = []
             potential_user_intents = []
             intent_results = []
             flow_results = {}
@@ -678,13 +679,10 @@ class LLMGenerationActions:
                     )
                     flow_results[intent] = flow_results_intent
 
-            # We add the intent to the examples in reverse order
-            # so the most relevant is towards the end.
-            num_examples = 0
-            for result in reversed(intent_results):
+            for result in intent_results:
                 # Stop after the first 5 flow examples, in case more than 5 intents
                 # have been selected from the index.
-                if num_examples >= 5:
+                if len(examples_list) >= 5:
                     break
 
                 intent = result.meta["intent"]
@@ -742,9 +740,12 @@ class LLMGenerationActions:
                     continue
 
                 example += "\n"
+                examples_list.append(example)
 
+            # We add the intent to the examples in reverse order
+            # so the most relevant is towards the end.
+            for example in reversed(examples_list):
                 examples += example
-                num_examples += 1
 
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERATE_INTENT_STEPS_MESSAGE,

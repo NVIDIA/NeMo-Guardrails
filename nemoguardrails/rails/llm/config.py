@@ -201,10 +201,6 @@ def _join_config(dest_config: dict, additional_config: dict):
         "embedding_search_provider", {}
     ) or additional_config.get("embedding_search_provider", {})
 
-    dest_config["rails"] = dest_config.get("rails", {}) or additional_config.get(
-        "rails", {}
-    )
-
     additional_fields = [
         "sample_conversation",
         "lowest_temperature",
@@ -212,6 +208,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "custom_data",
         "knowledge_base",
         "core",
+        "rails",
     ]
 
     for field in additional_fields:
