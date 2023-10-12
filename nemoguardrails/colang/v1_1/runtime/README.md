@@ -22,7 +22,6 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Support calling actions with positional arguments
 - Fix `flow` keyword parsing when it is used not as a keyword in e.g. a variable name or reference member
 - Add support for timer action support in the runtime
-- Run run_to_completion once when CLI is started to allow bot to start the interaction
 - Find a better solution for separating the flow event arguments like `flow_id` or `activated` from the flow context variables.
 - Fix unit test helper function to work with stories that generate bot messages when started
 - Cleanup abort/stop naming convention
@@ -30,6 +29,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 ## To Discuss
 
 - Should the action parameters be under a separate key in the event? (currently using a black list to extract the actual action parameters from the `Start...Action` event).
+- Should we add regular expressions for user utterances to match? Otherwise, the LLM needs to be involved more.
 
 ## Events
 

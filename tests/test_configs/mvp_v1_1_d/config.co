@@ -90,10 +90,12 @@ flow unknown intent
 
 flow fallback
   # llm: exclude
-  # flow: parallel
 
   priority 0.1
   user said something
+
+  start_new_flow_instance:
+
   $intent = await GenerateUserIntentAction()
   $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
 
@@ -113,18 +115,20 @@ flow fallback
 flow flows fallback
   """If we reach a point where we need to start a flow that does not exist, we generate it."""
   # llm: exclude
-  # flow: parallel
 
   match StartFlow() as $event
 
   $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
 
+  if $event.arguments.flow_id != "flows fallback"
+    start_new_flow_instance:
+
   if not $exists
-      $flow_id = $event.arguments.flow_id
-      bot say "Need to generate flow from name: {$flow_id}"
-      $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
-      await AddFlowsAction(config=$flow_source)
-      send StartFlow(flow_id=$flow_id)
+    $flow_id = $event.arguments.flow_id
+    bot say "Need to generate flow from name: {$flow_id}"
+    $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
+    await AddFlowsAction(config=$flow_source)
+    send StartFlow(flow_id=$flow_id)
 
 
 flow do $instructions

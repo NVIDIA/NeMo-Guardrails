@@ -23,7 +23,8 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
+from itertools import zip_longest
+from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union, cast
 
 from dataclasses_json import dataclass_json
 
@@ -68,6 +69,8 @@ class InternalEvents:
     FLOW_STARTED = "FlowStarted"
     FLOW_FINISHED = "FlowFinished"
     FLOW_FAILED = "FlowFailed"
+    START_SIBLING_FLOW = "StartSiblingFlow"
+    DISABLE_FLOW_INSTANCE_RESTART = "DisableFlowInstanceRestart"
 
     ALL = {
         START_FLOW,
@@ -76,6 +79,8 @@ class InternalEvents:
         FLOW_STARTED,
         FLOW_FINISHED,
         FLOW_FAILED,
+        START_SIBLING_FLOW,
+        DISABLE_FLOW_INSTANCE_RESTART,
     }
 
 
@@ -151,6 +156,31 @@ class ActionStatus(Enum):
 class Action:
     """The action groups and manages the action events."""
 
+    # The action event name mapping
+    _event_name_map = {
+        "Started": "started_event",
+        "Updated": "updated_event",
+        "Finished": "finished_event",
+        "Start": "start_event",
+        "Change": "change_event",
+        "Stop": "stop_event",
+    }
+
+    @classmethod
+    def from_event(cls, event: ActionEvent) -> Optional[Action]:
+        """Returns the name of the action if event name conforms with UMIM convention."""
+        for name in cls._event_name_map:
+            if name in event.name:
+                action = Action(event.name.replace(name, ""), {})
+                action.uid = event.action_uid
+                action.status = (
+                    ActionStatus.STARTED
+                    if name != "Finished"
+                    else ActionStatus.FINISHED
+                )
+                return action
+        return None
+
     def __init__(
         self, name: str, arguments: Dict[str, Any], flow_uid: Optional[str] = None
     ) -> None:
@@ -172,19 +202,10 @@ class Action:
         # The arguments that will be used for the start event
         self.start_event_arguments = arguments
 
-        # The action event name mapping
-        self._event_name_map = {
-            "Start": "start",
-            "Change": "change",
-            "Stop": "stop",
-            "Started": "started_event",
-            "Updated": "updated_event",
-            "Finished": "finished_event",
-        }
-
     # Process an event
     def process_event(self, event: Event) -> None:
         """Processes event and updates action accordingly."""
+        # TODO: This matching can easily break if action names are badly chosen
         if "Action" in event.name and event.action_uid == self.uid:
             if "ActionStarted" in event.name:
                 self.context.update(event.arguments)
@@ -194,32 +215,36 @@ class Action:
             elif "ActionFinished" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.FINISHED
+            elif "Start" in event.name:
+                self.context.update(event.arguments)
+                self.status = ActionStatus.STARTING
+            elif "Stop" in event.name:
+                self.context.update(event.arguments)
+                self.status = ActionStatus.STOPPING
 
     def get_event(self, name: str, arguments: dict) -> Callable[[], ActionEvent]:
         """Returns the corresponding action event."""
-        assert name in self._event_name_map, f"Event '{name}' not available!"
-        func = getattr(self, self._event_name_map[name])
+        assert name in Action._event_name_map, f"Event '{name}' not available!"
+        func = getattr(self, Action._event_name_map[name])
         return func(arguments)
 
     # Action events to send
-    def start(self, args: dict) -> ActionEvent:
+    def start_event(self, args: dict) -> ActionEvent:
         """Starts the action. Takes no arguments."""
-        self.status = ActionStatus.STARTING
         return ActionEvent(
             name=f"Start{self.name}",
             arguments=self.start_event_arguments,
             action_uid=self.uid,
         )
 
-    def change(self, args: dict) -> ActionEvent:
+    def change_event(self, args: dict) -> ActionEvent:
         """Changes a parameter of a started action."""
         return ActionEvent(
             name=f"Change{self.name}", arguments=args["arguments"], action_uid=self.uid
         )
 
-    def stop(self, args: dict) -> ActionEvent:
+    def stop_event(self, args: dict) -> ActionEvent:
         """Stops a started action. Takes no arguments."""
-        self.status = ActionStatus.STOPPING
         return ActionEvent(name=f"Stop{self.name}", arguments={}, action_uid=self.uid)
 
     # Action events to match
@@ -281,9 +306,6 @@ class FlowConfig:
     loop_id: Optional[str] = None
     loop_type: InteractionLoopType = InteractionLoopType.PARENT
 
-    # Whether there is always a new instance once the flow advances from the first match statement
-    enable_parallel_instances: bool = False
-
     # Whether it is an extension flow or not.
     # Extension flows can interrupt other flows on actionable steps.
     # is_extension: bool = False
@@ -340,13 +362,15 @@ class FlowHead:
 class FlowStatus(Enum):
     """The status of a flow."""
 
-    WAITING = "waiting"
-    STARTING = "starting"
-    STARTED = "started"
-    ACTIVE = "active"
-    INTERRUPTED = "interrupted"
-    ABORTED = "aborted"
-    COMPLETED = "completed"
+    WAITING = "waiting"  # Waiting for the flow to start (first match statement)
+    STARTING = "starting"  # Flow has been started but head is not yet at the next match statement
+    STARTED = "started"  # Flow is considered started when head arrived at second match statement
+    STOPPING = "stopping"  # Flow was stopped from inside ('abort') but did not yet stop all child flows or actions
+    STOPPED = "stopped"  # Flow has stopped/failed and all child flows and actions
+    FINISHING = "finishing"  # Flow has finished (end or early return), did not yet stop child flows or actions
+    FINISHED = (
+        "finished"  # Flow has finished and all child flows and actions were stopped
+    )
 
 
 # TODO: Rename just to "Flow" for better clarity, also all variables flow_state -> flow
@@ -364,7 +388,8 @@ class FlowState:
     loop_id: str
 
     # The position in the sequence of elements that compose the flow.
-    # TODO: Generalize to have multiple heads for branching head statements like when/else
+    # TODO: Generalize to have multiple heads for
+    # branching head statements like when/else
     heads: List[FlowHead]
 
     # All actions that were instantiated since the beginning of the flow
@@ -392,22 +417,22 @@ class FlowState:
     # An activated flow will restart immediately when finished
     activated: bool = False
 
+    # True if a new instance was started either by restarting or
+    # a early 'start_new_flow_instance' label
+    new_instance_started: bool = False
+
     # The UID of the flows that interrupted this one
     # interrupted_by = None
-
-    # Events that need to be send out before the flow advances the next time
-    # Currently, only used to start a new instance of a flow that was activated before
-    next_head_advance_events: List[FlowEvent] = field(default_factory=list)
 
     # The flow event name mapping
     _event_name_map: dict = field(init=False)
 
     def __post_init__(self) -> None:
         self._event_name_map = {
-            "Start": "start",
-            "Stop": "stop",
-            "Pause": "pause",
-            "Resume": "resume",
+            "Start": "start_event",
+            "Stop": "stop_event",
+            "Pause": "pause_event",
+            "Resume": "resume_event",
             "Started": "started_event",
             "Paused": "paused_event",
             "Resumed": "resumed_event",
@@ -422,30 +447,30 @@ class FlowState:
         return func(arguments)
 
     # Flow events to send
-    def start(self, args: dict) -> FlowEvent:
+    def start_event(self, args: dict) -> FlowEvent:
         """Starts the flow. Takes no arguments."""
         return FlowEvent(InternalEvents.START_FLOW, {"flow_id": self.flow_id})
 
-    def finish(self, args: dict) -> FlowEvent:
+    def finish_event(self, args: dict) -> FlowEvent:
         """Finishes the flow. Takes no arguments."""
         return FlowEvent(
             InternalEvents.FINISH_FLOW,
             {"flow_id": self.flow_id, "flow_instance_uid": self.uid},
         )
 
-    def stop(self, args: dict) -> FlowEvent:
+    def stop_event(self, args: dict) -> FlowEvent:
         """Stops the flow. Takes no arguments."""
         return FlowEvent(
             "StopFlow", {"flow_id": self.flow_id, "flow_instance_uid": self.uid}
         )
 
-    def pause(self, args: dict) -> FlowEvent:
+    def pause_event(self, args: dict) -> FlowEvent:
         """Pauses the flow. Takes no arguments."""
         return FlowEvent(
             "PauseFlow", {"flow_id": self.flow_id, "flow_instance_uid": self.uid}
         )
 
-    def resume(self, args: dict) -> FlowEvent:
+    def resume_event(self, args: dict) -> FlowEvent:
         """Resumes the flow. Takes no arguments."""
         return FlowEvent(
             "ResumeFlow", {"flow_id": self.flow_id, "flow_instance_uid": self.uid}
@@ -580,13 +605,6 @@ def initialize_flow(state: State, flow_config: FlowConfig) -> None:
     for idx, element in enumerate(flow_config.elements):
         if isinstance(element, Label):
             flow_config.element_labels.update({element["name"]: idx})
-
-    # Mark flow as parallel flow based on source code comment
-    if (
-        flow_config.source_code is not None
-        and "# flow: parallel" in flow_config.source_code
-    ):
-        flow_config.enable_parallel_instances = True
 
 
 def expand_elements(
@@ -1345,78 +1363,6 @@ def uniquify_element_group(group: dict) -> dict:
     return new_group
 
 
-def normalize_element_groups(group: Union[Spec, dict]) -> dict:
-    """
-    Normalize groups to the disjunctive normal form (DNF),
-    resulting in a single or group that contains multiple and groups.
-    """
-
-    if isinstance(group, Spec):
-        group = {"_type": "spec_and", "elements": [group]}
-
-    if group["_type"] == "spec_or":
-        return flatten_or_group(
-            {
-                "_type": "spec_or",
-                "elements": [
-                    normalize_element_groups(elem)
-                    if isinstance(elem, dict)
-                    else {"_type": "spec_and", "elements": [elem]}
-                    for elem in group["elements"]
-                ],
-            }
-        )
-    elif group["_type"] == "spec_and":
-        results = [{"_type": "spec_and", "elements": []}]
-        for elem in group["elements"]:
-            normalized = (
-                normalize_element_groups(elem)
-                if isinstance(elem, dict)
-                else {
-                    "_type": "spec_or",
-                    "elements": [{"_type": "spec_and", "elements": [elem]}],
-                }
-            )
-
-            # Distribute using the property: A and (B or C) = (A and B) or (A and C)
-            new_results = []
-            for res_elem in results:
-                for norm_elem in normalized["elements"]:
-                    new_elem = {
-                        "_type": "spec_and",
-                        "elements": res_elem["elements"] + norm_elem["elements"],
-                    }
-                    new_results.append(new_elem)
-            results = new_results
-
-        # Remove duplicate elements from groups
-        for idx, and_group in enumerate(results):
-            results[idx] = uniquify_element_group(and_group)
-
-        # TODO: Remove duplicated and groups
-        return flatten_or_group({"_type": "spec_or", "elements": results})
-
-
-def flatten_or_group(group: dict):
-    new_elements = []
-    for elem in group["elements"]:
-        if isinstance(elem, dict) and elem["_type"] == "spec_or":
-            new_elements.extend(elem["elements"])
-        else:
-            new_elements.append(elem)
-    return {"_type": "spec_or", "elements": new_elements}
-
-
-def uniquify_element_group(group: dict) -> dict:
-    """Remove all duplicate elements from group."""
-    unique_elements: Dict[Tuple[int, Spec]] = {}
-    for element in group["elements"]:
-        unique_elements.setdefault(element.hash(), element)
-    new_group = group.copy()
-    new_group["elements"] = [e for e in unique_elements.values()]
-    return new_group
-
-
 def convert_to_single_and_element_group(group: dict) -> dict:
     """Convert element group into a single 'and' group with unique elements."""
     unique_elements: Dict[Tuple[int, Spec]] = {}
@@ -1520,9 +1466,15 @@ def _create_event_reference(
     if isinstance(new_event, FlowEvent):
         new_event.flow = state.flow_states[event.arguments["source_flow_instance_uid"]]
     elif isinstance(new_event, ActionEvent):
+        event = cast(ActionEvent, event)
         new_event.action_uid = event.action_uid
         if event.action_uid is not None:
-            new_event.action = state.actions[event.action_uid]
+            if event.action_uid not in state.actions:
+                user_action = Action.from_event(event)
+                state.actions[event.action_uid] = user_action
+                new_event.action = user_action
+            else:
+                new_event.action = state.actions[event.action_uid]
     return {reference_name: new_event}
 
 
@@ -1569,19 +1521,26 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 state.last_events.append({"type": event.name, **event.arguments})
 
             # Handle internal events that have no default matchers in flows yet
+            if event.name == InternalEvents.START_SIBLING_FLOW:
+                # Convert it into a normal START_FLOW event and only switch source flow instance to parent flow uid
+                event.name = InternalEvents.START_FLOW
+                parent_state_uid = state.flow_states[
+                    event.arguments["source_flow_instance_uid"]
+                ].parent_uid
+                event.arguments["source_flow_instance_uid"] = parent_state_uid
             if event.name == InternalEvents.FINISH_FLOW:
                 if "flow_instance_uid" in event.arguments:
                     flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
-                    if _is_active_flow(flow_state):
+                    if not _is_inactive_flow(flow_state):
                         _finish_flow(state, flow_state, event.matching_scores)
                 elif "flow_id" in event.arguments:
                     for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
-                        if _is_active_flow(flow_state):
+                        if not _is_inactive_flow(flow_state):
                             _finish_flow(state, flow_state, event.matching_scores)
             elif event.name == InternalEvents.STOP_FLOW:
                 if "flow_instance_uid" in event.arguments:
                     flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
-                    if _is_active_flow(flow_state):
+                    if not _is_inactive_flow(flow_state):
                         _abort_flow(
                             state,
                             flow_state,
@@ -1590,7 +1549,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         )
                 elif "flow_id" in event.arguments:
                     for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
-                        if _is_active_flow(flow_state):
+                        if not _is_inactive_flow(flow_state):
                             _abort_flow(
                                 state,
                                 flow_state,
@@ -1662,6 +1621,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     event.name == InternalEvents.START_FLOW
                     and event.arguments["flow_id"]
                     == _get_flow_state_from_head(state, head).flow_id
+                    and head.position == 0
                 ):
                     _start_flow(state, flow_state, event.arguments)
                 # elif event.name == InternalEvents.FINISH_FLOW:
@@ -1673,6 +1633,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 #     pass
                 # elif event.name == "PauseFlow":
                 #     pass
+
+            # Update actions status in all active flows by action event
+            if isinstance(event, ActionEvent):
+                _update_action_status_by_event(state, event)
 
             # Abort all flows with a mismatch
             for head in heads_failing:
@@ -1692,12 +1656,19 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
         # All internal events are processed and flow heads are on either action or match statements
 
+        # Remove actionable heads for stopped or finished flows
+        filtered_actionable_heads: Set[FlowHead] = set()
+        for actionable_head in actionable_heads:
+            if _is_active_flow(_get_flow_state_from_head(state, actionable_head)):
+                filtered_actionable_heads.add(actionable_head)
+        actionable_heads = filtered_actionable_heads
+
         # Check for potential conflicts between actionable heads
         advancing_heads = []
         if len(actionable_heads) == 1:
             # If we have only one actionable head there are no conflicts
             advancing_heads = actionable_heads
-            _create_outgoing_event_from_actionable_element(
+            _generate_action_event_from_actionable_element(
                 state, list(actionable_heads)[0]
             )
         elif len(actionable_heads) > 1:
@@ -1710,10 +1681,13 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 else:
                     head_groups.update({flow_state.loop_id: [head]})
 
-            # Find winning and loosing heads for each group
             for group in head_groups.values():
+                max_length = max(len(head.matching_scores) for head in group)
                 ordered_heads = sorted(
-                    group, key=lambda head: head.matching_scores, reverse=True
+                    group,
+                    key=lambda head: head.matching_scores
+                    + [1.0] * (max_length - len(head.matching_scores)),
+                    reverse=True,
                 )
                 # Check if we have heads with the exact same matching scores and pick one at random (or-group)
                 equal_heads_index = next(
@@ -1737,7 +1711,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 )
 
                 advancing_heads.append(picked_head)
-                _create_outgoing_event_from_actionable_element(state, picked_head)
+                _generate_action_event_from_actionable_element(state, picked_head)
                 for head in ordered_heads:
                     if head == picked_head:
                         continue
@@ -1750,7 +1724,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     )
                     if winning_event.is_equal(competing_event):
                         # All heads that are on the exact same action as the winning head
-                        # need to align their action references to the winning head
+                        # need to replace their action references with the winning heads action reference
                         for (
                             key,
                             context_variable,
@@ -1762,6 +1736,13 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                                 competing_flow_state.context[key] = state.actions[
                                     winning_event.action_uid
                                 ]
+                        index = competing_flow_state.action_uids.index(
+                            competing_event.action_uid
+                        )
+                        competing_flow_state.action_uids[
+                            index
+                        ] = winning_event.action_uid
+                        state.actions.pop(competing_event.action_uid, None)
 
                         advancing_heads.append(head)
                         log.info(
@@ -1788,21 +1769,6 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
         heads_are_advancing = len(advancing_heads) > 0
         actionable_heads = _advance_head_front(state, advancing_heads)
 
-    # Update all external event related actions in all flows that were not updated yet
-    for flow_state in state.flow_states.values():
-        if not _is_listening_flow(flow_state):
-            # Don't process flows that are no longer active
-            continue
-
-        for action_uid in flow_state.action_uids:
-            action = state.actions[action_uid]
-            if (
-                action.status == ActionStatus.INITIALIZED
-                or action.status == ActionStatus.FINISHED
-            ):
-                continue
-            action.process_event(converted_external_event)
-
     return state
 
 
@@ -1819,14 +1785,9 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
         if flow_state.status == FlowStatus.WAITING:
             flow_state.status = FlowStatus.STARTING
 
-        # Add all scheduled events
-        internal_events = flow_state.next_head_advance_events.copy()
-        flow_state.next_head_advance_events.clear()
-
         head.position += 1
 
-        new_internal_events, new_heads = slide(state, flow_state, flow_config, head)
-        internal_events.extend(new_internal_events)
+        internal_events, new_heads = slide(state, flow_state, flow_config, head)
 
         state.internal_events.extend(internal_events)
 
@@ -1839,7 +1800,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
         flow_finished = False
         flow_aborted = False
         if head.position >= len(flow_config.elements):
-            if flow_state.status == FlowStatus.ABORTED:
+            if flow_state.status == FlowStatus.STOPPED:
                 flow_aborted = True
             else:
                 flow_finished = True
@@ -1870,13 +1831,6 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
                     InternalEvents.FLOW_STARTED, flow_state, head.matching_scores
                 )
                 _push_internal_event(state, event)
-                if not flow_finished:
-                    # Schedule the StartFlow event for the next head advancement if it is a "parallel" flow
-                    if flow_config.enable_parallel_instances:
-                        event = _create_restart_flow_internal_event(
-                            state, flow_state, head.matching_scores
-                        )
-                        flow_state.next_head_advance_events = [event]
 
         elif not flow_aborted and _is_action_op_element(
             flow_config.elements[head.position]
@@ -1885,9 +1839,19 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
 
         # Check if flow has finished or was aborted
         if flow_finished:
-            _finish_flow(state, flow_state, head.matching_scores)
+            flow_state.status = FlowStatus.FINISHING
+            event = create_finish_flow_internal_event(
+                flow_state.uid, flow_state.uid, head.matching_scores
+            )
+            _push_internal_event(state, event)
         elif flow_aborted:
-            _abort_flow(state, flow_state, head.matching_scores)
+            flow_state.status = FlowStatus.STOPPING
+            event = create_stop_flow_internal_event(
+                flow_state.uid,
+                flow_state.uid,
+                head.matching_scores,
+            )
+            _push_internal_event(state, event)
 
     # Make sure that all actionable heads still exist in flows, otherwise remove them
     actionable_heads = set(
@@ -1935,7 +1899,7 @@ def slide(
                 new_event = create_internal_event(
                     event.name, event_arguments, head.matching_scores
                 )
-                _push_internal_event(state, new_event)
+                internal_events.append(new_event)
                 head.position += 1
 
             elif element.op == "_new_action_instance":
@@ -1963,6 +1927,14 @@ def slide(
                 break
 
         elif isinstance(element, Label):
+            if element.name == "start_new_flow_instance":
+                new_event = _create_restart_flow_internal_event(
+                    state, flow_state, head.matching_scores
+                )
+                # TODO: This is not so nice, since it bypasses the function interface that returns the new events
+                # But we currently have no way of left appending with that
+                _push_left_internal_event(state, new_event)
+                flow_state.new_instance_started = True
             head.position += 1
 
         elif isinstance(element, Goto):
@@ -2030,7 +2002,11 @@ def slide(
                 head.catch_pattern_failure_label = element.label
                 head.position += 1
             else:
-                flow_state.status = FlowStatus.ABORTED
+                flow_state.status = FlowStatus.STOPPING
+                new_event = create_stop_flow_internal_event(
+                    flow_state.uid, flow_state.uid, head.matching_scores
+                )
+                internal_events.append(new_event)
                 head.position = len(flow_config.elements)
 
         elif isinstance(element, Continue) or isinstance(element, Break):
@@ -2095,44 +2071,54 @@ def _abort_flow(
     deactivate_flow: bool = False,
 ) -> None:
     """Aborts a flow instance and all its active child flows."""
+
+    # abort all running child flows
+    for child_flow_uid in flow_state.child_flow_uids:
+        child_flow_state = state.flow_states[child_flow_uid]
+        if _is_listening_flow(child_flow_state):
+            child_flow_state.status = FlowStatus.STOPPING
+            event = create_stop_flow_internal_event(
+                child_flow_state.uid, flow_state.uid, matching_scores
+            )
+            _push_internal_event(state, event)
+
+    # Abort all stared actions that have not finished yet
+    for action_uid in flow_state.action_uids:
+        action = state.actions[action_uid]
+        if (
+            action.status == ActionStatus.STARTING
+            or action.status == ActionStatus.STARTED
+        ):
+            event = action.stop_event({})
+            action.status = ActionStatus.STOPPING
+            _generate_action_event(state, event)
+
+    flow_state.status = FlowStatus.STOPPED
+
     # Generate FlowFailed event
     event = create_flow_internal_event(
         InternalEvents.FLOW_FAILED, flow_state, matching_scores
     )
     _push_internal_event(state, event)
 
-    # abort all running child flows
-    for child_flow_uid in flow_state.child_flow_uids:
-        child_flow_state = state.flow_states[child_flow_uid]
-        if _is_listening_flow(child_flow_state):
-            event = create_stop_flow_internal_event(
-                child_flow_state.uid, flow_state.uid, matching_scores
-            )
-            _push_internal_event(state, event)
-
-    flow_state.status = FlowStatus.ABORTED
-
     log.info(
         f"Flow aborted/failed: '{_get_flow_parent_hierarchy(state, flow_state.uid)}'"
     )
 
-    if not deactivate_flow and flow_state.activated:
+    if (
+        not deactivate_flow
+        and flow_state.activated
+        and not flow_state.new_instance_started
+    ):
         event = _create_restart_flow_internal_event(state, flow_state, matching_scores)
-        _push_internal_event(state, event)
+        _push_left_internal_event(state, event)
+        flow_state.new_instance_started = True
 
 
 def _finish_flow(
     state: State, flow_state: FlowState, matching_scores: List[float]
 ) -> None:
     """Finishes a flow instance and all its active child flows."""
-    if not _is_active_flow(flow_state):
-        return
-
-    # Generate FlowFinished event
-    event = create_flow_internal_event(
-        InternalEvents.FLOW_FINISHED, flow_state, matching_scores
-    )
-    _push_internal_event(state, event)
 
     # Deactivate all activated child flows
     for child_flow_uid in flow_state.child_flow_uids:
@@ -2147,29 +2133,56 @@ def _finish_flow(
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
+            child_flow_state.status = FlowStatus.STOPPING
             event = create_stop_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, matching_scores, True
             )
             _push_internal_event(state, event)
 
-    flow_state.status = FlowStatus.COMPLETED
+    # Abort all started actions that have not finished yet
+    for action_uid in flow_state.action_uids:
+        action = state.actions[action_uid]
+        if (
+            action.status == ActionStatus.STARTING
+            or action.status == ActionStatus.STARTED
+        ):
+            event = action.stop_event({})
+            action.status = ActionStatus.STOPPING
+            _generate_action_event(state, event)
+
+    flow_state.status = FlowStatus.FINISHED
+
+    # Generate FlowFinished event
+    event = create_flow_internal_event(
+        InternalEvents.FLOW_FINISHED, flow_state, matching_scores
+    )
+    _push_internal_event(state, event)
 
     log.info(
         f"Flow finished: '{_get_flow_parent_hierarchy(state, flow_state.uid)}' context={_context_log(flow_state)}"
     )
 
-    if (
-        flow_state.activated
-        and not state.flow_configs[flow_state.flow_id].enable_parallel_instances
-    ):
+    if flow_state.activated and not flow_state.new_instance_started:
         event = _create_restart_flow_internal_event(state, flow_state, matching_scores)
-        _push_internal_event(state, event)
+        _push_left_internal_event(state, event)
+        flow_state.new_instance_started = True
+
+
+def _update_action_status_by_event(state: State, event: ActionEvent) -> None:
+    for flow_state in state.flow_states.values():
+        if not _is_listening_flow(flow_state):
+            # Don't process flows that are not active
+            continue
+
+        for action_uid in flow_state.action_uids:
+            action = state.actions[action_uid]
+            if action.status != ActionStatus.FINISHED:
+                action.process_event(event)
 
 
 def _is_listening_flow(flow_state: FlowState) -> bool:
     return (
         flow_state.status == FlowStatus.WAITING
-        or flow_state.status == FlowStatus.ACTIVE
         or flow_state.status == FlowStatus.STARTED
         or flow_state.status == FlowStatus.STARTING
     )
@@ -2177,14 +2190,35 @@ def _is_listening_flow(flow_state: FlowState) -> bool:
 
 def _is_active_flow(flow_state: FlowState) -> bool:
     return (
-        flow_state.status == FlowStatus.ACTIVE
-        or flow_state.status == FlowStatus.STARTED
+        flow_state.status == FlowStatus.STARTED
         or flow_state.status == FlowStatus.STARTING
     )
 
 
+def _is_inactive_flow(flow_state: FlowState) -> bool:
+    return (
+        flow_state.status == FlowStatus.WAITING
+        or flow_state.status == FlowStatus.STOPPED
+        or flow_state.status == FlowStatus.FINISHED
+    )
+
+
+def _generate_action_event(state: State, event: ActionEvent) -> None:
+    umim_event = create_umim_action_event(event, event.arguments)
+    state.outgoing_events.append(umim_event)
+    log.info(f"Action: {event}")
+
+    # Update the status of relevant actions by event
+    _update_action_status_by_event(state, event)
+
+
 def _push_internal_event(state: State, event: dict) -> None:
     state.internal_events.append(event)
+    log.debug(f"Created internal event: {event}")
+
+
+def _push_left_internal_event(state: State, event: dict) -> None:
+    state.internal_events.appendleft(event)
     log.debug(f"Created internal event: {event}")
 
 
@@ -2317,6 +2351,8 @@ def _compute_event_matching_score(
             and ref_event.action_uid != event.action_uid
         ):
             return 0.0
+
+        # TODO: Action event matches can also fail for certain events, e.g. match Started(), received Finished()
 
         if event.action_uid is not None and event.action_uid in state.actions:
             action_arguments = state.actions[event.action_uid].start_event_arguments
@@ -2481,7 +2517,7 @@ def _get_event_from_element(
             return action_event
 
 
-def _create_outgoing_event_from_actionable_element(
+def _generate_action_event_from_actionable_element(
     state: State,
     head: FlowHead,
 ) -> None:
@@ -2494,10 +2530,7 @@ def _create_outgoing_event_from_actionable_element(
 
     if element.op == "send":
         event = _get_event_from_element(state, flow_state, element)
-        umim_event = create_umim_action_event(event, event.arguments)
-
-        state.outgoing_events.append(umim_event)
-        log.info(f"Action: {umim_event}")
+        _generate_action_event(state, event)
 
     # Extract the comment, if any
     # state.next_steps_comment = element.get("_source_mapping", {}).get("comment")
@@ -2518,6 +2551,23 @@ def _create_restart_flow_internal_event(
     return create_internal_event(InternalEvents.START_FLOW, arguments, matching_scores)
 
 
+def create_finish_flow_internal_event(
+    flow_instance_uid: str,
+    source_flow_instance_uid: str,
+    matching_scores: List[float],
+) -> FlowEvent:
+    """Returns 'FinishFlow' internal event"""
+    arguments = {
+        "flow_instance_uid": flow_instance_uid,
+        "source_flow_instance_uid": source_flow_instance_uid,
+    }
+    return create_internal_event(
+        InternalEvents.FINISH_FLOW,
+        arguments,
+        matching_scores,
+    )
+
+
 def create_stop_flow_internal_event(
     flow_instance_uid: str,
     source_flow_instance_uid: str,
@@ -2528,8 +2578,10 @@ def create_stop_flow_internal_event(
     arguments = {
         "flow_instance_uid": flow_instance_uid,
         "source_flow_instance_uid": source_flow_instance_uid,
-        "activated": deactivate_flow,
     }
+    if deactivate_flow:
+        arguments["activate"] = False
+
     return create_internal_event(
         InternalEvents.STOP_FLOW,
         arguments,

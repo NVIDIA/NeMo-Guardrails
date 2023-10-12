@@ -26,6 +26,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Flow,
     FlowParamDef,
     If,
+    Label,
     Priority,
     Return,
     Source,
@@ -410,6 +411,13 @@ class ColangTransformer(Transformer):
         assert len(children) == 1
         return Priority(
             priority_expr=children[0]["elements"][0],
+            _source=self.__source(meta),
+        )
+
+    def _label_stmt(self, children, meta):
+        assert len(children) == 1
+        return Label(
+            name=children[0]["elements"][0],
             _source=self.__source(meta),
         )
 

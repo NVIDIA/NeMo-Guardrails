@@ -135,7 +135,10 @@ def test_start_action():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello world",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -173,7 +176,10 @@ def test_start_match_action_on_action_parameter():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Done",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -244,7 +250,10 @@ def test_start_match_action_on_event_parameter():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Done",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -315,7 +324,10 @@ def test_start_match_action_with_reference():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Done",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -352,7 +364,10 @@ def test_await_action():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Done",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -412,7 +427,10 @@ def test_start_a_flow():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello world",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -435,7 +453,10 @@ def test_start_a_flow_compact_notation():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello world",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -476,7 +497,10 @@ def test_start_match_flow_with_reference():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Done",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -505,8 +529,14 @@ def test_await_a_flow():
                 "script": "Flow a started",
             },
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "Flow a finished",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -533,8 +563,14 @@ def test_await_a_flow_compact_notation():
                 "script": "Flow a started",
             },
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "Flow a finished",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -580,8 +616,7 @@ def test_child_flow_abort():
 
     flow main
       start a
-      # b.Failed()
-      match FlowFailed(flow_id="b")
+      match b.Failed()
       start UtteranceBotAction(script="Done")
     """
     state = run_to_completion(_init_state(content), start_main_flow_event)
@@ -593,8 +628,14 @@ def test_child_flow_abort():
                 "script": "Hi",
             },
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "Done",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -636,6 +677,12 @@ def test_conflicting_actions_v_a():
                 "type": "StartUtteranceBotAction",
                 "script": "Bye",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -675,6 +722,12 @@ def test_conflicting_actions_v_b():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "How are you",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -719,7 +772,10 @@ def test_conflicting_actions_with_flow_priorities():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "A",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
     state = run_to_completion(
@@ -737,8 +793,14 @@ def test_conflicting_actions_with_flow_priorities():
                 "script": "B",
             },
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "End",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -783,6 +845,12 @@ def test_conflicting_actions_branching_length():
                 "type": "StartUtteranceBotAction",
                 "script": "Bye",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -797,7 +865,7 @@ def test_conflicting_actions_reference_sharing():
       match $ref.Finished()
       start UtteranceBotAction(script="How are you")
       match UtteranceUserAction.Finished()
-      start UtteranceBotAction(script="Perfect")
+      start UtteranceBotAction(script="Should not be executed")
 
     flow main
       start a
@@ -859,9 +927,11 @@ def test_conflicting_actions_reference_sharing():
         state.outgoing_events,
         [
             {
-                "type": "StartUtteranceBotAction",
-                "script": "Perfect",
-            }
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -916,7 +986,10 @@ def test_flow_parameters_event_wrapper():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Yes",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -1052,6 +1125,12 @@ def test_activate_flow_mechanism():
                 "script": "End",
             },
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "Start",
             },
@@ -1070,6 +1149,12 @@ def test_activate_flow_mechanism():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "End",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
             {
                 "type": "StartUtteranceBotAction",
@@ -1119,9 +1204,12 @@ def test_finish_flow_event():
         state.outgoing_events,
         [
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "Yes",
-            }
+            },
         ],
     )
 
@@ -1187,8 +1275,14 @@ def test_match_specificity_mechanic():
                 "script": "hi",
             },
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "something failed",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -1207,8 +1301,14 @@ def test_match_specificity_mechanic():
                 "script": "bye",
             },
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "something failed",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -1378,6 +1478,12 @@ def test_while_loop_mechanic():
                 "type": "StartUtteranceBotAction",
                 "script": "Done",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -1411,6 +1517,15 @@ def test_start_and_grouping():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "C",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -1485,6 +1600,9 @@ def test_match_and_grouping():
                 "type": "StartUtteranceBotAction",
                 "script": "Done",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -1551,6 +1669,9 @@ def test_await_or_grouping():
                 "type": "StartUtteranceBotAction",
                 "script": "Match",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
     state = run_to_completion(_init_state(content), start_main_flow_event)
@@ -1577,6 +1698,9 @@ def test_await_or_grouping():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Match",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -1606,6 +1730,9 @@ def test_await_or_grouping():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Match",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -1665,6 +1792,9 @@ def test_await_and_or_grouping():
                 "type": "StartUtteranceBotAction",
                 "script": "Match",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -1708,6 +1838,9 @@ def test_await_and_or_grouping():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Match",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -1755,6 +1888,9 @@ def test_activate_and_grouping():
         state.outgoing_events,
         [
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "A",
             },
@@ -1770,6 +1906,9 @@ def test_activate_and_grouping():
     assert is_data_in_events(
         state.outgoing_events,
         [
+            {
+                "type": "StopUtteranceBotAction",
+            },
             {
                 "type": "StartUtteranceBotAction",
                 "script": "B",
@@ -1822,6 +1961,24 @@ def test_if_branching_mechanic():
                 "type": "StartUtteranceBotAction",
                 "script": "Next",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -1854,7 +2011,10 @@ def test_event_reference_member_access():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hi there!",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -1880,6 +2040,12 @@ def test_action_reference_member_access():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -1907,8 +2073,14 @@ def test_flow_references_member_access():
                 "script": "Hello",
             },
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -1935,6 +2107,12 @@ def test_values_in_strings():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hi Roger!",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -1969,6 +2147,9 @@ def test_flow_return_values():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "success 100 failed",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -2022,6 +2203,24 @@ def test_break_continue_statement_a():
                 "type": "StartUtteranceBotAction",
                 "script": "Done",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -2059,10 +2258,20 @@ def test_break_continue_statement_b():
                 "type": "StartUtteranceBotAction",
                 "script": "C",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
 
+# TODO: Stop actions/flows from cases that did not trigger in 'when' structure
 def test_when_or_core_mechanics():
     """"""
 
@@ -2133,6 +2342,15 @@ def test_when_or_core_mechanics():
                 "type": "StartUtteranceBotAction",
                 "script": "C",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -2141,9 +2359,6 @@ def test_when_or_bot_action_mechanics():
     """"""
 
     content = """
-    flow user said $transcript
-      match UtteranceUserAction.Finished(final_transcript=$transcript)
-
     flow main
       while True
         when UtteranceBotAction(script="Happens immediately")
@@ -2198,6 +2413,15 @@ def test_when_or_bot_action_mechanics():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "B",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -2284,6 +2508,15 @@ def test_when_or_group_mechanics():
                 "type": "StartUtteranceBotAction",
                 "script": "DE",
             },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -2360,7 +2593,16 @@ def test_when_or_competing_events_mechanics():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "C",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -2399,7 +2641,10 @@ def test_abort_flow():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Success",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -2440,7 +2685,10 @@ def test_multi_flow_level_member_access():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "do something",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -2470,8 +2718,14 @@ def test_FlowStart_event_fallback():
                 "script": "Success",
             },
             {
+                "type": "StopUtteranceBotAction",
+            },
+            {
                 "type": "StartUtteranceBotAction",
                 "script": "End",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -2510,7 +2764,10 @@ def test_multi_level_member_match_from_reference():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "End",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
 
@@ -2535,7 +2792,10 @@ def test_flow_deactivation_on_parent_flow_finished():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Started",
-            }
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
         ],
     )
     state = run_to_completion(
@@ -2632,13 +2892,13 @@ def test_event_action_wrapper_abstraction():
     )
 
 
-def test_parallel_flow_mechanism():
+def test_start_sibling_flow_mechanism():
     """"""
 
     content = """
     flow a
-      # flow: parallel
       match UtteranceUserAction.Finished(final_transcript="1")
+      send StartSiblingFlow(flow_id="a")
       start UtteranceBotAction(script="A")
       match UtteranceUserAction.Finished(final_transcript="2")
       start UtteranceBotAction(script="B")
@@ -2699,6 +2959,15 @@ def test_parallel_flow_mechanism():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "B",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -2805,5 +3074,109 @@ def test_parallel_flow_mechanism():
 #     )
 
 
+def test_user_action_reference():
+    """"""
+
+    content = """
+    flow main
+      match UtteranceUserAction.Started() as $event_ref
+      start UtteranceBotAction(script="Started user action: {$event_ref.action.name}")
+      match $event_ref.action.Finished(final_transcript="End")
+      start UtteranceBotAction(script="Success")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionStarted",
+            "uid": "d4a265bb-4a27-4d28-8ca5-80cc73dc4707",
+            "event_created_at": "2023-09-12T13:01:16.334940+00:00",
+            "source_uid": "umim_tui_app",
+            "action_uid": "cc63b1a0-5703-4e80-b66b-2734c13abcf3",
+            "action_info_modality": "user_speech",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Started user action: UtteranceUserAction",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "uid": "d4a265bb-4a27-4d28-8ca5-80cc73dc4707",
+            "event_created_at": "2023-09-12T13:01:16.334940+00:00",
+            "source_uid": "umim_tui_app",
+            "action_uid": "cc63b1a0-5703-4e80-b66b-2734c13abcf3",
+            "final_transcript": "End",
+            "is_success": True,
+            "action_info_modality": "user_speech",
+            "action_info_modality_policy": "replace",
+            "action_finished_at": "2023-09-12T13:01:16.334954+00:00",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+
+def test_stop_bot_action():
+    """"""
+
+    content = """
+    flow main
+      start UtteranceBotAction(script="This is a long sentence...") as $ref
+      match UtteranceUserAction.Finished(final_transcript="Stop")
+      send $ref.Stop()
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "This is a long sentence...",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {"type": "UtteranceUserActionFinished", "final_transcript": "Stop"},
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_await_or_grouping()
+    test_conflicting_actions_reference_sharing()

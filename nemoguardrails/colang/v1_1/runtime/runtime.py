@@ -101,7 +101,10 @@ class RuntimeV1_1(Runtime):
         for flow in self.config.flows:
             flow_id = flow.name
             self.flow_configs[flow_id] = FlowConfig(
-                id=flow_id, elements=flow.elements, parameters=flow.parameters
+                id=flow_id,
+                elements=flow.elements,
+                parameters=flow.parameters,
+                source_code=flow.source_code,
             )
 
     async def generate_events(self, events: List[dict]) -> List[dict]:

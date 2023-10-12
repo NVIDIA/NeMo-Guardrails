@@ -22,7 +22,7 @@
                 "chat",
                 "--config=${fileDirname}",
                 "--verbose",
-                "--debug-level=DEBUG"
+                "--debug-level=INFO"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
