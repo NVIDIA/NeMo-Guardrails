@@ -1,0 +1,18 @@
+define user ask about guardrails
+  "What is NeMo Guardrails?"
+
+define flow answer guardrails question
+  user ask about guardrails
+  bot provide answer
+  $accuracy = execute check_facts
+  if $accuracy < 0.4
+    bot remove last message
+    bot inform answer unknown
+    stop
+
+  if $accuracy < 0.6
+    bot inform answer potentially inaccurate
+    stop
+
+define bot remove last message
+  "(remove last message)"
