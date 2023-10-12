@@ -18,7 +18,7 @@ import importlib.util
 import json
 import logging
 import os.path
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -76,7 +76,10 @@ class RequestBody(BaseModel):
     messages: List[dict] = Field(
         default=None, description="The list of messages in the current conversation."
     )
-    context: dict
+    context: Optional[dict] = Field(
+        default=None,
+        description="Additional context data to be added to the conversation.",
+    )
 
 
 class ResponseBody(BaseModel):
