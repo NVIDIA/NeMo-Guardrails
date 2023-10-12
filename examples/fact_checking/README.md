@@ -58,7 +58,7 @@ Our toolkit provides support for the [AlignScore metric (Zha et al.)](https://ac
 In our testing, we observed an average latency of ~220ms on hosting AlignScore as a RESTful service, and ~45ms on direct inference with the model loaded in-memory. This makes it much faster than the `ask_llm` method. We also observe substantial improvements in accuracy over the `ask_llm` method, with a balanced performance on both factual and counterfactual statements. 
 
 In order to use AlignScore, the `config.yml` file can be updated as follows:
-```colang
+```yaml
 custom_data:
   fact_checking:
     provider: align_score  # the default is ask_llm
@@ -69,7 +69,30 @@ custom_data:
 Note that this method requires an on-prem deployment of the publicly available model. Please see the [AlignScore Deployment](#alignscore-deployment) section.
 
 Since this method gives a continuous score between 0 and 1 (as compared to the binary classification among 0 or 1 using the `ask_llm` method), it also allows more fine-grained control of the Colang flow.
+In the flow below, the bot responds with the answer but flags it as potentially inaccurate when AlignScore is between 0.4 and 0.6, while it removes its answer if it is below the 0.4 threshold.
+These thresholds can be increased or decreased to make the fact-checking behavior stricter or lenient, respectively.  
+```colang
+define user ask about report
+  "What was last month's unemployment rate?"
+  "Which industry added the most jobs?"
+  "How many jobs were added in the transportation industry?"
 
+define flow answer report question
+  user ask about report
+  bot provide report answer
+  $accuracy = execute check_facts
+  if $accuracy < 0.4
+    bot remove last message
+    bot inform answer unknown
+    stop
+
+  if $accuracy < 0.6
+    bot inform answer potentially inaccurate
+    stop
+
+define bot remove last message
+  "(remove last message)"
+```
 
 ### AlignScore Deployment
 In order to use AlignScore, follow these steps:
