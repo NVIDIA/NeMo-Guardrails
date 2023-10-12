@@ -1,28 +1,32 @@
 # Example flows with instructions
 
-flow tell a joke
-  """Tell a joke."""
-  bot say "Why don't scientists trust atoms? Because they make up everything!"
-  bot smile
-
-flow count
-  """Count from 1 to 5."""
-  bot say "1"
-  bot say "2"
-  bot say "3"
-  bot say "4"
-  bot say "5"
-
+# Simple answer
 flow answer question about france
   """Answer the following question: What is the capital of France."""
   bot say "The capital of France it's Paris."
 
+# Mutlimodal answer
+flow tell a joke
+  """Tell a joke."""
+  bot say "Why don't scientists trust atoms? Because they make up everything!"
+    and bot gesture "smile"
+
+# Loop
+flow count
+  """Count from 1 to 5."""
+  $count = 1
+  while $count <= 5
+    bot say "{$count}"
+    $count = $count + 1
+
+# Sequence
 flow bot ask user for age
   """Ask the user how old she is and response with 'You look younger!' when she answers something."""
   bot say "How old are you?"
   user said "I am 16"
   bot say "You look younger!"
 
+# Branching
 flow bot ask user to pick a color
   """Ask user to choose from two offered colors: red and blue then give a answer depending on the user choice."""
   bot say "What color would you like? Red or blue?"
@@ -30,6 +34,27 @@ flow bot ask user to pick a color
     bot say "I like red!"
   orwhen user said "Blue"
     bot say "I don't like blue!"
+
+# A little game
+flow number guessing game
+  """Ask the user to guess a random number between 1 and 100; after each guess let the user know if the number was to low or high. If the user guesses the correct number, congratulate!"""
+  bot say "Hi, please guess the random number between 0 and 100"
+
+  $random_number = 66
+  $is_correct_number = False
+  while $is_correct_number
+    user said number
+    # The number of the user otherwise None
+    $number = 13
+    if $number != None
+      if $number < $random_number
+        bot say "Sorry, this number is too low!"
+      elif $number > $random_number
+        bot say "Sorry, this number is too high!"
+      else
+        bot say "Congratulation! This is the correct number!"
+        $is_correct_number = True
+
 
 # Common
 
