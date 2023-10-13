@@ -478,10 +478,10 @@ def _step_to_event(step: dict) -> dict:
 
     if step_type == "run_action":
         if step["action_name"] == "utter":
-            return {
-                "type": "BotIntent",
-                "intent": step["action_params"]["value"],
-            }
+            return new_event_dict(
+                "BotIntent",
+                intent=step["action_params"]["value"],
+            )
 
         else:
             action_name = step["action_name"]
