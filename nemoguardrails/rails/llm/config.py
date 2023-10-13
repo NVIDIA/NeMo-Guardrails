@@ -60,14 +60,17 @@ class Document(BaseModel):
     content: str
 
 
-class RedactPII(BaseModel):
+class SensitiveDataDetection(BaseModel):
 
-    enable_pii_redaction : Optional[bool] 
-    load_predefined : Optional[bool]
+    enable_detection : Optional[bool] 
+    provider : Optional[str]
     entities : Optional[List[str]] = Field(
         default = None,
-        description = "List of entities to be redacted"
+        description = """List of entities to be redacted, 
+                         choose from: PERSON, US_SSN, CREDIT_CARD, PHONE_NUMBER
+                                      EMAIL_ADDRESS, US_DRIVER_LICENSE"""
     )
+    mask_token: Optional[str] 
 
 
 class MessageTemplate(BaseModel):
@@ -155,8 +158,8 @@ def _join_config(dest_config: dict, additional_config: dict):
         "actions_server_url", None
     ) or additional_config.get("actions_server_url", None)
 
-    dest_config["redact_pii"] = {**dest_config.get("redact_pii", {}),
-                                 **additional_config.get("redact_pii", {})
+    dest_config["sensitive_data_detection"] = {**dest_config.get("sensitive_data_detection", {}),
+                                 **additional_config.get("sensitive_data_detection", {})
                                 }
     
     additional_fields = [
@@ -239,9 +242,9 @@ class RailsConfig(BaseModel):
         description="Whether to enable multi-step generation for the LLM.",
     )
 
-    redact_pii: Optional[RedactPII] = Field(
+    sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
         default = None,
-        description = "Enabling PII redaction from LLM responses"
+        description = "detecting sensitive data in user messages, retrieved chunks and bot response"
     )
 
     custom_data: Dict = Field(

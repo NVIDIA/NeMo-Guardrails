@@ -36,8 +36,11 @@ from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
-from nemoguardrails.recognizers.pii_recognizer import PIIRecognizer
-from nemoguardrails.recognizers.recognizers import pii_redact_enabled
+from nemoguardrails.actions.detect_sensitive_data import detect_sensitive_data_in_user_message, \
+                                                         detect_sensitive_data_in_bot_message,\
+                                                         detect_sensitive_data_in_retrieved_chunks,\
+                                                         anonymize_sensitive_data_in_retrieved_chunks, \
+                                                         sensitive_data_detection
 
 
 log = logging.getLogger(__name__)
@@ -58,15 +61,16 @@ class Runtime:
             "output_moderation": output_moderation,
             "check_hallucination": check_hallucination,
             "retrieve_relevant_chunks": retrieve_relevant_chunks,
+            "detect_sensitive_data_in_user_message": detect_sensitive_data_in_user_message,
+            "detect_sensitive_data_in_bot_message": detect_sensitive_data_in_bot_message,
+            "detect_senstive_data_in_retrieved_chunks": detect_sensitive_data_in_retrieved_chunks,
+            "anonymize_sensitive_data_in_retrieved_chunks": anonymize_sensitive_data_in_retrieved_chunks,  
+            "sensitive_data_detection": sensitive_data_detection, # TODO remove this
         }
 
         # Register the actions with the dispatcher.
         self.action_dispatcher = ActionDispatcher(config_path=config.config_path)
         
-        self.pii_recognizer = PIIRecognizer(config = config)
-        self.registered_actions["retrieve_relevant_chunks_redacted"] = self.pii_recognizer.anonymize_fn(self.registered_actions["retrieve_relevant_chunks"])()
-        self.registered_actions["pii_redact_enabled"] = pii_redact_enabled
-
         for action_name, action_fn in self.registered_actions.items():
             self.action_dispatcher.register_action(action_fn, action_name)
 
