@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import random
 import time
@@ -203,7 +204,7 @@ class Action:
         self.start_event_arguments = arguments
 
     # Process an event
-    def process_event(self, event: Event) -> None:
+    def process_event(self, event: ActionEvent) -> None:
         """Processes event and updates action accordingly."""
         # TODO: This matching can easily break if action names are badly chosen
         if "Action" in event.name and event.action_uid == self.uid:
@@ -343,11 +344,28 @@ class FlowHead:
     # Matching score history of previous matches that resulted in this head to be advanced
     matching_scores: List[float]
 
+    # Whether a head is active or not (a head fork will deactivate the parent head)
+    active: bool = True
+
+    # If a flow head is forked it will create new child heads
+    child_head_uids: List[str] = field(default_factory=list)
+
     # If set a flow failure will be diverted to the label, otherwise it will abort the flow
     # Mainly used to simplify inner flow logic
     catch_pattern_failure_label: Optional[str] = None
 
-    def __eq__(self, other: FlowHead) -> bool:
+    def get_child_head_uids(self, state: State) -> List[str]:
+        """ "Return uids of all child heads (recursively)."""
+        flow_state = state.flow_states[self.flow_state_uid]
+        child_uids: List[str] = []
+        for uid in self.child_head_uids:
+            child_uids.append(uid)
+            # TODO: Make sure that child head uids are kept up-to-date
+            if uid in flow_state.heads:
+                child_uids.extend(flow_state.heads[uid].get_child_head_uids(state))
+        return child_uids
+
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, FlowHead):
             return self.uid == other.uid
         return NotImplemented
@@ -387,10 +405,8 @@ class FlowState:
     # Interaction loop id
     loop_id: str
 
-    # The position in the sequence of elements that compose the flow.
-    # TODO: Generalize to have multiple heads for
-    # branching head statements like when/else
-    heads: List[FlowHead]
+    # All the heads that point to the positions in the sequence of elements that compose the flow.
+    heads: Dict[str, FlowHead]
 
     # All actions that were instantiated since the beginning of the flow
     action_uids: List[str]
@@ -426,6 +442,11 @@ class FlowState:
 
     # The flow event name mapping
     _event_name_map: dict = field(init=False)
+
+    @property
+    def active_heads(self):
+        """Returns all active heads of this flow."""
+        return {id: h for (id, h) in self.heads.items() if h.active}
 
     def __post_init__(self) -> None:
         self._event_name_map = {
@@ -497,7 +518,7 @@ class FlowState:
         """Returns the flow Failed event."""
         return self._create_event(InternalEvents.FLOW_FAILED, args)
 
-    def _create_event(self, event_type: InternalEvents, args: dict) -> FlowEvent:
+    def _create_event(self, event_type: str, args: dict) -> FlowEvent:
         arguments = args.copy()
         arguments["flow_id"] = self.flow_id
         arguments.update(
@@ -658,42 +679,58 @@ def expand_elements(
 
 
 def _expand_element_group(element: SpecOp) -> List[ElementType]:
+    # TODO: Simplify for a single or group (we don't need head forking)
     new_elements: List[ElementType] = []
 
     normalized_group = normalize_element_groups(element.spec)
 
-    fork_element = ForkHead()
-    group_label_elements: List[Label] = []
-    failure_label_name = f"failure_label_{new_var_uid()}"
-    failure_label_element = Label(name=failure_label_name)
-    end_label_name = f"end_label_{new_var_uid()}"
-    goto_end_element = Goto(label=end_label_name)
-    end_label_element = Label(name=end_label_name)
-
-    for group_idx, and_group in enumerate(normalized_group["elements"]):
-        group_label_name = f"group_{group_idx}_{new_var_uid()}"
-        group_label_elements.append(Label(name=group_label_name))
-        fork_element.labels.append(group_label_name)
-
-    # Generate new element sequence
-    new_elements.append(CatchPatternFailure(label=failure_label_name))
-    new_elements.append(fork_element)
-    for group_idx, and_group in enumerate(normalized_group["elements"]):
-        new_elements.append(group_label_elements[group_idx])
-        for group_element in and_group["elements"]:
-            new_elements.append(
-                SpecOp(
-                    op=element.op,
-                    spec=group_element,
+    if len(normalized_group["elements"]) == 1:
+        # Only one and-group
+        for and_group in normalized_group["elements"]:
+            for group_element in and_group["elements"]:
+                new_elements.append(
+                    SpecOp(
+                        op=element.op,
+                        spec=group_element,
+                    )
                 )
-            )
-        new_elements.append(goto_end_element)
-    new_elements.append(failure_label_element)
-    new_elements.append(WaitForHeads(number=len(normalized_group["elements"])))
-    new_elements.append(CatchPatternFailure(label=None))
-    new_elements.append(Abort())
-    new_elements.append(end_label_element)
-    new_elements.append(MergeHeads())
+    else:
+        # Multiple and-groups
+        fork_element = ForkHead()
+        fork_head_uids: List(str) = []
+        group_label_elements: List[Label] = []
+        failure_label_name = f"failure_label_{new_var_uid()}"
+        failure_label_element = Label(name=failure_label_name)
+        end_label_name = f"end_label_{new_var_uid()}"
+        goto_end_element = Goto(label=end_label_name)
+        end_label_element = Label(name=end_label_name)
+
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            group_label_name = f"group_{group_idx}_{new_var_uid()}"
+            group_label_elements.append(Label(name=group_label_name))
+            fork_head_uids.append(new_var_uid())
+            fork_element.head_uids.append(fork_head_uids[-1])
+            fork_element.labels.append(group_label_name)
+
+        # Generate new element sequence
+        new_elements.append(CatchPatternFailure(label=failure_label_name))
+        new_elements.append(fork_element)
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            new_elements.append(group_label_elements[group_idx])
+            for group_element in and_group["elements"]:
+                new_elements.append(
+                    SpecOp(
+                        op=element.op,
+                        spec=group_element,
+                    )
+                )
+            new_elements.append(goto_end_element)
+        new_elements.append(failure_label_element)
+        new_elements.append(WaitForHeads(number=len(normalized_group["elements"])))
+        new_elements.append(CatchPatternFailure(label=None))
+        new_elements.append(Abort())
+        new_elements.append(end_label_element)
+        new_elements.append(MergeHeads(head_uids=fork_head_uids))
 
     return new_elements
 
@@ -898,51 +935,66 @@ def _expand_match_element(
         # Element group
         normalized_group = normalize_element_groups(element.spec)
 
-        fork_element = ForkHead()
-        event_label_elements: List[Label] = []
-        event_match_elements: List[SpecOp] = []
-        goto_group_elements: List[Goto] = []
-        group_label_elements: List[Label] = []
-        wait_for_heads_elements: List[WaitForHeads] = []
-        end_label_name = f"end_label_{new_var_uid()}"
-        goto_end_element = Goto(label=end_label_name)
-        end_label_element = Label(name=end_label_name)
-
-        element_idx = 0
-        for group_idx, and_group in enumerate(normalized_group["elements"]):
-            group_label_name = f"group_{group_idx}_{new_var_uid()}"
-            group_label_elements.append(Label(name=group_label_name))
-            goto_group_elements.append(Goto(label=group_label_name))
-            wait_for_heads_elements.append(
-                WaitForHeads(number=len(and_group["elements"]))
-            )
-
-            for match_element in and_group["elements"]:
-                label_name = f"event_{element_idx}_{new_var_uid()}"
-                event_label_elements.append(Label(name=label_name))
-                fork_element.labels.append(label_name)
-                event_match_elements.append(
-                    SpecOp(
-                        op="match",
-                        spec=match_element,
-                    ),
+        if (
+            len(normalized_group["elements"]) == 1
+            and len(normalized_group["elements"][0]["elements"]) == 1
+        ):
+            # Only one and-group with a single element
+            new_elements.append(
+                SpecOp(
+                    op=element.op,
+                    spec=normalized_group["elements"][0]["elements"][0],
                 )
-                element_idx += 1
+            )
+        else:
+            fork_element = ForkHead()
+            fork_head_uids: List(str) = []
+            event_label_elements: List[Label] = []
+            event_match_elements: List[SpecOp] = []
+            goto_group_elements: List[Goto] = []
+            group_label_elements: List[Label] = []
+            wait_for_heads_elements: List[WaitForHeads] = []
+            end_label_name = f"end_label_{new_var_uid()}"
+            goto_end_element = Goto(label=end_label_name)
+            end_label_element = Label(name=end_label_name)
 
-        # Generate new element sequence
-        element_idx = 0
-        new_elements.append(fork_element)
-        for group_idx, and_group in enumerate(normalized_group["elements"]):
-            for match_element in and_group["elements"]:
-                new_elements.append(event_label_elements[element_idx])
-                new_elements.append(event_match_elements[element_idx])
-                new_elements.append(goto_group_elements[group_idx])
-                element_idx += 1
-            new_elements.append(group_label_elements[group_idx])
-            new_elements.append(wait_for_heads_elements[group_idx])
-            new_elements.append(MergeHeads())
-            new_elements.append(goto_end_element)
-        new_elements.append(end_label_element)
+            element_idx = 0
+            for group_idx, and_group in enumerate(normalized_group["elements"]):
+                group_label_name = f"group_{group_idx}_{new_var_uid()}"
+                group_label_elements.append(Label(name=group_label_name))
+                goto_group_elements.append(Goto(label=group_label_name))
+                wait_for_heads_elements.append(
+                    WaitForHeads(number=len(and_group["elements"]))
+                )
+
+                for match_element in and_group["elements"]:
+                    label_name = f"event_{element_idx}_{new_var_uid()}"
+                    event_label_elements.append(Label(name=label_name))
+                    fork_head_uids.append(new_var_uid())
+                    fork_element.head_uids.append(fork_head_uids[-1])
+                    fork_element.labels.append(label_name)
+                    event_match_elements.append(
+                        SpecOp(
+                            op="match",
+                            spec=match_element,
+                        ),
+                    )
+                    element_idx += 1
+
+            # Generate new element sequence
+            element_idx = 0
+            new_elements.append(fork_element)
+            for group_idx, and_group in enumerate(normalized_group["elements"]):
+                for match_element in and_group["elements"]:
+                    new_elements.append(event_label_elements[element_idx])
+                    new_elements.append(event_match_elements[element_idx])
+                    new_elements.append(goto_group_elements[group_idx])
+                    element_idx += 1
+                new_elements.append(group_label_elements[group_idx])
+                new_elements.append(wait_for_heads_elements[group_idx])
+                new_elements.append(MergeHeads(head_uids=fork_head_uids))
+                new_elements.append(goto_end_element)
+            new_elements.append(end_label_element)
 
     else:
         raise ColangSyntaxError(f"Unknown element type '{type(element.spec)}'")
@@ -990,6 +1042,7 @@ def _expand_await_element(
         normalized_group = normalize_element_groups(element.spec)
 
         fork_element = ForkHead()
+        fork_head_uids: List(str) = []
         group_label_elements: List[Label] = []
         start_elements: List[List[SpecOp]] = []
         match_elements: List[List[Spec]] = []
@@ -1003,6 +1056,8 @@ def _expand_await_element(
         for group_idx, and_group in enumerate(normalized_group["elements"]):
             group_label_name = f"group_{group_idx}_{new_var_uid()}"
             group_label_elements.append(Label(name=group_label_name))
+            fork_head_uids.append(new_var_uid())
+            fork_element.head_uids.append(fork_head_uids[-1])
             fork_element.labels.append(group_label_name)
             start_elements.append([])
             match_elements.append([])
@@ -1049,7 +1104,7 @@ def _expand_await_element(
                 new_elements.append(start_elements[group_idx][idx])
             match_group = {"_type": "spec_and", "elements": match_elements[group_idx]}
             new_elements.append(SpecOp(op="match", spec=match_group))
-            new_elements.append(MergeHeads())
+            new_elements.append(MergeHeads(head_uids=fork_head_uids))
             new_elements.append(SpecOp(op="send", spec=stop_group))
             new_elements.append(goto_end_element)
         new_elements.append(failure_label_element)
@@ -1119,7 +1174,9 @@ def _expand_activate_element(
 
 def _expand_while_stmt_element(
     element: While, flow_configs: Dict[str, FlowConfig]
-) -> dict:
+) -> List[ElementType]:
+    new_elements: List[ElementType] = []
+
     label_uid = new_var_uid()
     begin_label = Label(name=f"_while_begin_{label_uid}")
     end_label = Label(name=f"_while_end_{label_uid}")
@@ -1172,6 +1229,172 @@ def _expand_if_element(
 
 
 def _expand_when_stmt_element(
+    element: When, flow_configs: Dict[str, FlowConfig]
+) -> List[ElementType]:
+    stmt_uid = new_var_uid()
+
+    init_case_label_names: List[str] = []
+    cases_fork_head_element = ForkHead()
+    cases_fork_head_uids: List[str] = []
+    groups_fork_head_elements: List[ForkHead] = []
+    failure_case_label_names: List[str] = []
+    group_label_names: List[List[str]] = []
+    group_start_elements: List[List[List[Spec]]] = []
+    group_match_elements: List[List[List[Spec]]] = []
+    group_stop_elements: List[List[List[Spec]]] = []
+    case_label_names: List[str] = []
+    else_label_name = f"when_else_label_{stmt_uid}"
+    else_statement_label_name = f"when_else_statement_label_{stmt_uid}"
+    end_label_name = f"when_end_label_{stmt_uid}"
+
+    for case_idx, case_element in enumerate(element.when_specs):
+        case_uid = str(chr(ord("a") + case_idx))
+        init_case_label_names.append(f"init_case_{case_uid}_label_{stmt_uid}")
+        cases_fork_head_uids.append(new_var_uid())
+        cases_fork_head_element.head_uids.append(cases_fork_head_uids[-1])
+        cases_fork_head_element.labels.append(init_case_label_names[case_idx])
+        failure_case_label_names.append(f"failure_case_{case_uid}_label_{stmt_uid}")
+        case_label_names.append(f"case_{case_uid}_label_{stmt_uid}")
+        groups_fork_head_elements.append(ForkHead())
+
+        if isinstance(case_element, Spec):
+            # Single element
+            case_element = {
+                "_type": "spec_and",
+                "elements": [case_element],
+            }
+
+        normalized_group = normalize_element_groups(case_element)
+
+        group_label_names.append([])
+        group_start_elements.append([])
+        group_match_elements.append([])
+        group_stop_elements.append([])
+        for group_idx, and_group in enumerate(normalized_group["elements"]):
+            group_label_names[case_idx].append(
+                f"group_{case_uid}_{group_idx}_label_{stmt_uid}"
+            )
+            groups_fork_head_elements[case_idx].labels.append(
+                group_label_names[case_idx][group_idx]
+            )
+
+            group_start_elements[case_idx].append([])
+            group_match_elements[case_idx].append([])
+            group_stop_elements[case_idx].append([])
+            for group_element in and_group["elements"]:
+                match_element = copy.deepcopy(group_element)
+
+                ref_uid = None
+                if (
+                    group_element.spec_type == SpecType.FLOW
+                    or group_element.spec_type == SpecType.ACTION
+                ) and group_element.members is None:
+                    # Add start element
+                    ref_uid = f"_ref_{new_var_uid()}"
+                    if group_element.ref is None:
+                        group_element.ref = _create_ref_ast_dict_helper(ref_uid)
+                    else:
+                        ref_uid = group_element.ref["elements"][0]["elements"][0]
+                    group_start_elements[case_idx][group_idx].append(group_element)
+
+                    # Add stop elements
+                    group_stop_elements[case_idx][group_idx].append(
+                        Spec(
+                            var_name=ref_uid,
+                            members=_create_member_ast_dict_helper("Stop", {}),
+                            spec_type=SpecType.REFERENCE,
+                        )
+                    )
+
+                # Add match element
+                if ref_uid:
+                    match_element.name = None
+                    match_element.var_name = ref_uid
+                    match_element.members = _create_member_ast_dict_helper(
+                        "Finished", {}
+                    )
+                    match_element.spec_type = SpecType.REFERENCE
+                group_match_elements[case_idx][group_idx].append(match_element)
+
+    new_elements: List[ElementType] = []
+    new_elements.append(cases_fork_head_element)
+    for case_idx, case_element in enumerate(element.when_specs):
+        new_elements.append(Label(name=init_case_label_names[case_idx]))
+        new_elements.append(
+            CatchPatternFailure(label=failure_case_label_names[case_idx])
+        )
+        new_elements.append(groups_fork_head_elements[case_idx])
+
+        for group_idx, group_label_name in enumerate(group_label_names[case_idx]):
+            new_elements.append(Label(name=group_label_name))
+
+            if group_start_elements[case_idx][group_idx]:
+                new_elements.append(
+                    SpecOp(
+                        op="start",
+                        spec={
+                            "_type": "spec_and",
+                            "elements": group_start_elements[case_idx][group_idx],
+                        },
+                    )
+                )
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec={
+                        "_type": "spec_and",
+                        "elements": group_match_elements[case_idx][group_idx],
+                    },
+                )
+            )
+            new_elements.append(MergeHeads(head_uids=cases_fork_head_uids))
+
+            stop_elements = [
+                elem
+                for cidx, case_groups in enumerate(group_stop_elements)
+                for gidx, group in enumerate(case_groups)
+                for elem in group
+                if gidx != group_idx or cidx != case_idx
+            ]
+            if stop_elements:
+                stop_group = {
+                    "_type": "spec_and",
+                    "elements": stop_elements,
+                }
+                new_elements.append(SpecOp(op="send", spec=stop_group))
+
+            new_elements.append(CatchPatternFailure(label=None))
+            new_elements.append(Goto(label=case_label_names[case_idx]))
+
+            new_elements.append(Label(name=case_label_names[case_idx]))
+            new_elements.extend(
+                expand_elements(element.then_elements[case_idx], flow_configs)
+            )
+            new_elements.append(Goto(label=end_label_name))
+
+            new_elements.append(Label(name=failure_case_label_names[case_idx]))
+            new_elements.append(WaitForHeads(number=len(group_label_names[case_idx])))
+            new_elements.append(CatchPatternFailure(label=None))
+            new_elements.append(Goto(label=else_label_name))
+
+            new_elements.append(Label(name=else_label_name))
+            new_elements.append(WaitForHeads(number=len(group_label_names)))
+            if element.else_elements is None:
+                new_elements.append(Abort())
+            else:
+                new_elements.append(Goto(label=else_statement_label_name))
+
+                new_elements.append(Label(name=else_statement_label_name))
+                new_elements.extend(
+                    expand_elements(element.else_elements, flow_configs)
+                )
+
+            new_elements.append(Label(name=end_label_name))
+
+    return new_elements
+
+
+def _expand_when_stmt_element_old(
     element: When, flow_configs: Dict[str, FlowConfig]
 ) -> List[ElementType]:
     start_elements: List[SpecOp] = []
@@ -1341,6 +1564,8 @@ def normalize_element_groups(group: Union[Spec, dict]) -> dict:
         # TODO: Remove duplicated and groups
         return flatten_or_group({"_type": "spec_or", "elements": results})
 
+    return {}
+
 
 def flatten_or_group(group: dict):
     """Flattens a group that has multiple or levels to a single one."""
@@ -1413,6 +1638,7 @@ def create_flow_instance(
 
     flow_uid = new_readable_uid(flow_config.id)
 
+    head_uid = new_uid()
     flow_state = FlowState(
         uid=flow_uid,
         context={},
@@ -1420,14 +1646,14 @@ def create_flow_instance(
         action_uids=[],
         flow_id=flow_config.id,
         loop_id=loop_uid,
-        heads=[
-            FlowHead(
-                uid=new_uid(),
+        heads={
+            head_uid: FlowHead(
+                uid=head_uid,
                 position=0,
                 flow_state_uid=flow_uid,
                 matching_scores=[],
             )
-        ],
+        },
     )
 
     # Add all the flow parameters
@@ -1471,7 +1697,8 @@ def _create_event_reference(
         if event.action_uid is not None:
             if event.action_uid not in state.actions:
                 user_action = Action.from_event(event)
-                state.actions[event.action_uid] = user_action
+                assert user_action is not None
+                state.actions.update({event.action_uid: user_action})
                 new_event.action = user_action
             else:
                 new_event.action = state.actions[event.action_uid]
@@ -1505,7 +1732,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
     # Clear all matching scores
     for flow_state in state.flow_states.values():
-        for head in flow_state.heads:
+        for head in flow_state.heads.values():
             head.matching_scores.clear()
 
     actionable_heads: Set[FlowHead] = set()
@@ -1574,7 +1801,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 if not _is_listening_flow(flow_state):
                     continue
 
-                for head in flow_state.heads:
+                for head in flow_state.active_heads.values():
                     element = _get_element_from_head(state, head)
                     if _is_match_op_element(element):
                         # TODO: Assign matching score
@@ -1664,7 +1891,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
         actionable_heads = filtered_actionable_heads
 
         # Check for potential conflicts between actionable heads
-        advancing_heads = []
+        advancing_heads: List[FlowHead] = []
         if len(actionable_heads) == 1:
             # If we have only one actionable head there are no conflicts
             advancing_heads = actionable_heads
@@ -1779,6 +2006,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
     """
     actionable_heads: Set[FlowHead] = set()
     for head in heads:
+        log.debug(f"Advancing head: {head}")
         flow_state = _get_flow_state_from_head(state, head)
         flow_config = _get_flow_config_from_head(state, head)
 
@@ -1812,14 +2040,14 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
             log.debug(f"Flow aborted: {head.flow_state_uid} by 'abort' statement")
         else:
             log.debug(
-                f"Head advanced in flow {head.flow_state_uid} to element: {flow_config.elements[head.position]}"
+                f"Head advanced: {head} to element: {flow_config.elements[head.position]}"
             )
 
         all_heads_at_match_elements = False
         if not flow_finished and not flow_aborted:
             # Check if all all flow heads at a match element
             all_heads_at_match_elements = True
-            for temp_head in flow_state.heads:
+            for temp_head in flow_state.active_heads.values():
                 if not _is_match_op_element(flow_config.elements[temp_head.position]):
                     all_heads_at_match_elements = False
                     break
@@ -1858,7 +2086,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> Set[FlowHead]:
         [
             head
             for head in actionable_heads
-            if head in state.flow_states[head.flow_state_uid].heads
+            if head in state.flow_states[head.flow_state_uid].active_heads.values()
         ]
     )
 
@@ -1883,7 +2111,7 @@ def slide(
 
         # prev_head = head.position
         element = flow_config.elements[head.position]
-        log.debug(f"Sliding element: '{element}'")
+        log.debug(f"--Sliding element: '{element}'")
 
         if isinstance(element, SpecOp):
             if element.op == "send":
@@ -1947,36 +2175,63 @@ def slide(
                     head.position += 1
             else:
                 head.position += 1
+
         elif isinstance(element, ForkHead):
-            # We create new heads for
+            # We deactivate current head (parent of new heads)
+            head.active = False
+            # We create the new child heads
             for idx, label in enumerate(element.labels):
+                head_uid = (
+                    element.head_uids[idx]
+                    if len(element.head_uids) > idx
+                    else new_uid()
+                )
                 pos = flow_config.element_labels[label]
-                if idx == 0:
-                    head.position = pos
-                else:
-                    new_head = FlowHead(
-                        new_uid(),
-                        pos,
-                        flow_state.uid,
-                        head.matching_scores,
-                        head.catch_pattern_failure_label,
-                    )
-                    flow_state.heads.append(new_head)
-                    new_heads.append(new_head)
+                new_head = FlowHead(
+                    uid=head_uid,
+                    position=pos,
+                    flow_state_uid=flow_state.uid,
+                    matching_scores=head.matching_scores,
+                    catch_pattern_failure_label=head.catch_pattern_failure_label,
+                )
+                flow_state.heads[head_uid] = new_head
+                head.child_head_uids.append(new_head.uid)
+                new_heads.append(new_head)
+
+            log.debug(f"Head forked: {element.labels}")
+
+            break
 
         elif isinstance(element, MergeHeads):
-            # Delete all heads from the flow except for the current on
-            for h in flow_state.heads:
-                if h != head:
-                    log.debug(f"Head merged: {h} with {head}")
-            flow_state.heads = [head]
+            # Compose a list of all head uids and there children that should be merged
+            # except for the current head that will continue
+            head_uids: List[str] = []
+            for uid in element.head_uids:
+                head_uids.append(uid)
+                # TODO: Make sure that child head uids are kept up-to-date
+                if uid in flow_state.heads:
+                    head_uids.extend(flow_state.heads[uid].get_child_head_uids(state))
+
+            # Remove them from the flow
+            for uid in head_uids:
+                if uid != head.uid:
+                    flow_state.heads.pop(uid, None)
+
             head.position += 1
 
         elif isinstance(element, WaitForHeads):
             # Check if enough heads are on this element to continue
-            waiting_heads = [h for h in flow_state.heads if h.position == head.position]
+            waiting_heads = [
+                h
+                for h in flow_state.active_heads.values()
+                if h.position == head.position
+            ]
             if len(waiting_heads) >= element.number:
-                flow_state.heads = [head]
+                # Remove all waiting head except for the current
+                for key in waiting_heads:
+                    if key != head.uid:
+                        flow_state.heads.pop(key, None)
+
                 head.position += 1
             else:
                 break
@@ -2093,6 +2348,9 @@ def _abort_flow(
             action.status = ActionStatus.STOPPING
             _generate_action_event(state, event)
 
+    # Cleanup all head from flow
+    flow_state.heads.clear()
+
     flow_state.status = FlowStatus.STOPPED
 
     # Generate FlowFailed event
@@ -2149,6 +2407,9 @@ def _finish_flow(
             event = action.stop_event({})
             action.status = ActionStatus.STOPPING
             _generate_action_event(state, event)
+
+    # Cleanup all head from flow
+    flow_state.heads.clear()
 
     flow_state.status = FlowStatus.FINISHED
 
@@ -2376,7 +2637,7 @@ def find_all_active_event_matchers(state: State, event: Event) -> List[FlowHead]
 
         flow_config = state.flow_configs[flow_state.flow_id]
 
-        for head in flow_state.heads:
+        for head in flow_state.active_heads.values():
             element = flow_config.elements[head.position]
             score = _compute_event_matching_score(
                 state,
@@ -2516,6 +2777,8 @@ def _get_event_from_element(
             action_event = ActionEvent(element_spec.name, event_arguments)
             return action_event
 
+    return None
+
 
 def _generate_action_event_from_actionable_element(
     state: State,
@@ -2590,7 +2853,7 @@ def create_stop_flow_internal_event(
 
 
 def create_flow_internal_event(
-    event_type: InternalEvents,
+    event_name: str,
     source_flow_state: FlowState,
     matching_scores: List[float],
     arguments: Optional[dict] = None,
@@ -2609,7 +2872,7 @@ def create_flow_internal_event(
         if arg in source_flow_state.context:
             arguments.update({arg: source_flow_state.context[arg]})
     return create_internal_event(
-        event_type,
+        event_name,
         arguments,
         matching_scores,
     )

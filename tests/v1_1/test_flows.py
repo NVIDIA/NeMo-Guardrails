@@ -2411,11 +2411,11 @@ def test_when_or_bot_action_mechanics():
         state.outgoing_events,
         [
             {
-                "type": "StartUtteranceBotAction",
-                "script": "B",
+                "type": "StopUtteranceBotAction",
             },
             {
-                "type": "StopUtteranceBotAction",
+                "type": "StartUtteranceBotAction",
+                "script": "B",
             },
             {
                 "type": "StopUtteranceBotAction",
@@ -3179,4 +3179,4 @@ def test_stop_bot_action():
 
 
 if __name__ == "__main__":
-    test_conflicting_actions_reference_sharing()
+    test_when_or_bot_action_mechanics()

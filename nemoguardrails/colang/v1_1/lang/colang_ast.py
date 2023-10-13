@@ -292,18 +292,20 @@ class ForkHead(Element):
     """
 
     labels: List[str] = field(default_factory=list)
+    head_uids: List[str] = field(default_factory=list)
     _type: str = "_fork"
 
 
 @dataclass_json
 @dataclass
 class MergeHeads(Element):
-    """Merge all heads from same flow.
+    """Merge heads based on uid from same flow.
 
     Only one head will advance from this element.
     """
 
     _type: str = "_merge"
+    head_uids: List[str] = field(default_factory=list)
 
 
 @dataclass_json
