@@ -17,11 +17,3 @@ def recognizer(name: Optional[str] = None):
         return fn_or_cls
     
     return decorator
-
-
-@action()
-async def pii_redact_enabled(config: RailsConfig):
-    if config.redact_pii:
-        return config.redact_pii.enable_pii_redaction
-    else:
-        return False
