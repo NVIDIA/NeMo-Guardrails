@@ -103,6 +103,8 @@ flow bot comment unsure how to respond
 flow greeting
   user expressed greeting
   bot express greeting
+
+  $name = await GenerateValueAction(var_name="name", instructions="Extract the user's name mentioned by the user. Wrap it with double quotes. If not mentioned, return None.")
   # bot say a fun random fact
 
 flow user unknown intent

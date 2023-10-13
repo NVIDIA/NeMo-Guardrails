@@ -15,6 +15,7 @@
 
 """A set of actions for generating various types of completions using an LLMs."""
 import logging
+from ast import literal_eval
 from typing import Any, List, Optional
 
 from langchain.llms import BaseLLM
@@ -360,3 +361,67 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
                 "name": "bot express unsure",
                 "body": 'flow bot express unsure\n  bot say "I\'m not sure what to do next."',
             }
+
+    @action(name="GenerateValueAction", is_system_action=True)
+    async def generate_value(
+        self,
+        var_name: str,
+        instructions: str,
+        events: List[dict],
+        llm: Optional[BaseLLM] = None,
+    ):
+        """Generate a value in the context of the conversation.
+
+        :param instructions: The instructions to generate the value.
+        :param events: The full stream of events so far.
+        :param var_name: The name of the variable to generate. If not specified, it will use
+          the `action_result_key` as the name of the variable.
+        :param llm: Custom llm model to generate_value
+        """
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
+        # We search for the most relevant flows.
+        examples = ""
+        if self.flows_index:
+            results = await self.flows_index.search(
+                text=f"${var_name} = ", max_results=5
+            )
+
+            # We add these in reverse order so the most relevant is towards the end.
+            for result in reversed(results):
+                # If the flow includes "GenerateValueAction", we ignore it as we don't want the LLM
+                # to learn to predict it.
+                if "GenerateValueAction" not in result.text:
+                    examples += f"{result.text}\n\n"
+
+        prompt = self.llm_task_manager.render_task_prompt(
+            task=Task.GENERATE_VALUE,
+            events=events,
+            context={
+                "examples": examples,
+                "instructions": instructions,
+                "var_name": var_name,
+            },
+        )
+
+        with llm_params(llm, temperature=self.config.lowest_temperature):
+            result = await llm_call(llm, prompt)
+
+        # Parse the output using the associated parser
+        result = self.llm_task_manager.parse_task_output(
+            Task.GENERATE_VALUE, output=result
+        )
+
+        # We only use the first line for now
+        # TODO: support multi-line values?
+        value = result.strip().split("\n")[0]
+
+        # Because of conventions from other languages, sometimes the LLM might add
+        # a ";" at the end of the line. We remove that
+        if value.endswith(";"):
+            value = value[:-1]
+
+        log.info(f"Generated value for ${var_name}: {value}")
+
+        return literal_eval(value)
