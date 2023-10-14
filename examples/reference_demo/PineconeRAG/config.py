@@ -29,7 +29,8 @@ from langchain.vectorstores import Pinecone
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 OPENAI_API_KEY = "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"
-
+import warnings
+warnings.filterwarnings("ignore")
 
 class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
     """Connecting to Pinecone"""
@@ -66,12 +67,109 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
             api_key=PINECONE_API_KEY,
             environment=PINECONE_ENVIRONMENT
         )
-        self.pinecone_init = create_pinecone_index(self, "starterindex", "something")
+        #self.pinecone_init = create_pinecone_index(self, "starterindex", "something")
+        
+        ######## adding the function to create embeddings here ######## 
+        from langchain.embeddings.openai import OpenAIEmbeddings
+        model_name = 'text-embedding-ada-002'
+        embed = OpenAIEmbeddings(
+            model=model_name,
+            openai_api_key=OPENAI_API_KEY
+        )
+        texts = [
+            'this is the first chunk of text',
+            'then another second chunk of text is here']
+        res = embed.embed_documents(texts)
+        print(len(res), len(res[0]), "shape and size of the generated embeddings")
+        #return res
+        
+        ############### adding create_pinecone_index############33
+        """ will create a pinecone empty template with the size of the data you want to upload"""
+        index_name = 'starterindex'
+        if index_name not in pinecone.list_indexes():
+            # we create a new index
+            pinecone.create_index(
+                name=index_name,
+                metric='cosine',
+                dimension=len(create_embeddings(texts)[0])  # 1536 dim of text-embedding-ada-002
+            )
+        self.index = pinecone.GRPCIndex(index_name)
+        self.index.describe_index_stats()
 
-    async def add_items(self, items: List[IndexItem]):
+    
+    async def add_items(self,  items: List[IndexItem], our_dataset):
         """Adds multiple items to the index."""
-        await upload_data_to_pinecone_index(self, our_dataset, index)
-        self.items.extend(items)
+        #############3 split text into chunks
+        def split_text_into_chunks(self, dataset):
+            import tiktoken
+            tiktoken.encoding_for_model('gpt-4')
+            tokenizer = tiktoken.get_encoding('cl100k_base')
+            # create the length function
+            def tiktoken_len(text):
+                tokens = tokenizer.encode(
+                    text,
+                    disallowed_special=()
+                )
+                return len(tokens)
+            print(tiktoken_len("hello I am a chunk of text and using the tiktoken_len function "
+                        "we can find the length of this chunk of text in tokens"))
+            from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=400,
+                chunk_overlap=20,
+                length_function=tiktoken_len,
+                separators=["\n\n", "\n", " ", ""]
+            )
+            chunks = text_splitter.split_text(dataset)
+            return chunks
+            
+        
+        def create_embeddings(self, texts):
+            from langchain.embeddings.openai import OpenAIEmbeddings
+            model_name = 'text-embedding-ada-002'
+            embed = OpenAIEmbeddings(
+                model=model_name,
+                openai_api_key=OPENAI_API_KEY
+            )
+            texts = [
+                'this is the first chunk of text',
+                'then another second chunk of text is here']
+            res = embed.embed_documents(texts)
+            print(len(res), len(res[0]), "shape and size of the generated embeddings")
+            return res
+        
+        ######await upload_data_to_pinecone_index(self, our_dataset, index)
+        from tqdm.auto import tqdm
+        from uuid import uuid4
+        batch_limit = 10
+        texts = []
+        metadatas = []
+
+        for i, record in enumerate(tqdm(our_dataset)):
+            # first get metadata fields for this record
+            metadata = {
+                'id': str(record['id']),
+                'source': record['url']
+            }
+            # now we create chunks from the record text
+            #record_texts = text_splitter.split_text(record['text'])
+            record_texts = await split_text_into_chunks(record['text'])
+            # create individual metadata dicts for each chunk
+            record_metadatas = [{
+                "chunk": j, "text": text, **metadata
+            } for j, text in enumerate(record_texts)]
+            # append these to current batches
+            texts.extend(record_texts)
+            metadatas.extend(record_metadatas)
+            # if we have reached the batch_limit we can add texts
+            if len(texts) >= batch_limit:
+                ids = [str(uuid4()) for _ in range(len(texts))]
+                #embeds = embed.embed_documents(texts)
+                embeds = create_embeddings(texts)
+                self.index.upsert(vectors=zip(ids, embeds, metadatas))
+                texts = []
+                metadatas = []
 
     async def search(self, text: str, max_results: int) -> List[IndexItem]:
         """Searches the index for the closes matches to the provided text."""
@@ -114,29 +212,6 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
         our_dataset.save_to_disk(path)
         return our_dataset
     
-    async def split_text_into_chunks(self, dataset):
-        import tiktoken
-        tiktoken.encoding_for_model('gpt-4')
-        tokenizer = tiktoken.get_encoding('cl100k_base')
-        # create the length function
-        async def tiktoken_len(text):
-            tokens = tokenizer.encode(
-                text,
-                disallowed_special=()
-            )
-            return len(tokens)
-        print(tiktoken_len("hello I am a chunk of text and using the tiktoken_len function "
-                    "we can find the length of this chunk of text in tokens"))
-        from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=400,
-            chunk_overlap=20,
-            length_function=tiktoken_len,
-            separators=["\n\n", "\n", " ", ""]
-        )
-        chunks = text_splitter.split_text(dataset)
-        return chunks
     
     async def create_embeddings(self, texts):
         from langchain.embeddings.openai import OpenAIEmbeddings
