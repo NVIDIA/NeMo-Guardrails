@@ -13,7 +13,9 @@ Starting the chat...
  'index_fullness': 0.00097,
  'namespaces': {'': {'vector_count': 97}},
  'total_vector_count': 97}
+
 > what does nvidia do
+
 Event UtteranceUserActionFinished {'final_transcript': 'what does nvidia do'}
 Event StartInternalSystemAction {'uid': '0b39bfbf-ffe7-4652-9cd0-e71318e4bc33', 'event_created_at': '2023-10-15T11:20:43.870987+00:00', 'source_uid': 'NeMoGuardrails', 'action_name': 'generate_user_intent', 'action_params': {}, 'action_result_key': None, 'action_uid': '4088be10-54fe-4634-88cd-09546987244b', 'is_system_action': True}
 Executing action generate_user_intent
@@ -29,7 +31,9 @@ Event hide_prev_turn {}
 --- Total processing took 24.08 seconds.
 --- Stats: 0 total calls, 0 total time, 0 total tokens, 0 total prompt tokens, 0 total completion tokens
 I'm sorry, an internal error has occurred.
+
 > whats an apple
+
 Event UtteranceUserActionFinished {'final_transcript': 'whats an apple'}
 Event StartInternalSystemAction {'uid': '8b41dbde-7e0b-4aa9-ae4b-dd6d91b8adca', 'event_created_at': '2023-10-15T11:21:13.152703+00:00', 'source_uid': 'NeMoGuardrails', 'action_name': 'generate_user_intent', 'action_params': {}, 'action_result_key': None, 'action_uid': 'eed89786-6c7b-441c-959b-faacefcee6f3', 'is_system_action': True}
 Executing action generate_user_intent
@@ -45,7 +49,9 @@ Event hide_prev_turn {}
 --- Total processing took 21.89 seconds.
 --- Stats: 0 total calls, 0 total time, 0 total tokens, 0 total prompt tokens, 0 total completion tokens
 I'm sorry, an internal error has occurred.
+
 > what type of a tree is mango
+
 Event UtteranceUserActionFinished {'final_transcript': 'what type of a tree is mango'}
 Event StartInternalSystemAction {'uid': '41b303d6-3fca-4169-be88-f9f413d41aa4', 'event_created_at': '2023-10-15T11:22:11.978966+00:00', 'source_uid': 'NeMoGuardrails', 'action_name': 'generate_user_intent', 'action_params': {}, 'action_result_key': None, 'action_uid': '0d4f0d4d-2b46-4bf5-9776-8c98929f12b8', 'is_system_action': True}
 Executing action generate_user_intent
