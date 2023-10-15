@@ -33,7 +33,6 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT")
 
-#"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"
 #import warnings
 #warnings.filterwarnings("ignore")
 
