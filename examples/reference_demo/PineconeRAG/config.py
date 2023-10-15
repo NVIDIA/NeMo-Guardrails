@@ -29,15 +29,23 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 from datasets import Dataset
 from langchain.chains import RetrievalQAWithSourcesChain
+from datetime import datetime
+import logging
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT")
-index_name = 'starterindex'
+index_name = 'nemoguardrailsindex'
 model_name = 'text-embedding-ada-002'
 
 # import warnings
 # warnings.filterwarnings("ignore")
+
+LOG_FILENAME = datetime.now().strftime('./logs/mylogfile_%H_%M_%d_%m_%Y.log')
+log = logging.getLogger(__name__)
+logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
+#print(logging.getLoggerClass().root.handlers[0].baseFilename)
+
 
 class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
     """Connecting to Pinecone"""
@@ -52,7 +60,7 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
         for x in tqdm(os.listdir(path)):
             ### extend later on to read all types of text files 
             if x.endswith(".pdf"):
-                print(x)
+                #print(x)
                 local_urls.append(path + x)
         local_articles = []
         for local_url in local_urls:
@@ -63,7 +71,7 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
             local_articles.append(text)
         data_local = {"id": [0 + i for i in range(len(local_urls))], "text": [local_articles[i] for i in range(
             0, len(local_urls))], "url": [local_urls[i] for i in range(0, len(local_urls))]}
-        print("----- reading dataset from local directory")
+        #print("----- reading dataset from local directory")
         return data_local
 
 
@@ -73,10 +81,10 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
         # Create a Hugging Face dataset
         our_dataset = Dataset.from_dict(data)
         # use the already loaded hugging face dataset for whatever else
-        print(our_dataset)
+        #print(our_dataset)
         # Save the dataset in Hugging Face dataset format
         our_dataset.save_to_disk(path)
-        print("------- saved huggingface dataset to -> ", path)
+        #print("------- saved huggingface dataset to -> ", path)
         return our_dataset
 
 
@@ -87,7 +95,7 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
             text,
             disallowed_special=()
         )
-        print("----- finalizing lengths for tiktoken")
+        #print("----- finalizing lengths for tiktoken")
         return len(tokens)
 
 
@@ -102,7 +110,7 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
             separators=["\n\n", "\n", " ", ""]
         )
         chunks = text_splitter.split_text(dataset)
-        print("----- splitting texts into chunks")
+        #print("----- splitting texts into chunks")
         return chunks
 
  
@@ -117,9 +125,8 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
         )
         # get text from all the pdf?
         res = embed.embed_documents(texts)
-        print(len(res), len(res[0]),
-              "shape and size of the generated embeddings")
-        print("----- Embeddings being created")
+        #print(len(res), len(res[0]),"shape and size of the generated embeddings")
+        #print("----- Embeddings being created")
         return res
 
     
@@ -127,6 +134,7 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
     def create_pinecone_index(self, index_name):
         """ will create a pinecone empty template with the size of the data you want to upload"""
         if index_name not in pinecone.list_indexes():
+            #print("-----", index_name, " does not exist!!!! Lets create it!!!")
             # we create a new index
             pinecone.create_index(
                 name=index_name,
@@ -135,14 +143,12 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
                 dimension=1536
             )
         index = pinecone.Index(index_name)
-        print("----- Pinecone Index being created")
-        index.describe_index_stats()
+        #print("----- Pinecone Index being created")
+        #index.describe_index_stats()
         return index
 
 
     def upload_data_to_pinecone_index(self, our_dataset, index):
-        from tqdm.auto import tqdm
-        from uuid import uuid4
         batch_limit = 10
         texts = []
         metadatas = []
@@ -176,8 +182,8 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
             ids = [str(uuid4()) for _ in range(len(texts))]
             embeds = self.create_embeddings(texts)  # embed.embed_documents(texts)
             index.upsert(vectors=zip(ids, embeds, metadatas))
-        print("---------------- data has been uploaded to pinecone index")
-        print(index.describe_index_stats())
+        #print("---------------- data has been uploaded to pinecone index")
+        #print(index.describe_index_stats())
 
 
     def create_vectorstore(self, index_name):
@@ -202,7 +208,7 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
         if index_name not in pinecone.list_indexes():
             #need to make sure pinecone index exists and has data
             #path to index data from
-            path = "/home/sganju/gitlab_stuff/nemoguardrails/examples/reference_demo/PineconeRAG/kb"
+            path = "/home/sganju/gitlab_stuff/nemoguardrails/examples/reference_demo/PineconeRAG/kb/"
             #create hugging face format of dataset
             our_dataset = self.create_hf_data(path)
             #upload data to pinecone
@@ -212,25 +218,34 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
         else:
             #index already exists, print out its stats
             self.index = pinecone.Index(index_name)
-            print("----- Pinecone Index already exists")
-            print(self.index.describe_index_stats())
+            #print("----- Pinecone Index already exists")
+            #print(self.index.describe_index_stats())
 
         #create vector store
         self.create_vectorstore(index_name)
-        print("-------- pinecone database and langchain vector store have been created")
+        #print("-------- pinecone database and langchain vector store have been created")
 
     
        
     async def add_items(self,  items: List[IndexItem]):
         """Adds multiple items to the index."""
         # In the init function we have already indexed items into pinecone, so here we can check that pinecone db is full
-        print("from add items function of nemo guardrails core")
-        print(self.index.describe_index_stats())
+        if self.index.describe_index_stats()['total_vector_count'] == 0:
+            #push data to pinecone
+            path = "/home/sganju/gitlab_stuff/nemoguardrails/examples/reference_demo/PineconeRAG/kb/"
+            #create hugging face format of dataset
+            our_dataset = self.create_hf_data(path)
+            #upload data to pinecone
+            #make sure pinecone index exists
+            self.upload_data_to_pinecone_index(our_dataset, self.index)
+        else:
+            #print("from add items function of nemo guardrails core")
+            print(self.index.describe_index_stats())
 
-    async def search(self, query: str, max_results: int) -> List[IndexItem]:
+    async def search(self, text: str, max_results: int) -> List[IndexItem]:
         """Searches the index for the closes matches to the provided text."""
         # needs to instead call pinecone search
-        print(self.retreival_qa_with_sources(query))
+        print(self.retreival_qa_with_sources(text))
 
 
     
