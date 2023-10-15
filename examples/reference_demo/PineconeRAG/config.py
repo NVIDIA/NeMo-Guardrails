@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from typing import List
-
 from nemoguardrails import LLMRails
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from tqdm.auto import tqdm
@@ -28,13 +27,17 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import Pinecone
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
+from datasets import Dataset
+from langchain.chains import RetrievalQAWithSourcesChain
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT")
+index_name = 'starterindex'
+model_name = 'text-embedding-ada-002'
 
-#import warnings
-#warnings.filterwarnings("ignore")
+# import warnings
+# warnings.filterwarnings("ignore")
 
 class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
     """Connecting to Pinecone"""
@@ -42,200 +45,102 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
     @property
     def embedding_size(self):
         return 0
-
-    def create_pinecone_index(self, index_name, texts):
-        """ will create a pinecone empty template with the size of the data you want to upload"""
-        #index_name = 'starterindex'
-        if index_name not in pinecone.list_indexes():
-            # we create a new index
-            pinecone.create_index(
-                name=index_name,
-                metric='cosine',
-                dimension=len(create_embeddings(texts)[0])  # 1536 dim of text-embedding-ada-002
-            )
-        index = pinecone.GRPCIndex(index_name)
-        index.describe_index_stats()
-        return index
     
-    def __init__(self):
-        #change this or delete on website
-        #https://app.pinecone.io/organizations/-NX1GJikDzyct7bwFz-B/projects/asia-southeast1-gcp-free:15a7b1a/indexes/test-our-data-retrieval-augmentation
-        import pinecone
-        # find API key in console at app.pinecone.io
-        #os.getenv('PINECONE_API_KEY') or 'PINECONE_API_KEY'
-        # find ENV (cloud region) next to API key in console
-        #os.getenv('PINECONE_ENVIRONMENT') or 'PINECONE_ENVIRONMENT'
-        pinecone.init(
-            api_key=PINECONE_API_KEY,
-            environment=PINECONE_ENVIRONMENT
-        )
-        #self.pinecone_init = create_pinecone_index(self, "starterindex", "something")
-        
-        ######## adding the function to create embeddings here ######## 
-        from langchain.embeddings.openai import OpenAIEmbeddings
-        model_name = 'text-embedding-ada-002'
-        embed = OpenAIEmbeddings(
-            model=model_name,
-            openai_api_key=OPENAI_API_KEY
-        )
-        texts = [
-            'this is the first chunk of text',
-            'then another second chunk of text is here']
-        res = embed.embed_documents(texts)
-        print(len(res), len(res[0]), "shape and size of the generated embeddings")
-        #return res
-        
-        ############### adding create_pinecone_index############33
-        """ will create a pinecone empty template with the size of the data you want to upload"""
-        index_name = 'starterindex'
-        if index_name not in pinecone.list_indexes():
-            # we create a new index
-            pinecone.create_index(
-                name=index_name,
-                metric='cosine',
-                dimension=len(create_embeddings(texts)[0])  # 1536 dim of text-embedding-ada-002
-            )
-        self.index = pinecone.GRPCIndex(index_name)
-        self.index.describe_index_stats()
-
-    
-    async def add_items(self,  items: List[IndexItem], our_dataset):
-        """Adds multiple items to the index."""
-        #############3 split text into chunks
-        def split_text_into_chunks(self, dataset):
-            import tiktoken
-            tiktoken.encoding_for_model('gpt-4')
-            tokenizer = tiktoken.get_encoding('cl100k_base')
-            # create the length function
-            def tiktoken_len(text):
-                tokens = tokenizer.encode(
-                    text,
-                    disallowed_special=()
-                )
-                return len(tokens)
-            print(tiktoken_len("hello I am a chunk of text and using the tiktoken_len function "
-                        "we can find the length of this chunk of text in tokens"))
-            from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=400,
-                chunk_overlap=20,
-                length_function=tiktoken_len,
-                separators=["\n\n", "\n", " ", ""]
-            )
-            chunks = text_splitter.split_text(dataset)
-            return chunks
-            
-        
-        def create_embeddings(self, texts):
-            from langchain.embeddings.openai import OpenAIEmbeddings
-            model_name = 'text-embedding-ada-002'
-            embed = OpenAIEmbeddings(
-                model=model_name,
-                openai_api_key=OPENAI_API_KEY
-            )
-            texts = [
-                'this is the first chunk of text',
-                'then another second chunk of text is here']
-            res = embed.embed_documents(texts)
-            print(len(res), len(res[0]), "shape and size of the generated embeddings")
-            return res
-        
-        ######await upload_data_to_pinecone_index(self, our_dataset, index)
-        from tqdm.auto import tqdm
-        from uuid import uuid4
-        batch_limit = 10
-        texts = []
-        metadatas = []
-
-        for i, record in enumerate(tqdm(our_dataset)):
-            # first get metadata fields for this record
-            metadata = {
-                'id': str(record['id']),
-                'source': record['url']
-            }
-            # now we create chunks from the record text
-            #record_texts = text_splitter.split_text(record['text'])
-            record_texts = await split_text_into_chunks(record['text'])
-            # create individual metadata dicts for each chunk
-            record_metadatas = [{
-                "chunk": j, "text": text, **metadata
-            } for j, text in enumerate(record_texts)]
-            # append these to current batches
-            texts.extend(record_texts)
-            metadatas.extend(record_metadatas)
-            # if we have reached the batch_limit we can add texts
-            if len(texts) >= batch_limit:
-                ids = [str(uuid4()) for _ in range(len(texts))]
-                #embeds = embed.embed_documents(texts)
-                embeds = create_embeddings(texts)
-                self.index.upsert(vectors=zip(ids, embeds, metadatas))
-                texts = []
-                metadatas = []
-
-    async def search(self, text: str, max_results: int) -> List[IndexItem]:
-        """Searches the index for the closes matches to the provided text."""
-        results = []
-        for item in self.items:
-            if text in item.text:
-                results.append(item)
-        return results
-    
-    async def load_data_from_pdfs(self, path, starting_id=0, pr="y"):
+    def load_data_from_pdfs(self, path):
         data_local = {}
         local_urls = []
         for x in tqdm(os.listdir(path)):
+            ### extend later on to read all types of text files 
             if x.endswith(".pdf"):
                 print(x)
                 local_urls.append(path + x)
-        if pr=="y":
-            pprint(local_urls)
         local_articles = []
         for local_url in local_urls:
             doc = fitz.open(local_url)
             text = ""
             for page in doc:
-                text+=page.get_text()
+                text += page.get_text()
             local_articles.append(text)
-        data_local = {"id": [starting_id + i for i in range(len(local_urls))] ,"text": [local_articles[i] for i in range(0,len(local_urls))],"url": [local_urls[i] for i in range(0,len(local_urls))]}
-        if pr=="y":
-            pprint(data_local.items())
+        data_local = {"id": [0 + i for i in range(len(local_urls))], "text": [local_articles[i] for i in range(
+            0, len(local_urls))], "url": [local_urls[i] for i in range(0, len(local_urls))]}
+        print("----- reading dataset from local directory")
         return data_local
 
-    async def create_hf_data(self, path):
-        from datasets import Dataset
-        data = load_data_from_pdfs(path)
-        #data = mergeDictionary(data1, data2)
+
+    def create_hf_data(self, path):
+        data = self.load_data_from_pdfs(path)
+        # data = mergeDictionary(data1, data2)
         # Create a Hugging Face dataset
         our_dataset = Dataset.from_dict(data)
-        #use the already loaded hugging face dataset for whatever else
+        # use the already loaded hugging face dataset for whatever else
         print(our_dataset)
         # Save the dataset in Hugging Face dataset format
         our_dataset.save_to_disk(path)
+        print("------- saved huggingface dataset to -> ", path)
         return our_dataset
-    
-    
-    async def create_embeddings(self, texts):
-        from langchain.embeddings.openai import OpenAIEmbeddings
+
+
+    def tiktoken_len(self, text):
+        tiktoken.encoding_for_model('gpt-4')
+        tokenizer = tiktoken.get_encoding('cl100k_base')
+        tokens = tokenizer.encode(
+            text,
+            disallowed_special=()
+        )
+        print("----- finalizing lengths for tiktoken")
+        return len(tokens)
+
+
+
+    def split_text_into_chunks(self, dataset):
+        # create the length function
+        #dataset variable is the hugging face format of dataset
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=400,
+            chunk_overlap=20,
+            length_function=self.tiktoken_len,
+            separators=["\n\n", "\n", " ", ""]
+        )
+        chunks = text_splitter.split_text(dataset)
+        print("----- splitting texts into chunks")
+        return chunks
+
+ 
+ 
+ 
+ 
+    def create_embeddings(self, texts):
         model_name = 'text-embedding-ada-002'
         embed = OpenAIEmbeddings(
             model=model_name,
             openai_api_key=OPENAI_API_KEY
         )
-        texts = [
-            'this is the first chunk of text',
-            'then another second chunk of text is here']
+        # get text from all the pdf?
         res = embed.embed_documents(texts)
-        print(len(res), len(res[0]), "shape and size of the generated embeddings")
+        print(len(res), len(res[0]),
+              "shape and size of the generated embeddings")
+        print("----- Embeddings being created")
         return res
-        
-    async def list_indexes_in_pinecone(self):
-        for index_name in pinecone.list_indexes():
-            print(index_name)
+
     
     
-        
-    async def upload_data_to_pinecone_index(self, our_dataset, index):
+    def create_pinecone_index(self, index_name):
+        """ will create a pinecone empty template with the size of the data you want to upload"""
+        if index_name not in pinecone.list_indexes():
+            # we create a new index
+            pinecone.create_index(
+                name=index_name,
+                metric='cosine',
+                # 1536 dim of text-embedding-ada-002
+                dimension=1536
+            )
+        index = pinecone.Index(index_name)
+        print("----- Pinecone Index being created")
+        index.describe_index_stats()
+        return index
+
+
+    def upload_data_to_pinecone_index(self, our_dataset, index):
         from tqdm.auto import tqdm
         from uuid import uuid4
         batch_limit = 10
@@ -249,8 +154,8 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
                 'source': record['url']
             }
             # now we create chunks from the record text
-            #record_texts = text_splitter.split_text(record['text'])
-            record_texts = split_text_into_chunks(record['text'])
+            # record_texts = text_splitter.split_text(record['text'])
+            record_texts = self.split_text_into_chunks(record['text'])
             # create individual metadata dicts for each chunk
             record_metadatas = [{
                 "chunk": j, "text": text, **metadata
@@ -261,44 +166,84 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
             # if we have reached the batch_limit we can add texts
             if len(texts) >= batch_limit:
                 ids = [str(uuid4()) for _ in range(len(texts))]
-                #embeds = embed.embed_documents(texts)
-                embeds = create_embeddings(texts)
+                # embeds = embed.embed_documents(texts)
+                embeds = self.create_embeddings(texts)
                 index.upsert(vectors=zip(ids, embeds, metadatas))
                 texts = []
                 metadatas = []
 
         if len(texts) > 0:
             ids = [str(uuid4()) for _ in range(len(texts))]
-            embeds = create_embeddings(texts) #embed.embed_documents(texts)
+            embeds = self.create_embeddings(texts)  # embed.embed_documents(texts)
             index.upsert(vectors=zip(ids, embeds, metadatas))
-            
+        print("---------------- data has been uploaded to pinecone index")
         print(index.describe_index_stats())
-        
-        
-    async def vector_store_init(self, index_name):
-        from langchain.vectorstores import Pinecone
+
+
+    def create_vectorstore(self, index_name):
         text_field = "text"
         # switch back to normal index for langchain
-        index = pinecone.Index(index_name)
         embed = OpenAIEmbeddings(
             model=model_name,
             openai_api_key=OPENAI_API_KEY
         )
-        vectorstore = Pinecone(
-            index, embed.embed_query, text_field
+        self.vectorstore = Pinecone(
+            pinecone.Index(index_name), embed.embed_query, text_field
         )
-        query = "what is nemoguardrails ?"
+        
+    def __init__(self):
+        #first do pinecone initialization 
+        pinecone.init(
+            api_key=PINECONE_API_KEY,
+            environment=PINECONE_ENVIRONMENT
+        )
+        
+        
+        if index_name not in pinecone.list_indexes():
+            #need to make sure pinecone index exists and has data
+            #path to index data from
+            path = "/home/sganju/gitlab_stuff/nemoguardrails/examples/reference_demo/PineconeRAG/kb"
+            #create hugging face format of dataset
+            our_dataset = self.create_hf_data(path)
+            #upload data to pinecone
+            #make sure pinecone index exists
+            self.index = self.create_pinecone_index(index_name)
+            self.upload_data_to_pinecone_index(our_dataset, self.index)
+        else:
+            #index already exists, print out its stats
+            self.index = pinecone.Index(index_name)
+            print("----- Pinecone Index already exists")
+            print(self.index.describe_index_stats())
 
-        vectorstore.similarity_search(
+        #create vector store
+        self.create_vectorstore(index_name)
+        print("-------- pinecone database and langchain vector store have been created")
+
+    
+       
+    async def add_items(self,  items: List[IndexItem]):
+        """Adds multiple items to the index."""
+        # In the init function we have already indexed items into pinecone, so here we can check that pinecone db is full
+        print("from add items function of nemo guardrails core")
+        print(self.index.describe_index_stats())
+
+    async def search(self, query: str, max_results: int) -> List[IndexItem]:
+        """Searches the index for the closes matches to the provided text."""
+        # needs to instead call pinecone search
+        print(self.retreival_qa_with_sources(query))
+
+
+    
+
+    def standard_query(self, query):
+        #query = "what is nemoguardrails ?"
+        result = self.vectorstore.similarity_search(
             query,  # our search query
             k=3  # return 3 most relevant docs
         )
+        return result 
 
-
-    async def retreival_qa(vectorstore):
-        from langchain.chat_models import ChatOpenAI
-        from langchain.chains import RetrievalQA
-
+    def retreival_qa(self, query):
         # completion llm
         llm = ChatOpenAI(
             openai_api_key=OPENAI_API_KEY,
@@ -306,25 +251,26 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
             temperature=0.0
         )
         qa = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=vectorstore.as_retriever()
+            llm=llm,
+            chain_type="stuff",
+            retriever=self.vectorstore.as_retriever()
         )
-        
-    async def retreival_qa_with_sources(vectorstore, query):
-        from langchain.chains import RetrievalQAWithSourcesChain
+        return qa(query)
+
+    def retreival_qa_with_sources(self, query):
         llm = ChatOpenAI(
-        openai_api_key=OPENAI_API_KEY,
-        model_name='gpt-3.5-turbo',
-        temperature=0.0
+            openai_api_key=OPENAI_API_KEY,
+            model_name='gpt-3.5-turbo',
+            temperature=0.0
         )
         qa_with_sources = RetrievalQAWithSourcesChain.from_chain_type(
             llm=llm,
             chain_type="stuff",
-            retriever=vectorstore.as_retriever()
+            retriever=self.vectorstore.as_retriever()
         )
         return qa_with_sources(query)
-    
+
 
 def init(app: LLMRails):
-    app.register_embedding_search_provider("simple", SimpleEmbeddingSearchProvider)
+    app.register_embedding_search_provider(
+        "simple", SimpleEmbeddingSearchProvider)
