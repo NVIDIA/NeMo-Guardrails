@@ -28,9 +28,14 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import Pinecone
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
-OPENAI_API_KEY = "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"
-import warnings
-warnings.filterwarnings("ignore")
+
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
+PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT")
+
+#"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"
+#import warnings
+#warnings.filterwarnings("ignore")
 
 class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
     """Connecting to Pinecone"""
@@ -58,10 +63,8 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
         #https://app.pinecone.io/organizations/-NX1GJikDzyct7bwFz-B/projects/asia-southeast1-gcp-free:15a7b1a/indexes/test-our-data-retrieval-augmentation
         import pinecone
         # find API key in console at app.pinecone.io
-        PINECONE_API_KEY = '73f910f7-f8dd-4bc0-a176-fe3e49184e12'
         #os.getenv('PINECONE_API_KEY') or 'PINECONE_API_KEY'
         # find ENV (cloud region) next to API key in console
-        PINECONE_ENVIRONMENT = 'gcp-starter'
         #os.getenv('PINECONE_ENVIRONMENT') or 'PINECONE_ENVIRONMENT'
         pinecone.init(
             api_key=PINECONE_API_KEY,
