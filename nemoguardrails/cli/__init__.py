@@ -29,6 +29,7 @@ from nemoguardrails.server import api
 
 app = typer.Typer()
 app.add_typer(evaluate.app, name="evaluate")
+app.pretty_exceptions_enable = False
 
 logging.getLogger().setLevel(logging.WARNING)
 

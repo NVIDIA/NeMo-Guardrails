@@ -100,8 +100,8 @@ def user_assistant_sequence(events: List[dict]) -> str:
     """
     history_items = []
     for event in events:
-        if event["type"] == "UtteranceUserActionFinished":
-            history_items.append("User: " + event["final_transcript"])
+        if event["type"] == "UserMessage":
+            history_items.append("User: " + event["text"])
         elif event["type"] == "StartUtteranceBotAction":
             history_items.append("Assistant: " + event["script"])
 
@@ -170,12 +170,20 @@ def user_assistant_sequence_nemollm(events: List[dict]) -> str:
     """
     history_items = []
     for event in events:
-        if event["type"] == "UtteranceUserActionFinished":
-            history_items.append("<extra_id_1>User\n" + event["final_transcript"])
+        if event["type"] == "UserMessage":
+            history_items.append("<extra_id_1>User\n" + event["text"])
         elif event["type"] == "StartUtteranceBotAction":
             history_items.append("<extra_id_1>Assistant\n" + event["script"])
 
     return "\n".join(history_items)
+
+
+def _previous_line(lines: List[str], i: int):
+    """Returns the previous lines, skipping comments."""
+    i = i - 1
+    while i > 0 and lines[i].strip().startswith("#"):
+        i -= 1
+    return lines[i]
 
 
 def to_messages_nemollm(colang_history: str) -> str:
@@ -203,8 +211,9 @@ def to_messages_nemollm(colang_history: str) -> str:
                 messages.append({"type": "assistant", "content": "\n".join(bot_lines)})
                 bot_lines = []
         else:
-            if i > 0 and lines[i - 1].startswith('user "'):
-                line = "User intent: " + line.strip()
+            if i > 0 and _previous_line(lines, i).startswith('user "'):
+                if not line.strip().startswith("#"):
+                    line = "User intent: " + line.strip()
             elif line.startswith("user "):
                 line = "User intent: " + line[5:].strip()
             elif line.startswith("bot "):

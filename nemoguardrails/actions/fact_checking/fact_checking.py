@@ -27,10 +27,8 @@ from nemoguardrails.llm.types import Task
 log = logging.getLogger(__name__)
 
 
-def _get_evidence_and_claim_from_context(
-    context: Optional[dict] = None
-):
-    """ Extract the evidence and claim from the context. """
+def _get_evidence_and_claim_from_context(context: Optional[dict] = None):
+    """Extract the evidence and claim from the context."""
     evidence = context.get("relevant_chunks", [])
     response = context.get("last_bot_message")
 
@@ -45,8 +43,11 @@ async def check_facts(
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
-    """ Checks the facts for the bot response. """
-    if llm_task_manager.config.custom_data['fact_checking']['provider'] == 'align_score':
+    """Checks the facts for the bot response."""
+    if (
+        llm_task_manager.config.custom_data["fact_checking"]["provider"]
+        == "align_score"
+    ):
         return await check_facts_align_score(llm_task_manager, context, llm)
     else:
         return await check_facts_ask_llm(llm_task_manager, context, llm)
@@ -57,7 +58,7 @@ async def check_facts_ask_llm(
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
-    """ Checks the facts for the bot response by appropriately prompting the base llm. """
+    """Checks the facts for the bot response by appropriately prompting the base llm."""
     evidence, response = _get_evidence_and_claim_from_context(context)
     if not evidence:
         # If there is no evidence, we always return true
@@ -84,15 +85,17 @@ async def check_facts_align_score(
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
-    """ Checks the facts for the bot response using an information alignment score. """
-    fact_checking_config = llm_task_manager.config.custom_data['fact_checking']
-    
-    alignscore_api_url = fact_checking_config['parameters']['endpoint']
+    """Checks the facts for the bot response using an information alignment score."""
+    fact_checking_config = llm_task_manager.config.custom_data["fact_checking"]
+
+    alignscore_api_url = fact_checking_config["parameters"]["endpoint"]
 
     evidence, response = _get_evidence_and_claim_from_context(context)
     alignscore = await alignscore_request(alignscore_api_url, evidence, response)
     if alignscore is None:
-        log.warning("AlignScore endpoint not set up properly. Falling back to the ask_llm approach for fact-checking.")
+        log.warning(
+            "AlignScore endpoint not set up properly. Falling back to the ask_llm approach for fact-checking."
+        )
         return await check_facts_ask_llm(llm_task_manager, context, llm)
     else:
         return alignscore

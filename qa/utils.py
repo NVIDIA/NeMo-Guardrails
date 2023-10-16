@@ -26,6 +26,7 @@ class ExampleConfigChatterTestCase(TestCase):
     logger = None
     chatter = None
     example_name = None
+    config_name = None
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -33,7 +34,7 @@ class ExampleConfigChatterTestCase(TestCase):
 
         # Create a logger and a chatter
         cls.logger = create_logger(f"{cls.example_name}.log")
-        cls.chatter = create_chatter(cls.example_name, cls.example_name, cls.logger)
+        cls.chatter = create_chatter(cls.example_name, cls.config_name, cls.logger)
 
     @classmethod
     def tearDownClass(cls) -> None:

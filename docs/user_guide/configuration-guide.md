@@ -122,7 +122,7 @@ You can specify additional parameters when using NeMo LLM models using the `para
 
 The `api_host`, `api_key`, and `organization_id` are fetched automatically from the environment variables `NGC_API_HOST`, `NGC_API_KEY`, and `NGC_ORGANIZATION_ID`, respectively.
 
-For more details, please refer to the NeMo LLM Service documentation and check out the [NeMo LLM example configuration](../../examples/llm/nemollm).
+For more details, please refer to the NeMo LLM Service documentation and check out the [NeMo LLM example configuration](../../examples/configs/llm/nemollm).
 
 #### Custom LLM Models
 
@@ -298,7 +298,92 @@ def init(app: LLMRails):
 
 ## Guardrails Definitions
 
-The dialog flows and guardrails are defined using Colang. You can include as many `.co` files as you want, including subdirectories. For getting started, please refer to the [Hello World](../getting_started/hello-world.md) example. More concrete examples of guardrails configuration can be found in the [Examples](../../examples) folder.
+**NOTE: THIS SECTION IS WORK IN PROGRESS.**
+
+Guardrails (or rails for short) are implemented through **flows**. Depending on their role, rails can be split into several main categories:
+
+1. Input rails: triggered when a new input from the user is received.
+2. Output rails: triggered when a new output should be sent to the user.
+3. Dialog rails: triggered after a user message is interpreted, i.e., a canonical form has been identified.
+4. Retrieval rails: triggered after the retrieval step has been performed (i.e., the `retrieve_relevant_chunks` action has finished).
+
+The active rails are configured using the `rails` key in `config.yml`. Below is a quick example:
+
+```yaml
+rails:
+  # Input rails are invoked when a new message from the user is received.
+  input:
+    flows:
+      - check jailbreak
+      - check input sensitive data
+      - check toxicity
+      - ... # Other input rails
+
+  # Output rails are triggered after a bot message has been generated.
+  output:
+    # By default, output rails are not applied on predefined bot messages.
+    enable_on_predefined_messages: false
+    flows:
+      - check facts
+      - check hallucination
+      - check output sensitive data
+      - ... # Other output rails
+
+  # Retrieval rails are invoked once `$relevant_chunks` are computed.
+  retrieval:
+    flows:
+      - check retrieval sensitive data
+
+  # Execution rails are triggered before and after an action is invoked
+  # TODO
+
+  # Dialog rails are triggered after user message is interpreted, i.e., its canonical form
+  # has been computed.
+  dialog:
+    # Whether to try to use a single call
+    single_call:
+      enabled: False
+      # If a single call fails, whether to fall back to multiple LLM calls.
+      fallback_to_multiple_calls: True
+
+    user_messages:
+      # Whether to use only the embeddings when interpreting the user's message
+      embeddings_only: False
+```
+
+### Input Rails
+
+**NOTE: THIS SECTION IS WORK IN PROGRESS.**
+
+Input rails process the message from the user. For example:
+
+```colang
+define flow some input rail
+  $allowed = execute check_jailbreak
+
+  if not $allowed
+    bot inform cannot answer
+    stop
+```
+
+Input rails can alter the input by changing the `$user_message` context variable.
+
+### Output Rails
+
+**NOTE: THIS SECTION IS WORK IN PROGRESS.**
+
+Output rails process a bot message. The message to be processed is available in the context variable `$bot_message`. Output rails can alter the `$bot_message` variable, e.g., to mask sensitive information.
+
+You can deactivate output rails temporarily, for the next bot message, by setting the `$skip_output_rails` context variable to `True`.
+
+**TODO: add example and test**.
+
+### Retrieval Rails
+
+**NOTE: THIS SECTION IS WORK IN PROGRESS.**
+
+Retrieval rails process the retrieved chunks, i.e., the `$relevant_chunks` variable.
+
 
 ## Knowledge base Documents
 

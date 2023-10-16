@@ -32,7 +32,7 @@ async def alignscore_request(
     """Checks the facts for the bot response by making a request to the AlignScore API."""
     if not evidence:
         return 1.0
-    
+
     payload = {"evidence": evidence, "claim": response}
 
     async with aiohttp.ClientSession() as session:
