@@ -54,17 +54,25 @@ define parallel extension flow generate bot message
     do run retrieval rails
 
   # $output_rails_enabled = True
-  $bot_message = execute generate_bot_message
+  execute generate_bot_message
 
-  if $bot_message
+
+define parallel extension flow process bot message
+  """Runs the output rails on a bot message."""
+  priority 100
+
+  event BotMessage
+
+  $bot_message = $event.text
+
+  if $skip_output_rails
+    $skip_output_rails = False
+  else
     # If we have any output flows, we run them.
-    if $skip_output_rails
-      $skip_output_rails = False
-    else
-      if $config.rails.output.flows
-        do run output rails
+    if $config.rails.output.flows
+      do run output rails
 
-    create event StartUtteranceBotAction(script=$bot_message)
+  create event StartUtteranceBotAction(script=$bot_message)
 
 
 define subflow run output rails

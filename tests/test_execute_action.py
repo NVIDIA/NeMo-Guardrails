@@ -186,30 +186,41 @@ async def test_action_execution_with_result(rails_config):
         {
             "action_name": "generate_bot_message",
             "action_params": {},
-            "action_result_key": "bot_message",
+            "action_result_key": None,
             "is_system_action": True,
             "source_uid": "NeMoGuardrails",
             "type": "StartInternalSystemAction",
         },
         {
-            "data": {"bot_message": "Hello!", "skip_output_rails": True},
+            "data": {"skip_output_rails": True},
             "source_uid": "NeMoGuardrails",
             "type": "ContextUpdate",
         },
         {
             "action_name": "generate_bot_message",
             "action_params": {},
-            "action_result_key": "bot_message",
-            "events": None,
+            "action_result_key": None,
+            "events": [
+                {
+                    "source_uid": "NeMoGuardrails",
+                    "text": "Hello!",
+                    "type": "BotMessage",
+                }
+            ],
             "is_success": True,
             "is_system_action": True,
-            "return_value": "Hello!",
+            "return_value": None,
             "source_uid": "NeMoGuardrails",
             "status": "success",
             "type": "InternalSystemActionFinished",
         },
         {
-            "data": {"skip_output_rails": False},
+            "source_uid": "NeMoGuardrails",
+            "text": "Hello!",
+            "type": "BotMessage",
+        },
+        {
+            "data": {"bot_message": "Hello!", "skip_output_rails": False},
             "source_uid": "NeMoGuardrails",
             "type": "ContextUpdate",
         },

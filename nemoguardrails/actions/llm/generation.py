@@ -311,10 +311,12 @@ class LLMGenerationActions:
             # We make this call with temperature 0 to have it as deterministic as possible.
             result = await llm_call(llm, prompt)
 
+            text = result.strip()
+            if text.startswith('"'):
+                text = text[1:-1]
+
             return ActionResult(
-                events=[
-                    new_event_dict("StartUtteranceBotAction", script=result.strip())
-                ]
+                events=[new_event_dict("BotMessage", text=text)],
             )
 
     @action(is_system_action=True)
@@ -541,12 +543,12 @@ class LLMGenerationActions:
 
         if bot_utterance:
             return ActionResult(
-                return_value=bot_utterance,
+                events=[new_event_dict("BotMessage", text=bot_utterance)],
                 context_updates=context_updates,
             )
         else:
             return ActionResult(
-                return_value="I'm not sure what to say.",
+                events=[new_event_dict("BotMessage", text="I'm not sure what to say.")],
                 context_updates=context_updates,
             )
 
