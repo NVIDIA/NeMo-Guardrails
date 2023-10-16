@@ -230,7 +230,7 @@ class LLMGenerationActions:
     ):
         """Generate the canonical form for what the user said i.e. user intent."""
         # If using a single LLM call, use the specific action defined for this task.
-        if self.config.rails.topical.single_call:
+        if self.config.rails.dialog.single_call.enabled:
             return await self.generate_intent_steps_message(events=events, llm=llm)
 
         # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
@@ -363,7 +363,7 @@ class LLMGenerationActions:
         # Currently, we only predict next step after a user intent using LLM
         if event["type"] == "UserIntent":
             # If using a single LLM call, use the results computed in the first call.
-            if self.config.rails.topical.single_call:
+            if self.config.rails.dialog.single_call.enabled:
                 bot_intent_event = event["additional_info"]["bot_intent_event"]
                 return ActionResult(events=[bot_intent_event])
 
@@ -532,7 +532,7 @@ class LLMGenerationActions:
             # Generate the bot message using an LLM call
 
             # If using a single LLM call, use the results computed in the first call.
-            if self.config.rails.topical.single_call:
+            if self.config.rails.dialog.single_call.enabled:
                 event = get_last_user_intent_event(events)
                 if event["type"] == "UserIntent":
                     bot_message_event = event["additional_info"]["bot_message_event"]
@@ -674,7 +674,7 @@ class LLMGenerationActions:
 
         # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
-        assert event["type"] == "UtteranceUserActionFinished"
+        assert event["type"] == "UserMessage"
 
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
@@ -687,8 +687,7 @@ class LLMGenerationActions:
             log.info("Generate all three phases in one LLM call...")
 
             # We search for the most relevant similar user utterance
-            examples = ""
-            examples_list = []
+            examples = []
             potential_user_intents = []
             intent_results = []
             flow_results = {}
@@ -698,11 +697,11 @@ class LLMGenerationActions:
                 # Some of these intents might not have an associated flow and will be
                 # skipped from the few-shot examples.
                 intent_results = await self.user_message_index.search(
-                    text=event["final_transcript"], max_results=10
+                    text=event["text"], max_results=10
                 )
 
                 # We fill in the list of potential user intents
-                for result in reversed(intent_results):
+                for result in intent_results:
                     potential_user_intents.append(result.meta["intent"])
 
             if self.flows_index:
@@ -712,10 +711,12 @@ class LLMGenerationActions:
                     )
                     flow_results[intent] = flow_results_intent
 
+            # We add the intent to the examples in reverse order
+            # so the most relevant is towards the end.
             for result in intent_results:
                 # Stop after the first 5 flow examples, in case more than 5 intents
                 # have been selected from the index.
-                if len(examples_list) >= 5:
+                if len(examples) >= 5:
                     break
 
                 intent = result.meta["intent"]
@@ -773,18 +774,13 @@ class LLMGenerationActions:
                     continue
 
                 example += "\n"
-                examples_list.append(example)
-
-            # We add the intent to the examples in reverse order
-            # so the most relevant is towards the end.
-            for example in reversed(examples_list):
-                examples += example
+                examples.append(example)
 
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERATE_INTENT_STEPS_MESSAGE,
                 events=events,
                 context={
-                    "examples": examples,
+                    "examples": "\n\n".join(reversed(examples)),
                     "potential_user_intents": ", ".join(potential_user_intents),
                 },
             )
@@ -868,8 +864,10 @@ class LLMGenerationActions:
             # We make this call with temperature 0 to have it as deterministic as possible.
             result = await llm_call(llm, prompt)
 
+            text = result.strip()
+            if text.startswith('"'):
+                text = text[1:-1]
+
             return ActionResult(
-                events=[
-                    new_event_dict("StartUtteranceBotAction", script=result.strip())
-                ]
+                events=[new_event_dict("BotMessage", text=text)],
             )

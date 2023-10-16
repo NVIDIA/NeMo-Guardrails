@@ -252,12 +252,14 @@ def get_first_nonempty_line(s: str):
 
 def get_top_k_nonempty_lines(s: str, k: int = 1):
     """Helper that returns a list with the top k non-empty lines from a string.
+
     If there are less than k non-empty lines, it returns a smaller number of lines."""
     if not s:
         return None
 
     lines = [line.strip() for line in s.split("\n")]
-    lines = [line for line in lines if len(line) > 0]
+    # Ignore line comments and empty lines
+    lines = [line for line in lines if len(line) > 0 and line[0] != "#"]
 
     return lines[:k]
 

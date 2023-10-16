@@ -30,7 +30,7 @@ def test_1():
         """
     )
     # Set the single call flag.
-    config.rails.topical.single_call = True
+    config.rails.dialog.single_call.enabled = True
 
     chat = TestChat(
         config,
@@ -60,7 +60,7 @@ def test_2():
         """
     )
     # Set the single call flag.
-    config.rails.topical.single_call = True
+    config.rails.dialog.single_call.enabled = True
 
     chat = TestChat(
         config,
