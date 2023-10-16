@@ -42,7 +42,7 @@ Existing LangChain chains can be used as actions when defining guardrails in Col
       bot remove last message
       bot $updated_msg
   ```
-Checkout [this sample script](../../examples/demo_chain_as_action.py) for the complete example.
+Checkout [this sample script](../../examples/scripts/demo_chain_as_action.py) for the complete example.
 
 ## Add guardrails to existing chains
 
@@ -73,7 +73,7 @@ define flow
   bot $answer
 ```
 
-Checkout [this sample script](../../examples/demo_chain_with_guardrails.py) for a complete example.
+Checkout [this sample script](../../examples/scripts/demo_chain_with_guardrails.py) for a complete example.
 
 ## Use chains in your custom actions
 

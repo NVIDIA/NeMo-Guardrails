@@ -147,11 +147,13 @@ def event_sequence_conforms(
     event_subset_list: Iterable[Dict[str, Any]], event_list: Iterable[Dict[str, Any]]
 ) -> bool:
     if len(event_subset_list) != len(event_list):
-        return False
+        raise Exception(
+            f"Different lengths: {len(event_subset_list)} vs {len(event_list)}"
+        )
 
     for subset, event in zip(event_subset_list, event_list):
         if not event_conforms(subset, event):
-            return False
+            raise Exception(f"Mismatch: {subset} vs {event}")
 
     return True
 

@@ -21,11 +21,11 @@ The getting started section covers two topics:
 
 Five reference examples are provided as a general demonstration for building different types of rails:
 
-* [Topical Rail](../examples/topical_rail/README.md): Making the bot stick to a specific topic of conversation.
-* [Moderation Rail](../examples/moderation_rail/README.md): Moderating a bot's response.
-* [Fact Checking and Hallucination Rail](../examples/grounding_rail/README.md): Ensuring factual answers.
-* [Secure Execution Rail](../examples/execution_rails/README.md): Executing a third-party service with LLMs.
-* [Jailbreaking Rail](../examples/jailbreak_check/README.md): Ensuring safe answers despite malicious intent from the user.
+* [Topical Rail](../examples/_deprecated/topical_rail/README.md): Making the bot stick to a specific topic of conversation.
+* [Moderation Rail](../examples/_deprecated/moderation_rail/README.md): Moderating a bot's response.
+* [Fact Checking and Hallucination Rail](../examples/_deprecated/grounding_rail/README.md): Ensuring factual answers.
+* [Secure Execution Rail](../examples/_deprecated/execution_rails/README.md): Executing a third-party service with LLMs.
+* [Jailbreaking Rail](../examples/_deprecated/jailbreak_check/README.md): Ensuring safe answers despite malicious intent from the user.
 
 > **Note:** These examples are meant to showcase the process of building rails, not as out-of-the-box safety features. Customization and strengthening of the rails is highly recommended.
 
