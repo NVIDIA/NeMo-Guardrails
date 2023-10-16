@@ -167,7 +167,12 @@ class LLMGenerationActions:
             colang_flow = flow.get("source_code") or flow_to_colang(flow)
 
             # We index on the full body for now
-            items.append(IndexItem(text=colang_flow, meta={"flow": colang_flow}))
+            # items.append(IndexItem(text=colang_flow, meta={"flow": colang_flow}))
+
+            # EXPERIMENTAL: We create an index entry for every line in the flow
+            for line in colang_flow.split("\n"):
+                if line.strip() != "":
+                    items.append(IndexItem(text=line, meta={"flow": colang_flow}))
 
         # If we have no patterns, we stop.
         if len(items) == 0:
@@ -323,6 +328,22 @@ class LLMGenerationActions:
                 events=[new_event_dict("BotMessage", text=text)],
             )
 
+    async def _search_flows_index(self, text, max_results):
+        """Search the index of flows."""
+        results = await self.flows_index.search(text=text, max_results=10)
+
+        # we filter the results to keep only unique flows
+        flows = set()
+        final_results = []
+        for result in results:
+            if result.meta["flow"] not in flows:
+                flows.add(result.meta["flow"])
+                # For backwards compatibility we also replace the text with the full version
+                result.text = result.meta["flow"]
+                final_results.append(result)
+
+        return final_results[0:max_results]
+
     @action(is_system_action=True)
     async def generate_next_step(
         self, events: List[dict], llm: Optional[BaseLLM] = None
@@ -351,7 +372,9 @@ class LLMGenerationActions:
             # We search for the most relevant similar flows
             examples = ""
             if self.flows_index:
-                results = await self.flows_index.search(text=user_intent, max_results=5)
+                results = await self._search_flows_index(
+                    text=user_intent, max_results=5
+                )
 
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
@@ -598,7 +621,7 @@ class LLMGenerationActions:
         # We search for the most relevant flows.
         examples = ""
         if self.flows_index:
-            results = await self.flows_index.search(
+            results = await self._search_flows_index(
                 text=f"${var_name} = ", max_results=5
             )
 
@@ -684,7 +707,7 @@ class LLMGenerationActions:
 
             if self.flows_index:
                 for intent in potential_user_intents:
-                    flow_results_intent = await self.flows_index.search(
+                    flow_results_intent = await self._search_flows_index(
                         text=intent, max_results=2
                     )
                     flow_results[intent] = flow_results_intent
