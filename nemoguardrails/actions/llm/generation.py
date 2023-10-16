@@ -221,7 +221,7 @@ class LLMGenerationActions:
 
     @action(is_system_action=True)
     async def generate_user_intent(
-        self, events: List[dict], llm: Optional[BaseLLM] = None
+        self, events: List[dict], config: RailsConfig, llm: Optional[BaseLLM] = None
     ):
         """Generate the canonical form for what the user said i.e. user intent."""
         # If using a single LLM call, use the specific action defined for this task.
@@ -230,7 +230,7 @@ class LLMGenerationActions:
 
         # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
-        assert event["type"] == "UtteranceUserActionFinished"
+        assert event["type"] == "UserMessage"
 
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
@@ -250,8 +250,19 @@ class LLMGenerationActions:
 
             if self.user_message_index:
                 results = await self.user_message_index.search(
-                    text=event["final_transcript"], max_results=5
+                    text=event["text"], max_results=5
                 )
+
+                # If the option to use only the embeddings is activated, we take the first
+                # canonical form.
+                if results and config.rails.dialog.user_messages.embeddings_only:
+                    return ActionResult(
+                        events=[
+                            new_event_dict(
+                                "UserIntent", intent=results[0].meta["intent"]
+                            )
+                        ]
+                    )
 
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
@@ -304,10 +315,12 @@ class LLMGenerationActions:
             # We make this call with temperature 0 to have it as deterministic as possible.
             result = await llm_call(llm, prompt)
 
+            text = result.strip()
+            if text.startswith('"'):
+                text = text[1:-1]
+
             return ActionResult(
-                events=[
-                    new_event_dict("StartUtteranceBotAction", script=result.strip())
-                ]
+                events=[new_event_dict("BotMessage", text=text)],
             )
 
     @action(is_system_action=True)
@@ -485,6 +498,9 @@ class LLMGenerationActions:
             # We also need to render
             bot_utterance = self._render_string(bot_utterance, context)
 
+            # We skip output rails for predefined messages.
+            context_updates["skip_output_rails"] = True
+
         # Check if the output is supposed to be the content of a context variable
         elif bot_intent[0] == "$" and bot_intent[1:] in context:
             bot_utterance = context[bot_intent[1:]]
@@ -545,18 +561,12 @@ class LLMGenerationActions:
 
         if bot_utterance:
             return ActionResult(
-                events=[
-                    new_event_dict("StartUtteranceBotAction", script=bot_utterance)
-                ],
+                events=[new_event_dict("BotMessage", text=bot_utterance)],
                 context_updates=context_updates,
             )
         else:
             return ActionResult(
-                events=[
-                    new_event_dict(
-                        "StartUtteranceBotAction", script="I'm not sure what to say."
-                    )
-                ],
+                events=[new_event_dict("BotMessage", text="I'm not sure what to say.")],
                 context_updates=context_updates,
             )
 

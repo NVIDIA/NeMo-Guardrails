@@ -23,6 +23,7 @@ QA_MODE = os.environ.get("QA")
 
 class TestGroundingRail(ExampleConfigChatterTestCase):
     example_name = "grounding_rail"
+    config_name = "_deprecated/grounding_rail"
 
     @pytest.mark.skipif(not QA_MODE, reason="Not in QA mode.")
     @pytest.mark.unit

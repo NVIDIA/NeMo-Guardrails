@@ -18,7 +18,7 @@ import importlib.util
 import json
 import logging
 import os.path
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -65,7 +65,9 @@ if ENABLE_CORS:
     )
 
 # By default, we use the rails in the examples folder
-app.rails_config_path = os.path.join(os.path.dirname(__file__), "..", "..", "examples")
+app.rails_config_path = os.path.join(
+    os.path.dirname(__file__), "..", "..", "examples", "_deprecated"
+)
 
 # Weather the chat UI is enabled or not.
 app.disable_chat_ui = False
@@ -76,7 +78,10 @@ class RequestBody(BaseModel):
     messages: List[dict] = Field(
         default=None, description="The list of messages in the current conversation."
     )
-    context: dict
+    context: Optional[dict] = Field(
+        default=None,
+        description="Additional context data to be added to the conversation.",
+    )
 
 
 class ResponseBody(BaseModel):

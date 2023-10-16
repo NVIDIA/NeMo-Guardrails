@@ -100,8 +100,8 @@ def user_assistant_sequence(events: List[dict]) -> str:
     """
     history_items = []
     for event in events:
-        if event["type"] == "UtteranceUserActionFinished":
-            history_items.append("User: " + event["final_transcript"])
+        if event["type"] == "UserMessage":
+            history_items.append("User: " + event["text"])
         elif event["type"] == "StartUtteranceBotAction":
             history_items.append("Assistant: " + event["script"])
 
@@ -170,8 +170,8 @@ def user_assistant_sequence_nemollm(events: List[dict]) -> str:
     """
     history_items = []
     for event in events:
-        if event["type"] == "UtteranceUserActionFinished":
-            history_items.append("<extra_id_1>User\n" + event["final_transcript"])
+        if event["type"] == "UserMessage":
+            history_items.append("<extra_id_1>User\n" + event["text"])
         elif event["type"] == "StartUtteranceBotAction":
             history_items.append("<extra_id_1>Assistant\n" + event["script"])
 

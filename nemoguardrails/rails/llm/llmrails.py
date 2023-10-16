@@ -24,14 +24,8 @@ from typing import Any, List, Optional, Type, Union
 
 from langchain.llms.base import BaseLLM
 
-from nemoguardrails.actions.fact_checking import check_facts
-from nemoguardrails.actions.hallucination import check_hallucination
-from nemoguardrails.actions.jailbreak_check import check_jailbreak
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
-from nemoguardrails.actions.math import wolfram_alpha_request
-from nemoguardrails.actions.output_moderation import output_moderation
-from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.kb.kb import KnowledgeBase
@@ -88,6 +82,26 @@ class LLMRails:
         # We add the default flows to the config.
         self.config.flows.extend(default_flows)
 
+        # We also need to load the content from the components library.
+        library_path = os.path.join(os.path.dirname(__file__), "../../library")
+        for root, dirs, files in os.walk(library_path):
+            for file in files:
+                # Extract the full path for the file
+                full_path = os.path.join(root, file)
+                if file.endswith(".co"):
+                    with open(full_path, "r", encoding="utf-8") as f:
+                        content = parse_colang_file(file, content=f.read())
+
+                        # We load all the flows
+                        self.config.flows.extend(content["flows"])
+
+                        # And all the messages as well, if they have not been overwritten
+                        for message_id, utterances in content.get(
+                            "bot_messages", {}
+                        ).items():
+                            if message_id not in self.config.bot_messages:
+                                self.config.bot_messages[message_id] = utterances
+
         # We check if the configuration has a config.py module associated with it.
         config_module = None
         if self.config.config_path:
@@ -106,20 +120,6 @@ class LLMRails:
         # LLM providers.
         if config_module is not None and hasattr(config_module, "init"):
             config_module.init(self)
-
-        # Register any default actions that have not yet been registered in the custom
-        # init function from config.py.
-        default_actions = {
-            "wolfram alpha request": wolfram_alpha_request,
-            "check_facts": check_facts,
-            "check_jailbreak": check_jailbreak,
-            "output_moderation": output_moderation,
-            "check_hallucination": check_hallucination,
-            "retrieve_relevant_chunks": retrieve_relevant_chunks,
-        }
-
-        for action_name, action_fn in default_actions.items():
-            self.runtime.register_action(action_fn, action_name, override=False)
 
         # If we have a customized embedding model, we'll use it.
         for model in self.config.models:

@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
 
+from nemoguardrails.flows.eval import eval_expression
 from nemoguardrails.flows.sliding import slide
 from nemoguardrails.utils import new_event_dict
 
@@ -45,6 +46,9 @@ class FlowConfig:
 
     # Weather this flow is a subflow
     is_subflow: bool = False
+
+    # Weather to allow multiple instances of the same flow
+    allow_multiple: bool = False
 
     # The events that can trigger this flow to advance.
     trigger_event_types = [
@@ -99,6 +103,9 @@ class State:
 
     # The configuration of all the flows that are available.
     flow_configs: Dict[str, FlowConfig]
+
+    # The full rails configuration object
+    rails_config: Optional["RailsConfig"] = None
 
     # The next step of the flow-driven system
     next_step: Optional[dict] = None
@@ -216,8 +223,14 @@ def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState
     The head for `flow_state` is expected to be on a "flow" element.
     """
     flow_config = new_state.flow_configs[flow_state.flow_id]
+    subflow_id = flow_config.elements[flow_state.head]["flow_name"]
+
+    # Basic support for referring a subflow using a variable
+    if subflow_id.startswith("$"):
+        subflow_id = eval_expression(subflow_id, new_state.context)
+
     subflow_state = FlowState(
-        flow_id=flow_config.elements[flow_state.head]["flow_name"],
+        flow_id=subflow_id,
         status=FlowStatus.ACTIVE,
         head=0,
         uid=str(uuid.uuid4()),
@@ -295,16 +308,22 @@ def compute_next_state(state: State, event: dict) -> State:
         return state
 
     # Update the default context variables
-    # TODO: refactor this logic in a single lace
-    if event["type"] == "UtteranceUserActionFinished":
-        state.context["last_user_message"] = event["final_transcript"]
+    # TODO: refactor this logic in a single place
+    if event["type"] == "UserMessage":
+        state.context["last_user_message"] = event["text"]
 
     elif event["type"] == "StartUtteranceBotAction":
         state.context["last_bot_message"] = event["script"]
 
+    state.context["event"] = event
+    state.context["config"] = state.rails_config
+
     # Initialize the new state
     new_state = State(
-        context=state.context, flow_states=[], flow_configs=state.flow_configs
+        context=state.context,
+        flow_states=[],
+        flow_configs=state.flow_configs,
+        rails_config=state.rails_config,
     )
 
     # The UID of the flow that will determine the next step
@@ -385,8 +404,11 @@ def compute_next_state(state: State, event: dict) -> State:
         if flow_config.is_subflow:
             continue
 
-        # If a flow with the same id is started, we skip
-        if flow_config.id in [fs.flow_id for fs in new_state.flow_states]:
+        # If the flow can't be started multiple times in parallel and
+        # a flow with the same id is started, we skip.
+        if not flow_config.allow_multiple and flow_config.id in [
+            fs.flow_id for fs in new_state.flow_states
+        ]:
             continue
 
         # We try to slide first, just in case a flow starts with sliding logic
@@ -446,28 +468,34 @@ def compute_next_state(state: State, event: dict) -> State:
                 flow_state.interrupted_by = new_state.next_step_by_flow_uid
 
     # If there are flows that were waiting on completed flows, we reactivate them
-    for flow_state in new_state.flow_states:
-        if flow_state.status == FlowStatus.INTERRUPTED:
-            # TODO: optimize this with a dict of statuses
-            # If already there are no more flows to interrupt, we should resume
-            should_resume = flow_state.interrupted_by is None
+    changes = True
+    while changes:
+        changes = False
 
-            # Check if it was waiting on a completed flow
-            if not should_resume:
-                for _flow_state in new_state.flow_states:
-                    if _flow_state.uid == flow_state.interrupted_by:
-                        if _flow_state.status == FlowStatus.COMPLETED:
-                            should_resume = True
-                        break
+        for flow_state in new_state.flow_states:
+            if flow_state.status == FlowStatus.INTERRUPTED:
+                # TODO: optimize this with a dict of statuses
+                # If already there are no more flows to interrupt, we should resume
+                should_resume = flow_state.interrupted_by is None
 
-            if should_resume:
-                flow_state.status = FlowStatus.ACTIVE
-                flow_state.interrupted_by = None
+                # Check if it was waiting on a completed flow
+                if not should_resume:
+                    for _flow_state in new_state.flow_states:
+                        if _flow_state.uid == flow_state.interrupted_by:
+                            if _flow_state.status == FlowStatus.COMPLETED:
+                                should_resume = True
+                            break
 
-                _slide_with_subflows(new_state, flow_state)
+                if should_resume:
+                    flow_state.status = FlowStatus.ACTIVE
+                    flow_state.interrupted_by = None
 
-                if flow_state.head < 0:
-                    flow_state.status = FlowStatus.COMPLETED
+                    _slide_with_subflows(new_state, flow_state)
+
+                    if flow_state.head < 0:
+                        flow_state.status = FlowStatus.COMPLETED
+
+                    changes = True
 
     return new_state
 
@@ -478,10 +506,10 @@ def _step_to_event(step: dict) -> dict:
 
     if step_type == "run_action":
         if step["action_name"] == "utter":
-            return {
-                "type": "BotIntent",
-                "intent": step["action_params"]["value"],
-            }
+            return new_event_dict(
+                "BotIntent",
+                intent=step["action_params"]["value"],
+            )
 
         else:
             action_name = step["action_name"]
@@ -499,10 +527,14 @@ def _step_to_event(step: dict) -> dict:
 
 
 def compute_next_steps(
-    history: List[dict], flow_configs: Dict[str, FlowConfig]
+    history: List[dict],
+    flow_configs: Dict[str, FlowConfig],
+    rails_config: "RailsConfig",
 ) -> List[dict]:
     """Computes the next step in a flow-driven system given a history of events."""
-    state = State(context={}, flow_states=[], flow_configs=flow_configs)
+    state = State(
+        context={}, flow_states=[], flow_configs=flow_configs, rails_config=rails_config
+    )
 
     # First, we process the history and apply any alterations e.g. 'hide_prev_turn'
     actual_history = []
@@ -569,10 +601,13 @@ def compute_context(history: List[dict]):
         if event["type"] == "ContextUpdate":
             context.update(event["data"])
 
-        if event["type"] == "UtteranceUserActionFinished":
-            context["last_user_message"] = event["final_transcript"]
+        if event["type"] == "UserMessage":
+            context["last_user_message"] = event["text"]
 
         elif event["type"] == "StartUtteranceBotAction":
             context["last_bot_message"] = event["script"]
+
+    if history:
+        context["event"] = history[-1]
 
     return context
