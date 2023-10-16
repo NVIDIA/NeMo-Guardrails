@@ -220,7 +220,7 @@ class LLMGenerationActions:
 
     @action(is_system_action=True)
     async def generate_user_intent(
-        self, events: List[dict], llm: Optional[BaseLLM] = None
+        self, events: List[dict], config: RailsConfig, llm: Optional[BaseLLM] = None
     ):
         """Generate the canonical form for what the user said i.e. user intent."""
 
@@ -248,6 +248,17 @@ class LLMGenerationActions:
                 results = await self.user_message_index.search(
                     text=event["text"], max_results=5
                 )
+
+                # If the option to use only the embeddings is activated, we take the first
+                # canonical form.
+                if results and config.rails.dialog.user_messages.embeddings_only:
+                    return ActionResult(
+                        events=[
+                            new_event_dict(
+                                "UserIntent", intent=results[0].meta["intent"]
+                            )
+                        ]
+                    )
 
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):

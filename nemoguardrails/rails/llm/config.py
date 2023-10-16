@@ -179,7 +179,7 @@ class UserMessagesConfig(BaseModel):
     )
 
 
-class TopicalRails(BaseModel):
+class DialogRails(BaseModel):
     """Configuration of topical rails."""
 
     single_call: SingleCallConfig = Field(
@@ -205,8 +205,8 @@ class Rails(BaseModel):
         default_factory=RetrievalRails,
         description="Configuration of the retrieval rails.",
     )
-    topical: TopicalRails = Field(
-        default_factory=TopicalRails, description="Configuration of the topical rails."
+    dialog: DialogRails = Field(
+        default_factory=DialogRails, description="Configuration of the dialog rails."
     )
 
 
