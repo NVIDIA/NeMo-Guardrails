@@ -1,15 +1,14 @@
 models:
   - type: main
-    engine: nemollm
-    model: gpt-43b-002
+    engine: openai
+    model: text-davinci-003
 
 rails:
   config:
     fact_checking:
       provider: "align_score"
       parameters:
-        endpoint: "http://localhost:5000/alignscore_base"
-      fallback_to_ask_llm: True
+        endpoint: "http://localhost:5123/alignscore_base"
 
   output:
     flows:

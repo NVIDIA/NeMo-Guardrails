@@ -82,8 +82,8 @@ def test_fact_checking_correct():
         )
         ## Fact-checking using AlignScore
         m.post(
-            "http://localhost:5000/alignscore_large",
-            payload=0.82,
+            "http://localhost:5000/alignscore_base",
+            payload={"alignscore": 0.82},
         )
         chat >> "What is NeMo Guardrails?"
         (
@@ -111,8 +111,8 @@ def test_fact_checking_wrong():
         )
         ## Fact-checking using AlignScore
         m.post(
-            "http://localhost:5000/alignscore_large",
-            payload=0.01,
+            "http://localhost:5000/alignscore_base",
+            payload={"alignscore": 0.01},
         )
         m.post(
             "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
@@ -146,19 +146,13 @@ def test_fact_checking_uncertain():
         )
         ## Fact-checking using AlignScore
         m.post(
-            "http://localhost:5000/alignscore_large",
-            payload=0.58,
-        )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={
-                "text": "The previous answer might have slight inaccuracies, kindly consult the original source."
-            },
+            "http://localhost:5000/alignscore_base",
+            payload={"alignscore": 0.58},
         )
         chat >> "What is NeMo Guardrails?"
         chat << (
             "NeMo Guardrails is an open-source toolkit for adding safeguards to conversational systems.\n"
-            + "The previous answer might have slight inaccuracies, kindly consult the original source."
+            + "Attention: the answer above is potentially inaccurate."
         )
 
 
@@ -181,7 +175,7 @@ def test_fact_checking_fallback_to_ask_llm_correct():
         )
         ## Fact-checking using AlignScore
         m.post(
-            "http://localhost:5000/alignscore_large",
+            "http://localhost:5000/alignscore_base",
             payload="API error 404",
         )
         m.post(
@@ -214,7 +208,7 @@ def test_fact_checking_fallback_to_ask_llm_wrong():
         )
         ## Fact-checking using AlignScore
         m.post(
-            "http://localhost:5000/alignscore_large",
+            "http://localhost:5000/alignscore_base",
             payload="API error 404",
         )
         m.post(

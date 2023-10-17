@@ -41,11 +41,11 @@ async def alignscore_request(
                 log.error(f"AlignScore API request failed with status {resp.status}")
                 return None
 
-            result = await resp.text()
+            result = await resp.json()
 
             log.info(f"AlignScore was {result}.")
             try:
-                result = float(result)
+                result = result["alignscore"]
             except Exception:
                 result = None
             return result

@@ -13,5 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .alignment_score import alignscore_request
-from .fact_checking import check_facts
+from .actions import check_facts

@@ -196,9 +196,36 @@ class DialogRails(BaseModel):
     )
 
 
+class FactCheckingRailConfig(BaseModel):
+    """Configuration data for the fact-checking rail."""
+
+    provider: str = Field(
+        default="ask_llm",
+        description="The fact-checking provider. Supported values: 'ask_llm', 'align_score'",
+    )
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    fallback_to_ask_llm: bool = Field(
+        default=False,
+        description="Whether to fall back to asking the main LLM for fact-checkin if other providers fail.",
+    )
+
+
+class RailsConfigData(BaseModel):
+    """Configuration data for specific rails that are supported out-of-the-box."""
+
+    fact_checking: FactCheckingRailConfig = Field(
+        default_factory=FactCheckingRailConfig,
+        description="Configuration data for the fact-checking rail.",
+    )
+
+
 class Rails(BaseModel):
     """Configuration of specific rails."""
 
+    config: RailsConfigData = Field(
+        default_factory=RailsConfigData,
+        description="Configuration data for specific rails that are supported out-of-the-box.",
+    )
     input: InputRails = Field(
         default_factory=InputRails, description="Configuration of the input rails."
     )

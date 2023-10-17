@@ -1,11 +1,14 @@
-define user ask about guardrails
-  "What is NeMo Guardrails?"
+define user ask about report
+  "What was last month's unemployment rate?"
+  "Which industry added the most jobs?"
+  "How many jobs were added in the transportation industry?"
 
-define flow answer guardrails question
-  user ask about guardrails
+define flow answer report question
+  user ask about report
+
+  # For report questions, we activate the fact checking.
   $check_facts = True
-  bot provide answer
-
+  bot provide report answer
 
 
 define subflow check facts
