@@ -123,7 +123,7 @@ rails:
 
 The `active fence moderation` flow uses the maximum risk score with the 0.7 threshold to decide if the input should be allowed or not (i.e., if the risk score is above the threshold, it is considered a violation). The `active fence moderation detailed` has individual scores per category of violations.
 
-To customize the scores, you have to overwrite the [default flows](../nemoguardrails/library/active_fence/flows.co) in your config. For example, to change the threshold for `active fence moderation` you can add the following flow to your config:
+To customize the scores, you have to overwrite the [default flows](../../nemoguardrails/library/active_fence/flows.co) in your config. For example, to change the threshold for `active fence moderation` you can add the following flow to your config:
 
 ```colang
 define subflow active fence moderation
