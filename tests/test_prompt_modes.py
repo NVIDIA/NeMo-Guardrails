@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import pytest
 
 from nemoguardrails import RailsConfig
 from nemoguardrails.llm.prompts import get_prompt
@@ -26,6 +27,45 @@ TEST_CASES = [
     ("task3_nemo_compact", Task.CHECK_HALLUCINATION, "<<Check for hallucinations>>"),
     ("task4_nemo_standard", Task.CHECK_HALLUCINATION, "<<This is a long placeholder prompt to check for hallucinations>>"),
 ]
+TASK_CONFIGS = {
+    "task1_openai_compact": ["openai", "gpt-3.5-turbo", "compact"],
+    "task2_openai_standard": ["openai", "gpt-3.5-turbo", "standard"],
+    "task3_nemo_compact": ["nemollm", "gpt-43b-905", "compact"],
+    "task4_nemo_standard": ["nemollm", "gpt-43b-905", "standard"]
+}
+
+
+
+def colang_config():
+    return """
+    define user express greeting
+        "hi"
+        "hello"
+
+    define flow
+        user express greeting
+        bot express greeting
+    """
+
+
+def yaml_config(task_name):
+    if "openai" in task_name:
+        engine = "openai"
+        model = "gpt-3.5-turbo"
+    else:
+        engine = "nemollm"
+        model = "gpt-43b-905"
+        
+    prompting_mode = "compact" if "compact" in task_name else "standard"
+        
+    return f"""
+        models:
+          - type: main
+            engine: {engine}
+            model: {model}
+        prompting_mode: {prompting_mode}
+    """
+
 
 def test_prompting_modes():
     prompts_config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "prompts"))
@@ -33,7 +73,7 @@ def test_prompting_modes():
     for test_case in TEST_CASES:
         task_name, task, expected_prompt = test_case
         
-        task_config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, task_name))
+        task_config = RailsConfig.from_content(colang_config(), yaml_config(task_name))
         task_config.prompts = prompts_config.prompts
         
         prompt = get_prompt(task_config, task)
