@@ -27,13 +27,6 @@ TEST_CASES = [
     ("task3_nemo_compact", Task.CHECK_HALLUCINATION, "<<Check for hallucinations>>"),
     ("task4_nemo_standard", Task.CHECK_HALLUCINATION, "<<This is a long placeholder prompt to check for hallucinations>>"),
 ]
-TASK_CONFIGS = {
-    "task1_openai_compact": ["openai", "gpt-3.5-turbo", "compact"],
-    "task2_openai_standard": ["openai", "gpt-3.5-turbo", "standard"],
-    "task3_nemo_compact": ["nemollm", "gpt-43b-905", "compact"],
-    "task4_nemo_standard": ["nemollm", "gpt-43b-905", "standard"]
-}
-
 
 
 def colang_config():

@@ -83,7 +83,9 @@ prompts:
 ...
 ```
 
-You can have as many different modes as you like for a given task and model, as long as the `mode` key inside the prompt configuration matches the `prompting_mode` key in the top-level task configuration, thus enabling an easy setup fopr prompt engineering experiments.
+You can have as many different modes as you like for a given task and model, as long as the `mode` key inside the prompt configuration matches the `prompting_mode` key in the top-level task configuration, thus enabling an easy setup for prompt engineering experiments.
+
+Note that if you specify a custom `prompting_mode` but no prompt definition with the same custom `mode` is defined, then, the `standard` prompt template for that task is used.
 
 ### Prompt Templates
 
