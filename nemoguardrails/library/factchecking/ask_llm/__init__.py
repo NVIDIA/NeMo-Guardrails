@@ -13,21 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
-
-
-class Task(Enum):
-    """The various tasks that can be performed by the LLM."""
-
-    GENERAL = "general"
-    GENERATE_USER_INTENT = "generate_user_intent"
-    GENERATE_NEXT_STEPS = "generate_next_steps"
-    GENERATE_BOT_MESSAGE = "generate_bot_message"
-    GENERATE_INTENT_STEPS_MESSAGE = "generate_intent_steps_message"
-    GENERATE_VALUE = "generate_value"
-
-    FACT_CHECKING = "fact_checking"
-    JAILBREAK_CHECK = "jailbreak_check"
-    OUTPUT_MODERATION = "output_moderation"
-    OUTPUT_MODERATION_V2 = "output_moderation_v2"
-    CHECK_HALLUCINATION = "check_hallucination"
+from .actions import check_facts

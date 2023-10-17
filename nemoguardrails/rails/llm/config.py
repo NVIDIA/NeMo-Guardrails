@@ -89,6 +89,10 @@ class TaskPrompt(BaseModel):
         default=None,
         description="The name of the output parser to use for this prompt.",
     )
+    max_length: Optional[int] = Field(
+        default=16000,
+        description="The maximum length of the prompt in number of characters.",
+    )
 
     @root_validator(pre=True, allow_reuse=True)
     def check_fields(cls, values):
@@ -179,7 +183,7 @@ class UserMessagesConfig(BaseModel):
     )
 
 
-class TopicalRails(BaseModel):
+class DialogRails(BaseModel):
     """Configuration of topical rails."""
 
     single_call: SingleCallConfig = Field(
@@ -192,9 +196,36 @@ class TopicalRails(BaseModel):
     )
 
 
+class FactCheckingRailConfig(BaseModel):
+    """Configuration data for the fact-checking rail."""
+
+    provider: str = Field(
+        default="ask_llm",
+        description="The fact-checking provider. Supported values: 'ask_llm', 'align_score'",
+    )
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    fallback_to_ask_llm: bool = Field(
+        default=False,
+        description="Whether to fall back to asking the main LLM for fact-checkin if other providers fail.",
+    )
+
+
+class RailsConfigData(BaseModel):
+    """Configuration data for specific rails that are supported out-of-the-box."""
+
+    fact_checking: FactCheckingRailConfig = Field(
+        default_factory=FactCheckingRailConfig,
+        description="Configuration data for the fact-checking rail.",
+    )
+
+
 class Rails(BaseModel):
     """Configuration of specific rails."""
 
+    config: RailsConfigData = Field(
+        default_factory=RailsConfigData,
+        description="Configuration data for specific rails that are supported out-of-the-box.",
+    )
     input: InputRails = Field(
         default_factory=InputRails, description="Configuration of the input rails."
     )
@@ -205,8 +236,8 @@ class Rails(BaseModel):
         default_factory=RetrievalRails,
         description="Configuration of the retrieval rails.",
     )
-    topical: TopicalRails = Field(
-        default_factory=TopicalRails, description="Configuration of the topical rails."
+    dialog: DialogRails = Field(
+        default_factory=DialogRails, description="Configuration of the dialog rails."
     )
 
 

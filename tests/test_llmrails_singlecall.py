@@ -18,34 +18,7 @@ from tests.utils import TestChat
 
 
 def test_1():
-    """Test that multi-line responses are processed correctly."""
-    config = RailsConfig.from_content(
-        """
-        define user express greeting
-            "hello"
-
-        define flow
-            user express greeting
-            bot express greeting and list of thing to help
-        """
-    )
-    chat = TestChat(
-        config,
-        llm_completions=[
-            "  express greeting",
-            '  "Hello, there! \nI can help you with:\n\n 1. Answering questions \n2. Sending messages"\n\n',
-        ],
-    )
-
-    chat >> "hello there!"
-    (
-        chat
-        << "Hello, there!\nI can help you with:\n1. Answering questions\n2. Sending messages"
-    )
-
-
-def test_1_single_call():
-    """Test that multi-line responses are processed correctly by single LLM call configuration."""
+    """Test for single line single LLM call configuration."""
     config: RailsConfig = RailsConfig.from_content(
         """
         define user express greeting
@@ -53,7 +26,37 @@ def test_1_single_call():
 
         define flow
             user express greeting
-            bot express greeting and list of thing to help
+            bot express greeting
+        """
+    )
+    # Set the single call flag.
+    config.rails.dialog.single_call.enabled = True
+
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "  express greeting\n" "bot express greeting\n" '  "Hello, there!"',
+        ],
+    )
+
+    chat >> "hello there!"
+    (chat << "Hello, there!")
+
+
+def test_2():
+    """Test for single line single LLM call configuration when generated bot intent
+    is different from the one in the flow."""
+    config: RailsConfig = RailsConfig.from_content(
+        """
+        define user express greeting
+            "hello"
+
+        define bot express greeting
+            "Hello, there!"
+
+        define flow
+            user express greeting
+            bot express greeting
         """
     )
     # Set the single call flag.
@@ -63,13 +66,10 @@ def test_1_single_call():
         config,
         llm_completions=[
             "  express greeting\n"
-            "bot express greeting and list of thing to help\n"
-            '  "Hello, there! \nI can help you with:\n\n 1. Answering questions \n2. Sending messages"',
+            "bot express greeting and present yourself\n"
+            '  "Hello, there! I am a bot and I can help you with a lot of tasks!"',
         ],
     )
 
     chat >> "hello there!"
-    (
-        chat
-        << "Hello, there!\nI can help you with:\n1. Answering questions\n2. Sending messages"
-    )
+    (chat << "Hello, there!")

@@ -23,5 +23,6 @@ dist
 *.log
 # Ignore some of the files that should be downloaded/generated for evaluation
 original_dataset
+eval_outputs
 /**/chitchat/user.co
 /**/banking/user.co

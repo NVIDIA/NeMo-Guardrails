@@ -78,6 +78,18 @@ prompts:
         content: ...
       # ...
 ```
+For each task, you can also specify the maximum length of the prompt to be used for the LLM call in terms of the number of characters. This is useful if you want to limit the number of tokens used by the LLM or when you want to make sure that the prompt length does not exceed the maximum context length. When the maximum length is exceeded, the prompt is truncated by removing older turns from the conversation history until length of the prompt is less than or equal to the maximum length. The default maximum length is 16000 characters.
+
+For example, for the `generate_user_intent` task, you can specify the following:
+
+```yaml
+prompts:
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+    max_length: 3000
+```
+
 
 ### Content Template
 

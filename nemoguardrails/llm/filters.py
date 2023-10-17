@@ -178,6 +178,14 @@ def user_assistant_sequence_nemollm(events: List[dict]) -> str:
     return "\n".join(history_items)
 
 
+def _previous_line(lines: List[str], i: int):
+    """Returns the previous lines, skipping comments."""
+    i = i - 1
+    while i > 0 and lines[i].strip().startswith("#"):
+        i -= 1
+    return lines[i]
+
+
 def to_messages_nemollm(colang_history: str) -> str:
     """Filter that given a history in colang format, returns a messages string
     in the chat format used by NeMo LLM models."""
@@ -203,8 +211,9 @@ def to_messages_nemollm(colang_history: str) -> str:
                 messages.append({"type": "assistant", "content": "\n".join(bot_lines)})
                 bot_lines = []
         else:
-            if i > 0 and lines[i - 1].startswith('user "'):
-                line = "User intent: " + line.strip()
+            if i > 0 and _previous_line(lines, i).startswith('user "'):
+                if not line.strip().startswith("#"):
+                    line = "User intent: " + line.strip()
             elif line.startswith("user "):
                 line = "User intent: " + line[5:].strip()
             elif line.startswith("bot "):
@@ -230,3 +239,42 @@ def remove_trailing_new_line(s: str):
     if s.endswith("\n"):
         s = s[:-1]
     return s
+
+
+def conversation_to_events(conversation: List) -> List[dict]:
+    """Filter that given a conversation, returns a list of events."""
+    events = []
+    for turn in conversation:
+        if "user" in turn:
+            events.append(
+                {
+                    "type": "UtteranceUserActionFinished",
+                    "final_transcript": turn["user"],
+                }
+            )
+
+        if "user_intent" in turn:
+            events.append(
+                {
+                    "type": "UserIntent",
+                    "intent": turn["user_intent"],
+                }
+            )
+
+        if "bot" in turn:
+            events.append(
+                {
+                    "type": "StartUtteranceBotAction",
+                    "script": turn["bot"],
+                }
+            )
+
+        if "bot_intent" in turn:
+            events.append(
+                {
+                    "type": "BotIntent",
+                    "intent": turn["bot_intent"],
+                }
+            )
+
+    return events

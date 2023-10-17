@@ -18,7 +18,7 @@ import importlib.util
 import json
 import logging
 import os.path
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -77,6 +77,10 @@ class RequestBody(BaseModel):
     config_id: str = Field(description="The id of the configuration to be used.")
     messages: List[dict] = Field(
         default=None, description="The list of messages in the current conversation."
+    )
+    context: Optional[dict] = Field(
+        default=None,
+        description="Additional context data to be added to the conversation.",
     )
 
 
@@ -158,7 +162,12 @@ async def chat_completion(body: RequestBody, request: Request):
         }
 
     try:
-        bot_message = await llm_rails.generate_async(messages=body.messages)
+        messages = body.messages
+        if body.context:
+            messages.insert(0, {"role": "context", "content": body.context})
+
+        bot_message = await llm_rails.generate_async(messages=messages)
+
     except Exception as ex:
         log.exception(ex)
         return {

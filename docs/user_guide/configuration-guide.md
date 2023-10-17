@@ -5,6 +5,7 @@ To set up a bot, we need the configuration to include the following:
 - **General Options** - which LM to use, general instructions (similar to system prompts), and sample conversation
 - **Guardrails Definitions** - files in Colang that define the dialog flows and guardrails
 - **Knowledge Base Documents**[Optional] - documents that can be used to provide context for bot responses
+- **Custom Configuration Data** - additional configuration data required by various rails (e.g., fact-checking)
 - **Actions** - custom actions implemented in python
 - **Initialization Code** - custom python code performing additional initialization e.g. registering a new type of LLM
 
@@ -239,9 +240,11 @@ prompts:
   - task: generate_user_intent
     models:
       - openai/gpt-3.5-turbo
+    max_length: 3000
     content: |-
       <<This is a placeholder for a custom prompt for generating the user intent>>
 ```
+For each task, you can also specify the maximum length of the prompt to be used for the LLM call in terms of the number of characters. This is useful if you want to limit the number of tokens used by the LLM or when you want to make sure that the prompt length does not exceed the maximum context length. When the maximum length is exceeded, the prompt is truncated by removing older turns from the conversation history until length of the prompt is less than or equal to the maximum length. The default maximum length is 16000 characters.
 
 The full list of tasks used by the NeMo Guardrails toolkit is the following:
 
@@ -296,7 +299,92 @@ def init(app: LLMRails):
 
 ## Guardrails Definitions
 
-The dialog flows and guardrails are defined using Colang. You can include as many `.co` files as you want, including subdirectories. For getting started, please refer to the [Hello World](../getting_started/hello-world.md) example. More concrete examples of guardrails configuration can be found in the [Examples](../../examples) folder.
+**NOTE: THIS SECTION IS WORK IN PROGRESS.**
+
+Guardrails (or rails for short) are implemented through **flows**. Depending on their role, rails can be split into several main categories:
+
+1. Input rails: triggered when a new input from the user is received.
+2. Output rails: triggered when a new output should be sent to the user.
+3. Dialog rails: triggered after a user message is interpreted, i.e., a canonical form has been identified.
+4. Retrieval rails: triggered after the retrieval step has been performed (i.e., the `retrieve_relevant_chunks` action has finished).
+
+The active rails are configured using the `rails` key in `config.yml`. Below is a quick example:
+
+```yaml
+rails:
+  # Input rails are invoked when a new message from the user is received.
+  input:
+    flows:
+      - check jailbreak
+      - check input sensitive data
+      - check toxicity
+      - ... # Other input rails
+
+  # Output rails are triggered after a bot message has been generated.
+  output:
+    # By default, output rails are not applied on predefined bot messages.
+    enable_on_predefined_messages: false
+    flows:
+      - check facts
+      - check hallucination
+      - check output sensitive data
+      - ... # Other output rails
+
+  # Retrieval rails are invoked once `$relevant_chunks` are computed.
+  retrieval:
+    flows:
+      - check retrieval sensitive data
+
+  # Execution rails are triggered before and after an action is invoked
+  # TODO
+
+  # Dialog rails are triggered after user message is interpreted, i.e., its canonical form
+  # has been computed.
+  dialog:
+    # Whether to try to use a single call
+    single_call:
+      enabled: False
+      # If a single call fails, whether to fall back to multiple LLM calls.
+      fallback_to_multiple_calls: True
+
+    user_messages:
+      # Whether to use only the embeddings when interpreting the user's message
+      embeddings_only: False
+```
+
+### Input Rails
+
+**NOTE: THIS SECTION IS WORK IN PROGRESS.**
+
+Input rails process the message from the user. For example:
+
+```colang
+define flow some input rail
+  $allowed = execute check_jailbreak
+
+  if not $allowed
+    bot inform cannot answer
+    stop
+```
+
+Input rails can alter the input by changing the `$user_message` context variable.
+
+### Output Rails
+
+**NOTE: THIS SECTION IS WORK IN PROGRESS.**
+
+Output rails process a bot message. The message to be processed is available in the context variable `$bot_message`. Output rails can alter the `$bot_message` variable, e.g., to mask sensitive information.
+
+You can deactivate output rails temporarily, for the next bot message, by setting the `$skip_output_rails` context variable to `True`.
+
+**TODO: add example and test**.
+
+### Retrieval Rails
+
+**NOTE: THIS SECTION IS WORK IN PROGRESS.**
+
+Retrieval rails process the retrieved chunks, i.e., the `$relevant_chunks` variable.
+
 
 ## Knowledge base Documents
 
@@ -312,3 +400,12 @@ By default, an `LLMRails` instance supports using a set of documents as context 
 ```
 
 Currently, only the Markdown format is supported. Support for other formats will be added in the near future.
+
+## Custom Configuration Data
+
+To provide additional configuration data to various components, you can use the `custom_data` key in your `config.yml`.
+
+```
+custom_data:
+  some_data: some_value
+```

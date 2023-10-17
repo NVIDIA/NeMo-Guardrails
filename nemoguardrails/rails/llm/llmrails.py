@@ -69,14 +69,15 @@ class LLMRails:
         #   should be removed
         self.events_history_cache = {}
 
-        # We also load the default flows from the `llm_flows.yml` file in the current folder.
+        # We also load the default flows from the `llm_flows.co` file in the current folder.
         current_folder = os.path.dirname(__file__)
-        default_flows_path = os.path.join(current_folder, "llm_flows.co")
+        default_flows_file = "llm_flows.co"
+        default_flows_path = os.path.join(current_folder, default_flows_file)
         with open(default_flows_path, "r") as f:
             default_flows_content = f.read()
-            default_flows = parse_colang_file("llm_flows.co", default_flows_content)[
-                "flows"
-            ]
+            default_flows = parse_colang_file(
+                default_flows_file, default_flows_content
+            )["flows"]
 
         # We add the default flows to the config.
         self.config.flows.extend(default_flows)

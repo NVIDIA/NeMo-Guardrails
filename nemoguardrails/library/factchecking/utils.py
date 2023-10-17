@@ -13,21 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from typing import Optional
 
 
-class Task(Enum):
-    """The various tasks that can be performed by the LLM."""
+def get_evidence_and_claim_from_context(context: Optional[dict] = None):
+    """Extract the evidence and claim from the context."""
+    evidence = context.get("relevant_chunks", [])
+    response = context.get("bot_message")
 
-    GENERAL = "general"
-    GENERATE_USER_INTENT = "generate_user_intent"
-    GENERATE_NEXT_STEPS = "generate_next_steps"
-    GENERATE_BOT_MESSAGE = "generate_bot_message"
-    GENERATE_INTENT_STEPS_MESSAGE = "generate_intent_steps_message"
-    GENERATE_VALUE = "generate_value"
+    if response is None:
+        raise Exception("No claim or context was provided to AlignScore.")
 
-    FACT_CHECKING = "fact_checking"
-    JAILBREAK_CHECK = "jailbreak_check"
-    OUTPUT_MODERATION = "output_moderation"
-    OUTPUT_MODERATION_V2 = "output_moderation_v2"
-    CHECK_HALLUCINATION = "check_hallucination"
+    return evidence, response
