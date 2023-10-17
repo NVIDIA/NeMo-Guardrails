@@ -7,7 +7,7 @@ define subflow check facts
   if $check_facts == True
     $check_facts = False
 
-    $accurate = execute check_facts
-    if not $accurate
+    $accuracy = execute check_facts
+    if $accuracy < 0.5
       bot inform answer unknown
       stop

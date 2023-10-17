@@ -19,41 +19,22 @@ from typing import Optional
 from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions import action
-from nemoguardrails.actions.llm.utils import llm_call
-from nemoguardrails.llm.params import llm_params
+from nemoguardrails.library.factchecking import align_score, ask_llm
 from nemoguardrails.llm.taskmanager import LLMTaskManager
-from nemoguardrails.llm.types import Task
 
 log = logging.getLogger(__name__)
 
 
-@action()
+@action(is_system_action=True)
 async def check_facts(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
     """Checks the facts for the bot response."""
+    provider = llm_task_manager.config.rails.config.fact_checking.provider
 
-    evidence = context.get("relevant_chunks", [])
-    response = context.get("bot_message")
-
-    if evidence:
-        prompt = llm_task_manager.render_task_prompt(
-            task=Task.FACT_CHECKING,
-            context={
-                "evidence": evidence,
-                "response": response,
-            },
-        )
-
-        with llm_params(llm, temperature=0.0):
-            entails = await llm_call(llm, prompt)
-
-        entails = entails.lower().strip()
-        log.info(f"Entailment result is {entails}.")
-
-        return "yes" in entails
-
-    # If there was no evidence, we always return true
-    return True
+    if provider == "align_score":
+        return await align_score.check_facts(llm_task_manager, context, llm)
+    else:
+        return await ask_llm.check_facts(llm_task_manager, context, llm)

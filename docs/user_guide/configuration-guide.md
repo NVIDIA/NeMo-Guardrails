@@ -5,6 +5,7 @@ To set up a bot, we need the configuration to include the following:
 - **General Options** - which LM to use, general instructions (similar to system prompts), and sample conversation
 - **Guardrails Definitions** - files in Colang that define the dialog flows and guardrails
 - **Knowledge Base Documents**[Optional] - documents that can be used to provide context for bot responses
+- **Custom Configuration Data** - additional configuration data required by various rails (e.g., fact-checking)
 - **Actions** - custom actions implemented in python
 - **Initialization Code** - custom python code performing additional initialization e.g. registering a new type of LLM
 
@@ -399,3 +400,12 @@ By default, an `LLMRails` instance supports using a set of documents as context 
 ```
 
 Currently, only the Markdown format is supported. Support for other formats will be added in the near future.
+
+## Custom Configuration Data
+
+To provide additional configuration data to various components, you can use the `custom_data` key in your `config.yml`.
+
+```
+custom_data:
+  some_data: some_value
+```

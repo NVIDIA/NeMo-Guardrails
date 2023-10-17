@@ -38,7 +38,7 @@ In particular, we'll look at two approaches:
 This example includes the following items
 
 - `kb/` - A folder containing our knowledge base to retrieve context from and fact check against. In this case, we include the March 2023 US Jobs report in `kb/report.md`.
-- `llm_config.yaml` - A config file defining the Large Language Model used.
+- `config.yml` - A config file defining the Large Language Model used.
 - `general.co` - A colang file with some generic examples of colang `flows` and `messages`
 - `factcheck.co` - A colang file demonstrating one way of implementing a Fact Checking rail using the `check_facts` action
 - `hallucination.co` - A colang file demonstrating one way of implementing a hallucination detection rail using the `check_hallucination` action
@@ -48,7 +48,7 @@ This example includes the following items
 
 To explore some of the capabilities, we'll ask questions about the document in our [knowledge base](./kb/) folder, which is the jobs report for march 2023. We'll see how we can use a large language model to answer questions about this document, and how we can use guardrails to control the outputs of the model to make sure they are factual.
 
-To start off with, we'll define some settings for our LLM and conversational flow. In the first file, `llm_config.yaml`, we'll specify that we want to use OpenAI's davinci model as the underlying engine of our chatbot.
+To start off with, we'll define some settings for our LLM and conversational flow. In the first file, `config.yml`, we'll specify that we want to use OpenAI's davinci model as the underlying engine of our chatbot.
 
 ```yaml
 models:
@@ -93,7 +93,7 @@ We're ready to start chatting. We'll add our first user utterance to the chat lo
 
 
 ```python
-history = [{"role": "user", "content": "What was last month's unemployment rate?"}]
+history = [{"role": "user", "content": "What was the unemployment rate reported in March?"}]
 bot_message = await app.generate_async(messages=history)
 print(bot_message['content'])
 ```
@@ -132,7 +132,7 @@ That certainly sounds reasonable, but there's a problem! If you look over the re
 
 The fact checking rail enables you to check the validity of the bot response based on the knowledge base. It takes as inputs the bot response and the relevant chunk from the knowledge base, and makes a call to the LLM asking if the response is true based on the retrieved chunk. The actual format of the LLM call can be seen in [`actions/fact_checking.py`](../../../nemoguardrails/library/factchecking/actions.py).
 
-Let's modify our flow from before to add the fact checking rail. Now, when the bot provides its answer, we'll execute the `check_facts` action, and store the response in the `accurate` variable. If the fact checking action deems the response to be false, we'll remove that message from the response and let the user know that the bot doesn't know the answer.
+Let's modify our flow from before to add the fact checking rail. Now, when the bot provides its answer, we'll execute the `check_facts` action, and store the response in the `accuracy` variable. If the fact checking action returns a low score, we'll remove that message from the response and let the user know that the bot doesn't know the answer.
 
 We also need to include a way to actually delete a message. NeMo Guardrails includes a special case, where the bot responding with the literal phrase `(remove last message)` causes the most recent message to be removed from the response. So we can include that exact response in our flow.
 
@@ -145,8 +145,8 @@ define user ask about report
 define flow answer report question
   user ask about report
   bot provide report answer
-  $accurate = execute check_facts
-  if not $accurate
+  $accuracy = execute check_facts
+  if $accuracy < 0.5
     bot remove last message
     bot inform answer unknown
 
@@ -198,6 +198,11 @@ Finished chain.
 ```
 
 Everything up until `Finished chain.` is part of the bot's "internal reasoning", with the text afterward actually being returned as the response. If you take a look at the output log above, you'll see that the LLM model still initially responds with the same false answer as before. But then it kicks off the `check_facts` action, and we see that the result was False. So, just as we defined, the bot removes the last, incorrect message and generates a response that corresponds to the `inform answer unknown` intent.
+
+### Fact Checking Methodology
+The default fact-checking rail operates by prompting the LLM that produced the response to check its own response against the retrieved relevant chunks from the knowledge base. This method can be slow due to the added LLM calls and can have unpredictable performance since the same LLM that might have produced an incorrect answer is responsible for identifying that. The performance is also sensitive to the prompt used to perform the fact-checking.
+
+This toolkit supports plugging in custom fact-checking solutions with ease. Please see the detailed [fact-checking example](../fact_checking/README.md) for a walkthrough on using the [AlignScore](https://aclanthology.org/2023.acl-long.634.pdf) method for faster and more predictable fact-checking.
 
 ## Hallucination Rail
 
