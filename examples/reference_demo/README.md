@@ -1,6 +1,11 @@
 # Nemo Guardrails Reference Examples
 
-This document details how to go about building workflows and applications using Nemo Guardrails. The examples contained are increasingly complex ways to use NeMo Guardrails. 
+This document details how to go about building workflows and applications using Nemo Guardrails. The examples contained are increasingly complex ways to use NeMo Guardrails. There are two examples: 
+
+- [basic_auth]() 
+  Shows a simple authentication process.
+- [PineconeRAG]()
+  Uses Pinecone vector database for Retreival Augmented Generation.
 
 ## Getting Started
 
