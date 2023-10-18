@@ -9,7 +9,7 @@ The Guardrails Server loads a predefined set of guardrails configurations at sta
 To launch the server:
 
 ```
-> nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT] [--prefix PREFIX] [--disable-chat-ui]
+> nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT] [--prefix PREFIX] [--disable-chat-ui] [--auto-reload]
 ```
 
 If no `--config` option is specified, the server will try to load the configurations from the `config` folder in the current directory. If no configurations are found, it will load all the example guardrails configurations.
@@ -28,6 +28,8 @@ If a `--prefix` option is specified, the root path for the guardrails server wil
 │       ├── ...
 │   ...
 ```
+
+If the `--auto-reload` option is specified, the server will monitor any changes to the files inside the folder holding the configurations and reload them automatically when they change. This allows you to iterate faster on your configurations, and even regenerate messages mid-conversation, after changes have been made. **IMPORTANT**: this option should only be used in development environments.
 
 ### CORS
 
