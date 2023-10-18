@@ -1,6 +1,6 @@
 # [Part 2] Reference Demo
 
-In order to run this component of the reference demo, you will need to obtain a Pinecone API. 
+In order to run this component of the reference demo, you will need to obtain a Pinecone API. The Pinecone vector database has the following Wikipedia pages [Nvidia](), [Mango]().
 
 This part enables Nemo Guardrails to talk to Pinecone for which we will be extending or overriding certain functionalities in the Simple Embedding Search Provider API that is provided within Nemo Guardrails core. The Simple Embedding Search Provider has three atomic functions: 
 - The initialisation 

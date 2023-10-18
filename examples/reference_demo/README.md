@@ -62,13 +62,13 @@ Start with the first use case and write down all the helper functions or Python 
 
 In this reference example we first build out the basic authentication flow, then search summarisation and question answering with references. All of these are additional applications built on top of core Nemo Guardrails and therefore need to be developed separately. To do this familiarity with the architecture of Nemo Guardrails core is essential and the best way to do that is to bring everything into the vscode, review the code and run things, track the flow, and use the debugger often. 
 
-Next, write out all the rails (in the `xx.co`` files) and utilize the helper functions or Python actions. There are a few rules of thumb to remember while writing out the rails. Let's go through them here:
+Next, write out all the rails (in the `xx.co` files) and utilize the helper functions or Python actions. There are a few rules of thumb to remember while writing out the rails. Let's go through them here:
 
 - Check that the flow order is correct and that all subflows are defined before the main flow. Ideally, you want to define subflows such that they are reusable components in your code. Its utility is similar to a helper function. 
 - Each sub-flow will likely have at least three components:
- - Bot requesting some information
- - User providing said information
- - Bot performing some action on this provided information (eg expressing gratitude or calling a Python action)
+  - Bot requesting some information
+  - User providing said information
+  - Bot performing some action on this provided information (eg expressing gratitude or calling a Python action)
 - When defining the sample conversations, it’s important to stick to the exact format i.e.
 ```
 user "<USER MESSAGE>"
