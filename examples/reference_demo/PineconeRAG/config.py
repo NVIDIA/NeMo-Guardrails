@@ -30,6 +30,8 @@ from langchain.chains import RetrievalQA
 from datasets import Dataset
 from langchain.chains import RetrievalQAWithSourcesChain
 from datetime import datetime
+
+from typing import Optional
 import logging
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -37,6 +39,8 @@ PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT")
 index_name = 'nemoguardrailsindex'
 model_name = 'text-embedding-ada-002'
+#todo different llm for different tasks 
+#https://github.com/NVIDIA/NeMo-Guardrails/blob/aa07d889e9437dc687cd1c0acf51678ad435516e/tests/test_configs/with_openai_embeddings/config.yml#L4
 
 # import warnings
 # warnings.filterwarnings("ignore")
@@ -228,6 +232,7 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
     
        
     async def add_items(self,  items: List[IndexItem]):
+        #todo not being used so need to think about changing config ?
         """Adds multiple items to the index."""
         # In the init function we have already indexed items into pinecone, so here we can check that pinecone db is full
         if self.index.describe_index_stats()['total_vector_count'] == 0:
@@ -245,7 +250,17 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
     async def search(self, text: str, max_results: int) -> List[IndexItem]:
         """Searches the index for the closes matches to the provided text."""
         # needs to instead call pinecone search
-        print(self.retreival_qa_with_sources(text))
+        print("in nemo guardrails core function of search not doing anything")
+        #return self.standard_query(text)
+        #print(self.retreival_qa_with_sources(text))
+        return self.retreival_qa_with_sources(text)
+        #todo 
+        #return result of search 
+        #retrieved chunks 
+        #query pinecone get 3 chunks and store them into IndexItem
+        #return list of three items
+        #guardrais will use the returned list 
+        #what does pinecone output look like?
 
 
     
@@ -287,5 +302,4 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
 
 
 def init(app: LLMRails):
-    app.register_embedding_search_provider(
-        "simple", SimpleEmbeddingSearchProvider)
+    app.register_embedding_search_provider("simple", SimpleEmbeddingSearchProvider)

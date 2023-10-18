@@ -1,10 +1,9 @@
-define user express greeting
-  "hi"
-  "hello"
+define user ask question
+    "What does Nvidia do?"
+    "What is a mango?"
+
 
 define flow
-  user express greeting
-  bot express greeting
-
-define bot express greeting
-  "Hello there!"
+  user ask question
+  $answer = execute qa_chain_with_sources(query=$last_user_message)
+  bot $answer
