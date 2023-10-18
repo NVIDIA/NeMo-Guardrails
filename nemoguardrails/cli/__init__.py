@@ -77,6 +77,7 @@ def server(
         default=False,
         help="Weather the ChatUI should be disabled",
     ),
+    auto_reload: bool = typer.Option(default=False, help="Enable auto reload option."),
     prefix: str = typer.Option(
         default="",
         help="A prefix that should be added to all server paths. Should start with '/'.",
@@ -98,6 +99,9 @@ def server(
 
     if disable_chat_ui:
         api.app.disable_chat_ui = True
+
+    if auto_reload:
+        api.app.auto_reload = True
 
     if prefix:
         server_app = FastAPI()

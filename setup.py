@@ -78,5 +78,6 @@ setup(
     ],
     extras_require={
         "eval": ["tqdm~=4.65", "numpy~=1.24"],
+        "dev": ["fastapi-utils==0.2.1", "watchdog==3.0.0"],
     },
 )

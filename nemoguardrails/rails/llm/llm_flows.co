@@ -1,4 +1,4 @@
-define flow process user input
+define parallel flow process user input
   """Run all the input rails on the user input."""
   event UtteranceUserActionFinished(final_transcript="...")
   $user_message = $event["final_transcript"]
