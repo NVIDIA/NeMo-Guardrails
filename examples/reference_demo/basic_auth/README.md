@@ -11,18 +11,18 @@ Key features of the architecture of NeMo Guardrails and the underlying dialog ma
 
 ## Steps performed in the demo: 
 
-- Authenticate the user by asking for user id, first name, last name and verify against a database. Later on, one can replace this with a more complex authentication guardrail.
-     - The developer can control the order of when bot asks questions and conditionally asks questions and requests for user input
-    - The developer can selectively store values in a Python dictionary or JSON file locally
-    -  The developer can selectively send specific parsed inputs to customizable actions
-    - The user inputs multiple input variables and the dialog manager can take care of context and parsing information and then pass it onto Guardrails
-- Loads user profile and informs the user of the bot's capabilities such as file summarization, opening IT tickets etc.
+- [Part 1] Authenticate the user by asking for user id, first name, last name and verify against a database. Later on, one can replace this with a more complex authentication guardrail. Concretely the following salient features will be displayed: 
+     - The developer can control the order of when bot asks questions and conditionally asks questions and requests for user input.
+    - The developer can selectively store values in a Python dictionary or JSON file locally. This is helpful to develop a cache or store user details in a production environment.
+    -  The developer can selectively send specific parsed inputs to customizable actions. So, sending only the first name, or last name for authentication rather than the entire message history and context. 
+    - The user inputs multiple input variables and the dialog manager can take care of context and parsing information and then pass it onto Guardrails for filtering and dialog management.
+- [Part 2] Loads user profile and informs the user of the bot's capabilities such as file summarization, question answering with citations or the ability to "talk to your data", opening IT tickets etc.
 
 ## How to run
 
-Within the `reference_demo` folder run: ` nemoguardrails chat --config=. `
+Follow the steps to install and setup Nemo Guardrails, then within the `reference_demo` folder run: ` nemoguardrails chat --config=. `
 
-The following shows an example conversation flow: 
+The following shows an example conversation flow for authentication (Part 1 of the reference demo): 
 
 ```
 user:~/NeMo-Guardrails/examples/reference_demo$ nemoguardrails chat --config=.
@@ -47,6 +47,6 @@ Aborted!
 ```
 ## Implementation Details
 
-- The `ground_truth.json` contains details of some example users. This will be used for a basic authentication rail. One can change the details of this file to control the authentication process.
+- The `ground_truth.json` contains details of some example users. This will be used for a basic authentication rail. One can change the details of this file to control the authentication process. For production versions one can increase the complexity of authentication and add third party APIs and two factor authentication within this workflow via actions.
   
 
