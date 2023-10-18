@@ -16,13 +16,11 @@
 from aioresponses import aioresponses
 
 from nemoguardrails import RailsConfig
-from nemoguardrails.library.active_fence import actions
 from tests.utils import TestChat
 
 
-def test_1():
-    # We need to set a dummy API key to avoid an error.
-    actions.API_KEY = "xxx"
+def test_1(monkeypatch):
+    monkeypatch.setenv("ACTIVE_FENCE_API_KEY", "xxx")
 
     config = RailsConfig.from_content(
         colang_content="""
@@ -55,10 +53,23 @@ def test_1():
         ],
     )
 
-    chat >> "Hello!"
-    chat << "Hello! How can I assist you today?"
-
     with aioresponses() as m:
+        # First call to ActiveFence should flag no violations.
+        m.post(
+            "https://apis.activefence.com/sync/v3/content/text",
+            payload={
+                "response_id": "36f76a43-ddbe-4308-bc86-1a2b068a00ea",
+                "entity_id": "59fe8fe0-5036-494f-970c-8e28305a3716",
+                "entity_type": "content",
+                "violations": [],
+                "errors": [],
+            },
+        )
+
+        chat >> "Hello!"
+        chat << "Hello! How can I assist you today?"
+
+        # Second call will flag an abusive_or_harmful violation.
         m.post(
             "https://apis.activefence.com/sync/v3/content/text",
             payload={
