@@ -18,18 +18,22 @@ import asyncio
 import importlib.util
 import logging
 import os
+import threading
 import time
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Type, Union
 
 from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
+from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.flows.runtime import Runtime
+from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.stats import llm_stats
-from nemoguardrails.rails.llm.config import RailsConfig
+from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
+from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 
 log = logging.getLogger(__name__)
@@ -52,22 +56,51 @@ class LLMRails:
         self.llm = llm
         self.verbose = verbose
 
+        # We allow the user to register additional embedding search providers, so we keep
+        # an index of them.
+        self.embedding_search_providers = {}
+
+        # The default embeddings model is using SentenceTransformers
+        self.default_embedding_model = "all-MiniLM-L6-v2"
+        self.default_embedding_engine = "SentenceTransformers"
+
         # We keep a cache of the events history associated with a sequence of user messages.
         # TODO: when we update the interface to allow to return a "state object", this
         #   should be removed
         self.events_history_cache = {}
 
-        # We also load the default flows from the `default_flows.yml` file in the current folder.
+        # We also load the default flows from the `llm_flows.co` file in the current folder.
         current_folder = os.path.dirname(__file__)
-        default_flows_path = os.path.join(current_folder, "llm_flows.co")
+        default_flows_file = "llm_flows.co"
+        default_flows_path = os.path.join(current_folder, default_flows_file)
         with open(default_flows_path, "r") as f:
             default_flows_content = f.read()
-            default_flows = parse_colang_file("llm_flows.co", default_flows_content)[
-                "flows"
-            ]
+            default_flows = parse_colang_file(
+                default_flows_file, default_flows_content
+            )["flows"]
 
         # We add the default flows to the config.
         self.config.flows.extend(default_flows)
+
+        # We also need to load the content from the components library.
+        library_path = os.path.join(os.path.dirname(__file__), "../../library")
+        for root, dirs, files in os.walk(library_path):
+            for file in files:
+                # Extract the full path for the file
+                full_path = os.path.join(root, file)
+                if file.endswith(".co"):
+                    with open(full_path, "r", encoding="utf-8") as f:
+                        content = parse_colang_file(file, content=f.read())
+
+                        # We load all the flows
+                        self.config.flows.extend(content["flows"])
+
+                        # And all the messages as well, if they have not been overwritten
+                        for message_id, utterances in content.get(
+                            "bot_messages", {}
+                        ).items():
+                            if message_id not in self.config.bot_messages:
+                                self.config.bot_messages[message_id] = utterances
 
         # We check if the configuration has a config.py module associated with it.
         config_module = None
@@ -88,18 +121,54 @@ class LLMRails:
         if config_module is not None and hasattr(config_module, "init"):
             config_module.init(self)
 
+        # If we have a customized embedding model, we'll use it.
+        for model in self.config.models:
+            if model.type == "embeddings":
+                self.default_embedding_model = model.model
+                self.default_embedding_engine = model.engine
+                break
+
         # Next, we initialize the LLM engines (main engine and action engines if specified).
         self._init_llms()
+
         # Next, we initialize the LLM Generate actions and register them.
-        actions = LLMGenerationActions(
+        self.llm_generation_actions = LLMGenerationActions(
             config=config,
             llm=self.llm,
             llm_task_manager=self.runtime.llm_task_manager,
+            get_embedding_search_provider_instance=self._get_embeddings_search_provider_instance,
             verbose=verbose,
         )
-        self.runtime.register_actions(actions)
+
+        # If there's already an action registered, we don't override.
+        self.runtime.register_actions(self.llm_generation_actions, override=False)
+
+        # Next, we initialize the Knowledge Base
+        if check_sync_call_from_async_loop():
+            t = threading.Thread(target=asyncio.run, args=(self._init_kb(),))
+            t.start()
+            t.join()
+        else:
+            asyncio.run(self._init_kb())
+
         # We also register the kb as a parameter that can be passed to actions.
-        self.runtime.register_action_param("kb", actions.kb)
+        self.runtime.register_action_param("kb", self.kb)
+
+    async def _init_kb(self):
+        """Initializes the knowledge base."""
+        self.kb = None
+
+        if not self.config.docs:
+            return
+
+        documents = [doc.content for doc in self.config.docs]
+        self.kb = KnowledgeBase(
+            documents=documents,
+            config=self.config.knowledge_base,
+            get_embedding_search_provider_instance=self._get_embeddings_search_provider_instance,
+        )
+        self.kb.init()
+        await self.kb.build()
 
     def _init_llms(self):
         """
@@ -112,47 +181,73 @@ class LLMRails:
         is to allow for flexibility in using specialized LLM engines for specific actions.
         """
 
-        # If we already have a pre-configured one, we do nothing.
+        # If we already have a pre-configured one,
+        # we just need to register the LLM as an action param.
         if self.llm is not None:
+            self.runtime.register_action_param("llm", self.llm)
             return
 
-        # TODO: Currently we assume the first model is the main one. Add proper support
-        #  to search for the main model config.
-
         for llm_config in self.config.models:
-            if llm_config.engine not in get_llm_provider_names():
-                raise Exception(f"Unknown LLM engine: {llm_config.engine}")
-
-            provider_cls = get_llm_provider(llm_config)
-            # We need to compute the kwargs for initializing the LLM
-            kwargs = llm_config.parameters
-
-            # We also need to pass the model, if specified
-            if llm_config.model:
-                # Some LLM providers use `model_name` instead of model. For backward compatibility
-                # we keep this hard-coded mapping.
-                if llm_config.engine in [
-                    "azure",
-                    "openai",
-                    "gooseai",
-                    "nlpcloud",
-                    "petals",
-                ]:
-                    kwargs["model_name"] = llm_config.model
-                else:
-                    # The `__fields__` attribute is computed dynamically by pydantic.
-                    if "model" in provider_cls.__fields__:
-                        kwargs["model"] = llm_config.model
-
-            if llm_config.type == "main" or len(self.config.models) == 1:
-                self.llm = provider_cls(**kwargs)
-                self.runtime.register_action_param("llm", self.llm)
+            if llm_config.type == "embeddings":
+                pass
             else:
-                model_name = f"{llm_config.type}_llm"
-                setattr(self, model_name, provider_cls(**kwargs))
-                self.runtime.register_action_param(
-                    model_name, getattr(self, model_name)
-                )
+                if llm_config.engine not in get_llm_provider_names():
+                    raise Exception(f"Unknown LLM engine: {llm_config.engine}")
+
+                provider_cls = get_llm_provider(llm_config)
+                # We need to compute the kwargs for initializing the LLM
+                kwargs = llm_config.parameters
+
+                # We also need to pass the model, if specified
+                if llm_config.model:
+                    # Some LLM providers use `model_name` instead of model. For backward compatibility
+                    # we keep this hard-coded mapping.
+                    if llm_config.engine in [
+                        "azure",
+                        "openai",
+                        "gooseai",
+                        "nlpcloud",
+                        "petals",
+                    ]:
+                        kwargs["model_name"] = llm_config.model
+                    else:
+                        # The `__fields__` attribute is computed dynamically by pydantic.
+                        if "model" in provider_cls.__fields__:
+                            kwargs["model"] = llm_config.model
+
+                if llm_config.type == "main" or len(self.config.models) == 1:
+                    self.llm = provider_cls(**kwargs)
+                    self.runtime.register_action_param("llm", self.llm)
+                else:
+                    model_name = f"{llm_config.type}_llm"
+                    setattr(self, model_name, provider_cls(**kwargs))
+                    self.runtime.register_action_param(
+                        model_name, getattr(self, model_name)
+                    )
+
+    def _get_embeddings_search_provider_instance(
+        self, esp_config: Optional[EmbeddingSearchProvider] = None
+    ) -> EmbeddingsIndex:
+        if esp_config is None:
+            esp_config = EmbeddingSearchProvider()
+
+        if esp_config.name == "default":
+            from nemoguardrails.embeddings.basic import BasicEmbeddingsIndex
+
+            return BasicEmbeddingsIndex(
+                embedding_model=esp_config.parameters.get(
+                    "embedding_model", self.default_embedding_model
+                ),
+                embedding_engine=esp_config.parameters.get(
+                    "embedding_engine", self.default_embedding_engine
+                ),
+            )
+        else:
+            if esp_config.name not in self.embedding_search_providers:
+                raise Exception(f"Unknown embedding search provider: {esp_config.name}")
+            else:
+                kwargs = esp_config.parameters
+                return self.embedding_search_providers[esp_config.name](**kwargs)
 
     def _get_events_for_messages(self, messages: List[dict]):
         """Return the list of events corresponding to the provided messages.
@@ -285,12 +380,7 @@ class LLMRails:
     ):
         """Synchronous version of generate_async."""
 
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
+        if check_sync_call_from_async_loop():
             raise RuntimeError(
                 "You are using the sync `generate` inside async code. "
                 "You should replace with `await generate_async(...)."
@@ -337,12 +427,7 @@ class LLMRails:
     def generate_events(self, events: List[dict]) -> List[dict]:
         """Synchronous version of `LLMRails.generate_events_async`."""
 
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
+        if check_sync_call_from_async_loop():
             raise RuntimeError(
                 "You are using the sync `generate_events` inside async code. "
                 "You should replace with `await generate_events_async(...)."
@@ -373,3 +458,15 @@ class LLMRails:
         :value_or_fn: The value or function that will be used to generate the value.
         """
         self.runtime.llm_task_manager.register_prompt_context(name, value_or_fn)
+
+    def register_embedding_search_provider(
+        self, name: str, cls: Type[EmbeddingsIndex]
+    ) -> None:
+        """Register a new embedding search provider.
+
+        Args:
+            name: The name of the embedding search provider that will be used.
+            cls: The class that will be used to generate and search embedding
+        """
+
+        self.embedding_search_providers[name] = cls

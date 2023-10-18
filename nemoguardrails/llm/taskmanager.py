@@ -25,7 +25,9 @@ from nemoguardrails.llm.filters import (
     last_turns,
     remove_text_messages,
     to_messages,
+    to_messages_nemollm,
     user_assistant_sequence,
+    user_assistant_sequence_nemollm,
     verbose_v1,
 )
 from nemoguardrails.llm.output_parsers import (
@@ -55,7 +57,11 @@ class LLMTaskManager:
         self.env.filters["first_turns"] = first_turns
         self.env.filters["last_turns"] = last_turns
         self.env.filters["user_assistant_sequence"] = user_assistant_sequence
+        self.env.filters[
+            "user_assistant_sequence_nemollm"
+        ] = user_assistant_sequence_nemollm
         self.env.filters["to_messages"] = to_messages
+        self.env.filters["to_messages_nemollm"] = to_messages_nemollm
         self.env.filters["verbose_v1"] = verbose_v1
 
         self.output_parsers = {
@@ -175,9 +181,16 @@ class LLMTaskManager:
 
         return messages
 
+    def _get_messages_text_length(self, messages: List[dict]) -> int:
+        """Return the length of the text in the messages."""
+        text = ""
+        for message in messages:
+            text += message["content"] + "\n"
+        return len(text)
+
     def render_task_prompt(
         self,
-        task: Task,
+        task: Union[str, Task],
         context: Optional[dict] = None,
         events: Optional[List[dict]] = None,
     ) -> Union[str, List[dict]]:
@@ -190,13 +203,38 @@ class LLMTaskManager:
         :return: A string, for completion models, or an array of messages for chat models.
         """
         prompt = get_prompt(self.config, task)
-
         if prompt.content:
-            return self._render_string(prompt.content, context=context, events=events)
+            task_prompt = self._render_string(
+                prompt.content, context=context, events=events
+            )
+            while len(task_prompt) > prompt.max_length:
+                if not events:
+                    raise Exception(
+                        f"Prompt exceeds max length of {prompt.max_length} characters even without history"
+                    )
+                # Remove events from the beginning of the history until the prompt fits.
+                events = events[1:]
+                task_prompt = self._render_string(
+                    prompt.content, context=context, events=events
+                )
+            return task_prompt
         else:
-            return self._render_messages(
+            task_messages = self._render_messages(
                 prompt.messages, context=context, events=events
             )
+            task_prompt_length = self._get_messages_text_length(task_messages)
+            while task_prompt_length > prompt.max_length:
+                if not events:
+                    raise Exception(
+                        f"Prompt exceeds max length of {prompt.max_length} characters even without history"
+                    )
+                # Remove events from the beginning of the history until the prompt fits.
+                events = events[1:]
+                task_messages = self._render_messages(
+                    prompt.messages, context=context, events=events
+                )
+                task_prompt_length = self._get_messages_text_length(task_messages)
+            return task_messages
 
     def parse_task_output(self, task: Task, output: str):
         """Parses the output for the provided tasks.

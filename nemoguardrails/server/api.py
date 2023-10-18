@@ -18,7 +18,7 @@ import importlib.util
 import json
 import logging
 import os.path
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -65,7 +65,9 @@ if ENABLE_CORS:
     )
 
 # By default, we use the rails in the examples folder
-app.rails_config_path = os.path.join(os.path.dirname(__file__), "..", "..", "examples")
+app.rails_config_path = os.path.join(
+    os.path.dirname(__file__), "..", "..", "examples", "_deprecated"
+)
 
 # Weather the chat UI is enabled or not.
 app.disable_chat_ui = False
@@ -75,6 +77,10 @@ class RequestBody(BaseModel):
     config_id: str = Field(description="The id of the configuration to be used.")
     messages: List[dict] = Field(
         default=None, description="The list of messages in the current conversation."
+    )
+    context: Optional[dict] = Field(
+        default=None,
+        description="Additional context data to be added to the conversation.",
     )
 
 
@@ -88,7 +94,7 @@ class ResponseBody(BaseModel):
     "/v1/rails/configs",
     summary="Get List of available rails configurations.",
 )
-def get_rails_configs():
+async def get_rails_configs():
     """Returns the list of available rails configurations."""
 
     # We extract all folder names as config names
@@ -156,7 +162,12 @@ async def chat_completion(body: RequestBody, request: Request):
         }
 
     try:
-        bot_message = await llm_rails.generate_async(messages=body.messages)
+        messages = body.messages
+        if body.context:
+            messages.insert(0, {"role": "context", "content": body.context})
+
+        bot_message = await llm_rails.generate_async(messages=messages)
+
     except Exception as ex:
         log.exception(ex)
         return {
@@ -183,7 +194,7 @@ def register_challenges(additional_challenges: List[dict]):
     "/v1/challenges",
     summary="Get list of available challenges.",
 )
-def get_challenges():
+async def get_challenges():
     """Returns the list of available challenges for red teaming."""
 
     return challenges

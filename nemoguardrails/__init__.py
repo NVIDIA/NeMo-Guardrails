@@ -14,4 +14,7 @@
 # limitations under the License.
 
 """NeMo Guardrails Toolkit."""
+from . import patch_asyncio
 from .rails import LLMRails, RailsConfig
+
+patch_asyncio.apply()

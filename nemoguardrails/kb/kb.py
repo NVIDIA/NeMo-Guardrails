@@ -17,13 +17,13 @@ import hashlib
 import logging
 import os
 from time import time
-from typing import List
+from typing import Callable, List, Optional, cast
 
 from annoy import AnnoyIndex
 
-from nemoguardrails.kb.basic import BasicEmbeddingsIndex
-from nemoguardrails.kb.index import IndexItem
+from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.kb.utils import split_markdown_in_topic_chunks
+from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, KnowledgeBaseConfig
 
 log = logging.getLogger(__name__)
 
@@ -33,11 +33,19 @@ CACHE_FOLDER = os.path.join(os.getcwd(), ".cache")
 class KnowledgeBase:
     """Basic implementation of a knowledge base."""
 
-    def __init__(self, documents: List[str], embedding_model: str):
+    def __init__(
+        self,
+        documents: List[str],
+        config: KnowledgeBaseConfig,
+        get_embedding_search_provider_instance: Callable[
+            [Optional[EmbeddingSearchProvider]], EmbeddingsIndex
+        ],
+    ):
         self.documents = documents
         self.chunks = []
         self.index = None
-        self.embedding_model = embedding_model
+        self.config = config
+        self._get_embeddings_search_instance = get_embedding_search_provider_instance
 
     def init(self):
         """Initialize the knowledge base.
@@ -54,7 +62,7 @@ class KnowledgeBase:
             chunks = split_markdown_in_topic_chunks(doc)
             self.chunks.extend(chunks)
 
-    def build(self):
+    async def build(self):
         """Builds the knowledge base index."""
         t0 = time()
         index_items = []
@@ -72,35 +80,62 @@ class KnowledgeBase:
         # We compute the md5
         md5_hash = hashlib.md5("".join(all_text_items).encode("utf-8")).hexdigest()
         cache_file = os.path.join(CACHE_FOLDER, f"{md5_hash}.ann")
+        embedding_size_file = os.path.join(CACHE_FOLDER, f"{md5_hash}.esize")
 
         # If we have already computed this before, we use it
-        if os.path.exists(cache_file):
-            # TODO: this should not be hardcoded. Currently set for all-MiniLM-L6-v2.
-            embedding_size = 384
+        if (
+            self.config.embedding_search_provider.name == "default"
+            and os.path.exists(cache_file)
+            and os.path.exists(embedding_size_file)
+        ):
+            from nemoguardrails.embeddings.basic import BasicEmbeddingsIndex
+
+            log.info(cache_file)
+            self.index = cast(
+                BasicEmbeddingsIndex,
+                self._get_embeddings_search_instance(
+                    self.config.embedding_search_provider
+                ),
+            )
+
+            with open(embedding_size_file, "r") as f:
+                embedding_size = int(f.read())
+
             ann_index = AnnoyIndex(embedding_size, "angular")
             ann_index.load(cache_file)
 
-            self.index = BasicEmbeddingsIndex(
-                embedding_model=self.embedding_model, index=ann_index
-            )
-            self.index.add_items(index_items)
-        else:
-            self.index = BasicEmbeddingsIndex(self.embedding_model)
-            self.index.add_items(index_items)
-            self.index.build()
+            self.index.embeddings_index = ann_index
 
-            # We also save the file for future use
-            os.makedirs(CACHE_FOLDER, exist_ok=True)
-            self.index.embeddings_index.save(cache_file)
+            await self.index.add_items(index_items)
+        else:
+            self.index = self._get_embeddings_search_instance(
+                self.config.embedding_search_provider
+            )
+            await self.index.add_items(index_items)
+            await self.index.build()
+
+            # For the default Embedding Search provider, which uses annoy, we also
+            # persist the index after it's computed.
+            if self.config.embedding_search_provider.name == "default":
+                from nemoguardrails.embeddings.basic import BasicEmbeddingsIndex
+
+                # We also save the file for future use
+                os.makedirs(CACHE_FOLDER, exist_ok=True)
+                basic_index = cast(BasicEmbeddingsIndex, self.index)
+                basic_index.embeddings_index.save(cache_file)
+
+                # And, explicitly save the size as we need it when we reload
+                with open(embedding_size_file, "w") as f:
+                    f.write(str(basic_index.embedding_size))
 
         log.info(f"Building the Knowledge Base index took {time() - t0} seconds.")
 
-    def search_relevant_chunks(self, text, max_results: int = 3):
+    async def search_relevant_chunks(self, text, max_results: int = 3):
         """Search the index for the most relevant chunks."""
         if self.index is None:
             return []
 
-        results = self.index.search(text, max_results=max_results)
+        results = await self.index.search(text, max_results=max_results)
 
         # Return the chunks directly
         return [result.meta for result in results]
