@@ -53,7 +53,9 @@ def _load_prompts() -> List[TaskPrompt]:
 _prompts = _load_prompts()
 
 
-def _get_prompt(task_name: str, model: str, prompting_mode: str, prompts: List) -> TaskPrompt:
+def _get_prompt(
+    task_name: str, model: str, prompting_mode: str, prompts: List
+) -> TaskPrompt:
     """Return the prompt for the given task.
 
     We intentionally update the matching model at equal score, to take the last one,
@@ -94,7 +96,7 @@ def _get_prompt(task_name: str, model: str, prompting_mode: str, prompts: List) 
             # This way, if a prompt with the correct mode (say "compact") is found, it will be preferred over a prompt with another mode (say "standard").
             if prompt.mode == "standard":
                 # why 0.5? why not <0.2? To give preference to matching model or provider over matching mode.
-                # This way, standard mode with matching provider at gets a score of 0.5 * 0.5 = 0.25 
+                # This way, standard mode with matching provider at gets a score of 0.5 * 0.5 = 0.25
                 # (> 0.2 for a matching mode but without a matching provider or model).
                 _score *= 0.5
             else:
@@ -125,7 +127,8 @@ def get_prompt(config: RailsConfig, task: Union[str, Task]) -> TaskPrompt:
             task_model += "/" + config.models[0].model
 
     task_prompting_mode = "standard"
-    if config.prompting_mode:  # if exists in config, overwrite, else, default to "standard"
+    if config.prompting_mode:
+        # if exists in config, overwrite, else, default to "standard"
         task_prompting_mode = config.prompting_mode
 
     prompts = _prompts + (config.prompts or [])
