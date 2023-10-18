@@ -16,11 +16,13 @@
 from aioresponses import aioresponses
 
 from nemoguardrails import RailsConfig
+from nemoguardrails.library.active_fence import actions
 from tests.utils import TestChat
 
 
-def test_1(monkeypatch):
-    monkeypatch.setenv("ACTIVE_FENCE_API_KEY", "xxx")
+def test_1():
+    # We need to set a dummy API key to avoid an error.
+    actions.API_KEY = "xxx"
 
     config = RailsConfig.from_content(
         colang_content="""
