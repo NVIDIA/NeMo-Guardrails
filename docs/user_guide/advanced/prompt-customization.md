@@ -49,6 +49,44 @@ prompts:
 ...
 ```
 
+To override the prompt for any other custom purpose, you can specify the `mode` key. If the corresponding task configuration is run with the same `prompting_mode`, the custom prompt will be used.
+
+As an example of this, let's consider the case of compacting. Some applications might need concise prompts, for instance to avoid handling long contexts, and lower latency at the risk of slightly degraded performance due to the smaller context. For this, you might want to have multiple versions of a prompt for the same task and same model. This can be achieved as follows:
+
+Task configuration:
+```yaml
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo
+
+prompting_mode: "compact"  # Default value is "standard"
+```
+
+Prompts configuration:
+```yaml
+prompts:
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+      - openai/gpt-4
+    content: |-
+      Default prompt tailored for high accuracy with the given models for example by adding the fill {{ history }}
+
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+      - openai/gpt-4
+    content: |-
+      Smaller prompt tailored for high accuracy by reducing number of few shot examples or other means
+    mode: compact
+...
+```
+
+You can have as many different modes as you like for a given task and model, as long as the `mode` key inside the prompt configuration matches the `prompting_mode` key in the top-level task configuration, thus enabling an easy setup for prompt engineering experiments.
+
+Note that if you specify a custom `prompting_mode` but no prompt definition with the same custom `mode` is defined, then, the `standard` prompt template for that task is used.
+
 ### Prompt Templates
 
 Depending on the type of LLM, there are two types of templates you can define: **completion** and **chat**. For completion models (e.g., `text-davinci-003`), you need to include the `content` key in the configuration of a prompt:

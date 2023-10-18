@@ -26,6 +26,11 @@ from nemoguardrails.language.coyml_parser import parse_flow_elements
 from nemoguardrails.language.parser import parse_colang_file
 
 
+# Load the default config values from the file
+with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
+    _default_config = yaml.safe_load(_fc)
+
+
 class Model(BaseModel):
     """Configuration of a model used by the rails engine.
 
@@ -92,6 +97,10 @@ class TaskPrompt(BaseModel):
     max_length: Optional[int] = Field(
         default=16000,
         description="The maximum length of the prompt in number of characters.",
+    )
+    mode: Optional[str] = Field(
+        default=_default_config["prompting_mode"],
+        description="Corresponds to the `prompting_mode` for which this prompt is fetched. Default is 'standard'.",
     )
 
     @root_validator(pre=True, allow_reuse=True)
@@ -292,6 +301,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "lowest_temperature",
         "enable_multi_step_generation",
         "custom_data",
+        "prompting_mode",
         "knowledge_base",
         "core",
         "rails",
@@ -350,6 +360,11 @@ class RailsConfig(BaseModel):
     prompts: Optional[List[TaskPrompt]] = Field(
         default=None,
         description="The prompts that should be used for the various LLM tasks.",
+    )
+
+    prompting_mode: Optional[str] = Field(
+        default=_default_config["prompting_mode"],
+        description="Allows choosing between different prompting strategies.",
     )
 
     config_path: Optional[str] = Field(
