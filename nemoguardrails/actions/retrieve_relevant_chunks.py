@@ -36,7 +36,7 @@ async def retrieve_relevant_chunks(
     context_updates = {}
     context_updates["relevant_chunks"] = ""
     if user_message and kb:
-        chunks = kb.search_relevant_chunks(user_message)
+        chunks = await kb.search_relevant_chunks(user_message)
         relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
         context_updates["relevant_chunks"] = relevant_chunks
 

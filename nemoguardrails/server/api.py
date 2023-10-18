@@ -18,18 +18,15 @@ import importlib.util
 import json
 import logging
 import os.path
-from typing import List
 import time
+from typing import List, Optional
 
-from fastapi import FastAPI, Request, BackgroundTasks
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -69,7 +66,9 @@ if ENABLE_CORS:
     )
 
 # By default, we use the rails in the examples folder
-app.rails_config_path = os.path.join(os.path.dirname(__file__), "..", "..", "examples")
+app.rails_config_path = os.path.join(
+    os.path.dirname(__file__), "..", "..", "examples", "_deprecated"
+)
 
 # Weather the chat UI is enabled or not.
 app.disable_chat_ui = False
@@ -86,6 +85,10 @@ class RequestBody(BaseModel):
     messages: List[dict] = Field(
         default=None, description="The list of messages in the current conversation."
     )
+    context: Optional[dict] = Field(
+        default=None,
+        description="Additional context data to be added to the conversation.",
+    )
 
 
 class ResponseBody(BaseModel):
@@ -93,31 +96,42 @@ class ResponseBody(BaseModel):
         default=None, description="The new messages in the conversation"
     )
 
-class Handler(FileSystemEventHandler):
- 
-    @staticmethod
-    def on_any_event(event):
-        if event.is_directory:
-            return None
- 
-        elif event.event_type == 'created' or event.event_type == 'modified':
-            log.info(f"Watchdog received {event.event_type} event for file {event.src_path}")
-            tokens = event.src_path.split("/")
-            if not tokens[-1].startswith(".")  and ".ipynb_checkpoints" not in tokens and os.path.isfile(event.src_path):
-                for config_id in llm_rails_instances:
-                    if config_id in tokens:
-                        print (f"Update rail for {config_id}")
-                        time.sleep(1)
-                        _update_rails(config_id)
 
+def start_auto_reload_monitoring():
+    try:
+        from watchdog.events import FileSystemEventHandler
+        from watchdog.observers import Observer
+    except ImportError:
+        raise ImportError(
+            "The auto-reload feature requires `watchdog`. "
+            "Please install using `pip install watchdog`."
+        )
 
+    class Handler(FileSystemEventHandler):
+        @staticmethod
+        def on_any_event(event):
+            if event.is_directory:
+                return None
 
-def monitor_files():
+            elif event.event_type == "created" or event.event_type == "modified":
+                log.info(
+                    f"Watchdog received {event.event_type} event for file {event.src_path}"
+                )
+                tokens = event.src_path.split("/")
+                if (
+                    not tokens[-1].startswith(".")
+                    and ".ipynb_checkpoints" not in tokens
+                    and os.path.isfile(event.src_path)
+                ):
+                    for config_id in llm_rails_instances:
+                        if config_id in tokens:
+                            print(f"Update rail for {config_id}")
+                            time.sleep(1)
+                            _update_rails(config_id)
+
     observer = Observer()
     event_handler = Handler()
-    observer.schedule(event_handler, 
-                      app.rails_config_path,
-                      recursive = True)
+    observer.schedule(event_handler, app.rails_config_path, recursive=True)
     observer.start()
     try:
         while not app.stop_signal:
@@ -126,11 +140,12 @@ def monitor_files():
         observer.stop()
         observer.join()
 
+
 @app.get(
     "/v1/rails/configs",
     summary="Get List of available rails configurations.",
 )
-def get_rails_configs():
+async def get_rails_configs():
     """Returns the list of available rails configurations."""
 
     # We extract all folder names as config names
@@ -146,7 +161,7 @@ def get_rails_configs():
             or os.path.exists(os.path.join(app.rails_config_path, f, "config.yaml"))
         )
     ]
-    
+
     return [{"id": config_id} for config_id in config_ids]
 
 
@@ -204,7 +219,12 @@ async def chat_completion(body: RequestBody, request: Request):
         }
 
     try:
-        bot_message = await llm_rails.generate_async(messages=body.messages)
+        messages = body.messages
+        if body.context:
+            messages.insert(0, {"role": "context", "content": body.context})
+
+        bot_message = await llm_rails.generate_async(messages=messages)
+
     except Exception as ex:
         log.exception(ex)
         return {
@@ -231,7 +251,7 @@ def register_challenges(additional_challenges: List[dict]):
     "/v1/challenges",
     summary="Get list of available challenges.",
 )
-def get_challenges():
+async def get_challenges():
     """Returns the list of available challenges for red teaming."""
 
     return challenges
@@ -281,12 +301,12 @@ async def startup_event():
         configs = get_rails_configs()
         for config_id in configs:
             try:
-                llm_rails = _get_rails(config_id['id'])
+                llm_rails = _get_rails(config_id["id"])
             except:
                 pass
-        try: 
-            app.task = app.loop.run_in_executor(None, monitor_files)
-        except: 
+        try:
+            app.task = app.loop.run_in_executor(None, start_auto_reload_monitoring)
+        except:
             pass
 
 

@@ -4,18 +4,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## Unreleased
 
 ### Added
 
+- Support for [custom tasks and their prompts](./docs/user_guide/advanced/prompt-customization.md#custom-tasks-and-prompts).
+
+
+## [0.5.0] - 2023-09-04
+
+### Added
+
 - Support for [custom configuration data](./docs/user_guide/configuration-guide.md#custom-data).
-- Example for using [custom LLM and multiple KBs](./examples/multi_kb/README.md)
+- Example for using [custom LLM and multiple KBs](examples/configs/multi_kb/README.md)
 - Support for [`PROMPTS_DIR`](./docs/user_guide/advanced/prompt-customization.md#prompt-configuration).
+- [#101](https://github.com/NVIDIA/NeMo-Guardrails/pull/101) Support for [using OpenAI embeddings](./docs/user_guide/configuration-guide.md#the-embeddings-model) models in addition to SentenceTransformers.
+- First set of end-to-end QA tests for the example configurations.
+- Support for configurable [embedding search providers](./docs/user_guide/advanced/embedding-search-providers.md)
+
+### Changed
+
+- Moved to using `nest_asyncio` for [implementing the blocking API](./docs/user_guide/advanced/nested-async-loop.md). Fixes [#3](https://github.com/NVIDIA/NeMo-Guardrails/issues/3) and [#32](https://github.com/NVIDIA/NeMo-Guardrails/issues/32).
+- Improved event property validation in `new_event_dict`.
+- Refactored imports to allow installing from source without Annoy/SentenceTransformers (would need a custom embedding search provider to work).
 
 ### Fixed
 
 - Fixed when the `init` function from `config.py` is called to allow custom LLM providers to be registered inside.
-
+- [#93](https://github.com/NVIDIA/NeMo-Guardrails/pull/93): Removed redundant `hasattr` check in `nemoguardrails/llm/params.py`.
+- [#91](https://github.com/NVIDIA/NeMo-Guardrails/issues/91): Fixed how default context variables are initialized.
 
 ## [0.4.0] - 2023-08-03
 
@@ -64,8 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Support for chat models i.e. prompting with a sequence of messages.
 - Experimental support for allowing the LLM to generate [multi-step flows](docs/user_guide/configuration-guide.md#multi-step-generation).
 - Example of using Llama Index from a guardrails configuration (#40).
-- [Example](examples/llm/hf_endpoint) for using HuggingFace Endpoint LLMs with a guardrails configuration.
-- [Example](examples/llm/hf_pipeline_dolly) for using HuggingFace Pipeline LLMs with a guardrails configuration.
+- [Example](examples/configs/llm/hf_endpoint) for using HuggingFace Endpoint LLMs with a guardrails configuration.
+- [Example](examples/configs/llm/hf_pipeline_dolly) for using HuggingFace Pipeline LLMs with a guardrails configuration.
 - Support to alter LLM parameters passed as `model_kwargs` in LangChain.
 - CLI tool for running evaluations on the different steps (e.g., canonical form generation, next steps, bot message) and on existing rails implementation (e.g., moderation, jailbreak, fact-checking, and hallucination).
 - [Initial evaluation](nemoguardrails/eval/README.md) results for `text-davinci-003` and `gpt-3.5-turbo`.

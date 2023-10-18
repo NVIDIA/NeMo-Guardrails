@@ -68,6 +68,25 @@ prompts:
       {{ sample_conversation | first_turns(2) }}
       {{ history | colang }}
 
+  # Prompt for generating the user intent, next steps and bot message in a single call.
+  - task: generate_intent_steps_message
+    content: |-
+      """
+      {{ general_instruction }}
+      """
+
+      # This is how a conversation between a user and the bot can go:
+      {{ sample_conversation }}
+
+      # For each user message, generate the next steps and finish with the bot message.
+      # These are some examples how the bot thinks:
+      {{ examples }}
+
+      # This is the current conversation between the user and the bot:
+      {{ sample_conversation | first_turns(2) }}
+      {{ history | colang }}
+
+
   # Prompt for generating the value of a context variable.
   - task: generate_value
     content: |-

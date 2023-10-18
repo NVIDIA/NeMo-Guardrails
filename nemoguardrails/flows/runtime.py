@@ -25,12 +25,6 @@ from langchain.chains.base import Chain
 
 from nemoguardrails.actions.action_dispatcher import ActionDispatcher
 from nemoguardrails.actions.actions import ActionResult
-from nemoguardrails.actions.fact_checking import check_facts
-from nemoguardrails.actions.hallucination import check_hallucination
-from nemoguardrails.actions.jailbreak_check import check_jailbreak
-from nemoguardrails.actions.math import wolfram_alpha_request
-from nemoguardrails.actions.output_moderation import output_moderation
-from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.flows.flows import FlowConfig, compute_context, compute_next_steps
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -47,20 +41,8 @@ class Runtime:
         self.config = config
         self.verbose = verbose
 
-        # The dictionary of registered actions, initialized with default ones.
-        self.registered_actions = {
-            "wolfram alpha request": wolfram_alpha_request,
-            "check_facts": check_facts,
-            "check_jailbreak": check_jailbreak,
-            "output_moderation": output_moderation,
-            "check_hallucination": check_hallucination,
-            "retrieve_relevant_chunks": retrieve_relevant_chunks,
-        }
-
         # Register the actions with the dispatcher.
         self.action_dispatcher = ActionDispatcher(config_path=config.config_path)
-        for action_name, action_fn in self.registered_actions.items():
-            self.action_dispatcher.register_action(action_fn, action_name)
 
         # The list of additional parameters that can be passed to the actions.
         self.registered_action_params = {}
@@ -72,6 +54,17 @@ class Runtime:
 
     def _load_flow_config(self, flow: dict):
         """Loads a flow into the list of flow configurations."""
+
+        # If we don't have an id, we generate a random UID.
+        flow_id = flow.get("id") or str(uuid.uuid4())
+
+        # If the flow already exists, we stop.
+        # This allows us to override flows. The order in which the flows
+        # are in the config is such that the first ones are the ones that
+        # should be kept.
+        if flow_id in self.flow_configs:
+            return
+
         elements = flow["elements"]
 
         # If we have an element with meta information, we move the relevant properties
@@ -85,12 +78,13 @@ class Runtime:
                 flow["is_extension"] = meta_data["is_extension"]
             if "interruptable" in meta_data:
                 flow["is_interruptible"] = meta_data["interruptable"]
+            if meta_data.get("subflow"):
+                flow["is_subflow"] = True
+            if meta_data.get("allow_multiple"):
+                flow["allow_multiple"] = True
 
             # Finally, remove the meta element
             elements = elements[1:]
-
-        # If we don't have an id, we generate a random UID.
-        flow_id = flow.get("id") or str(uuid.uuid4())
 
         self.flow_configs[flow_id] = FlowConfig(
             id=flow_id,
@@ -98,7 +92,9 @@ class Runtime:
             priority=flow.get("priority", 1.0),
             is_extension=flow.get("is_extension", False),
             is_interruptible=flow.get("is_interruptible", True),
+            is_subflow=flow.get("is_subflow", False),
             source_code=flow.get("source_code"),
+            allow_multiple=flow.get("allow_multiple", False),
         )
 
         # We also compute what types of events can trigger this flow, in addition
@@ -116,17 +112,24 @@ class Runtime:
         for flow in self.config.flows:
             self._load_flow_config(flow)
 
-    def register_action(self, action: callable, name: Optional[str] = None):
+    def register_action(
+        self, action: callable, name: Optional[str] = None, override: bool = True
+    ):
         """Registers an action with the given name.
 
         :param name: The name of the action.
         :param action: The action function.
+        :param override: If an action already exists, whether it should be overriden or not.
         """
-        self.action_dispatcher.register_action(action, name)
+        self.action_dispatcher.register_action(action, name, override=override)
 
-    def register_actions(self, actions_obj: any):
+    def register_actions(self, actions_obj: any, override: bool = True):
         """Registers all the actions from the given object."""
-        self.action_dispatcher.register_actions(actions_obj)
+        self.action_dispatcher.register_actions(actions_obj, override=override)
+
+    @property
+    def registered_actions(self):
+        return self.action_dispatcher.registered_actions
 
     def register_action_param(self, name: str, value: any):
         """Registers an additional parameter that can be passed to the actions.
@@ -191,7 +194,9 @@ class Runtime:
 
     async def compute_next_steps(self, events: List[dict]) -> List[dict]:
         """Computes the next step based on the current flow."""
-        next_steps = compute_next_steps(events, self.flow_configs)
+        next_steps = compute_next_steps(
+            events, self.flow_configs, rails_config=self.config
+        )
 
         # If there are any StartInternalSystemAction events, we mark if they are system actions or not
         for event in next_steps:
@@ -231,6 +236,7 @@ class Runtime:
         action_name = event["action_name"]
         action_params = event["action_params"]
         action_result_key = event["action_result_key"]
+        action_uid = event["action_uid"]
 
         context = {}
         action_meta = {}
@@ -355,6 +361,7 @@ class Runtime:
         next_steps.append(
             new_event_dict(
                 "InternalSystemActionFinished",
+                action_uid=action_uid,
                 action_name=action_name,
                 action_params=action_params,
                 action_result_key=action_result_key,

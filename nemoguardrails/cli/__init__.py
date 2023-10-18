@@ -19,6 +19,7 @@ from typing import List
 
 import typer
 import uvicorn
+from fastapi import FastAPI
 
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
@@ -28,6 +29,7 @@ from nemoguardrails.server import api
 
 app = typer.Typer()
 app.add_typer(evaluate.app, name="evaluate")
+app.pretty_exceptions_enable = False
 
 logging.getLogger().setLevel(logging.WARNING)
 
@@ -75,9 +77,10 @@ def server(
         default=False,
         help="Weather the ChatUI should be disabled",
     ),
-    auto_reload: bool = typer.Option(
-        default=False,
-        help ="enable auto reload option",
+    auto_reload: bool = typer.Option(default=False, help="Enable auto reload option."),
+    prefix: str = typer.Option(
+        default="",
+        help="A prefix that should be added to all server paths. Should start with '/'.",
     ),
 ):
     """Starts a NeMo Guardrails server."""
@@ -100,7 +103,13 @@ def server(
     if auto_reload:
         api.app.auto_reload = True
 
-    uvicorn.run(api.app, port=port, log_level="info", host="0.0.0.0")
+    if prefix:
+        server_app = FastAPI()
+        server_app.mount(prefix, api.app)
+    else:
+        server_app = api.app
+
+    uvicorn.run(server_app, port=port, log_level="info", host="0.0.0.0")
 
 
 @app.command("actions-server")

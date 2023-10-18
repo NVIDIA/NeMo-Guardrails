@@ -42,3 +42,34 @@ def test_1():
         chat
         << "Hello, there!\nI can help you with:\n1. Answering questions\n2. Sending messages"
     )
+
+
+def test_1_single_call():
+    """Test that multi-line responses are processed correctly by single LLM call configuration."""
+    config: RailsConfig = RailsConfig.from_content(
+        """
+        define user express greeting
+            "hello"
+
+        define flow
+            user express greeting
+            bot express greeting and list of thing to help
+        """
+    )
+    # Set the single call flag.
+    config.rails.dialog.single_call.enabled = True
+
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "  express greeting\n"
+            "bot express greeting and list of thing to help\n"
+            '  "Hello, there! \nI can help you with:\n\n 1. Answering questions \n2. Sending messages"',
+        ],
+    )
+
+    chat >> "hello there!"
+    (
+        chat
+        << "Hello, there!\nI can help you with:\n1. Answering questions\n2. Sending messages"
+    )

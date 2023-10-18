@@ -15,7 +15,7 @@
 
 """Prompts for the various steps in the interaction."""
 import os
-from typing import List
+from typing import List, Union
 
 import yaml
 
@@ -53,7 +53,9 @@ def _load_prompts() -> List[TaskPrompt]:
 _prompts = _load_prompts()
 
 
-def _get_prompt(task_name: str, model: str, prompts: List) -> TaskPrompt:
+def _get_prompt(
+    task_name: str, model: str, prompting_mode: str, prompts: List
+) -> TaskPrompt:
     """Return the prompt for the given task.
 
     We intentionally update the matching model at equal score, to take the last one,
@@ -89,6 +91,17 @@ def _get_prompt(task_name: str, model: str, prompts: List) -> TaskPrompt:
                     _score = 0.8
                     break
 
+        if prompt.mode != prompting_mode:
+            # Penalize matching score for being in an incorrect mode.
+            # This way, if a prompt with the correct mode (say "compact") is found, it will be preferred over a prompt with another mode (say "standard").
+            if prompt.mode == "standard":
+                # why 0.5? why not <0.2? To give preference to matching model or provider over matching mode.
+                # This way, standard mode with matching provider at gets a score of 0.5 * 0.5 = 0.25
+                # (> 0.2 for a matching mode but without a matching provider or model).
+                _score *= 0.5
+            else:
+                continue  # if it's the mode doesn't match AND it's not standard too, discard this match
+
         if _score >= matching_score:
             matching_score = _score
             matching_prompt = prompt
@@ -99,19 +112,27 @@ def _get_prompt(task_name: str, model: str, prompts: List) -> TaskPrompt:
     raise ValueError(f"Could not find prompt for task {task_name} and model {model}")
 
 
-def get_prompt(config: RailsConfig, task: Task) -> TaskPrompt:
+def get_prompt(config: RailsConfig, task: Union[str, Task]) -> TaskPrompt:
     """Return the prompt for the given task."""
     # Currently, we use the main model for all tasks
     # TODO: add support to use different models for different tasks
+
+    # Fetch current task parameters like name, models to use, and the prompting mode
+    task_name = str(task.value) if isinstance(task, Task) else task
+
     task_model = "unknown"
     if config.models:
         task_model = config.models[0].engine
         if config.models[0].model:
             task_model += "/" + config.models[0].model
-    task_name = str(task.value)
+
+    task_prompting_mode = "standard"
+    if config.prompting_mode:
+        # if exists in config, overwrite, else, default to "standard"
+        task_prompting_mode = config.prompting_mode
 
     prompts = _prompts + (config.prompts or [])
-    prompt = _get_prompt(task_name, task_model, prompts)
+    prompt = _get_prompt(task_name, task_model, task_prompting_mode, prompts)
 
     if prompt:
         return prompt

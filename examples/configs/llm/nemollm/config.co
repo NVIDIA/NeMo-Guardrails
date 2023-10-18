@@ -1,0 +1,54 @@
+# Generic flows
+
+define user express greeting
+  "Hello"
+  "Hi"
+
+define user ask capabilities
+  "What can you do?"
+  "What can you help me with?"
+  "tell me what you can do"
+  "tell me about you"
+
+define flow
+  user express greeting
+  bot express greeting
+
+define flow
+  user ask capabilities
+  bot inform capabilities
+
+define bot inform capabilities
+  "I am an AI assistant and I'm here to help."
+
+define bot inform cannot answer
+    "I am not able to answer the question."
+
+define bot remove last message
+  "(remove last message)"
+
+# Jailbreak check
+
+define extension flow check jailbreak
+  """We set the priority to 2 as we want this to have priority over normal flows"""
+  priority 2
+
+  event UtteranceUserActionFinished(final_transcript="...")
+  $allowed = execute check_jailbreak
+
+  if not $allowed
+    bot inform cannot answer
+    stop
+
+# Output moderation check
+
+define extension flow check bot response
+  priority 2
+
+  bot ...
+  $allowed = execute output_moderation_v2
+
+  if not $allowed
+    bot remove last message
+    bot inform cannot answer
+    stop

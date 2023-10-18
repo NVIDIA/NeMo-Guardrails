@@ -49,6 +49,44 @@ prompts:
 ...
 ```
 
+To override the prompt for any other custom purpose, you can specify the `mode` key. If the corresponding task configuration is run with the same `prompting_mode`, the custom prompt will be used.
+
+As an example of this, let's consider the case of compacting. Some applications might need concise prompts, for instance to avoid handling long contexts, and lower latency at the risk of slightly degraded performance due to the smaller context. For this, you might want to have multiple versions of a prompt for the same task and same model. This can be achieved as follows:
+
+Task configuration:
+```yaml
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo
+
+prompting_mode: "compact"  # Default value is "standard"
+```
+
+Prompts configuration:
+```yaml
+prompts:
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+      - openai/gpt-4
+    content: |-
+      Default prompt tailored for high accuracy with the given models for example by adding the fill {{ history }}
+
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+      - openai/gpt-4
+    content: |-
+      Smaller prompt tailored for high accuracy by reducing number of few shot examples or other means
+    mode: compact
+...
+```
+
+You can have as many different modes as you like for a given task and model, as long as the `mode` key inside the prompt configuration matches the `prompting_mode` key in the top-level task configuration, thus enabling an easy setup for prompt engineering experiments.
+
+Note that if you specify a custom `prompting_mode` but no prompt definition with the same custom `mode` is defined, then, the `standard` prompt template for that task is used.
+
 ### Prompt Templates
 
 Depending on the type of LLM, there are two types of templates you can define: **completion** and **chat**. For completion models (e.g., `text-davinci-003`), you need to include the `content` key in the configuration of a prompt:
@@ -78,6 +116,18 @@ prompts:
         content: ...
       # ...
 ```
+For each task, you can also specify the maximum length of the prompt to be used for the LLM call in terms of the number of characters. This is useful if you want to limit the number of tokens used by the LLM or when you want to make sure that the prompt length does not exceed the maximum context length. When the maximum length is exceeded, the prompt is truncated by removing older turns from the conversation history until length of the prompt is less than or equal to the maximum length. The default maximum length is 16000 characters.
+
+For example, for the `generate_user_intent` task, you can specify the following:
+
+```yaml
+prompts:
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+    max_length: 3000
+```
+
 
 ### Content Template
 
@@ -155,3 +205,35 @@ Optionally, the output from the LLM can be parsed using an *output parser*. The 
 Currently, the NeMo Guardrails toolkit includes prompts for `openai/text-davinci-003`, `openai/gpt-3.5-turbo`, `openai/gpt-4`, `databricks/dolly-v2-3b`, `cohere/command`, `cohere/command-light`, `cohere/command-light-nightly`.
 
 **DISCLAIMER**: Evaluating and improving the provided prompts is a work in progress. We do not recommend deploying this alpha version using these prompts in a production setting.
+
+## Custom Tasks and Prompts
+
+In the scenario where you would like to create a custom task beyond those included in
+[the default tasks](../../../nemoguardrails/llm/types.py), you can include the task and associated prompt as provided in the example below:
+
+```yaml
+prompts:
+- task: summarize_text
+  content: |-
+      Text: {{ user_input }}
+      Summarize the above text.
+```
+
+Refer to ["Prompt Customization"](#prompt-customization) on where to include this custom task and prompt.
+
+Within an action, this prompt can be rendered via the `LLMTaskManager`:
+
+```python
+prompt = llm_task_manager.render_task_prompt(
+    task="summarize_text",
+    context={
+        "user_input": user_input,
+    },
+)
+
+with llm_params(llm, temperature=0.0):
+    check = await llm_call(llm, prompt)
+...
+```
+
+With this approach, you can quickly modify custom tasks' prompts in your configuration files.
