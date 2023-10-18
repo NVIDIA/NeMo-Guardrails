@@ -25,7 +25,6 @@ from pydantic.fields import Field
 from nemoguardrails.language.coyml_parser import parse_flow_elements
 from nemoguardrails.language.parser import parse_colang_file
 
-
 # Load the default config values from the file
 with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
     _default_config = yaml.safe_load(_fc)
@@ -63,6 +62,42 @@ class Document(BaseModel):
 
     format: str
     content: str
+
+
+class SensitiveDataDetectionOptions(BaseModel):
+    entities: List[str] = Field(
+        default_factory=list,
+        description="The list of entities that should be detected. "
+        "Check out https://microsoft.github.io/presidio/supported_entities/ for"
+        "the list of supported entities.",
+    )
+    # TODO: this is not currently in use.
+    mask_token: str = Field(
+        default="*",
+        description="The token that should be used to mask the sensitive data.",
+    )
+
+
+class SensitiveDataDetection(BaseModel):
+    """Configuration of what sensitive data should be detected."""
+
+    recognizers: List[dict] = Field(
+        default_factory=list,
+        description="Additional custom recognizers. "
+        "Check out https://microsoft.github.io/presidio/tutorial/08_no_code/ for more details.",
+    )
+    input: SensitiveDataDetectionOptions = Field(
+        default_factory=SensitiveDataDetectionOptions,
+        description="Configuration of the entities to be detected on the user input.",
+    )
+    output: SensitiveDataDetectionOptions = Field(
+        default_factory=SensitiveDataDetectionOptions,
+        description="Configuration of the entities to be detected on the bot output.",
+    )
+    retrieval: SensitiveDataDetectionOptions = Field(
+        default_factory=SensitiveDataDetectionOptions,
+        description="Configuration of the entities to be detected on retrieved relevant chunks.",
+    )
 
 
 class MessageTemplate(BaseModel):
@@ -227,6 +262,11 @@ class RailsConfigData(BaseModel):
         description="Configuration data for the fact-checking rail.",
     )
 
+    sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
+        default_factory=SensitiveDataDetection,
+        description="Configuration for detecting sensitive data.",
+    )
+
 
 class Rails(BaseModel):
     """Configuration of specific rails."""
@@ -291,6 +331,11 @@ def _join_config(dest_config: dict, additional_config: dict):
     dest_config["actions_server_url"] = dest_config.get(
         "actions_server_url", None
     ) or additional_config.get("actions_server_url", None)
+
+    dest_config["sensitive_data_detection"] = {
+        **dest_config.get("sensitive_data_detection", {}),
+        **additional_config.get("sensitive_data_detection", {}),
+    }
 
     dest_config["embedding_search_provider"] = dest_config.get(
         "embedding_search_provider", {}

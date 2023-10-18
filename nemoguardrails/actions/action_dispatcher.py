@@ -140,7 +140,9 @@ class ActionDispatcher:
                 try:
                     # We support both functions and classes as actions
                     if inspect.isfunction(fn) or inspect.ismethod(fn):
-                        result = await fn(**params)
+                        result = fn(**params)
+                        if inspect.iscoroutine(result):
+                            result = await result
                     elif isinstance(fn, Chain):
                         try:
                             chain = fn
