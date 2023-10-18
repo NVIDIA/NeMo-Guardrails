@@ -64,16 +64,40 @@ class Document(BaseModel):
     content: str
 
 
-class SensitiveDataDetection(BaseModel):
-    enable_detection: Optional[bool]
-    provider: Optional[str]
-    entities: Optional[List[str]] = Field(
-        default=None,
-        description="""List of entities to be redacted,
-                         choose from: PERSON, US_SSN, CREDIT_CARD, PHONE_NUMBER
-                                      EMAIL_ADDRESS, US_DRIVER_LICENSE""",
+class SensitiveDataDetectionOptions(BaseModel):
+    entities: List[str] = Field(
+        default_factory=list,
+        description="The list of entities that should be detected. "
+        "Check out https://microsoft.github.io/presidio/supported_entities/ for"
+        "the list of supported entities.",
     )
-    mask_token: Optional[str]
+    # TODO: this is not currently in use.
+    mask_token: str = Field(
+        default="*",
+        description="The token that should be used to mask the sensitive data.",
+    )
+
+
+class SensitiveDataDetection(BaseModel):
+    """Configuration of what sensitive data should be detected."""
+
+    recognizers: List[dict] = Field(
+        default_factory=list,
+        description="Additional custom recognizers. "
+        "Check out https://microsoft.github.io/presidio/tutorial/08_no_code/ for more details.",
+    )
+    input: SensitiveDataDetectionOptions = Field(
+        default_factory=SensitiveDataDetectionOptions,
+        description="Configuration of the entities to be detected on the user input.",
+    )
+    output: SensitiveDataDetectionOptions = Field(
+        default_factory=SensitiveDataDetectionOptions,
+        description="Configuration of the entities to be detected on the bot output.",
+    )
+    retrieval: SensitiveDataDetectionOptions = Field(
+        default_factory=SensitiveDataDetectionOptions,
+        description="Configuration of the entities to be detected on retrieved relevant chunks.",
+    )
 
 
 class MessageTemplate(BaseModel):
@@ -238,6 +262,11 @@ class RailsConfigData(BaseModel):
         description="Configuration data for the fact-checking rail.",
     )
 
+    sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
+        default_factory=SensitiveDataDetection,
+        description="Configuration for detecting sensitive data.",
+    )
+
 
 class Rails(BaseModel):
     """Configuration of specific rails."""
@@ -399,11 +428,6 @@ class RailsConfig(BaseModel):
     enable_multi_step_generation: Optional[bool] = Field(
         default=False,
         description="Whether to enable multi-step generation for the LLM.",
-    )
-
-    sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
-        default=None,
-        description="Configuration for detecting sensitive data.",
     )
 
     custom_data: Dict = Field(
