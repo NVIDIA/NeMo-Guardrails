@@ -624,10 +624,10 @@ def initialize_flow(state: State, flow_config: FlowConfig) -> None:
     flow_config.elements = expand_elements(flow_config.elements, state.flow_configs)
 
     # Extract flow loop id if available
-    # Define the regular expression pattern
-    match = re.search(r"#\W*loop_id:\W*(\w*)", flow_config.source_code)
-    if match:
-        flow_config.loop_id = match.group(1)
+    if flow_config.source_code:
+        match = re.search(r"#\W*loop_id:\W*(\w*)", flow_config.source_code)
+        if match:
+            flow_config.loop_id = match.group(1)
 
     # Extract all the label elements
     for idx, element in enumerate(flow_config.elements):

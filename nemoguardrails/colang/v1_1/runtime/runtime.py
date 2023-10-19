@@ -60,7 +60,6 @@ class RuntimeV1_1(Runtime):
             parsed_flow = parse_colang_file(
                 filename="",
                 content=flow_content,
-                include_source_mapping=False,
                 version="1.1",
             )
         except Exception as e:
