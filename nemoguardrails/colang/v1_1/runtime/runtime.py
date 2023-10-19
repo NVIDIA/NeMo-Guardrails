@@ -47,12 +47,10 @@ class RuntimeV1_1(Runtime):
     def __init__(self, config: RailsConfig, verbose: bool = False):
         super().__init__(config, verbose)
 
-        self.state: Optional[State] = None
-
         # Register local system actions
         self.register_action(self._add_flows_action, "AddFlowsAction", False)
 
-    async def _add_flows_action(self, **args):
+    async def _add_flows_action(self, state: "State", **args):
         log.info(f"Start AddFlowsAction! {args}")
         flow_content = args["config"]
         # Parse new flow
@@ -68,25 +66,25 @@ class RuntimeV1_1(Runtime):
 
         added_flows: List[str] = []
         for flow in parsed_flow["flows"]:
-            if flow.name in self.state.flow_configs:
+            if flow.name in state.flow_configs:
                 log.warning(f"Flow '{flow.name}' already exists!")
                 break
 
             flow_config = FlowConfig(
                 id=flow.name,
                 loop_id=None,
-                elements=expand_elements(flow.elements, self.state.flow_configs),
+                elements=expand_elements(flow.elements, state.flow_configs),
                 parameters=flow.parameters,
             )
 
             initialize_flow(self, flow_config)
 
             # Add flow config to state.flow_configs
-            self.state.flow_configs.update({flow.name: flow_config})
+            state.flow_configs.update({flow.name: flow_config})
 
             # Create an instance of the flow in flow_states
             add_new_flow_instance(
-                self.state, create_flow_instance(self.state.flow_configs[flow.name])
+                state, create_flow_instance(state.flow_configs[flow.name])
             )
 
             added_flows.append(flow.name)
@@ -326,8 +324,6 @@ class RuntimeV1_1(Runtime):
         else:
             if isinstance(state, dict):
                 state = State.from_dict(state)
-
-        self.state = state
 
         # While we have input events to process, or there are local running actions
         # we continue the processing.
