@@ -20,6 +20,7 @@ from __future__ import annotations
 import copy
 import logging
 import random
+import re
 import time
 from collections import deque
 from dataclasses import dataclass, field
@@ -621,6 +622,12 @@ class ColangValueError(Exception):
 def initialize_flow(state: State, flow_config: FlowConfig) -> None:
     # Transform and resolve flow configuration element notation (actions, flows, ...)
     flow_config.elements = expand_elements(flow_config.elements, state.flow_configs)
+
+    # Extract flow loop id if available
+    # Define the regular expression pattern
+    match = re.search(r"#\W*loop_id:\W*(\w*)", flow_config.source_code)
+    if match:
+        flow_config.loop_id = match.group(1)
 
     # Extract all the label elements
     for idx, element in enumerate(flow_config.elements):
@@ -1925,7 +1932,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     ),
                     len(ordered_heads) - 1,
                 )
-                picked_head = random.choice(ordered_heads[:equal_heads_index])
+                if equal_heads_index == 0:
+                    picked_head = ordered_heads[0]
+                else:
+                    picked_head = random.choice(ordered_heads[:equal_heads_index])
                 winning_element = _get_flow_config_from_head(
                     state, picked_head
                 ).elements[picked_head.position]
@@ -2301,7 +2311,11 @@ def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
         flow_state.parent_uid = parent_flow_uid
         parent_flow.child_flow_uids.append(flow_state.uid)
 
-        flow_state.loop_id = parent_flow.loop_id
+        loop_id = state.flow_configs[flow_state.flow_id].loop_id
+        if loop_id is not None:
+            flow_state.loop_id = loop_id
+        else:
+            flow_state.loop_id = parent_flow.loop_id
         flow_state.activated = arguments.get("activated", False)
 
         # Update context with event/flow parameters
