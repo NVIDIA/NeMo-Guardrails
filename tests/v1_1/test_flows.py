@@ -22,12 +22,8 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (
-    ActionStatus,
-    FlowEvent,
-    State,
-    run_to_completion,
-)
+from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, FlowEvent,
+                                                      State, run_to_completion)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -3178,5 +3174,94 @@ def test_stop_bot_action():
     )
 
 
+# TODO: Double-check if the behavior of an or-group makes sense in combination with separated interaction loops
+def test_independent_flow_loop_mechanics():
+    """"""
+
+    content = """
+    flow bot say $script
+      # loop_id: NEW
+      await UtteranceBotAction(script=$script)
+
+    flow main
+      start bot say "Hi" or bot say "Hello"
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+
+def test_list_parameters():
+    """"""
+
+    content = """
+    flow bot say $scripts
+      await UtteranceBotAction(script=$scripts[0])
+
+    flow main
+      start bot say ["Hi", "Hello"]
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+def test_dict_parameters():
+    """"""
+
+    content = """
+    flow bot say $scripts
+      await UtteranceBotAction(script=$scripts["value2"])
+
+    flow main
+      start bot say {"value1": "something", "value2": "Hello"}
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_when_or_bot_action_mechanics()
+    test_dict_parameters()

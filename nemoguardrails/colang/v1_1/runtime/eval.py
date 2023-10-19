@@ -16,7 +16,7 @@
 import logging
 import re
 
-from simpleeval import simple_eval
+from simpleeval import EvalWithCompoundTypes
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def eval_expression(expr, context):
 
     # We search for all expressions inside expressions mark inside curly brackets
     # and evaluate them first
-    pattern = r"(\{.*?\})"
+    pattern = r"(\{.[^:]*?\})"
     inner_expressions = re.findall(pattern, expr)
     if inner_expressions:
         inner_expression_values = []
@@ -74,14 +74,14 @@ def eval_expression(expr, context):
     # Finally, just evaluate the expression
     try:
         # TODO: replace this with something even more restrictive.
-        return simple_eval(
-            updated_expr,
-            names=expr_locals,
+        s = EvalWithCompoundTypes(
             functions={
                 "len": len,
                 "flow": system_functions.flow,
                 "action": system_functions.action,
             },
+            names=expr_locals,
         )
+        return s.eval(updated_expr)
     except Exception as ex:
         raise Exception(f"Error evaluating '{expr}': {str(ex)}")

@@ -86,8 +86,8 @@ flow user expressed greeting
 flow user provided custom instructions
   user said "do something"
 
-flow bot express greeting
-  bot say "Hello world!"
+flow bot express greeting $name
+  bot say "Hello {$name}!"
 
 flow bot comment unsure how to respond
   bot say "I'm not sure how to respond."
@@ -102,10 +102,9 @@ flow bot comment unsure how to respond
 
 flow greeting
   user expressed greeting
-  bot express greeting
-
-  $name = await GenerateValueAction(var_name="name", instructions="Extract the user's name mentioned by the user. Wrap it with double quotes. If not mentioned, return None.")
-  # bot say a fun random fact
+  $name = "world"
+  #$name = await GenerateValueAction(var_name="name", instructions="Extract the user's name mentioned by the user. Wrap it with double quotes. If not mentioned, return 'world'.")
+  bot express greeting $name
 
 flow user unknown intent
   user said "xyz"

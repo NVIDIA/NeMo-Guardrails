@@ -68,8 +68,8 @@ capture_ref: "as" var_name
 ?spec_atom: "(" spec_expr ")"
          | spec
 
-// A spec includes name, arguments and potentially members acces.
-// Example members: .Finsihed(), .action
+// A spec includes name, arguments and potentially members access.
+// Example members: .Finished(), .action
 spec: spec_name [classic_arguments | simple_arguments] (spec_member)* [capture_ref]
     | var_name (spec_member)* [capture_ref]
 spec_member: "." name [classic_arguments]
@@ -80,7 +80,7 @@ _argvalues: argvalue ("," argvalue)*
 argvalue: expr
         | name "=" expr
 
-// A simplified version of the arguments without paranthesis and ","
+// A simplified version of the arguments without parenthesis and ","
 simple_arguments: simple_argvalue+
 ?simple_argvalue: expr
                 | var_name "=" expr
@@ -120,10 +120,16 @@ expr: or_expr
 !comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="|"in"|"not" "in"|"is"|"is" "not"
 
 ?power: atom_expr ("**" factor)?
-?atom_expr: func_name "(" [arguments] ")"      -> funccall
+?atom_expr: func_name "(" [arguments] ")"    -> funccall
           | atom_expr "[" subscriptlist "]"  -> getitem
           | atom_expr "." name               -> getattr
+          | "[" _exprlist? "]"  -> list
+          | "{" _dict_exprlist? "}" -> dict
           | atom
+
+_exprlist: atom_expr (","  atom_expr)* [","]
+_dict_exprlist: (key_value | "**" expr) ("," (key_value | "**" expr))* [","]
+key_value: test ":"  test
 
 arguments: argvalue ("," argvalue)*  ("," [ starargs | kwargs])?
          | starargs
