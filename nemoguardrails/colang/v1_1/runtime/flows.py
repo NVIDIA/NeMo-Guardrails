@@ -2313,7 +2313,10 @@ def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
 
         loop_id = state.flow_configs[flow_state.flow_id].loop_id
         if loop_id is not None:
-            flow_state.loop_id = loop_id
+            if loop_id == "NEW":
+                flow_state.loop_id = new_uid()
+            else:
+                flow_state.loop_id = loop_id
         else:
             flow_state.loop_id = parent_flow.loop_id
         flow_state.activated = arguments.get("activated", False)
