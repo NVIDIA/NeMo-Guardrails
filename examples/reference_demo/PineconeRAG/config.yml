@@ -1,14 +1,3 @@
-instructions:
-  - type: general
-    content: |
-      Below is a conversation between a bot and a user where the user asks the bot a question and the bot responds.
-
-sample_conversation: |
-  user "What does nvidia do"
-      ask question
-  bot responds
-      "Hello"
-
 models:
   - type: main
     engine: openai
@@ -20,11 +9,11 @@ models:
 
 #if you dont want to call the search backend to index the data in the kb folder, dont add these here
 # Use the simple embedding search provider for the core logic.
-#core:
-#  embedding_search_provider:
-#    name: simple
+core:
+  embedding_search_provider:
+    name: simple
 
 # And for the knowledge base.
-#knowledge_base:
-#  embedding_search_provider:
-#    name: simple
+knowledge_base:
+  embedding_search_provider:
+    name: simple
