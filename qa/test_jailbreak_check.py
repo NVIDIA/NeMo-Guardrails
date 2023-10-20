@@ -23,6 +23,7 @@ QA_MODE = os.environ.get("QA")
 
 class TestJailbreakCheck(ExampleConfigChatterTestCase):
     example_name = "jailbreak_check"
+    config_name = "_deprecated/jailbreak_check"
 
     @pytest.mark.skipif(not QA_MODE, reason="Not in QA mode.")
     @pytest.mark.unit

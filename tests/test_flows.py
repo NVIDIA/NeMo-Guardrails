@@ -77,7 +77,11 @@ FLOW_CONFIGS = {
 
 def test_simple_sequence():
     """Test a simple sequence of two turns in a flow."""
-    state = State(context={}, flow_states=[], flow_configs=FLOW_CONFIGS)
+    state = State(
+        context={},
+        flow_states=[],
+        flow_configs=FLOW_CONFIGS,
+    )
 
     state = compute_next_state(
         state,

@@ -17,3 +17,8 @@ Jinja2==3.1.2
 lark~=1.1.7
 rich==13.5.2
 nest-asyncio==1.5.6
+
+# TODO: move these to a separate extra
+presidio-analyzer
+presidio-anonymizer
+spacy

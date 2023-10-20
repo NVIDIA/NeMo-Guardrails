@@ -23,6 +23,7 @@ class Task(Enum):
     GENERATE_USER_INTENT = "generate_user_intent"
     GENERATE_NEXT_STEPS = "generate_next_steps"
     GENERATE_BOT_MESSAGE = "generate_bot_message"
+    GENERATE_INTENT_STEPS_MESSAGE = "generate_intent_steps_message"
     GENERATE_VALUE = "generate_value"
     GENERATE_FLOW_FROM_INSTRUCTIONS = "generate_flow_from_instructions"
     GENERATE_FLOW_FROM_NAME = "generate_flow_from_name"

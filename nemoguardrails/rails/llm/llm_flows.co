@@ -1,8 +1,30 @@
-define flow generate user intent
-  """Turn the raw user utterance into a canonical form."""
-
+define parallel flow process user input
+  """Run all the input rails on the user input."""
   event UtteranceUserActionFinished(final_transcript="...")
+  $user_message = $event["final_transcript"]
+
+  # If we have input rails, we run them, otherwise we just create the user message event
+  if $config.rails.input.flows
+    # Run all the input rails
+    # This can potentially alter the $user_message
+    do run input rails
+
+  create event UserMessage(text=$user_message)
+
+
+define flow generate user intent
+  """Generate the user's intent based on the text."""
+  event UserMessage(text="...")
   execute generate_user_intent
+
+
+define subflow run input rails
+  """Runs all the input rails in a sequential order. """
+  $i = 0
+  $input_flows = $config.rails.input.flows
+  while $i < len($input_flows)
+    do $input_flows[$i]
+    $i = $i + 1
 
 
 define flow generate next step
@@ -17,7 +39,7 @@ define flow generate next step
   execute generate_next_step
 
 
-define extension flow generate bot message
+define parallel extension flow generate bot message
   """Generate the bot utterance for a bot message.
 
   We always want to generate an utterance after a bot intent, hence the high priority.
@@ -26,4 +48,46 @@ define extension flow generate bot message
 
   bot ...
   execute retrieve_relevant_chunks
+
+  # If we have any retrieval rails, we run them.
+  if $config.rails.retrieval.flows
+    do run retrieval rails
+
+  # $output_rails_enabled = True
   execute generate_bot_message
+
+
+define parallel extension flow process bot message
+  """Runs the output rails on a bot message."""
+  priority 100
+
+  event BotMessage
+
+  $bot_message = $event.text
+
+  if $skip_output_rails
+    $skip_output_rails = False
+  else
+    # If we have any output flows, we run them.
+    if $config.rails.output.flows
+      do run output rails
+
+  create event StartUtteranceBotAction(script=$bot_message)
+
+
+define subflow run output rails
+  """Runs all the output rails in a sequential order. """
+  $i = 0
+  $output_flows = $config.rails.output.flows
+  while $i < len($output_flows)
+    do $output_flows[$i]
+    $i = $i + 1
+
+
+define subflow run retrieval rails
+  """Runs all the retrieval rails in a sequential order. """
+  $i = 0
+  $retrieval_flows = $config.rails.retrieval.flows
+  while $i < len($retrieval_flows)
+    do $retrieval_flows[$i]
+    $i = $i + 1

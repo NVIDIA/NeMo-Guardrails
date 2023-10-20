@@ -96,8 +96,8 @@ def get_colang_history(
             last_bot_intent_idx -= 1
 
         for idx, event in enumerate(events):
-            if event["type"] == "UtteranceUserActionFinished" and include_texts:
-                history += f'user "{event["final_transcript"]}"\n'
+            if event["type"] == "UserMessage" and include_texts:
+                history += f'user "{event["text"]}"\n'
             elif event["type"] == "UserIntent":
                 if include_texts:
                     history += f'  {event["intent"]}\n'
@@ -231,8 +231,8 @@ def flow_to_colang(flow: Union[dict, Flow]):
 def get_last_user_utterance(events: List[dict]):
     """Returns the last user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "UtteranceUserActionFinished":
-            return event["final_transcript"]
+        if event["type"] == "UserMessage":
+            return event["text"]
 
     return None
 
@@ -240,7 +240,7 @@ def get_last_user_utterance(events: List[dict]):
 def get_retrieved_relevant_chunks(events: List[dict]):
     """Returns the retrieved chunks for current user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "UtteranceUserActionFinished":
+        if event["type"] == "UserMessage":
             break
         if event["type"] == "ContextUpdate" and "relevant_chunks" in event.get(
             "data", {}
@@ -253,7 +253,16 @@ def get_retrieved_relevant_chunks(events: List[dict]):
 def get_last_user_utterance_event(events: List[dict]):
     """Returns the last user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "UtteranceUserActionFinished":
+        if isinstance(event, dict) and event["type"] == "UserMessage":
+            return event
+
+    return None
+
+
+def get_last_user_utterance_event_v1_1(events: List[dict]):
+    """Returns the last user utterance from the events."""
+    for event in reversed(events):
+        if isinstance(event, dict) and event["type"] == "UtteranceUserActionFinished":
             return event
 
     return None
@@ -314,6 +323,20 @@ def get_first_nonempty_line(s: str):
             break
 
     return first_nonempty_line
+
+
+def get_top_k_nonempty_lines(s: str, k: int = 1):
+    """Helper that returns a list with the top k non-empty lines from a string.
+
+    If there are less than k non-empty lines, it returns a smaller number of lines."""
+    if not s:
+        return None
+
+    lines = [line.strip() for line in s.split("\n")]
+    # Ignore line comments and empty lines
+    lines = [line for line in lines if len(line) > 0 and line[0] != "#"]
+
+    return lines[:k]
 
 
 def strip_quotes(s: str):

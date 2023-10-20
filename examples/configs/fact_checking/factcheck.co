@@ -1,0 +1,44 @@
+define user ask about report
+  "What was last month's unemployment rate?"
+  "Which industry added the most jobs?"
+  "How many jobs were added in the transportation industry?"
+
+define flow answer report question
+  user ask about report
+
+  # For report questions, we activate the fact checking.
+  $check_facts = True
+  bot provide report answer
+
+
+define subflow check facts
+  """Add the ability to flag potentially inaccurate responses.
+
+  Flag potentially inaccurate responses when the confidence is between 0.4 and 0.6.
+
+  NOTE: This overrides the default `check facts`.
+  """
+  # Check the facts when explicitly needed.
+  if $check_facts == True
+    $check_facts = False
+
+    $accuracy = execute check_facts
+    if $accuracy < 0.4
+      bot inform answer unknown
+      stop
+
+    if $accuracy < 0.6
+      # We need to provide a warning in this case
+      $bot_message_potentially_inaccurate = True
+
+
+define flow flag potentially inaccurate response
+  """Tell the user that the previous answer is potentially inaccurate."""
+  bot ...
+
+  if $bot_message_potentially_inaccurate
+    $bot_message_potentially_inaccurate = False
+    bot inform answer potentially inaccurate
+
+define bot inform answer potentially inaccurate
+  "Attention: the answer above is potentially inaccurate."

@@ -18,7 +18,8 @@ import importlib.util
 import json
 import logging
 import os.path
-from typing import List
+import time
+from typing import List, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -65,10 +66,18 @@ if ENABLE_CORS:
     )
 
 # By default, we use the rails in the examples folder
-app.rails_config_path = os.path.join(os.path.dirname(__file__), "..", "..", "examples")
+app.rails_config_path = os.path.join(
+    os.path.dirname(__file__), "..", "..", "examples", "_deprecated"
+)
 
 # Weather the chat UI is enabled or not.
 app.disable_chat_ui = False
+
+# auto reload flag
+app.auto_reload = False
+
+# stop signal for observer
+app.stop_signal = False
 
 
 class RequestBody(BaseModel):
@@ -76,7 +85,10 @@ class RequestBody(BaseModel):
     messages: List[dict] = Field(
         default=None, description="The list of messages in the current conversation."
     )
-    context: dict
+    context: Optional[dict] = Field(
+        default=None,
+        description="Additional context data to be added to the conversation.",
+    )
 
 
 class ResponseBody(BaseModel):
@@ -111,16 +123,21 @@ async def get_rails_configs():
 
 # One instance of LLMRails per config id
 llm_rails_instances = {}
+llm_rails_events_history_cache = {}
 
 
 def _get_rails(config_id: str) -> LLMRails:
     """Returns the rails instance for the given config id."""
+
     if config_id in llm_rails_instances:
         return llm_rails_instances[config_id]
 
     rails_config = RailsConfig.from_path(os.path.join(app.rails_config_path, config_id))
     llm_rails = LLMRails(config=rails_config, verbose=True)
     llm_rails_instances[config_id] = llm_rails
+
+    # If we have a cache for the events, we restore it
+    llm_rails.events_history_cache = llm_rails_events_history_cache.get(config_id, {})
 
     return llm_rails
 
@@ -233,7 +250,86 @@ async def startup_event():
         async def root_handler():
             return {"status": "ok"}
 
+    if app.auto_reload:
+        app.loop = asyncio.get_running_loop()
+        app.task = app.loop.run_in_executor(None, start_auto_reload_monitoring)
+
 
 def register_logger(logger: callable):
     """Register an additional logger"""
     registered_loggers.append(logger)
+
+
+@app.on_event("shutdown")
+def shutdown_observer():
+    if app.auto_reload:
+        app.stop_signal = True
+        if hasattr(app, "task"):
+            app.task.cancel()
+        log.info("Shutting down file observer")
+    else:
+        pass
+
+
+def start_auto_reload_monitoring():
+    """Start a thread that monitors the config folder for changes."""
+    try:
+        from watchdog.events import FileSystemEventHandler
+        from watchdog.observers import Observer
+
+        class Handler(FileSystemEventHandler):
+            @staticmethod
+            def on_any_event(event):
+                if event.is_directory:
+                    return None
+
+                elif event.event_type == "created" or event.event_type == "modified":
+                    log.info(
+                        f"Watchdog received {event.event_type} event for file {event.src_path}"
+                    )
+
+                    # Compute the relative path
+                    rel_path = os.path.relpath(event.src_path, app.rails_config_path)
+
+                    # The config_id is the first component
+                    parts = rel_path.split(os.path.sep)
+                    config_id = parts[0]
+
+                    if (
+                        not parts[-1].startswith(".")
+                        and ".ipynb_checkpoints" not in parts
+                        and os.path.isfile(event.src_path)
+                    ):
+                        # We just remove the config from the cache so that a new one is used next time
+                        if config_id in llm_rails_instances:
+                            instance = llm_rails_instances[config_id]
+                            del llm_rails_instances[config_id]
+                            if instance:
+                                # We save the events history cache, to restore it on the new instance
+                                llm_rails_events_history_cache[
+                                    config_id
+                                ] = instance.events_history_cache
+
+                            log.info(
+                                f"Configuration {config_id} has changed. Clearing cache."
+                            )
+
+        observer = Observer()
+        event_handler = Handler()
+        observer.schedule(event_handler, app.rails_config_path, recursive=True)
+        observer.start()
+        try:
+            while not app.stop_signal:
+                time.sleep(5)
+        finally:
+            observer.stop()
+            observer.join()
+
+    except ImportError:
+        # Since this is running in a separate thread, we just print the error.
+        print(
+            "The auto-reload feature requires `watchdog`. "
+            "Please install using `pip install watchdog`."
+        )
+        # Force close everything.
+        os._exit(-1)

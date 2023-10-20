@@ -25,6 +25,7 @@ from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import (
     get_first_nonempty_line,
     get_last_user_utterance_event,
+    get_last_user_utterance_event_v1_1,
     llm_call,
 )
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
@@ -134,7 +135,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         """Generate the canonical form for what the user said i.e. user intent."""
 
         # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
-        event = get_last_user_utterance_event(events)
+        event = get_last_user_utterance_event_v1_1(events)
         assert event["type"] == "UtteranceUserActionFinished"
 
         # Use action specific llm if registered else fallback to main llm
