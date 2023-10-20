@@ -38,6 +38,7 @@ from nemoguardrails.actions.llm.utils import (
     get_last_user_utterance_event,
     get_multiline_response,
     get_retrieved_relevant_chunks,
+    get_top_k_nonempty_lines,
     llm_call,
     strip_quotes,
 )
@@ -166,7 +167,12 @@ class LLMGenerationActions:
             colang_flow = flow.get("source_code") or flow_to_colang(flow)
 
             # We index on the full body for now
-            items.append(IndexItem(text=colang_flow, meta={"flow": colang_flow}))
+            # items.append(IndexItem(text=colang_flow, meta={"flow": colang_flow}))
+
+            # EXPERIMENTAL: We create an index entry for every line in the flow
+            for line in colang_flow.split("\n"):
+                if line.strip() != "":
+                    items.append(IndexItem(text=line, meta={"flow": colang_flow}))
 
         # If we have no patterns, we stop.
         if len(items) == 0:
@@ -220,13 +226,16 @@ class LLMGenerationActions:
 
     @action(is_system_action=True)
     async def generate_user_intent(
-        self, events: List[dict], llm: Optional[BaseLLM] = None
+        self, events: List[dict], config: RailsConfig, llm: Optional[BaseLLM] = None
     ):
         """Generate the canonical form for what the user said i.e. user intent."""
+        # If using a single LLM call, use the specific action defined for this task.
+        if self.config.rails.dialog.single_call.enabled:
+            return await self.generate_intent_steps_message(events=events, llm=llm)
 
         # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
-        assert event["type"] == "UtteranceUserActionFinished"
+        assert event["type"] == "UserMessage"
 
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
@@ -246,8 +255,19 @@ class LLMGenerationActions:
 
             if self.user_message_index:
                 results = await self.user_message_index.search(
-                    text=event["final_transcript"], max_results=5
+                    text=event["text"], max_results=5
                 )
+
+                # If the option to use only the embeddings is activated, we take the first
+                # canonical form.
+                if results and config.rails.dialog.user_messages.embeddings_only:
+                    return ActionResult(
+                        events=[
+                            new_event_dict(
+                                "UserIntent", intent=results[0].meta["intent"]
+                            )
+                        ]
+                    )
 
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
@@ -300,11 +320,29 @@ class LLMGenerationActions:
             # We make this call with temperature 0 to have it as deterministic as possible.
             result = await llm_call(llm, prompt)
 
+            text = result.strip()
+            if text.startswith('"'):
+                text = text[1:-1]
+
             return ActionResult(
-                events=[
-                    new_event_dict("StartUtteranceBotAction", script=result.strip())
-                ]
+                events=[new_event_dict("BotMessage", text=text)],
             )
+
+    async def _search_flows_index(self, text, max_results):
+        """Search the index of flows."""
+        results = await self.flows_index.search(text=text, max_results=10)
+
+        # we filter the results to keep only unique flows
+        flows = set()
+        final_results = []
+        for result in results:
+            if result.meta["flow"] not in flows:
+                flows.add(result.meta["flow"])
+                # For backwards compatibility we also replace the text with the full version
+                result.text = result.meta["flow"]
+                final_results.append(result)
+
+        return final_results[0:max_results]
 
     @action(is_system_action=True)
     async def generate_next_step(
@@ -324,12 +362,19 @@ class LLMGenerationActions:
 
         # Currently, we only predict next step after a user intent using LLM
         if event["type"] == "UserIntent":
+            # If using a single LLM call, use the results computed in the first call.
+            if self.config.rails.dialog.single_call.enabled:
+                bot_intent_event = event["additional_info"]["bot_intent_event"]
+                return ActionResult(events=[bot_intent_event])
+
             user_intent = event["intent"]
 
             # We search for the most relevant similar flows
             examples = ""
             if self.flows_index:
-                results = await self.flows_index.search(text=user_intent, max_results=5)
+                results = await self._search_flows_index(
+                    text=user_intent, max_results=5
+                )
 
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
@@ -476,11 +521,23 @@ class LLMGenerationActions:
             # We also need to render
             bot_utterance = self._render_string(bot_utterance, context)
 
+            # We skip output rails for predefined messages.
+            context_updates["skip_output_rails"] = True
+
         # Check if the output is supposed to be the content of a context variable
         elif bot_intent[0] == "$" and bot_intent[1:] in context:
             bot_utterance = context[bot_intent[1:]]
 
         else:
+            # Generate the bot message using an LLM call
+
+            # If using a single LLM call, use the results computed in the first call.
+            if self.config.rails.dialog.single_call.enabled:
+                event = get_last_user_intent_event(events)
+                if event["type"] == "UserIntent":
+                    bot_message_event = event["additional_info"]["bot_message_event"]
+                    return ActionResult(events=[bot_message_event])
+
             # We search for the most relevant similar bot utterance
             examples = ""
             # NOTE: disabling bot message index when there are no user messages
@@ -527,18 +584,12 @@ class LLMGenerationActions:
 
         if bot_utterance:
             return ActionResult(
-                events=[
-                    new_event_dict("StartUtteranceBotAction", script=bot_utterance)
-                ],
+                events=[new_event_dict("BotMessage", text=bot_utterance)],
                 context_updates=context_updates,
             )
         else:
             return ActionResult(
-                events=[
-                    new_event_dict(
-                        "StartUtteranceBotAction", script="I'm not sure what to say."
-                    )
-                ],
+                events=[new_event_dict("BotMessage", text="I'm not sure what to say.")],
                 context_updates=context_updates,
             )
 
@@ -570,7 +621,7 @@ class LLMGenerationActions:
         # We search for the most relevant flows.
         examples = ""
         if self.flows_index:
-            results = await self.flows_index.search(
+            results = await self._search_flows_index(
                 text=f"${var_name} = ", max_results=5
             )
 
@@ -611,3 +662,212 @@ class LLMGenerationActions:
         log.info(f"Generated value for ${var_name}: {value}")
 
         return literal_eval(value)
+
+    @action(is_system_action=True)
+    async def generate_intent_steps_message(
+        self, events: List[dict], llm: Optional[BaseLLM] = None
+    ):
+        """Generate all three main Guardrails phases with a single LLM call.
+        The three phases are: user canonical from (user intent), next flow steps (i.e. bot canonical form)
+        and bot message.
+        """
+
+        # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
+        event = get_last_user_utterance_event(events)
+        assert event["type"] == "UserMessage"
+
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
+        if self.config.user_messages:
+            # TODO: based on the config we can use a specific canonical forms model
+            #  or use the LLM to detect the canonical form. The below implementation
+            #  is for the latter.
+
+            log.info("Generate all three phases in one LLM call...")
+
+            # We search for the most relevant similar user utterance
+            examples = []
+            potential_user_intents = []
+            intent_results = []
+            flow_results = {}
+
+            if self.user_message_index:
+                # Get the top 10 intents even if we use less in the selected examples.
+                # Some of these intents might not have an associated flow and will be
+                # skipped from the few-shot examples.
+                intent_results = await self.user_message_index.search(
+                    text=event["text"], max_results=10
+                )
+
+                # We fill in the list of potential user intents
+                for result in intent_results:
+                    potential_user_intents.append(result.meta["intent"])
+
+            if self.flows_index:
+                for intent in potential_user_intents:
+                    flow_results_intent = await self._search_flows_index(
+                        text=intent, max_results=2
+                    )
+                    flow_results[intent] = flow_results_intent
+
+            # We add the intent to the examples in reverse order
+            # so the most relevant is towards the end.
+            for result in intent_results:
+                # Stop after the first 5 flow examples, in case more than 5 intents
+                # have been selected from the index.
+                if len(examples) >= 5:
+                    break
+
+                intent = result.meta["intent"]
+                example = f'user "{result.text}"\n  {intent}\n'
+
+                flow_results_intent = flow_results.get(intent, [])
+                found_flow_for_intent = False
+                for result_flow in flow_results_intent:
+                    # Assumption: each flow should contain at least two lines, the first is the user intent.
+                    # Just in case there are some flows with only one line
+                    if "\n" not in result_flow.text:
+                        continue
+                    (flow_user_intent, flow_continuation) = result_flow.text.split(
+                        "\n", 1
+                    )
+                    flow_user_intent = flow_user_intent[5:]
+                    if flow_user_intent == intent:
+                        found_flow_for_intent = True
+                        example += f"{flow_continuation}\n"
+
+                        # Also add the bot message if the last line in the flow is a bot canonical form
+                        last_flow_line = flow_continuation
+                        if "\n" in flow_continuation:
+                            (_, last_flow_line) = flow_continuation.rsplit("\n", 1)
+                        if last_flow_line.startswith("bot "):
+                            bot_canonical_form = last_flow_line[4:]
+
+                            found_bot_message = False
+                            if self.bot_message_index:
+                                bot_messages_results = (
+                                    await self.bot_message_index.search(
+                                        text=bot_canonical_form, max_results=1
+                                    )
+                                )
+
+                                for bot_message_result in bot_messages_results:
+                                    if bot_message_result.text == bot_canonical_form:
+                                        found_bot_message = True
+                                        example += (
+                                            f"  \"{bot_message_result.meta['text']}\"\n"
+                                        )
+                                        # Only use the first bot message for now
+                                        break
+
+                            if not found_bot_message:
+                                # This is for canonical forms that do not have an associated message.
+                                # Create a simple message for the bot canonical form.
+                                # In a later version we could generate a message with the LLM at app initialization.
+                                example += f"  # On the next line generate a bot message related to {bot_canonical_form}\n"
+
+                        # For now, only use the first flow for each intent.
+                        break
+                if not found_flow_for_intent:
+                    # Skip intents that do not have an associated flow.
+                    continue
+
+                example += "\n"
+                examples.append(example)
+
+            prompt = self.llm_task_manager.render_task_prompt(
+                task=Task.GENERATE_INTENT_STEPS_MESSAGE,
+                events=events,
+                context={
+                    "examples": "\n\n".join(reversed(examples)),
+                    "potential_user_intents": ", ".join(potential_user_intents),
+                },
+            )
+
+            # We make this call with temperature 0 to have it as deterministic as possible.
+            # This is important for canonical forms, but not a great choice for bot messages.
+            with llm_params(llm, temperature=self.config.lowest_temperature):
+                result = await llm_call(llm, prompt)
+
+            # Parse the output using the associated parser
+            result = self.llm_task_manager.parse_task_output(
+                Task.GENERATE_INTENT_STEPS_MESSAGE, output=result
+            )
+
+            # TODO: Implement logic for generating more complex Colang next steps (multi-step),
+            #  not just a single bot intent.
+
+            # Get the next 2 non-empty lines, these should contain:
+            # line 1 - user intent, line 2 - bot intent.
+            # Afterwards we have the bot message.
+            next_three_lines = get_top_k_nonempty_lines(result, k=2)
+            user_intent = next_three_lines[0] if len(next_three_lines) > 0 else None
+            bot_intent = next_three_lines[1] if len(next_three_lines) > 1 else None
+            bot_message = None
+            if bot_intent:
+                pos = result.find(bot_intent)
+                if pos != -1:
+                    # The bot message could be multiline
+                    bot_message = result[pos + len(bot_intent) :]
+                    bot_message = get_multiline_response(bot_message)
+                    bot_message = strip_quotes(bot_message)
+                    # Quick hack for degenerated / empty bot messages
+                    if bot_message and len(bot_message.strip()) == 0:
+                        bot_message = None
+
+            if user_intent:
+                if user_intent.startswith("user "):
+                    user_intent = user_intent[5:]
+            else:
+                user_intent = "unknown message"
+
+            if bot_intent and bot_intent.startswith("bot "):
+                bot_intent = bot_intent[4:]
+            else:
+                bot_intent = "general response"
+
+            if not bot_message:
+                bot_message = "I'm not sure what to say."
+
+            log.info(
+                "Canonical form for user intent: "
+                + (user_intent if user_intent else "None")
+            )
+            log.info(
+                "Canonical form for bot intent: "
+                + (bot_intent if bot_intent else "None")
+            )
+            log.info(
+                f"Generated bot message: " + (bot_message if bot_message else "None")
+            )
+
+            additional_info = {
+                "bot_intent_event": new_event_dict("BotIntent", intent=bot_intent),
+                "bot_message_event": new_event_dict(
+                    "StartUtteranceBotAction", script=bot_message
+                ),
+            }
+            events = [
+                new_event_dict(
+                    "UserIntent", intent=user_intent, additional_info=additional_info
+                )
+            ]
+
+            return ActionResult(events=events)
+
+        else:
+            prompt = self.llm_task_manager.render_task_prompt(
+                task=Task.GENERAL, events=events
+            )
+
+            # We make this call with temperature 0 to have it as deterministic as possible.
+            result = await llm_call(llm, prompt)
+
+            text = result.strip()
+            if text.startswith('"'):
+                text = text[1:-1]
+
+            return ActionResult(
+                events=[new_event_dict("BotMessage", text=text)],
+            )

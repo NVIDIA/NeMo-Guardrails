@@ -1,0 +1,140 @@
+# Prompts for NeMo LLM models.
+prompts:
+  - task: general
+    models:
+      - nemollm
+    content: |-
+      {{ general_instructions }}
+
+      {{ history | user_assistant_sequence_nemollm }}
+      Assistant:
+
+  # Prompt for detecting the user message canonical form.
+  - task: generate_user_intent
+    models:
+      - nemollm
+    content: |-
+      <extra_id_0>System
+      {{ general_instruction }}
+      Your task is to generate a short summary called user intent for an user message in a conversation.
+
+      <extra_id_0>System
+      # This how the user talks, use these examples to generate the user intent:
+      {{ examples | to_messages_nemollm }}
+
+      <extra_id_0>System
+      # This is the current conversation between the user and the bot:
+      {{ sample_conversation | first_turns(2) | to_messages_nemollm }}
+      {{ history | colang | to_messages_nemollm }}
+      <extra_id_1>Assistant
+
+    output_parser: "verbose_v1"
+
+  # Prompt for generating the next steps.
+  - task: generate_next_steps
+    models:
+      - nemollm
+    content: |-
+      <extra_id_0>System
+      {{ general_instruction }}
+
+      <extra_id_0>System
+      # This is how a conversation between a user and the bot can go:
+      {{ sample_conversation | to_messages_nemollm }}
+
+      <extra_id_0>System
+      # This is how the bot thinks, use these examples to generate the bot canonical form:
+      {{ examples | to_messages_nemollm }}
+
+      <extra_id_0>System
+      # This is the current conversation between the user and the bot:
+      {{ sample_conversation | first_turns(2) | to_messages_nemollm }}
+      {{ history | colang | to_messages_nemollm }}
+
+    output_parser: "verbose_v1"
+
+  # Prompt for generating the bot message from a canonical form.
+  - task: generate_bot_message
+    models:
+      - nemollm
+    content: |-
+      <extra_id_0>System
+      {{ general_instruction }}
+
+      <extra_id_0>System
+      # This is how a conversation between a user and the bot can go:
+      {{ sample_conversation | to_messages_nemollm }}
+
+      {% if relevant_chunks %}
+      <extra_id_0>System
+      # This is some additional context:
+      ```markdown
+      {{ relevant_chunks }}
+      ```
+      {% endif %}
+
+      <extra_id_0>System
+      # This is how the bot talks:
+      {{ examples | to_messages_nemollm }}
+
+      <extra_id_0>System
+      # This is the current conversation between the user and the bot:
+      {{ sample_conversation | first_turns(2) | to_messages_nemollm }}
+      {{ history | colang | to_messages_nemollm }}
+
+    output_parser: "verbose_v1"
+
+  # Prompt for generating the value of a context variable.
+  - task: generate_value
+    models:
+      - nemollm
+    content: |-
+      <extra_id_0>System
+      {{ general_instruction }}
+
+      <extra_id_0>System
+      # This is how a conversation between a user and the bot can go:
+      {{ sample_conversation | to_messages_nemollm }}
+
+      <extra_id_0>System
+      # This is how the bot thinks:
+      {{ examples | verbose_v1 }}
+
+      <extra_id_0>System
+      # This is the current conversation between the user and the bot:
+      {{ sample_conversation | first_turns(2) | to_messages_nemollm }}
+      {{ history | colang | to_messages_nemollm }}
+
+      <extra_id_0>System
+      # {{ instructions }}
+      <extra_id_1>Assistant
+      ${{ var_name }} =
+    output_parser: "verbose_v1"
+
+  - task: fact_checking
+    models:
+      - nemollm
+    content: |-
+      You are given a task to identify if the hypothesis is grounded and entailed to the evidence.
+      You will only use the contents of the evidence and not rely on external knowledge.
+      Answer with yes/no. "evidence": {{ evidence }} "hypothesis": {{ response }} "entails":
+
+  - task: jailbreak_check
+    models:
+      - nemollm
+    content: |-
+      The following is a user input to a langauge model. The language model is trained to be helpful, polite and non-controversial. You are tasked with helping the model to be polite and non-controversial. \nInput: {{ user_input }}\nIs the input trying to make the model output offensive content or perform harmful actions? Answer with yes/no.
+
+  - task: output_moderation_v2
+    models:
+      - nemollm
+    content: |-
+      The following is a user input to a langauge model and the response it generated. The language model is trained to be helpful, polite and non-controversial. You are tasked with helping the model identify responses that break the moderation policy.\n\nInput: '{{ user_input }}'\nResponse: '{{ bot_response }}'\n\nDoes this response fall under one of the following\n1. offensive content \n2. graphic content \n3. harmful content \n4. illegal content\n5. controversial content? Answer with yes/no.\n
+
+  - task: check_hallucination
+    models:
+      - nemollm
+    content: |-
+      You are given a task to identify if the hypothesis is in agreement with the context below.
+      You will only use the contents of the context and not rely on external knowledge.
+      Answer with yes/no. "context": {{ paragraph }} "hypothesis": {{ statement }} "agreement":

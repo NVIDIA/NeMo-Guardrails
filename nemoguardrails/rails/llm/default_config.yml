@@ -27,3 +27,5 @@ instructions:
       The bot is designed to generate human-like text based on the input that it receives.
       The bot is talkative and provides lots of specific details.
       If the bot does not know the answer to a question, it truthfully says it does not know.
+
+prompting_mode: "standard"
