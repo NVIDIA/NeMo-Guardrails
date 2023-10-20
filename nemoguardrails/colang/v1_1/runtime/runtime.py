@@ -50,6 +50,13 @@ class RuntimeV1_1(Runtime):
         # Register local system actions
         self.register_action(self._add_flows_action, "AddFlowsAction", False)
 
+        # Maps main_flow.uid to a dictionary of actions that are run locally, asynchronously.
+        # Dict[main_flow_uid, Dict[action_uid, action_data]]
+        self.async_actions: Dict[str, List] = {}
+
+        # A way to disable async function execution. Useful for testing.
+        self.disable_async_execution = False
+
     async def _add_flows_action(self, state: "State", **args):
         log.info(f"Start AddFlowsAction! {args}")
         flow_content = args["config"]
@@ -294,6 +301,56 @@ class RuntimeV1_1(Runtime):
             log.info(f"Failed to get response from {action_name} due to exception {e}")
         return result, status
 
+    @staticmethod
+    def _get_action_finished_event(result):
+        """Helper to return the ActionFinished event from the result of running a local action."""
+        return new_event_dict(
+            f"{result['action_name']}Finished",
+            action_uid=result["start_action_event"]["action_uid"],
+            action_name=result["action_name"],
+            status="success",
+            is_success=True,
+            return_value=result["return_value"],
+            events=result["new_events"],
+            # is_system_action=action_meta.get("is_system_action", False),
+        )
+
+    async def _get_async_actions_finished_events(
+        self, main_flow_uid: str
+    ) -> Tuple[List[dict], int]:
+        """Helper to return the ActionFinished events for the local async actions that finished.
+
+        Args
+            main_flow_uid: The UID of the main flow.
+
+        Returns
+            (action_finished_events, pending_counter)
+            The array of *ActionFinished events and the pending counter
+        """
+
+        log.info(f"Checking if there are any local async actions that have finished.")
+        pending_actions = self.async_actions.get(main_flow_uid, [])
+        if len(pending_actions) == 0:
+            return [], 0
+
+        done, pending = await asyncio.wait(
+            pending_actions,
+            return_when=asyncio.FIRST_COMPLETED,
+            timeout=0,
+        )
+        log.info(f"{len(done)} actions finished.")
+
+        action_finished_events = []
+        for finished_task in done:
+            self.async_actions[main_flow_uid].remove(finished_task)
+            result = finished_task.result()
+
+            # We need to create the corresponding action finished event
+            action_finished_event = self._get_action_finished_event(result)
+            action_finished_events.append(action_finished_event)
+
+        return action_finished_events, len(pending)
+
     async def process_events(
         self, events: List[dict], state: Optional[dict] = None
     ) -> Tuple[List[dict], dict]:
@@ -325,12 +382,35 @@ class RuntimeV1_1(Runtime):
             if isinstance(state, dict):
                 state = State.from_dict(state)
 
+        main_flow_uid = state.main_flow_state.uid
+
         # While we have input events to process, or there are local running actions
         # we continue the processing.
         while input_events or local_running_actions:
             # First, we process all events
             for event in input_events:
                 log.info(f"Processing event {event}")
+
+                # If we have a "CheckLocalAsync" event, we check if there are
+                # any local async actions that have finished executing, and if so,
+                # return the ActionFinished events.
+                event_name = event["type"] if isinstance(event, dict) else event.name
+                if event_name == "CheckLocalAsync":
+                    (
+                        action_finished_events,
+                        pending_counter,
+                    ) = await self._get_async_actions_finished_events(main_flow_uid)
+
+                    output_events.extend(action_finished_events)
+
+                    if pending_counter:
+                        output_events.append(
+                            new_event_dict("LocalAsyncCounter", counter=pending_counter)
+                        )
+                    continue
+                elif event_name == "LocalAsyncCounter":
+                    # If we receive back this event, we don't bother to process.
+                    continue
 
                 # Record the event that we're about to process
                 state.last_events.append(event)
@@ -353,7 +433,11 @@ class RuntimeV1_1(Runtime):
                         action_name = start_action_match[1]
 
                         if action_name in self.action_dispatcher.registered_actions:
-                            # In this case we need to start the action asynchronously
+                            # In this case we need to start the action locally
+                            action_fn = self.action_dispatcher.get_action(action_name)
+                            execute_async = getattr(action_fn, "action_meta", {}).get(
+                                "execute_async", False
+                            )
 
                             # Start the local action
                             local_action = asyncio.create_task(
@@ -364,7 +448,16 @@ class RuntimeV1_1(Runtime):
                                     state=state,
                                 )
                             )
-                            local_running_actions.append(local_action)
+
+                            # If the function is not async, or async execution is disabled
+                            # we execute the actions as a local action.
+                            if not execute_async or self.disable_async_execution:
+                                local_running_actions.append(local_action)
+                            else:
+                                main_flow_uid = state.main_flow_state.uid
+                                if main_flow_uid not in self.async_actions:
+                                    self.async_actions[main_flow_uid] = []
+                                self.async_actions[main_flow_uid].append(local_action)
                         else:
                             output_events.append(out_event)
                     else:
@@ -389,22 +482,20 @@ class RuntimeV1_1(Runtime):
                     result = finished_task.result()
 
                     # We need to create the corresponding action finished event
-                    action_finished_event = new_event_dict(
-                        f"{result['action_name']}Finished",
-                        action_uid=result["start_action_event"]["action_uid"],
-                        action_name=result["action_name"],
-                        status="success",
-                        is_success=True,
-                        return_value=result["return_value"],
-                        events=result["new_events"],
-                        # is_system_action=action_meta.get("is_system_action", False),
-                    )
+                    action_finished_event = self._get_action_finished_event(result)
                     input_events.append(action_finished_event)
 
         # TODO: serialize the state to dict
 
         # We cap the recent history to the last 100
         state.last_events = state.last_events[-100:]
+
+        # We also return any async action finished events that finished meanwhile.
+        (
+            action_finished_events,
+            pending_counter,
+        ) = await self._get_async_actions_finished_events(main_flow_uid)
+        output_events.extend(action_finished_events)
 
         return output_events, state
 

@@ -12,10 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import asyncio
 import os
 import pickle
 from typing import Optional
+
+from prompt_toolkit import prompt
+from prompt_toolkit.patch_stdout import patch_stdout
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.utils import new_event_dict
@@ -38,52 +41,101 @@ def _run_chat_v1_0(rails_app: LLMRails):
         print(f"\033[92m{bot_message['content']}\033[0m")
 
 
-def _run_chat_v1_1(rails_app: LLMRails):
+async def _run_chat_v1_1(rails_app: LLMRails):
     """Simple chat loop for v1.1 using the stateful events API."""
     state = None
+    waiting_user_input = False
+
+    def _process_output():
+        """Helper to process the output events."""
+        nonlocal output_events, output_state, input_events, state
+
+        # We detect any "StartUtteranceBotAction" events, show the message, and
+        # generate the corresponding Finished events as new input events.
+        input_events = []
+        for event in output_events:
+            if event["type"] == "StartUtteranceBotAction":
+                # We print bot messages in green.
+                print(f"\033[92m{event['script']}\033[0m")
+
+                input_events.append(
+                    new_event_dict(
+                        "UtteranceBotActionFinished",
+                        action_uid=event["action_uid"],
+                        is_success=True,
+                        final_script=event["script"],
+                    )
+                )
+
+        # TODO: deserialize the output state
+        # state = State.from_dict(output_state)
+        # Simulate serialization for testing
+        data = pickle.dumps(output_state)
+        output_state = pickle.loads(data)
+        state = output_state
+
+    async def _check_local_async_actions():
+        nonlocal output_events, output_state, input_events, check_task
+
+        while True:
+            # We only run the check when we wait for user input, but not the first time.
+            if not waiting_user_input or first_time:
+                await asyncio.sleep(0.1)
+                continue
+
+            output_events, output_state = await rails_app.process_events_async(
+                [new_event_dict("CheckLocalAsync")], state
+            )
+            if output_events:
+                input_events = output_events
+                while input_events:
+                    (
+                        output_events,
+                        output_state,
+                    ) = await rails_app.process_events_async(input_events, state)
+                    _process_output()
+            else:
+                # If there are no pending actions, we stop
+                check_task = None
+                return
+
+            await asyncio.sleep(0.2)
+
+    # Start the task for checking async actions
+    check_task = asyncio.create_task(_check_local_async_actions())
 
     # And go into the default listening loop.
     first_time = True
-    while True:
-        if first_time:
-            input_events = []
-        else:
-            user_message = input("> ")
-            input_events = [
-                {
-                    "type": "UtteranceUserActionFinished",
-                    "final_transcript": user_message,
-                }
-            ]
+    with patch_stdout(raw=True):
+        while True:
+            if first_time:
+                input_events = []
+            else:
+                waiting_user_input = True
+                user_message = await input_async("> ")
+                waiting_user_input = False
+                input_events = [
+                    {
+                        "type": "UtteranceUserActionFinished",
+                        "final_transcript": user_message,
+                    }
+                ]
 
-        while input_events or first_time:
-            first_time = False
+            while input_events or first_time:
+                output_events, output_state = await rails_app.process_events_async(
+                    input_events, state
+                )
+                _process_output()
+                # If we don't have a check task, we start it
+                if check_task is None:
+                    check_task = asyncio.create_task(_check_local_async_actions())
 
-            output_events, output_state = rails_app.process_events(input_events, state)
+                first_time = False
 
-            # We detect any "StartUtteranceBotAction" events, show the message, and
-            # generate the corresponding Finished events as new input events.
-            input_events = []
-            for event in output_events:
-                if event["type"] == "StartUtteranceBotAction":
-                    # We print bot messages in green.
-                    print(f"\033[92m{event['script']}\033[0m")
 
-                    input_events.append(
-                        new_event_dict(
-                            "UtteranceBotActionFinished",
-                            action_uid=event["action_uid"],
-                            is_success=True,
-                            final_script=event["script"],
-                        )
-                    )
-
-            # TODO: deserialize the output state
-            # state = State.from_dict(output_state)
-            # Simulate serialization for testing
-            data = pickle.dumps(output_state)
-            output_state = pickle.loads(data)
-            state = output_state
+async def input_async(prompt_message: str = "") -> str:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, prompt, prompt_message)
 
 
 def run_chat(config_path: Optional[str] = None, verbose: bool = False):
@@ -95,6 +147,6 @@ def run_chat(config_path: Optional[str] = None, verbose: bool = False):
     if rails_config.colang_version == "1.0":
         _run_chat_v1_0(rails_app)
     elif rails_config.colang_version == "1.1":
-        _run_chat_v1_1(rails_app)
+        asyncio.run(_run_chat_v1_1(rails_app))
     else:
         raise Exception(f"Invalid colang version: {rails_config.colang_version}")

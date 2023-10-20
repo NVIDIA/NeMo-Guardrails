@@ -17,12 +17,18 @@ from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
 
-# A decorator that sets a property on the function to indicate if it's a system action or not.
-def action(is_system_action: bool = False, name: Optional[str] = None):
+def action(
+    is_system_action: bool = False,
+    name: Optional[str] = None,
+    execute_async: bool = False,
+):
+    """A decorator that sets a property on the function to indicate if it's a system action or not."""
+
     def decorator(fn_or_cls):
         fn_or_cls.action_meta = {
             "name": name or fn_or_cls.__name__,
             "is_system_action": is_system_action,
+            "execute_async": execute_async,
         }
         return fn_or_cls
 

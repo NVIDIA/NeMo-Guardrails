@@ -98,6 +98,7 @@ class TestChat:
 
         # For 1.1, we start the main flow when initializing by providing a empty state
         if self.config.colang_version == "1.1":
+            self.app.runtime.disable_async_execution = True
             _, self.state = self.app.process_events(
                 [],
                 self.state,

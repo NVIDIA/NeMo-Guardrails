@@ -499,8 +499,11 @@ class LLMRails:
         # Compute the new events.
         output_events, output_state = await self.runtime.process_events(events, state)
 
-        log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
-        log.info("--- :: Stats: %s" % llm_stats)
+        took = time.time() - t0
+        # Small tweak, disable this when there were no events (or it was just too fast).
+        if took > 0.01:
+            log.info("--- :: Total processing took %.2f seconds." % took)
+            log.info("--- :: Stats: %s" % llm_stats)
 
         return output_events, output_state
 

@@ -127,7 +127,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         assert event["type"] == "UtteranceUserActionFinished"
         return event["final_transcript"]
 
-    @action(name="GenerateUserIntentAction", is_system_action=True)
+    @action(name="GenerateUserIntentAction", is_system_action=True, execute_async=True)
     async def generate_user_intent(
         self, events: List[dict], llm: Optional[BaseLLM] = None
     ):
@@ -202,7 +202,11 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         heads = find_all_active_event_matchers(state, event)
         return len(heads) > 0
 
-    @action(name="GenerateFlowFromInstructionsAction", is_system_action=True)
+    @action(
+        name="GenerateFlowFromInstructionsAction",
+        is_system_action=True,
+        execute_async=True,
+    )
     async def generate_flow_from_instructions(
         self,
         instructions: str,
@@ -247,7 +251,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         lines = _remove_leading_empty_lines(result).split("\n")
 
         if lines[0].startswith("  "):
-            print(f"Generated flow:\n{result}\n")
+            # print(f"Generated flow:\n{result}\n")
             return {
                 "name": flow_name,
                 "body": f"flow {flow_name}\n" + "\n".join(lines),
@@ -258,7 +262,9 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
                 "body": "flow bot express unsure\n  bot say 'I'm sure, I don't know how to do that.'",
             }
 
-    @action(name="GenerateFlowFromNameAction", is_system_action=True)
+    @action(
+        name="GenerateFlowFromNameAction", is_system_action=True, execute_async=True
+    )
     async def generate_flow_from_name(
         self,
         name: str,
@@ -299,12 +305,14 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         lines = _remove_leading_empty_lines(result).split("\n")
 
         if lines[0].startswith("  "):
-            print(f"Generated flow:\n{result}\n")
+            # print(f"Generated flow:\n{result}\n")
             return f"flow {name}\n" + "\n".join(lines)
         else:
             return "flow bot express unsure\n  bot say 'I don't know how to do that.'"
 
-    @action(name="GenerateFlowContinuationAction", is_system_action=True)
+    @action(
+        name="GenerateFlowContinuationAction", is_system_action=True, execute_async=True
+    )
     async def generate_flow_continuation(
         self,
         events: List[dict],
@@ -351,7 +359,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         flow_name = f"dynamic_{flow_id}"
 
         if lines[0].startswith("  "):
-            print(f"Generated flow:\n{result}\n")
+            # print(f"Generated flow:\n{result}\n")
             return {
                 "name": flow_name,
                 "body": f"flow {flow_name}\n" + "\n".join(lines),
@@ -362,7 +370,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
                 "body": 'flow bot express unsure\n  bot say "I\'m not sure what to do next."',
             }
 
-    @action(name="GenerateValueAction", is_system_action=True)
+    @action(name="GenerateValueAction", is_system_action=True, execute_async=True)
     async def generate_value(
         self,
         var_name: str,
