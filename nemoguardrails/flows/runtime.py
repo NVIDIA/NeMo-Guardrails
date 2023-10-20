@@ -25,12 +25,6 @@ from langchain.chains.base import Chain
 
 from nemoguardrails.actions.action_dispatcher import ActionDispatcher
 from nemoguardrails.actions.actions import ActionResult
-from nemoguardrails.actions.fact_checking import check_facts
-from nemoguardrails.actions.hallucination import check_hallucination
-from nemoguardrails.actions.jailbreak_check import check_jailbreak
-from nemoguardrails.actions.math import wolfram_alpha_request
-from nemoguardrails.actions.output_moderation import output_moderation
-from nemoguardrails.actions.retrieve_relevant_chunks import retrieve_relevant_chunks
 from nemoguardrails.flows.flows import FlowConfig, compute_context, compute_next_steps
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -60,6 +54,17 @@ class Runtime:
 
     def _load_flow_config(self, flow: dict):
         """Loads a flow into the list of flow configurations."""
+
+        # If we don't have an id, we generate a random UID.
+        flow_id = flow.get("id") or str(uuid.uuid4())
+
+        # If the flow already exists, we stop.
+        # This allows us to override flows. The order in which the flows
+        # are in the config is such that the first ones are the ones that
+        # should be kept.
+        if flow_id in self.flow_configs:
+            return
+
         elements = flow["elements"]
 
         # If we have an element with meta information, we move the relevant properties
@@ -73,12 +78,13 @@ class Runtime:
                 flow["is_extension"] = meta_data["is_extension"]
             if "interruptable" in meta_data:
                 flow["is_interruptible"] = meta_data["interruptable"]
+            if meta_data.get("subflow"):
+                flow["is_subflow"] = True
+            if meta_data.get("allow_multiple"):
+                flow["allow_multiple"] = True
 
             # Finally, remove the meta element
             elements = elements[1:]
-
-        # If we don't have an id, we generate a random UID.
-        flow_id = flow.get("id") or str(uuid.uuid4())
 
         self.flow_configs[flow_id] = FlowConfig(
             id=flow_id,
@@ -86,7 +92,9 @@ class Runtime:
             priority=flow.get("priority", 1.0),
             is_extension=flow.get("is_extension", False),
             is_interruptible=flow.get("is_interruptible", True),
+            is_subflow=flow.get("is_subflow", False),
             source_code=flow.get("source_code"),
+            allow_multiple=flow.get("allow_multiple", False),
         )
 
         # We also compute what types of events can trigger this flow, in addition
@@ -186,7 +194,9 @@ class Runtime:
 
     async def compute_next_steps(self, events: List[dict]) -> List[dict]:
         """Computes the next step based on the current flow."""
-        next_steps = compute_next_steps(events, self.flow_configs)
+        next_steps = compute_next_steps(
+            events, self.flow_configs, rails_config=self.config
+        )
 
         # If there are any StartInternalSystemAction events, we mark if they are system actions or not
         for event in next_steps:

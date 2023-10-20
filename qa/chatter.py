@@ -24,7 +24,7 @@ EXAMPLES_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), "exam
 def create_chatter(name, configname, logger):
     """Create a NeMo Guardrails chatter specified with the configuration"""
     chatter = None
-    cwd = os.path.join(EXAMPLES_FOLDER, name)
+    cwd = os.path.join(EXAMPLES_FOLDER, configname)
     config = os.path.join(EXAMPLES_FOLDER, configname)
     logger.info(f"config: {config}")
     try:
@@ -43,7 +43,7 @@ def create_chatter(name, configname, logger):
             # Is the chatter process ready?
             # assert "Starting the chat" in output
     except subprocess.CalledProcessError as e:
-        logger.error("Command execution failed: %s", e)
+        logger.error("Command execution for config %s failed: %s", name, e)
         logger.error(f"Error message: {e.stderr}")
         logger.error(traceback.format_exc())
 

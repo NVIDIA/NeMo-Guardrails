@@ -60,14 +60,14 @@ setup(
     install_requires=[
         "pydantic==1.10.9",
         "aiohttp==3.8.5",
-        "langchain==0.0.272",
+        "langchain==0.0.308",
         "requests>=2.31.0",
         "typer==0.7.0",
         "PyYAML~=6.0",
         "setuptools~=65.5.1",
         "annoy==1.17.3",
         "sentence-transformers==2.2.2",
-        "fastapi==0.101.1",
+        "fastapi==0.103.1",
         "starlette==0.27.0",
         "uvicorn==0.23.2",
         "httpx==0.23.3",
@@ -78,5 +78,6 @@ setup(
     ],
     extras_require={
         "eval": ["tqdm~=4.65", "numpy~=1.24"],
+        "dev": ["fastapi-utils==0.2.1", "watchdog==3.0.0"],
     },
 )

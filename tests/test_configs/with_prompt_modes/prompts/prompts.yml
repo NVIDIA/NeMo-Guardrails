@@ -1,0 +1,27 @@
+prompts:
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+    content: |-
+      <<This is a placeholder for a custom prompt for generating the user intent using gpt-3.5-turbo>>
+
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+      - openai/gpt-4
+    mode: compact
+    content: |-
+      <<This custom prompt generates the user intent>>
+
+  - task: check_hallucination
+    models:
+      - nemollm
+    content: |-
+      <<This is a long placeholder prompt to check for hallucinations>>
+
+  - task: check_hallucination
+    models:
+      - nemollm
+    mode: compact
+    content: |-
+      <<Check for hallucinations>>

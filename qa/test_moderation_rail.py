@@ -23,6 +23,7 @@ QA_MODE = os.environ.get("QA")
 
 class TestModerationRail(ExampleConfigChatterTestCase):
     example_name = "moderation_rail"
+    config_name = "_deprecated/moderation_rail"
 
     @pytest.mark.skipif(not QA_MODE, reason="Not in QA mode.")
     @pytest.mark.unit
