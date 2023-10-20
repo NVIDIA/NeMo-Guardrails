@@ -35,10 +35,10 @@ async def call_active_fence_api(context: Optional[dict] = None):
     user_message = context.get("user_message")
 
     url = "https://apis.activefence.com/sync/v3/content/text"
-    headers = {"af-api-key": api_key}
+    headers = {"af-api-key": api_key, "af-source": "nemo-guardrails"}
     data = {
         "text": user_message,
-        "content_id": new_uuid(),
+        "content_id": "ng-" + new_uuid(),
     }
 
     async with aiohttp.ClientSession() as session:
