@@ -1,21 +1,79 @@
 # Example flows with instructions
 
-flow tell a joke
-  """Tell a joke."""
-  bot say "Why don't scientists trust atoms? Because they make up everything!"
-  bot smile
-
-flow count
-  """Count from 1 to 5."""
-  bot say "1"
-  bot say "2"
-  bot say "3"
-  bot say "4"
-  bot say "5"
-
+# Simple bot utterance action
 flow answer question about france
   """Answer the following question: What is the capital of France."""
   bot say "The capital of France it's Paris."
+
+# User action
+flow user expressed a color choice
+  """The user expressed a color choice."""
+  user said "blue"
+    or user said "red"
+    or user said "I take the green option"
+    or user said "I like black"
+
+# Mutlimodal bot action
+flow bot attract user
+  """Attracts a user by calling and waving bot hands."""
+  bot say "Hey there! Come closer!"
+    and bot gesture "Wave with both hands"
+
+# Mutlimodal bot action sequence
+flow bot tell a joke
+  """Tell a joke."""
+  bot say "Why don't scientists trust atoms?"
+    and bot gesture "raising both eyebrows, making a question face"
+  bot make short pause
+  bot say "Because they make up everything!"
+    and bot gesture "Smiles"
+
+# Bot user interaction sequence
+flow bot ask user for age
+  """Ask the user how old she is and response with 'You look younger!' when she answers something."""
+  bot say "How old are you?"
+  user said "I am 16"
+  bot say "You look younger!"
+
+# Loop
+flow count
+  """Count from 1 to 5."""
+  $count = 1
+  while $count <= 5
+    bot say "{$count}"
+    $count = $count + 1
+
+# Branching
+flow bot ask user to pick a color
+  """Ask user to choose from two offered colors: red and blue then give a answer depending on the user choice."""
+  bot say "What color would you like? Red or blue?"
+  when user said "Red"
+    bot say "I like red!"
+  orwhen user said "Blue"
+    bot say "I don't like blue!"
+
+# A little game
+flow play number guessing game
+  """Ask the user to guess a random number between 1 and 100; after each guess let the user know if the number was to low or high. If the user guesses the correct number, congratulate!"""
+  bot say "Hi, please guess the random number between 0 and 100"
+
+  $random_number = 66
+  $is_incorrect_number = True
+  while $is_incorrect_number
+    user said something
+    # The number of the user otherwise None
+    $number = None
+    $number = await GenerateValueAction(var_name="number", instructions="Extract the number the user guessed.")
+    if $number == None
+      bot say "Please guess a number between 0 and 100!"
+      continue
+    if $number < $random_number
+      bot say "Sorry, this number is too low!"
+    elif $number > $random_number
+      bot say "Sorry, this number is too high!"
+    else
+      bot say "Congratulation! This is the correct number!"
+      $is_correct_number = False
 
 # -----------------------------------
 # User UMIM event wrapper flows
@@ -28,6 +86,9 @@ flow user said $text
 flow user said something
   # llm: exclude
   match UtteranceUserAction.Finished() as $event
+
+flow user was silent
+  match TimerBotActionFinished(timer_name="user_silence", was_stoppped=False)
 
 # ----------------------------------
 # Bot UMIM event wrapper flows
@@ -55,7 +116,7 @@ flow bot say $text
 
 flow bot gesture $gesture
   # llm: exclude
-  await GestureBotAction($gesture) as $action
+  await GestureBotAction(gesture=$gesture) as $action
 
 flow scene show choice $prompt
   # llm: exclude
@@ -67,7 +128,7 @@ flow scene show information $prompt
 
 flow scene show form $prompt
   # llm: exclude
-  wait VisualInformationSceneAction(prompt=$prompt) as $action
+  await VisualInformationSceneAction(prompt=$prompt) as $action
 
 # ----------------------------------
 # Bot say action semantic wrapper flows
@@ -129,42 +190,82 @@ flow user provide custom instructions
 # Helper flows
 # -----------------------------------
 
+flow log $text
+  """Little helper flow to log something as a bot utterance."""
+  # llm: exclude
+  # loop_id: NEW
+  start bot say ">> logging: {$text}"
+
 flow wait
+  """Little helper flow to wait indefinitely."""
   # llm: exclude
   match NeverComingEvent()
 
-flow fallback
+flow user silence handling
+  """This helper flow will start the "user_silence" timer whenever the user utterance finished."""
   # llm: exclude
+  # loop_id: silence_handling
   user said something
+  #log "Start silence timer!"
+  start TimerBotAction(timer_name="user_silence", duration=2)
+  match TimerBotActionFinished(timer_name="user_silence") or UtteranceUserAction.Started()
+
+flow fallback
+  """This is the fallback flow that takes care of unhandled user utterances and will generate a flow continuation."""
+  # llm: exclude
+
+  priority 0.1
+  user said something
+
+  #log "Flow started -> fallback"
+
+  start_new_flow_instance:
+
   $intent = await GenerateUserIntentAction()
-  $exists = await CheckIfFlowExistsAction(flow_id=$intent)
+  $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
 
   if $exists
     send FinishFlow(flow_id=$intent)
   else
-    $instructions = await GetLastUserMessageAction()
-    do $instructions
-    #bot say "This is a new intent {$intent}."
+    #log "'fallback' -> Generate new flow for intent '{$intent}'"
+    send DynamicFlowFinished(flow_id=$intent)
+
+    $flow_info = await GenerateFlowContinuationAction()
+    await AddFlowsAction(config=$flow_info['body'])
+
+    send StartFlow(flow_id=$flow_info['name'])
+    match FlowStarted(flow_id=$flow_info['name']) as $event_ref
+    match $event_ref.flow.Finished()
+
+flow flows fallback
+  """If we reach a point where we need to start a flow that does not exist, we generate it."""
+  # llm: exclude
+
+  match StartFlow() as $event
+
+  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
+
+  if $event.arguments.flow_id != "flows fallback"
+    start_new_flow_instance:
+
+  if not $exists
+    $flow_id = $event.arguments.flow_id
+    log "'flows fallback' -> generate new flow '{$event.arguments.flow_id}'"
+    $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
+    await AddFlowsAction(config=$flow_source)
+    send StartFlow(flow_id=$flow_id)
 
 flow do $instructions
+  """This will create a new flow based on the provided instructions and start it."""
   # llm: exclude
+
+  #log "Flow started -> do '{$instructions}'"
+
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
   await AddFlowsAction(config=$flow_info.body)
   send StartFlow(flow_id=$flow_info['name'])
   match FlowStarted(flow_id=$flow_info['name']) as $event_ref
   match $event_ref.flow.Finished()
-
-flow flows fallback
-  # llm: exclude
-  match StartFlow() as $event
-
-  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
-
-  if not $exists
-      $flow_id = $event.arguments.flow_id
-      $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
-      await AddFlowsAction(config=$flow_source)
-      send StartFlow(flow_id=$flow_id)
 
 # ----------------------------------
 # FAQs
@@ -176,9 +277,8 @@ flow greeting
 
 flow how are you
   user asked how are you
-  start bot express feeling well as $ref
-    or bot express feeling bad as $ref
-  match $ref.Finished()
+  bot express feeling well
+    or bot express feeling bad
 
 flow faq
   activate greeting
@@ -191,14 +291,17 @@ flow faq
 
 flow custom instruction
   user provide custom instructions as $ref
+  bot say "User instruction: {$ref.context.instruction}"
   do $ref.context.instruction
 
 flow main
+  activate user silence handling
   activate faq
   #activate fallback
-  activate flows fallback
+  #activate flows fallback
   #activate custom instruction
   #bot express greeting
   bot say "Welcome! I'm the MVP bot."
   #bot inform about service
+  #play number guessing game
   wait

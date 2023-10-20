@@ -22,12 +22,8 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (
-    ActionStatus,
-    FlowEvent,
-    State,
-    run_to_completion,
-)
+from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, FlowEvent,
+                                                      State, run_to_completion)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -1846,6 +1842,41 @@ def test_await_and_or_grouping():
     )
 
 
+def test_await_multimodal_action():
+    """"""
+
+    content = """
+    flow bot say $text
+      await UtteranceBotAction(script=$text) as $action
+
+    flow bot gesture $gesture
+      await GestureBotAction(gesture=$gesture) as $action
+
+    flow bot express $text
+      await bot say $text
+
+    flow main
+        start bot express "Hi"
+        start bot gesture "Wave"
+        match UtteranceUserAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "Wave",
+            },
+        ],
+    )
+
+
 def test_activate_and_grouping():
     """"""
 
@@ -3269,4 +3300,4 @@ def test_dict_parameters():
 
 
 if __name__ == "__main__":
-    test_dict_parameters()
+    test_abort_flow()

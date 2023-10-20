@@ -103,6 +103,11 @@ _event_validators = [
 _action_to_modality_info: Dict[str, Tuple[str, str]] = {
     "UtteranceBotAction": ("bot_speech", "replace"),
     "UtteranceUserAction": ("user_speech", "replace"),
+    "TimerBotAction": ("time", "parallel"),
+    "GestureBotAction": ("bot_gesture", "override"),
+    "VisualChoiceSceneAction": ("information", "override"),
+    "VisualInformationSceneAction": ("information", "override"),
+    "VisualFormSceneAction": ("information", "override"),
 }
 
 
