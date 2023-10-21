@@ -238,13 +238,15 @@ class SimpleEmbeddingSearchProvider(EmbeddingsIndex):
     async def search(self, text: str, max_results: int) -> List[IndexItem]:
         """Searches the index for the closes matches to the provided text."""
         # needs to instead call pinecone search
-        print("in nemo guardrails core function of search")
+        #when is the search function called?
+        #print("in nemo guardrails core function of search")
         # return self.standard_query(text)re
-        start_time = time.time()
-        result = self.retreival_qa_with_sources(text)
-        print("Getting back from pinecone took: ", time.time() - start_time)
-        print(result)
-        return [result['answer'], result['sources']]
+        #start_time = time.time()
+        #result = self.retreival_qa_with_sources(text)
+        #print("Getting back from pinecone took: ", time.time() - start_time)
+        #print(result)
+        #return [result['answer'], result['sources']]
+        return ["Random Answer"]
         # todo
         # return result of search
         # retrieved chunks
@@ -300,13 +302,19 @@ async def retrieve_relevant_chunks(
         model_name='gpt-3.5-turbo',
         temperature=0.0
     )
+    text_field = "text"
+    # switch back to normal index for langchain
+    embed = OpenAIEmbeddings(
+        model=model_name,
+        openai_api_key=OPENAI_API_KEY)
+    vectorstore = Pinecone(pinecone.Index(index_name), embed.embed_query, text_field)
     qa_with_sources = RetrievalQAWithSourcesChain.from_chain_type(
         llm=llm,
         chain_type="stuff",
-        retriever=self.vectorstore.as_retriever()
+        retriever=vectorstore.as_retriever()
     )
     start_time = time.time()
-    result = qa_with_sources(query)
+    result = qa_with_sources(context.get("last_user_message"))
     print("Getting back from pinecone took: ", time.time() - start_time)
     print(result)
     answer = result['answer']
@@ -330,3 +338,4 @@ async def retrieve_relevant_chunks(
 def init(app: LLMRails):
     app.register_embedding_search_provider(
         "simple", SimpleEmbeddingSearchProvider)
+    app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")

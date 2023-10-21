@@ -5,9 +5,13 @@ define user express greeting
 define bot express greeting
   "Hello there!"
 
+define user ask question
+  "What does Nvidia do?"
+  "Who is the CEO of Nvidia?"
+
 define flow
   user express greeting
   bot express greeting
-  #user ...
-  #$answer = execute qa_chain(query=$last_user_message)
-  #bot $answer
+  user ask question
+  $answer = execute retrieve_relevant_chunks()
+  bot $answer
