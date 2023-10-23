@@ -23,8 +23,10 @@ prompts:
       {{ examples }}
 
       # This is the current conversation between the user and the bot:
+      # Choose intent from this list: {{ potential_user_intents }}
       {{ sample_conversation | first_turns(2) }}
       {{ history | colang }}
+
 
   # Prompt for generating the next steps.
   - task: generate_next_steps
@@ -83,6 +85,7 @@ prompts:
       {{ examples }}
 
       # This is the current conversation between the user and the bot:
+      # Choose intent from this list: {{ potential_user_intents }}
       {{ sample_conversation | first_turns(2) }}
       {{ history | colang }}
 
@@ -133,3 +136,47 @@ prompts:
       You are given a task to identify if the hypothesis is in agreement with the context below.
       You will only use the contents of the context and not rely on external knowledge.
       Answer with yes/no. "context": {{ paragraph }} "hypothesis": {{ statement }} "agreement":
+
+
+  # Prompts for compact mode for dialogue rails
+  # Prompt for detecting the user message canonical form in compact form.
+  - task: generate_user_intent
+    mode: compact
+    content: |-
+      # Task: generate the user intent for the last user message.
+
+      # This is a sample conversation between the user and the bot:
+      {{ sample_conversation | first_turns(2) }}
+      # Use these examples:
+      {{ examples }}
+      # Choose intent from this list: {{ potential_user_intents }}
+      {{ history | colang | last_turns(1) }}
+
+
+  # Prompt for generating the next steps in compact form.
+  - task: generate_next_steps
+    content: |-
+      # Task: generate the next steps in a conversation.
+
+      # Use these examples:
+      {{ examples | remove_text_messages}}
+      {{ history | colang | remove_text_messages | last_turns(1) }}
+
+
+  # Prompt for generating the bot message from a canonical form in compact form.
+  - task: generate_bot_message
+    content: |-
+      # Task: generate the bot message in a conversation.
+
+      {% if relevant_chunks %}
+      # This is some additional context:
+      ```markdown
+      {{ relevant_chunks }}
+      ```
+      {% endif %}
+
+      # This is the current conversation between the user and the bot:
+      {{ history | colang | last_turns(3) }}
+      # Use these examples:
+      {{ examples }}
+      {{ history | colang | last_turns(1) }}
