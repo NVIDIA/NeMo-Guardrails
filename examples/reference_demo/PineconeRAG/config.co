@@ -13,5 +13,5 @@ define flow
   user express greeting
   bot express greeting
   user ask question
-  $answer = execute retrieve_relevant_chunks()
+  $answer = execute answer_question_with_sources()
   bot $answer

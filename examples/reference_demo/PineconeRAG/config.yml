@@ -10,30 +10,15 @@ sample_conversation: |
       "Hello"
   user "What does Nvidia do?"
       ask question 
-  bot retrieve relevant chunks
-    "Nvidia is a technology company"
+  bot answer question with sources
+    "Nvidia is a technology company according to Wikipedia"
   user "Who is the CEO of Nvidia?"
       ask question
-  bot retrieve relevant chunks
-      "Jensen Huang is the CEO of Nvidia"
+  bot answer question with sources
+      "Jensen Huang is the CEO of Nvidia according to Wikipedia"
   
 
 models:
   - type: main
     engine: openai
     model: text-davinci-003
-
-  - type: embeddings
-    engine: openai
-    model: text-embedding-ada-002
-
-#if you dont want to call the search backend to index the data in the kb folder, dont add these here
-# Use the simple embedding search provider for the core logic.
-#core:
-#  embedding_search_provider:
-#    name: simple
-
-# And for the knowledge base.
-#knowledge_base:
-#  embedding_search_provider:
-#    name: simple
