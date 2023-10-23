@@ -60,11 +60,6 @@ async def answer_question_with_sources(
     ):
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     user_message = context.get("last_user_message")
-    llm = ChatOpenAI(
-        openai_api_key=OPENAI_API_KEY,
-        model_name='gpt-3.5-turbo',
-        temperature=0.0
-    )
     text_field = "text"
     # switch back to normal index for langchain
     embed = OpenAIEmbeddings(
