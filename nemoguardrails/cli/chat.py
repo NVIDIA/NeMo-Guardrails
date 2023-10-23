@@ -114,14 +114,7 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 waiting_user_input = True
                 user_message = await input_async("> ")
                 waiting_user_input = False
-                if user_message == "":
-                    # Pooling pending system actions
-                    input_events = [
-                        {
-                            "type": "CheckLocalAsync",
-                        }
-                    ]
-                elif user_message.startswith("/"):
+                if user_message.startswith("/"):
                     # Non-UtteranceBotAction actions
                     pass
                 else:

@@ -391,27 +391,26 @@ class RuntimeV1_1(Runtime):
             for event in input_events:
                 log.info(f"Processing event {event}")
 
-                # check if there are any local async actions that have finished executing,
-                # and if so, return the ActionFinished events
-                (
-                    action_finished_events,
-                    pending_counter,
-                ) = await self._get_async_actions_finished_events(main_flow_uid)
-                input_events.extend(action_finished_events)
+                # If we have a "CheckLocalAsync" event, we check if there are
+                # any local async actions that have finished executing, and if so,
+                # return the ActionFinished events.
+                event_name = event["type"] if isinstance(event, dict) else event.name
+                if event_name == "CheckLocalAsync":
+                    (
+                        action_finished_events,
+                        pending_counter,
+                    ) = await self._get_async_actions_finished_events(main_flow_uid)
 
-                # # If we have a "CheckLocalAsync" event, we check if there are
-                # # any local async actions that have finished executing, and if so,
-                # # return the ActionFinished events.
-                # event_name = event["type"] if isinstance(event, dict) else event.name
-                # if event_name == "CheckLocalAsync":
-                #     if pending_counter:
-                #         output_events.append(
-                #             new_event_dict("LocalAsyncCounter", counter=pending_counter)
-                #         )
-                #     continue
-                # elif event_name == "LocalAsyncCounter":
-                #     # If we receive back this event, we don't bother to process.
-                #     continue
+                    output_events.extend(action_finished_events)
+
+                    if pending_counter:
+                        output_events.append(
+                            new_event_dict("LocalAsyncCounter", counter=pending_counter)
+                        )
+                    continue
+                elif event_name == "LocalAsyncCounter":
+                    # If we receive back this event, we don't bother to process.
+                    continue
 
                 # Record the event that we're about to process
                 state.last_events.append(event)
@@ -490,6 +489,13 @@ class RuntimeV1_1(Runtime):
 
         # We cap the recent history to the last 100
         state.last_events = state.last_events[-100:]
+
+        # We also return any async action finished events that finished meanwhile.
+        (
+            action_finished_events,
+            pending_counter,
+        ) = await self._get_async_actions_finished_events(main_flow_uid)
+        output_events.extend(action_finished_events)
 
         return output_events, state
 

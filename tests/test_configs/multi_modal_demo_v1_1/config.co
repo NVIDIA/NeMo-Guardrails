@@ -158,17 +158,26 @@ flow bot express greeting
   bot express "Hi there!"
     or bot express "Welcome!"
     or bot express "Hello!"
+    and bot gesture "Wave with one hand"
 
 flow bot express feeling well
   bot express "I am good!"
     or bot express "I am great!"
+    and (bot gesture "Thumbs up" or bot gesture "Smile")
 
 flow bot express feeling bad
   bot express "I am not good!"
     or bot express "I am a bit under the weather!"
+    and (bot gesture "Thumbs down" or bot gesture "Sad face")
 
 flow bot inform about service
   bot inform "You can ask or instruct me whatever you want and I will do it!"
+    and bot gesture "Open up both hands making a presenting gesture"
+
+flow bot ask how are you
+  bot say "How are you doing?"
+    or bot say "How is it going?"
+    and bot gesture "Pay attention to user"
 
 # ----------------------------------
 # User action flows
@@ -201,14 +210,26 @@ flow wait
   # llm: exclude
   match NeverComingEvent()
 
-flow user silence handling
+flow pooling timer $time_s
+  start TimerBotAction(timer_name="pooling_timer", duration=$time_s) as $timer_ref
+  match $timer_ref.Finished()
+  log "Pooling timer triggered"
+
+flow user silence handling $time_s
   """This helper flow will start the "user_silence" timer whenever the user utterance finished."""
   # llm: exclude
   # loop_id: silence_handling
   user said something
   #log "Start silence timer!"
-  start TimerBotAction(timer_name="user_silence", duration=2)
-  match TimerBotActionFinished(timer_name="user_silence") or UtteranceUserAction.Started()
+  start TimerBotAction(timer_name="user_silence", duration=$time_s) as $timer_ref
+  match $timer_ref.Finished() or UtteranceUserAction.Started()
+
+flow repeat previous utterance for user silence
+  """This helper flow will repeat the previous bot utterance when user was silent."""
+  # llm: exclude
+  activate user silence handling 5.0
+  user was silent
+  bot inform "Just talk to me!"
 
 flow fallback
   """This is the fallback flow that takes care of unhandled user utterances and will generate a flow continuation."""
@@ -221,8 +242,12 @@ flow fallback
 
   start_new_flow_instance:
 
+  #activate pooling timer 0.5 as $pooling_timer
+
   $intent = await GenerateUserIntentAction()
   $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
+
+  #send $pooling_timer.Stop()
 
   if $exists
     send FinishFlow(flow_id=$intent)
@@ -295,11 +320,11 @@ flow custom instruction
   do $ref.context.instruction
 
 flow main
-  activate user silence handling
+  #activate repeat previous utterance for user silence
   activate faq
-  #activate fallback
-  #activate flows fallback
-  #activate custom instruction
+  activate fallback
+  activate flows fallback
+  activate custom instruction
   #bot express greeting
   bot say "Welcome! I'm the MVP bot."
   #bot inform about service
