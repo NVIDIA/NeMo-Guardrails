@@ -43,6 +43,7 @@ from nemoguardrails.actions.llm.utils import (
     strip_quotes,
 )
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
+from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -226,12 +227,18 @@ class LLMGenerationActions:
 
     @action(is_system_action=True)
     async def generate_user_intent(
-        self, events: List[dict], config: RailsConfig, llm: Optional[BaseLLM] = None
+        self,
+        events: List[dict],
+        config: RailsConfig,
+        llm: Optional[BaseLLM] = None,
+        kb: Optional[KnowledgeBase] = None,
     ):
         """Generate the canonical form for what the user said i.e. user intent."""
         # If using a single LLM call, use the specific action defined for this task.
         if self.config.rails.dialog.single_call.enabled:
-            return await self.generate_intent_steps_message(events=events, llm=llm)
+            return await self.generate_intent_steps_message(
+                events=events, llm=llm, kb=kb
+            )
 
         # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
@@ -665,7 +672,10 @@ class LLMGenerationActions:
 
     @action(is_system_action=True)
     async def generate_intent_steps_message(
-        self, events: List[dict], llm: Optional[BaseLLM] = None
+        self,
+        events: List[dict],
+        llm: Optional[BaseLLM] = None,
+        kb: Optional[KnowledgeBase] = None,
     ):
         """Generate all three main Guardrails phases with a single LLM call.
         The three phases are: user canonical from (user intent), next flow steps (i.e. bot canonical form)
@@ -776,12 +786,19 @@ class LLMGenerationActions:
                 example += "\n"
                 examples.append(example)
 
+            if kb:
+                chunks = await kb.search_relevant_chunks(event["text"])
+                relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
+            else:
+                relevant_chunks = ""
+
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERATE_INTENT_STEPS_MESSAGE,
                 events=events,
                 context={
                     "examples": "\n\n".join(reversed(examples)),
                     "potential_user_intents": ", ".join(potential_user_intents),
+                    "relevant_chunks": relevant_chunks,
                 },
             )
 
