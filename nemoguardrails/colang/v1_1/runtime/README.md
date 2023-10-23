@@ -25,11 +25,13 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Find a better solution for separating the flow event arguments like `flow_id` or `activated` from the flow context variables.
 - Fix unit test helper function to work with stories that generate bot messages when started
 - Cleanup abort/stop naming convention
+- Add support for other actions than UtteranceBotAction in cli interface
 
 ## To Discuss
 
 - Should the action parameters be under a separate key in the event? (currently using a black list to extract the actual action parameters from the `Start...Action` event).
 - Should we add regular expressions for user utterances to match? Otherwise, the LLM needs to be involved more.
+- Do we need to the option to classify action into types that do or do not conflict? This would allow us to make a distinction between `start a, start b` and `start a and b`
 
 ## Events
 
