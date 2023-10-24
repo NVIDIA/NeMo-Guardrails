@@ -1119,15 +1119,6 @@ def _expand_await_element(
             new_elements.append(CatchPatternFailure(label=failure_label_name))
             new_elements.append(fork_element)
             for group_idx, and_group in enumerate(normalized_group["elements"]):
-                stop_group = {
-                    "_type": "spec_and",
-                    "elements": [
-                        elem
-                        for idx, sublist in enumerate(stop_elements)
-                        for elem in sublist
-                        if idx != group_idx
-                    ],
-                }
                 new_elements.append(group_label_elements[group_idx])
                 for idx, group_element in enumerate(and_group["elements"]):
                     new_elements.append(start_elements[group_idx][idx])
@@ -1137,6 +1128,15 @@ def _expand_await_element(
                 }
                 new_elements.append(SpecOp(op="match", spec=match_group))
                 new_elements.append(MergeHeads(head_uids=fork_head_uids))
+                stop_group = {
+                    "_type": "spec_and",
+                    "elements": [
+                        elem
+                        for idx, sublist in enumerate(stop_elements)
+                        for elem in sublist
+                        if idx != group_idx
+                    ],
+                }
                 new_elements.append(SpecOp(op="send", spec=stop_group))
                 new_elements.append(goto_end_element)
             new_elements.append(failure_label_element)
@@ -2549,9 +2549,11 @@ def _update_action_status_by_event(state: State, event: ActionEvent) -> None:
             continue
 
         for action_uid in flow_state.action_uids:
-            action = state.actions[action_uid]
-            if action.status != ActionStatus.FINISHED:
-                action.process_event(event)
+            # TODO: Make sure that the state.action are deleted so we don't need this check
+            if action_uid in state.actions:
+                action = state.actions[action_uid]
+                if action.status != ActionStatus.FINISHED:
+                    action.process_event(event)
 
 
 def _is_listening_flow(flow_state: FlowState) -> bool:
@@ -3017,8 +3019,9 @@ def create_internal_event(
 
 def create_umim_action_event(event: ActionEvent, event_args: dict) -> Dict[str, Any]:
     """Returns an outgoing UMIM event for the provided action data"""
-    event_args["source_uid"] = "NeMoGuardrails-Colang-1.1"
+    new_event_args = event_args.copy()
+    new_event_args["source_uid"] = "NeMoGuardrails-Colang-1.1"
     if event.action_uid is not None:
-        return new_event_dict(event.name, action_uid=event.action_uid, **event_args)
+        return new_event_dict(event.name, action_uid=event.action_uid, **new_event_args)
     else:
-        return new_event_dict(event.name, **event_args)
+        return new_event_dict(event.name, **new_event_args)
