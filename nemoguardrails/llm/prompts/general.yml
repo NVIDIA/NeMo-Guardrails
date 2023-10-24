@@ -155,6 +155,7 @@ prompts:
 
   # Prompt for generating the next steps in compact form.
   - task: generate_next_steps
+    mode: compact
     content: |-
       # Task: generate the next steps in a conversation.
 
@@ -165,6 +166,7 @@ prompts:
 
   # Prompt for generating the bot message from a canonical form in compact form.
   - task: generate_bot_message
+    mode: compact
     content: |-
       # Task: generate the bot message in a conversation.
 
