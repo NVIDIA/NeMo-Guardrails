@@ -16,7 +16,7 @@ import asyncio
 import inspect
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urljoin
 
 import aiohttp
@@ -328,7 +328,6 @@ class RuntimeV1_1(Runtime):
             The array of *ActionFinished events and the pending counter
         """
 
-        log.info(f"Checking if there are any local async actions that have finished.")
         pending_actions = self.async_actions.get(main_flow_uid, [])
         if len(pending_actions) == 0:
             return [], 0
@@ -338,7 +337,8 @@ class RuntimeV1_1(Runtime):
             return_when=asyncio.FIRST_COMPLETED,
             timeout=0,
         )
-        log.info(f"{len(done)} actions finished.")
+        if len(done) > 0:
+            log.info(f"{len(done)} actions finished.")
 
         action_finished_events = []
         for finished_task in done:
@@ -352,7 +352,7 @@ class RuntimeV1_1(Runtime):
         return action_finished_events, len(pending)
 
     async def process_events(
-        self, events: List[dict], state: Optional[dict] = None
+        self, events: List[dict], state: Union[Optional[dict], State] = None
     ) -> Tuple[List[dict], dict]:
         """Process a sequence of events in a given state.
 
@@ -382,39 +382,34 @@ class RuntimeV1_1(Runtime):
             if isinstance(state, dict):
                 state = State.from_dict(state)
 
+        assert isinstance(state, State)
         main_flow_uid = state.main_flow_state.uid
+
+        # Check if we have new finished async local action events to add
+        (
+            local_action_finished_events,
+            pending_local_async_action_counter,
+        ) = await self._get_async_actions_finished_events(main_flow_uid)
+        input_events = local_action_finished_events + input_events
+        local_action_finished_events = []
+        return_local_async_action_count = False
 
         # While we have input events to process, or there are local running actions
         # we continue the processing.
         while input_events or local_running_actions:
-            # First, we process all events
             for event in input_events:
                 log.info(f"Processing event {event}")
 
-                # If we have a "CheckLocalAsync" event, we check if there are
-                # any local async actions that have finished executing, and if so,
-                # return the ActionFinished events.
                 event_name = event["type"] if isinstance(event, dict) else event.name
+
                 if event_name == "CheckLocalAsync":
-                    (
-                        action_finished_events,
-                        pending_counter,
-                    ) = await self._get_async_actions_finished_events(main_flow_uid)
-
-                    output_events.extend(action_finished_events)
-
-                    if pending_counter:
-                        output_events.append(
-                            new_event_dict("LocalAsyncCounter", counter=pending_counter)
-                        )
-                    continue
-                elif event_name == "LocalAsyncCounter":
-                    # If we receive back this event, we don't bother to process.
+                    return_local_async_action_count = True
                     continue
 
                 # Record the event that we're about to process
                 state.last_events.append(event)
 
+                # Advance the state machine
                 run_to_completion(state, event)
 
                 # If we have context updates after this event, we first add that.
@@ -463,8 +458,18 @@ class RuntimeV1_1(Runtime):
                     else:
                         output_events.append(out_event)
 
+                # Check if we have new finished async local action events to add
+                (
+                    new_local_action_finished_events,
+                    pending_local_async_action_counter,
+                ) = await self._get_async_actions_finished_events(main_flow_uid)
+                local_action_finished_events.extend(new_local_action_finished_events)
+
             # We clear the input events
             input_events = []
+
+            input_events.extend(local_action_finished_events)
+            local_action_finished_events = []
 
             # If we have any local running actions, we need to wait for at least one
             # of them to finish.
@@ -485,17 +490,22 @@ class RuntimeV1_1(Runtime):
                     action_finished_event = self._get_action_finished_event(result)
                     input_events.append(action_finished_event)
 
+        if return_local_async_action_count:
+            # If we have a "CheckLocalAsync" event, we return the number of
+            # pending local async actions that have not yet finished executing
+            log.debug(
+                f"Checking if there are any local async actions that have finished."
+            )
+            output_events.append(
+                new_event_dict(
+                    "LocalAsyncCounter", counter=pending_local_async_action_counter
+                )
+            )
+
         # TODO: serialize the state to dict
 
         # We cap the recent history to the last 100
         state.last_events = state.last_events[-100:]
-
-        # We also return any async action finished events that finished meanwhile.
-        (
-            action_finished_events,
-            pending_counter,
-        ) = await self._get_async_actions_finished_events(main_flow_uid)
-        output_events.extend(action_finished_events)
 
         return output_events, state
 
@@ -511,7 +521,7 @@ class RuntimeV1_1(Runtime):
         Args
             action_name: The name of the action to be executed.
             start_action_event: The event that triggered the action.
-            events_history: The recent history of events that led to the action being triggerd.
+            events_history: The recent history of events that led to the action being triggered.
         """
 
         # NOTE: To extract the actual parameters that should be passed to the local action,

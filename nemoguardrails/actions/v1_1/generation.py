@@ -124,7 +124,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
     async def get_last_user_message(
         self, events: List[dict], llm: Optional[BaseLLM] = None
     ):
-        event = get_last_user_utterance_event(events)
+        event = get_last_user_utterance_event_v1_1(events)
         assert event["type"] == "UtteranceUserActionFinished"
         return event["final_transcript"]
 

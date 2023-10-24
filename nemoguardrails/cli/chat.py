@@ -15,7 +15,7 @@
 import asyncio
 import os
 import pickle
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from prompt_toolkit import prompt
 from prompt_toolkit.patch_stdout import patch_stdout
@@ -70,8 +70,8 @@ async def _run_chat_v1_1(rails_app: LLMRails):
         # TODO: deserialize the output state
         # state = State.from_dict(output_state)
         # Simulate serialization for testing
-        data = pickle.dumps(output_state)
-        output_state = pickle.loads(data)
+        # data = pickle.dumps(output_state)
+        # output_state = pickle.loads(data)
         state = output_state
 
     async def _check_local_async_actions():
@@ -83,21 +83,26 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 await asyncio.sleep(0.1)
                 continue
 
+            if len(input_events) == 0:
+                input_events = [new_event_dict("CheckLocalAsync")]
+
             output_events, output_state = await rails_app.process_events_async(
-                [new_event_dict("CheckLocalAsync")], state
+                input_events, state
             )
-            if output_events:
-                input_events = output_events
-                while input_events:
-                    (
-                        output_events,
-                        output_state,
-                    ) = await rails_app.process_events_async(input_events, state)
-                    _process_output()
-            else:
+
+            # Process output_events and potentially generate new input_events
+            _process_output()
+
+            if (
+                len(output_events) == 1
+                and output_events[0]["type"] == "LocalAsyncCounter"
+                and output_events[0]["counter"] == 0
+            ):
                 # If there are no pending actions, we stop
                 check_task = None
                 return
+
+            output_events.clear()
 
             await asyncio.sleep(0.2)
 
@@ -114,7 +119,13 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 waiting_user_input = True
                 user_message = await input_async("> ")
                 waiting_user_input = False
-                if user_message.startswith("/"):
+                if user_message == "":
+                    input_events = [
+                        {
+                            "type": "CheckLocalAsync",
+                        }
+                    ]
+                elif user_message.startswith("/"):
                     # Non-UtteranceBotAction actions
                     pass
                 else:

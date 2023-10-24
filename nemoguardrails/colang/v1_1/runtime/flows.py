@@ -3017,6 +3017,7 @@ def create_internal_event(
 
 def create_umim_action_event(event: ActionEvent, event_args: dict) -> Dict[str, Any]:
     """Returns an outgoing UMIM event for the provided action data"""
+    event_args["source_uid"] = "NeMoGuardrails-Colang-1.1"
     if event.action_uid is not None:
         return new_event_dict(event.name, action_uid=event.action_uid, **event_args)
     else:
