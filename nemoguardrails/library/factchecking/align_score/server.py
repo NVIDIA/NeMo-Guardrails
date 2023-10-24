@@ -37,6 +37,8 @@ if models_path is None:
 
 app = FastAPI()
 
+device = os.environ.get("ALIGN_SCORE_DEVICE", "cpu")
+
 
 @lru_cache
 def get_model(model: str):
@@ -48,7 +50,7 @@ def get_model(model: str):
     return AlignScore(
         model="roberta-base",
         batch_size=32,
-        device="cuda:0",
+        device=device,
         ckpt_path=os.path.join(models_path, f"AlignScore-{model}.ckpt"),
         evaluation_mode="nli_sp",
     )

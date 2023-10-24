@@ -26,10 +26,12 @@ curl -OL https://huggingface.co/yzha/AlignScore/resolve/main/AlignScore-large.ck
 
 4. Set the `ALIGN_SCORE_PATH` to point to the path where the checkpoints have been downloaded.
 
-5. Start the AlignScore server.
+5. Set the `ALIGN_SCORE_DEVICE` to `"cpu"` to run the AlignScore model on CPU, or to the corresponding device, e.g. `"cuda:0"`.
+
+6. Start the AlignScore server.
 
 ```bash
-python -m nemoguardrails.library.factchecking.alignscore.server --port
+python -m nemoguardrails.library.factchecking.alignscore.server --port 5000 --models=base
 ```
 
-**TODO**: document the `--port` and `--models` options.
+By default, the AlignScore server listens on the port `5000`. You can change the port using the `--port` option. Also, by default, the AlignScore server loads only the base model. You can load only the large model using `--models=large` or both using `--models=base --models=large`.
