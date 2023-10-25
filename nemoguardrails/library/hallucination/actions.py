@@ -16,9 +16,10 @@
 import logging
 from typing import Optional
 
-from langchain import LLMChain, PromptTemplate
-from langchain.llms import OpenAI
+from langchain.chains import LLMChain
 from langchain.llms.base import BaseLLM
+from langchain.llms.openai import OpenAI
+from langchain.prompts import PromptTemplate
 
 from nemoguardrails.actions import action
 from nemoguardrails.actions.llm.utils import (

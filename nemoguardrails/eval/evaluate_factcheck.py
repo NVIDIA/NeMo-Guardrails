@@ -18,7 +18,8 @@ import os
 
 import tqdm
 import typer
-from langchain import LLMChain, PromptTemplate
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 
 from nemoguardrails.eval.utils import initialize_llm, load_dataset
 from nemoguardrails.llm.params import llm_params

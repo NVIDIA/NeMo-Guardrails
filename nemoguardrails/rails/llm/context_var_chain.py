@@ -15,7 +15,8 @@
 
 from typing import Any, Dict, List
 
-from langchain import LLMChain, PromptTemplate
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 from pydantic import Extra, root_validator
 
 
