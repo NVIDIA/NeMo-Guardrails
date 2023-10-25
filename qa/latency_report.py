@@ -32,7 +32,7 @@ TEST_QUESTIONS = [
     "Hello! What can you do for me?",
     # questions about the report in kb
     "What was the unemployment rate in March?",
-    "What about among Asians?",
+    "What was the unemployment rate among Asians?",
     "Has the labor force participation rate been trending up?",
     "How many people remained discouraged by the job market?",
     "What percentage of unemployed people have been jobless for a long time?",
@@ -44,6 +44,7 @@ TEST_QUESTIONS = [
 
 
 TEST_CONFIGS = [
+    "latency_0_baseline",
     "latency_1_normal",
     "latency_2_single_call",
     "latency_3_embeddings_only",
@@ -64,6 +65,8 @@ def run_latency_report():
     ]
     latency_report_rows = []
 
+    sleep_time = 0
+
     for test_config in tqdm(TEST_CONFIGS):
         config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, test_config))
 
@@ -71,6 +74,9 @@ def run_latency_report():
 
         for test_run_idx in tqdm(range(NUM_TEST_RUNS)):
             for test_question_idx, test_question in enumerate(TEST_QUESTIONS):
+                # This is to avoid rate-limiters from LLM APIs affecting measurements
+                time.sleep(2)
+                sleep_time += 2
                 start_time = time.time()
                 response = app.generate(
                     messages=[{"role": "user", "content": test_question}]
@@ -91,7 +97,7 @@ def run_latency_report():
 
     latency_report_df = pd.DataFrame(latency_report_rows, columns=latency_report_cols)
     print(latency_report_df)
-    latency_report_df.to_csv("latency_report_detailed.tsv", sep="\t")
+    latency_report_df.to_csv("latency_report_detailed_openai.tsv", sep="\t")
 
     latency_report_grouped = latency_report_df.groupby(
         by=["config", "question_id"]
@@ -106,12 +112,14 @@ def run_latency_report():
     )
     print()
     print(latency_report_pivoted)
-    latency_report_pivoted.to_csv("latency_report.tsv", sep="\t")
+    latency_report_pivoted.to_csv("latency_report_openai.tsv", sep="\t")
+    return sleep_time
 
 
 if __name__ == "__main__":
     test_start_time = time.time()
-    run_latency_report()
+    sleep_time = run_latency_report()
     test_end_time = time.time()
 
     print(f"Total time taken: {(test_end_time-test_start_time):.2f}")
+    print(f"Time spent sleeping: {(sleep_time):.2f}")
