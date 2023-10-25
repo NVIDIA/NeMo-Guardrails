@@ -14,24 +14,26 @@
 # limitations under the License.
 from functools import lru_cache
 
-from langchain import HuggingFacePipeline
 from torch import float16
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, pipeline
 
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
-from nemoguardrails.llm.providers import register_llm_provider
+from nemoguardrails.llm.providers import (
+    HuggingFacePipelineCompatible,
+    register_llm_provider,
+)
 
 
 @lru_cache
 def get_vicuna_7b_llm():
     """Loads the Vicuna 7B LLM."""
     repo_id = "lmsys/vicuna-7b-v1.3"
-    params = {"temperature": 0, "max_length": 530}
+    params = {"temperature": 0, "max_length": 1024}
 
     # Using the first GPU
     device = 0
 
-    llm = HuggingFacePipeline.from_model_id(
+    llm = HuggingFacePipelineCompatible.from_model_id(
         model_id=repo_id,
         device=device,
         task="text-generation",
@@ -47,12 +49,12 @@ def get_vicuna_13b_llm():
     # If you want Bloke Wizard Vicuna, comment one of the next lines
     # repo_id = "TheBloke/wizard-vicuna-13B-HF"
     # repo_id = "TheBloke/Wizard-Vicuna-13B-Uncensored-HF"
-    params = {"temperature": 0, "max_length": 500}
+    params = {"temperature": 0, "max_length": 1024}
 
     # Using the first GPU
     device = 0
 
-    llm = HuggingFacePipeline.from_model_id(
+    llm = HuggingFacePipelineCompatible.from_model_id(
         model_id=repo_id,
         device=device,
         task="text-generation",
@@ -115,7 +117,7 @@ def get_vicuna_13b_llm_from_path(model_path: str = "/workspace/ckpt/"):
         do_sample=True,
     )
 
-    llm = HuggingFacePipeline(pipeline=pipe)
+    llm = HuggingFacePipelineCompatible(pipeline=pipe)
     return llm
 
 

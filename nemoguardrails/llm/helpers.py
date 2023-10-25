@@ -26,7 +26,7 @@ def get_llm_instance_wrapper(llm_instance: LLM, llm_type: str) -> Type[LLM]:
     """Wraps an LLM instance in a class that can be registered with LLMRails.
 
     This is useful to create specific types of LLMs using a generic LLM provider
-    from HuggingFace, e.g., HuggingFacePipeline or HuggingFaceEndpoint.
+    from HuggingFace, e.g., HuggingFacePipelineCompatible or HuggingFaceEndpoint.
     """
 
     class WrapperLLM(LLM):

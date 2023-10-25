@@ -14,17 +14,19 @@
 # limitations under the License.
 from functools import lru_cache
 
-from langchain import HuggingFacePipeline
 from torch import bfloat16
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, pipeline
 
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
-from nemoguardrails.llm.providers import register_llm_provider
+from nemoguardrails.llm.providers import (
+    HuggingFacePipelineCompatible,
+    register_llm_provider,
+)
 
 
 @lru_cache
 def get_mpt_7b_instruct_llm():
-    # For Mosaic MBT LLM, need to use from_pretrained instead of HuggingFacePipeline.from_model_id
+    # For Mosaic MBT LLM, need to use from_pretrained instead of HuggingFacePipelineCompatible.from_model_id
     # in order to use the GPU. Default config uses CPU and cannot be modified.
     # Bug submitted here: https://github.com/huggingface/transformers/issues/24471#issuecomment-1606549042
     name = "mosaicml/mpt-7b-instruct"
@@ -54,7 +56,7 @@ def get_mpt_7b_instruct_llm():
         **params,
     )
 
-    llm = HuggingFacePipeline(pipeline=pipe, model_kwargs=params)
+    llm = HuggingFacePipelineCompatible(pipeline=pipe, model_kwargs=params)
 
     return llm
 

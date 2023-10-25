@@ -21,7 +21,6 @@ import faiss
 import pandas as pd
 import torch
 from gpt4pandas import GPT4Pandas
-from langchain import HuggingFacePipeline
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.llms import BaseLLM
@@ -34,7 +33,10 @@ from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
-from nemoguardrails.llm.providers import register_llm_provider
+from nemoguardrails.llm.providers import (
+    HuggingFacePipelineCompatible,
+    register_llm_provider,
+)
 
 
 def _get_model_config(config: RailsConfig, type: str):
@@ -169,7 +171,7 @@ def init_main_llm(config: RailsConfig):
         do_sample=True,
     )
 
-    hf_llm = HuggingFacePipeline(pipeline=pipe)
+    hf_llm = HuggingFacePipelineCompatible(pipeline=pipe)
     provider = get_llm_instance_wrapper(
         llm_instance=hf_llm, llm_type="hf_pipeline_bloke"
     )
