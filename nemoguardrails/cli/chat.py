@@ -66,6 +66,17 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                         final_script=event["script"],
                     )
                 )
+            if event["type"] == "StartGestureBotAction":
+                # We print bot messages in green.
+                print(f"\033[92mgesture: {event['gesture']}\033[0m")
+
+                input_events.append(
+                    new_event_dict(
+                        "GestureBotActionFinished",
+                        action_uid=event["action_uid"],
+                        is_success=True,
+                    )
+                )
 
         # TODO: deserialize the output state
         # state = State.from_dict(output_state)

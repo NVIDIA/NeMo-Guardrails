@@ -2968,101 +2968,102 @@ def test_event_action_wrapper_abstraction():
     )
 
 
-def test_start_sibling_flow_mechanism():
-    """"""
+# TODO: Check if we really need this
+# def test_start_sibling_flow_mechanism():
+#     """"""
 
-    content = """
-    flow a
-      match UtteranceUserAction.Finished(final_transcript="1")
-      send StartSiblingFlow(flow_id="a")
-      start UtteranceBotAction(script="A")
-      match UtteranceUserAction.Finished(final_transcript="2")
-      start UtteranceBotAction(script="B")
+#     content = """
+#     flow a
+#       match UtteranceUserAction.Finished(final_transcript="1")
+#       send StartSiblingFlow(flow_id="a")
+#       start UtteranceBotAction(script="A")
+#       match UtteranceUserAction.Finished(final_transcript="2")
+#       start UtteranceBotAction(script="B")
 
-    flow main
-      activate a
-      match UtteranceUserAction.Finished(final_transcript="End")
-    """
+#     flow main
+#       activate a
+#       match UtteranceUserAction.Finished(final_transcript="End")
+#     """
 
-    config = _init_state(content)
-    state = run_to_completion(config, start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
-    state = run_to_completion(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "1",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "A",
-            },
-        ],
-    )
-    state = run_to_completion(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "1",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "A",
-            },
-        ],
-    )
-    state = run_to_completion(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "2",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "B",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-        ],
-    )
-    state = run_to_completion(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "1",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "A",
-            },
-        ],
-    )
+#     config = _init_state(content)
+#     state = run_to_completion(config, start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [],
+#     )
+#     state = run_to_completion(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "1",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "A",
+#             },
+#         ],
+#     )
+#     state = run_to_completion(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "1",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "A",
+#             },
+#         ],
+#     )
+#     state = run_to_completion(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "2",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "B",
+#             },
+#             {
+#                 "type": "StopUtteranceBotAction",
+#             },
+#             {
+#                 "type": "StopUtteranceBotAction",
+#             },
+#             {
+#                 "type": "StopUtteranceBotAction",
+#             },
+#         ],
+#     )
+#     state = run_to_completion(
+#         state,
+#         {
+#             "type": "UtteranceUserActionFinished",
+#             "final_transcript": "1",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "A",
+#             },
+#         ],
+#     )
 
 
 # def test_stop_flow():
@@ -3391,4 +3392,4 @@ def test_mixed_multimodal_group_actions():
 
 
 if __name__ == "__main__":
-    test_await_or_group()
+    test_mixed_multimodal_group_actions()

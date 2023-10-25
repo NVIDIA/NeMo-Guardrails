@@ -25,18 +25,19 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from itertools import zip_longest
-from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Callable, Deque, Dict, List, Optional, Tuple, Union, cast
 
 from dataclasses_json import dataclass_json
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Abort,
     Assignment,
+    BeginScope,
     Break,
     CatchPatternFailure,
     Continue,
     Element,
+    EndScope,
     FlowParamDef,
     ForkHead,
     Goto,
@@ -348,6 +349,9 @@ class FlowHead:
     # Whether a head is active or not (a head fork will deactivate the parent head)
     active: bool = True
 
+    # List of all scopes that are relevant for the head
+    scope_uids: List[str] = field(default_factory=list)
+
     # If a flow head is forked it will create new child heads
     child_head_uids: List[str] = field(default_factory=list)
 
@@ -407,13 +411,16 @@ class FlowState:
     loop_id: str
 
     # All the heads that point to the positions in the sequence of elements that compose the flow.
-    heads: Dict[str, FlowHead]
+    heads: Dict[str, FlowHead] = field(default_factory=dict)
+
+    # All active/open scopes that contain a tuple of flow uids and action uids that were started within that scope
+    scopes: Dict[str, Tuple(List[str], List[str])] = field(default_factory=dict)
 
     # All actions that were instantiated since the beginning of the flow
-    action_uids: List[str]
+    action_uids: List[str] = field(default_factory=list)
 
     # The current set of variables in the flow state.
-    context: dict
+    context: dict = field(default_factory=dict)
 
     # The current priority of the flow instance that is used for action resolution.
     priority: float = 1.0
@@ -624,6 +631,12 @@ class ColangValueError(Exception):
     pass
 
 
+class ColangRuntimeError(Exception):
+    """Raises when there is a Colang related runtime exception."""
+
+    pass
+
+
 def initialize_flow(state: State, flow_config: FlowConfig) -> None:
     # Transform and resolve flow configuration element notation (actions, flows, ...)
     flow_config.elements = expand_elements(flow_config.elements, state.flow_configs)
@@ -772,14 +785,6 @@ def _expand_start_element(
                     ),
                 )
             )
-            # We assign a dummy event to the future flow reference since the
-            # match might never get triggered and the reference would be undefined
-            element_ref = element.spec.ref
-            if element_ref is None:
-                flow_ref_uid = f"_flow_ref_{new_var_uid()}"
-                element_ref = _create_ref_ast_dict_helper(flow_ref_uid)
-            key = element_ref["elements"][0]["elements"][0].lstrip("$")
-            new_elements.append(Assignment(key=key, expression="{'dummy_event': True}"))
             # match FlowStarted(...) as $_flow_event_ref
             flow_event_ref_uid = f"_flow_event_ref_{new_var_uid()}"
             new_elements.append(
@@ -795,10 +800,13 @@ def _expand_start_element(
                 )
             )
             # $flow_ref = $_flow_event_ref.flow
-
+            element_ref = element.spec.ref
+            if element_ref is None:
+                flow_ref_uid = f"_flow_ref_{new_var_uid()}"
+                element_ref = _create_ref_ast_dict_helper(flow_ref_uid)
             new_elements.append(
                 Assignment(
-                    key=key,
+                    key=element_ref["elements"][0]["elements"][0].lstrip("$"),
                     expression=f"${flow_event_ref_uid}.flow",
                 )
             )
@@ -1066,9 +1074,10 @@ def _expand_await_element(
         fork_element = ForkHead()
         fork_head_uids: List(str) = []
         group_label_elements: List[Label] = []
+        begin_scope_elements: List[BeginScope] = []
+        end_scope_elements: List[EndScope] = []
         start_elements: List[List[SpecOp]] = []
         match_elements: List[List[Spec]] = []
-        stop_elements: List[List[Spec]] = []
         failure_label_name = f"failure_label_{new_var_uid()}"
         failure_label_element = Label(name=failure_label_name)
         end_label_name = f"end_label_{new_var_uid()}"
@@ -1078,12 +1087,14 @@ def _expand_await_element(
         for group_idx, and_group in enumerate(normalized_group["elements"]):
             group_label_name = f"group_{group_idx}_{new_var_uid()}"
             group_label_elements.append(Label(name=group_label_name))
+            scope_name = f"scope_{group_idx}_{new_var_uid()}"
+            begin_scope_elements.append(BeginScope(name=scope_name))
+            end_scope_elements.append(EndScope(name=scope_name))
             fork_head_uids.append(new_var_uid())
             fork_element.head_uids.append(fork_head_uids[-1])
             fork_element.labels.append(group_label_name)
             start_elements.append([])
             match_elements.append([])
-            stop_elements.append([])
             for group_element in and_group["elements"]:
                 reference_name = f"_ref_{new_var_uid()}"
                 group_element.ref = _create_ref_ast_dict_helper(reference_name)
@@ -1097,13 +1108,6 @@ def _expand_await_element(
                     Spec(
                         var_name=reference_name,
                         members=_create_member_ast_dict_helper("Finished", {}),
-                        spec_type=SpecType.REFERENCE,
-                    )
-                )
-                stop_elements[-1].append(
-                    Spec(
-                        var_name=reference_name,
-                        members=_create_member_ast_dict_helper("Stop", {}),
                         spec_type=SpecType.REFERENCE,
                     )
                 )
@@ -1122,6 +1126,7 @@ def _expand_await_element(
             new_elements.append(fork_element)
             for group_idx, and_group in enumerate(normalized_group["elements"]):
                 new_elements.append(group_label_elements[group_idx])
+                new_elements.append(begin_scope_elements[group_idx])
                 for idx, group_element in enumerate(and_group["elements"]):
                     new_elements.append(start_elements[group_idx][idx])
                 match_group = {
@@ -1129,24 +1134,16 @@ def _expand_await_element(
                     "elements": match_elements[group_idx],
                 }
                 new_elements.append(SpecOp(op="match", spec=match_group))
-                new_elements.append(MergeHeads(head_uids=fork_head_uids))
-                stop_group = {
-                    "_type": "spec_and",
-                    "elements": [
-                        elem
-                        for idx, sublist in enumerate(stop_elements)
-                        for elem in sublist
-                        if idx != group_idx
-                    ],
-                }
-                new_elements.append(SpecOp(op="send", spec=stop_group))
                 new_elements.append(goto_end_element)
             new_elements.append(failure_label_element)
             new_elements.append(WaitForHeads(number=len(normalized_group["elements"])))
             new_elements.append(CatchPatternFailure(label=None))
             new_elements.append(Abort())
             new_elements.append(end_label_element)
+            new_elements.append(MergeHeads(head_uids=fork_head_uids))
             new_elements.append(CatchPatternFailure(label=None))
+            for group_idx, _ in enumerate(normalized_group["elements"]):
+                new_elements.append(end_scope_elements[group_idx])
 
     return new_elements
 
@@ -1274,10 +1271,10 @@ def _expand_when_stmt_element(
     cases_fork_head_uids: List[str] = []
     groups_fork_head_elements: List[ForkHead] = []
     failure_case_label_names: List[str] = []
+    scope_label_names: List[List[str]] = []
     group_label_names: List[List[str]] = []
     group_start_elements: List[List[List[Spec]]] = []
     group_match_elements: List[List[List[Spec]]] = []
-    group_stop_elements: List[List[List[Spec]]] = []
     case_label_names: List[str] = []
     else_label_name = f"when_else_label_{stmt_uid}"
     else_statement_label_name = f"when_else_statement_label_{stmt_uid}"
@@ -1303,12 +1300,15 @@ def _expand_when_stmt_element(
         normalized_group = normalize_element_groups(case_element)
 
         group_label_names.append([])
+        scope_label_names.append([])
         group_start_elements.append([])
         group_match_elements.append([])
-        group_stop_elements.append([])
         for group_idx, and_group in enumerate(normalized_group["elements"]):
             group_label_names[case_idx].append(
                 f"group_{case_uid}_{group_idx}_label_{stmt_uid}"
+            )
+            scope_label_names[case_idx].append(
+                f"scope_{case_uid}_{group_idx}_label_{stmt_uid}"
             )
             groups_fork_head_elements[case_idx].labels.append(
                 group_label_names[case_idx][group_idx]
@@ -1316,7 +1316,6 @@ def _expand_when_stmt_element(
 
             group_start_elements[case_idx].append([])
             group_match_elements[case_idx].append([])
-            group_stop_elements[case_idx].append([])
             for group_element in and_group["elements"]:
                 match_element = copy.deepcopy(group_element)
 
@@ -1333,15 +1332,6 @@ def _expand_when_stmt_element(
                         ref_uid = group_element.ref["elements"][0]["elements"][0]
                     group_start_elements[case_idx][group_idx].append(group_element)
 
-                    # Add stop elements
-                    group_stop_elements[case_idx][group_idx].append(
-                        Spec(
-                            var_name=ref_uid,
-                            members=_create_member_ast_dict_helper("Stop", {}),
-                            spec_type=SpecType.REFERENCE,
-                        )
-                    )
-
                 # Add match element
                 if ref_uid:
                     match_element.name = None
@@ -1355,14 +1345,17 @@ def _expand_when_stmt_element(
     new_elements: List[ElementType] = []
     new_elements.append(cases_fork_head_element)
     for case_idx, case_element in enumerate(element.when_specs):
+        # Case init groups
         new_elements.append(Label(name=init_case_label_names[case_idx]))
         new_elements.append(
             CatchPatternFailure(label=failure_case_label_names[case_idx])
         )
         new_elements.append(groups_fork_head_elements[case_idx])
 
+        # And-group element groups
         for group_idx, group_label_name in enumerate(group_label_names[case_idx]):
             new_elements.append(Label(name=group_label_name))
+            new_elements.append(BeginScope(name=scope_label_names[case_idx][group_idx]))
 
             if group_start_elements[case_idx][group_idx]:
                 new_elements.append(
@@ -1383,49 +1376,39 @@ def _expand_when_stmt_element(
                     },
                 )
             )
-            new_elements.append(MergeHeads(head_uids=cases_fork_head_uids))
-
-            stop_elements = [
-                elem
-                for cidx, case_groups in enumerate(group_stop_elements)
-                for gidx, group in enumerate(case_groups)
-                for elem in group
-                if gidx != group_idx or cidx != case_idx
-            ]
-            if stop_elements:
-                stop_group = {
-                    "_type": "spec_and",
-                    "elements": stop_elements,
-                }
-                new_elements.append(SpecOp(op="send", spec=stop_group))
-
-            new_elements.append(CatchPatternFailure(label=None))
             new_elements.append(Goto(label=case_label_names[case_idx]))
 
+            # Case groups
             new_elements.append(Label(name=case_label_names[case_idx]))
+            new_elements.append(MergeHeads(head_uids=cases_fork_head_uids))
+            new_elements.append(CatchPatternFailure(label=None))
+            for scope_labels in scope_label_names:
+                for scope_label in scope_labels:
+                    new_elements.append(EndScope(name=scope_label))
             new_elements.extend(
                 expand_elements(element.then_elements[case_idx], flow_configs)
             )
             new_elements.append(Goto(label=end_label_name))
 
+            # Failure case groups
             new_elements.append(Label(name=failure_case_label_names[case_idx]))
             new_elements.append(WaitForHeads(number=len(group_label_names[case_idx])))
             new_elements.append(CatchPatternFailure(label=None))
             new_elements.append(Goto(label=else_label_name))
 
-            new_elements.append(Label(name=else_label_name))
-            new_elements.append(WaitForHeads(number=len(group_label_names)))
-            if element.else_elements is None:
-                new_elements.append(Abort())
-            else:
-                new_elements.append(Goto(label=else_statement_label_name))
+        # Else group
+        new_elements.append(Label(name=else_label_name))
+        new_elements.append(WaitForHeads(number=len(group_label_names)))
+        if element.else_elements is None:
+            new_elements.append(Abort())
+        else:
+            new_elements.append(Goto(label=else_statement_label_name))
 
-                new_elements.append(Label(name=else_statement_label_name))
-                new_elements.extend(
-                    expand_elements(element.else_elements, flow_configs)
-                )
+            new_elements.append(Label(name=else_statement_label_name))
+            new_elements.extend(expand_elements(element.else_elements, flow_configs))
 
-            new_elements.append(Label(name=end_label_name))
+        # End label
+        new_elements.append(Label(name=end_label_name))
 
     return new_elements
 
@@ -1677,9 +1660,7 @@ def create_flow_instance(
     head_uid = new_uid()
     flow_state = FlowState(
         uid=flow_uid,
-        context={},
         parent_uid=parent_uid,
-        action_uids=[],
         flow_id=flow_config.id,
         loop_id=loop_uid,
         heads={
@@ -1723,7 +1704,6 @@ def _create_event_reference(
 ) -> dict:
     reference_name = element.spec.ref["elements"][0]["elements"][0].lstrip("$")
     new_event = _get_event_from_element(state, flow_state, element)
-    assert new_event is not None
     new_event.arguments.update(event.arguments)
 
     if isinstance(new_event, FlowEvent):
@@ -1756,7 +1736,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
     """
     Computes the next state of the flow-driven system.
     """
-    log.info(f"Process event: {external_event}")
+    log.info(f"[bold violet]-> External Event[/]: {external_event}")
 
     if isinstance(external_event, dict):
         converted_external_event = ActionEvent.from_umim_event(external_event)
@@ -1785,13 +1765,14 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 state.last_events.append({"type": event.name, **event.arguments})
 
             # Handle internal events that have no default matchers in flows yet
-            if event.name == InternalEvents.START_SIBLING_FLOW:
-                # Convert it into a normal START_FLOW event and only switch source flow instance to parent flow uid
-                event.name = InternalEvents.START_FLOW
-                parent_state_uid = state.flow_states[
-                    event.arguments["source_flow_instance_uid"]
-                ].parent_uid
-                event.arguments["source_flow_instance_uid"] = parent_state_uid
+            # TODO: Let's see if we need this
+            # if event.name == InternalEvents.START_SIBLING_FLOW:
+            #     # Convert it into a normal START_FLOW event and only switch source flow instance to parent flow uid
+            #     event.name = InternalEvents.START_FLOW
+            #     parent_state_uid = state.flow_states[
+            #         event.arguments["source_flow_instance_uid"]
+            #     ].parent_uid
+            #     event.arguments["source_flow_instance_uid"] = parent_state_uid
             if event.name == InternalEvents.FINISH_FLOW:
                 if "flow_instance_uid" in event.arguments:
                     flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
@@ -1856,8 +1837,8 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
                         if matching_score > 0.0:
                             # Make sure that we can always resolve conflicts, using the matching score
-                            matching_score *= match_order_score
-                            match_order_score *= 0.999999
+                            # matching_score *= match_order_score
+                            # match_order_score *= 0.999999
                             head.matching_scores = event.matching_scores.copy()
                             head.matching_scores.append(matching_score)
 
@@ -1895,7 +1876,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     == _get_flow_state_from_head(state, head).flow_id
                     and head.position == 0
                 ):
-                    _start_flow(state, flow_state, event.arguments)
+                    _start_flow(state, flow_state, head, event.arguments)
                 # elif event.name == InternalEvents.FINISH_FLOW:
                 #     _finish_flow(new_state, flow_state)
                 # TODO: Introduce default matching statements with heads for all flows
@@ -1927,6 +1908,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     actionable_heads.append(new_head)
 
         # All internal events are processed and flow heads are on either action or match statements
+        log.debug("All internal event processed -> advance actionable heads:")
 
         # Remove actionable heads for stopped or finished flows
         actionable_heads = [
@@ -1968,12 +1950,9 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         for i, h in enumerate(ordered_heads)
                         if h.matching_scores != ordered_heads[0].matching_scores
                     ),
-                    len(ordered_heads) - 1,
+                    len(ordered_heads),
                 )
-                if equal_heads_index == 0:
-                    picked_head = ordered_heads[0]
-                else:
-                    picked_head = random.choice(ordered_heads[:equal_heads_index])
+                picked_head = random.choice(ordered_heads[:equal_heads_index])
                 winning_element = _get_flow_config_from_head(
                     state, picked_head
                 ).elements[picked_head.position]
@@ -1981,7 +1960,6 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 winning_event: ActionEvent = _get_event_from_element(
                     state, flow_state, winning_element
                 )
-                assert winning_event is not None
                 log.info(
                     f"Winning action at head: {picked_head} scores={picked_head.matching_scores}"
                 )
@@ -1998,7 +1976,6 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     competing_event: ActionEvent = _get_event_from_element(
                         state, competing_flow_state, competing_element
                     )
-                    assert competing_event is not None
                     if winning_event.is_equal(competing_event):
                         # All heads that are on the exact same action as the winning head
                         # need to replace their action references with the winning heads action reference
@@ -2065,9 +2042,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
 
         head.position += 1
 
-        internal_events, new_heads = slide(state, flow_state, flow_config, head)
-
-        state.internal_events.extend(internal_events)
+        new_heads = slide(state, flow_state, flow_config, head)
 
         # Advance all new heads from a head fork
         if len(new_heads) > 0:
@@ -2088,10 +2063,6 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
             log.debug(f"Flow finished: {head.flow_state_uid} with last element")
         elif flow_aborted:
             log.debug(f"Flow aborted: {head.flow_state_uid} by 'abort' statement")
-        else:
-            log.debug(
-                f"Head advanced: {head} to element: {flow_config.elements[head.position]}"
-            )
 
         all_heads_at_real_match_elements = False
         if not flow_finished and not flow_aborted:
@@ -2145,7 +2116,6 @@ def slide(
     state: State, flow_state: FlowState, flow_config: FlowConfig, head: FlowHead
 ) -> Tuple[Deque[dict], List[FlowHead]]:
     """Tries to slide a flow with the provided head."""
-    internal_events: Deque[dict] = deque()
     new_heads: List[FlowHead] = []
 
     # TODO: Implement global/local flow context handling
@@ -2165,23 +2135,20 @@ def slide(
             if element.op == "send":
                 event = _get_event_from_element(state, flow_state, element)
 
-                if event is None:
-                    # Only case this can happen is currently for a reference with a dummy event
-                    # that is used to optionally stop a flow
-                    head.position += 1
-                    continue
-
                 if event.name not in InternalEvents.ALL:
                     break
 
                 event_arguments = event.arguments
                 event_arguments.update(
-                    {"source_flow_instance_uid": head.flow_state_uid}
+                    {
+                        "source_flow_instance_uid": head.flow_state_uid,
+                        "source_head_uid": head.uid,
+                    }
                 )
                 new_event = create_internal_event(
                     event.name, event_arguments, head.matching_scores
                 )
-                internal_events.append(new_event)
+                _push_internal_event(state, new_event)
                 head.position += 1
 
             elif element.op == "_new_action_instance":
@@ -2199,6 +2166,8 @@ def slide(
                 )
                 state.actions.update({action.uid: action})
                 flow_state.action_uids.append(action.uid)
+                for scope_uid in head.scope_uids:
+                    flow_state.scopes[scope_uid][1].append(action.uid)
                 reference_name = element.spec.ref["elements"][0]["elements"][0].lstrip(
                     "$"
                 )
@@ -2213,8 +2182,6 @@ def slide(
                 new_event = _create_restart_flow_internal_event(
                     state, flow_state, head.matching_scores
                 )
-                # TODO: This is not so nice, since it bypasses the function interface that returns the new events
-                # But we currently have no way of left appending with that
                 _push_left_internal_event(state, new_event)
                 flow_state.new_instance_started = True
             head.position += 1
@@ -2247,6 +2214,7 @@ def slide(
                     flow_state_uid=flow_state.uid,
                     matching_scores=head.matching_scores,
                     catch_pattern_failure_label=head.catch_pattern_failure_label,
+                    scope_uids=head.scope_uids,
                 )
                 flow_state.heads[head_uid] = new_head
                 head.child_head_uids.append(new_head.uid)
@@ -2260,11 +2228,22 @@ def slide(
             # Compose a list of all head uids and there children that should be merged
             # except for the current head that will continue
             head_uids: List[str] = []
+            scope_uids: List[str] = []
             for uid in element.head_uids:
                 head_uids.append(uid)
                 # TODO: Make sure that child head uids are kept up-to-date
                 if uid in flow_state.heads:
                     head_uids.extend(flow_state.heads[uid].get_child_head_uids(state))
+                    # Merge scope uids from heads
+                    scope_uids.extend(
+                        [
+                            scope_uid
+                            for scope_uid in flow_state.heads[uid].scope_uids
+                            if scope_uid not in scope_uids
+                        ]
+                    )
+
+            head.scope_uids = scope_uids
 
             # Remove them from the flow
             for uid in head_uids:
@@ -2315,7 +2294,7 @@ def slide(
                 new_event = create_stop_flow_internal_event(
                     flow_state.uid, flow_state.uid, head.matching_scores
                 )
-                internal_events.append(new_event)
+                _push_internal_event(state, new_event)
                 head.position = len(flow_config.elements)
 
         elif isinstance(element, Continue) or isinstance(element, Break):
@@ -2337,15 +2316,62 @@ def slide(
             head.catch_pattern_failure_label = element.label
             head.position += 1
 
+        elif isinstance(element, BeginScope):
+            if element.name in head.scope_uids:
+                raise ColangRuntimeError(
+                    f"Scope with name {element.name} already opened in this head!"
+                )
+            head.scope_uids.append(element.name)
+            if element.name not in flow_state.scopes:
+                flow_state.scopes.update({element.name: ([], [])})
+            head.position += 1
+
+        elif isinstance(element, EndScope):
+            if element.name not in flow_state.scopes:
+                raise ColangRuntimeError(
+                    f"Scope with name {element.name} does not exist!"
+                )
+            # Remove scope and stop all started flows/actions in scope
+            flow_uids, action_uids = flow_state.scopes.pop(element.name)
+            for flow_uid in flow_uids:
+                child_flow_state = state.flow_states[flow_uid]
+                if _is_listening_flow(child_flow_state):
+                    child_flow_state.status = FlowStatus.STOPPING
+                    event = create_stop_flow_internal_event(
+                        child_flow_state.uid,
+                        flow_state.uid,
+                        head.matching_scores,
+                        True,
+                    )
+                    _push_internal_event(state, event)
+            for action_uid in action_uids:
+                action = state.actions[action_uid]
+                if (
+                    action.status == ActionStatus.STARTING
+                    or action.status == ActionStatus.STARTED
+                ):
+                    event = action.stop_event({})
+                    action.status = ActionStatus.STOPPING
+                    _generate_action_event(state, event)
+
+            # Remove scope from all heads
+            for h in flow_state.heads.values():
+                if element.name in h.scope_uids:
+                    h.scope_uids.remove(element.name)
+
+            head.position += 1
+
         else:
             # Ignore unknown element
             head.position += 1
 
     # If we got this far, it means we had a match and the flow advanced
-    return internal_events, new_heads
+    return new_heads
 
 
-def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
+def _start_flow(
+    state: State, flow_state: FlowState, head: FlowHead, arguments: dict
+) -> None:
     flow_config = state.flow_configs[flow_state.flow_id]
 
     if flow_state.uid != state.main_flow_state.uid:
@@ -2354,6 +2380,11 @@ def _start_flow(state: State, flow_state: FlowState, arguments: dict) -> None:
         parent_flow = state.flow_states[parent_flow_uid]
         flow_state.parent_uid = parent_flow_uid
         parent_flow.child_flow_uids.append(flow_state.uid)
+        # Add to parent scopes
+        if "source_head_uid" in arguments:
+            for scope_uid in parent_flow.heads[arguments["source_head_uid"]].scope_uids:
+                if scope_uid in parent_flow.scopes:
+                    parent_flow.scopes[scope_uid][0].append(flow_state.uid)
 
         loop_id = state.flow_configs[flow_state.flow_id].loop_id
         if loop_id is not None:
@@ -2530,13 +2561,13 @@ def _is_inactive_flow(flow_state: FlowState) -> bool:
 def _generate_action_event(state: State, event: ActionEvent) -> None:
     umim_event = create_umim_action_event(event, event.arguments)
     state.outgoing_events.append(umim_event)
-    log.info(f"[bold violet]Action[/]: {event}")
+    log.info(f"[bold violet]<- Action[/]: {event}")
 
     # Update the status of relevant actions by event
     _update_action_status_by_event(state, event)
 
 
-def _push_internal_event(state: State, event: dict) -> None:
+def _push_internal_event(state: State, event: Event) -> None:
     state.internal_events.append(event)
     log.debug(f"Created internal event: {event}")
 
@@ -2610,7 +2641,6 @@ def _compute_event_matching_score(
     assert _is_match_op_element(element), f"Element '{element}' is not a match element!"
 
     ref_event = _get_event_from_element(state, flow_state, element)
-    assert ref_event is not None
     if not isinstance(ref_event, type(event)):
         return 0.0
 
@@ -2740,7 +2770,7 @@ def _compute_arguments_dict_matching_score(args: dict, ref_args: dict) -> float:
 
 def _get_event_from_element(
     state: State, flow_state: FlowState, element: dict
-) -> Optional[Event]:
+) -> Event:
     """
     Converts the element into the corresponding event if possible.
 
@@ -2788,12 +2818,8 @@ def _get_event_from_element(
                 event.action = None
 
             return event
-        elif isinstance(obj, dict):
-            # Check if dummy event that should not get sent
-            if "dummy_event" in obj:
-                return None
         else:
-            raise ColangSyntaxError(f"Unsupported type '{type(obj)}'")
+            raise ColangRuntimeError(f"Unsupported type '{type(obj)}'")
 
     elif element_spec.members is not None:
         # Case 2)
@@ -2861,8 +2887,7 @@ def _generate_action_event_from_actionable_element(
 
     if element.op == "send":
         event = _get_event_from_element(state, flow_state, element)
-        if event is not None:
-            _generate_action_event(state, event)
+        _generate_action_event(state, event)
 
     # Extract the comment, if any
     # state.next_steps_comment = element.get("_source_mapping", {}).get("comment")
@@ -2877,6 +2902,7 @@ def _create_restart_flow_internal_event(
         {
             "flow_id": flow_state.context["flow_id"],
             "source_flow_instance_uid": flow_state.context["source_flow_instance_uid"],
+            "source_head_uid": flow_state.context["source_head_uid"],
             "activated": flow_state.context["activated"],
         }
     )
@@ -2934,10 +2960,11 @@ def create_flow_internal_event(
         {
             "source_flow_instance_uid": source_flow_state.uid,
             "flow_id": source_flow_state.flow_id,
-            "flow_start_uid": source_flow_state.context.get("flow_start_uid", None),
             "return_value": source_flow_state.context.get("_return_value", None),
         }
     )
+    if "flow_start_uid" in source_flow_state.context:
+        arguments["flow_start_uid"] = source_flow_state.context["flow_start_uid"]
     for arg in source_flow_state.arguments:
         if arg in source_flow_state.context:
             arguments.update({arg: source_flow_state.context[arg]})

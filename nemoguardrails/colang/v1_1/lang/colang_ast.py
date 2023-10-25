@@ -357,3 +357,23 @@ class CatchPatternFailure(Element):
 
     label: Optional[str] = None
     _type: str = "_catch_pattern_failure"
+
+
+@dataclass_json
+@dataclass
+class BeginScope(Element):
+    """Defines the start of a new scope in a flow to keep track of all started actions/flows."""
+
+    name: str = ""
+    _type: str = "_begin_scope"
+
+
+@dataclass_json
+@dataclass
+class EndScope(Element):
+    """Defines the end of a scope in a flow that will stop all active actions/flows that have been started
+    within that scope.
+    """
+
+    name: str = ""
+    _type: str = "_end_scope"
