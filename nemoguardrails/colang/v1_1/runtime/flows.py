@@ -756,7 +756,12 @@ def _expand_start_element(
         if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
             # send StartFlow(flow_id="FLOW_NAME")
-            element.spec.arguments.update({"flow_id": f"'{element.spec.name}'"})
+            element.spec.arguments.update(
+                {
+                    "flow_id": f"'{element.spec.name}'",
+                    "flow_start_uid": f"'{new_var_uid()}'",
+                }
+            )
             new_elements.append(
                 SpecOp(
                     op="send",
@@ -767,7 +772,14 @@ def _expand_start_element(
                     ),
                 )
             )
-            # TODO: This could potential still be triggered from another flow start
+            # We assign a dummy event to the future flow reference since the
+            # match might never get triggered and the reference would be undefined
+            element_ref = element.spec.ref
+            if element_ref is None:
+                flow_ref_uid = f"_flow_ref_{new_var_uid()}"
+                element_ref = _create_ref_ast_dict_helper(flow_ref_uid)
+            key = element_ref["elements"][0]["elements"][0].lstrip("$")
+            new_elements.append(Assignment(key=key, expression="{'dummy_event': True}"))
             # match FlowStarted(...) as $_flow_event_ref
             flow_event_ref_uid = f"_flow_event_ref_{new_var_uid()}"
             new_elements.append(
@@ -783,13 +795,10 @@ def _expand_start_element(
                 )
             )
             # $flow_ref = $_flow_event_ref.flow
-            element_ref = element.spec.ref
-            if element_ref is None:
-                flow_ref_uid = f"_flow_ref_{new_var_uid()}"
-                element_ref = _create_ref_ast_dict_helper(flow_ref_uid)
+
             new_elements.append(
                 Assignment(
-                    key=element_ref["elements"][0]["elements"][0].lstrip("$"),
+                    key=key,
                     expression=f"${flow_event_ref_uid}.flow",
                 )
             )
@@ -1153,6 +1162,7 @@ def _expand_activate_element(
             element.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
+                    "flow_start_uid": f"'{new_var_uid()}'",
                     "activated": "True",
                 }
             )
@@ -1584,8 +1594,8 @@ def normalize_element_groups(group: Union[Spec, dict]) -> dict:
             results = new_results
 
         # Remove duplicate elements from groups
-        for idx, and_group in enumerate(results):
-            results[idx] = uniquify_element_group(and_group)
+        # for idx, and_group in enumerate(results):
+        #     results[idx] = uniquify_element_group(and_group)
 
         # TODO: Remove duplicated and groups
         return flatten_or_group({"_type": "spec_or", "elements": results})
@@ -1713,6 +1723,7 @@ def _create_event_reference(
 ) -> dict:
     reference_name = element.spec.ref["elements"][0]["elements"][0].lstrip("$")
     new_event = _get_event_from_element(state, flow_state, element)
+    assert new_event is not None
     new_event.arguments.update(event.arguments)
 
     if isinstance(new_event, FlowEvent):
@@ -1970,6 +1981,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 winning_event: ActionEvent = _get_event_from_element(
                     state, flow_state, winning_element
                 )
+                assert winning_event is not None
                 log.info(
                     f"Winning action at head: {picked_head} scores={picked_head.matching_scores}"
                 )
@@ -1986,6 +1998,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     competing_event: ActionEvent = _get_event_from_element(
                         state, competing_flow_state, competing_element
                     )
+                    assert competing_event is not None
                     if winning_event.is_equal(competing_event):
                         # All heads that are on the exact same action as the winning head
                         # need to replace their action references with the winning heads action reference
@@ -2151,6 +2164,12 @@ def slide(
         if isinstance(element, SpecOp):
             if element.op == "send":
                 event = _get_event_from_element(state, flow_state, element)
+
+                if event is None:
+                    # Only case this can happen is currently for a reference with a dummy event
+                    # that is used to optionally stop a flow
+                    head.position += 1
+                    continue
 
                 if event.name not in InternalEvents.ALL:
                     break
@@ -2591,6 +2610,7 @@ def _compute_event_matching_score(
     assert _is_match_op_element(element), f"Element '{element}' is not a match element!"
 
     ref_event = _get_event_from_element(state, flow_state, element)
+    assert ref_event is not None
     if not isinstance(ref_event, type(event)):
         return 0.0
 
@@ -2720,7 +2740,7 @@ def _compute_arguments_dict_matching_score(args: dict, ref_args: dict) -> float:
 
 def _get_event_from_element(
     state: State, flow_state: FlowState, element: dict
-) -> Event:
+) -> Optional[Event]:
     """
     Converts the element into the corresponding event if possible.
 
@@ -2768,6 +2788,10 @@ def _get_event_from_element(
                 event.action = None
 
             return event
+        elif isinstance(obj, dict):
+            # Check if dummy event that should not get sent
+            if "dummy_event" in obj:
+                return None
         else:
             raise ColangSyntaxError(f"Unsupported type '{type(obj)}'")
 
@@ -2837,7 +2861,8 @@ def _generate_action_event_from_actionable_element(
 
     if element.op == "send":
         event = _get_event_from_element(state, flow_state, element)
-        _generate_action_event(state, event)
+        if event is not None:
+            _generate_action_event(state, event)
 
     # Extract the comment, if any
     # state.next_steps_comment = element.get("_source_mapping", {}).get("comment")
@@ -2909,6 +2934,7 @@ def create_flow_internal_event(
         {
             "source_flow_instance_uid": source_flow_state.uid,
             "flow_id": source_flow_state.flow_id,
+            "flow_start_uid": source_flow_state.context.get("flow_start_uid", None),
             "return_value": source_flow_state.context.get("_return_value", None),
         }
     )

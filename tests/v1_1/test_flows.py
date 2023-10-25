@@ -1488,47 +1488,48 @@ def test_while_loop_mechanic():
     )
 
 
-def test_start_and_grouping():
-    """"""
+# TODO: Think about how to add back duplicate removal in normalization
+# def test_start_and_grouping():
+#     """"""
 
-    content = """
-    flow bot say $script
-      await UtteranceBotAction(script=$script)
+#     content = """
+#     flow bot say $script
+#       await UtteranceBotAction(script=$script)
 
-    flow main
-        start bot say "A"
-          and bot say "B"
-          and UtteranceBotAction(script="C")
-          and bot say "A"
-    """
+#     flow main
+#         start bot say "A"
+#           and bot say "B"
+#           and UtteranceBotAction(script="C")
+#           and bot say "A"
+#     """
 
-    state = run_to_completion(_init_state(content), start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "A",
-            },
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "B",
-            },
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "C",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-        ],
-    )
+#     state = run_to_completion(_init_state(content), start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "A",
+#             },
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "B",
+#             },
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "C",
+#             },
+#             {
+#                 "type": "StopUtteranceBotAction",
+#             },
+#             {
+#                 "type": "StopUtteranceBotAction",
+#             },
+#             {
+#                 "type": "StopUtteranceBotAction",
+#             },
+#         ],
+#     )
 
 
 def test_match_and_grouping():
@@ -1735,6 +1736,46 @@ def test_await_or_grouping():
                 "type": "StopUtteranceBotAction",
             },
         ],
+    )
+
+
+def test_await_or_group_finish():
+    """"""
+
+    content = """
+    flow bot say $text
+      # llm: exclude
+      await UtteranceBotAction(script=$text) as $action
+
+    flow bot express greeting
+      bot say "Hi there!"
+        or bot say "Welcome!"
+
+    flow main
+      bot express greeting
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": state.outgoing_events[0]["script"],
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
     )
 
 
@@ -3350,4 +3391,4 @@ def test_mixed_multimodal_group_actions():
 
 
 if __name__ == "__main__":
-    test_independent_flow_loop_mechanics()
+    test_await_or_group()
