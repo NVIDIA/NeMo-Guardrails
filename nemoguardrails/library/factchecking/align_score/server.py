@@ -101,13 +101,19 @@ def start(
         default=["base"],
         help="The list of models to be loaded on startup",
     ),
+    initialize_only: bool = typer.Option(
+        default=False, help="Whether to run only the initialization for the models."
+    ),
 ):
     # Preload the models
     for model in models:
         typer.echo(f"Pre-loading model {model}.")
         get_model(model)
 
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    if initialize_only:
+        print("Initialization successful.")
+    else:
+        uvicorn.run(app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":

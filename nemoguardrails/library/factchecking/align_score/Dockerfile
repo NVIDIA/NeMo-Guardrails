@@ -39,9 +39,12 @@ ENV ALIGN_SCORE_PATH=/app/AlignScore
 # Set the device on which the model should load e.g., "cpu", "cuda:0", etc.
 ENV ALIGN_SCORE_DEVICE=cpu
 
+# Initialize the models
+RUN python server.py --initialize-only
+
 # Expose a port for the server
 EXPOSE 5000
 
 # tart the AlignScore server as the default command
-ENTRYPOINT ["/usr/local/bin/python server.py"]
-CMD ["--port=5000 --models=base"]
+ENTRYPOINT ["/usr/local/bin/python", "server.py"]
+CMD ["--port=5000", "--models=base"]

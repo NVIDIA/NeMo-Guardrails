@@ -38,11 +38,12 @@ RUN pip install torch==2.0.*
 # Make port 800 available to the world outside this container
 EXPOSE 8000
 
+# We copy the topical/moderation/etc. examples
+WORKDIR /config
+COPY ./examples/_deprecated /config
+
 # Run app.py when the container launches
 WORKDIR /nemoguardrails
-
-# Link the default configs to the /config folder
-RUN ln -s /nemoguardrails/examples/configs/_deprecated /config
 
 # Download the transformer model
 RUN python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('all-MiniLM-L6-v2')"
