@@ -54,6 +54,7 @@ def test_basic():
                 "_source": None,
                 "_type": "spec_op",
                 "op": "match",
+                "info": {},
                 "return_var_name": None,
                 "spec": {
                     "_source": None,
@@ -76,6 +77,7 @@ def test_basic():
                         "_source": None,
                         "_type": "spec_op",
                         "op": "await",
+                        "info": {},
                         "return_var_name": None,
                         "spec": {
                             "_source": None,

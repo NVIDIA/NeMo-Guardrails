@@ -175,12 +175,26 @@ class SpecOr(Element):
 SpecElementType = Union[Spec, SpecAnd, SpecOr]
 
 
+# TODO: Use this to replace the _type attribute in SpecOp
+class SpecOpType(Enum):
+    """All internal event types."""
+
+    NONE = "none"
+    SEND = "send"
+    MATCH = "match"
+    START = "start"
+    STOP = "stop"
+    AWAIT = "await"
+    ACTIVATE = "activate"
+    DEACTIVATE = "deactivate"
+
+
 @dataclass_json
 @dataclass
 class SpecOp(Element):
     """An operation performed on a spec.
 
-    Valid operations are: await, start, match, activate, send.
+    Valid operations are: send, match, start, stop, await, activate, deactivate.
     """
 
     op: str = ""
@@ -191,6 +205,10 @@ class SpecOp(Element):
     # For compatibility, the return value in all other cases is the same value as the ref.
     # TODO: or should it just be None?
     return_var_name: Optional[str] = None
+
+    # Attribute that can carry SpecOp specific information, currently only used for
+    # 'match' operations that should not be considered for a flow to have started: info['internal'] = True
+    info: dict = field(default_factory=dict)
 
     _type: str = "spec_op"
 

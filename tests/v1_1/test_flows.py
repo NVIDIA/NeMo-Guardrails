@@ -3315,8 +3315,22 @@ def test_mixed_multimodal_group_actions():
       # llm: exclude
       await GestureBotAction(gesture=$gesture) as $action
 
+    flow bot express $text
+      # llm: exclude
+      await bot say $text
+
+    flow bot express feeling well
+      bot express "I am good!"
+        and (bot gesture "Thumbs up" or bot gesture "Smile")
+
+    flow bot express feeling bad
+      bot express "I am not good!"
+        and (bot gesture "Thumbs down" or bot gesture "Sad face")
+
     flow main
-      bot say "One" and (bot gesture "Two" or bot gesture "Three")
+      #bot say "One" and (bot gesture "Two" or bot gesture "Three")
+      bot express feeling well
+        or bot express feeling bad
       match NeverComingEvent()
     """
 
@@ -3327,7 +3341,6 @@ def test_mixed_multimodal_group_actions():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "One",
             },
             {
                 "type": "StartGestureBotAction",
@@ -3337,4 +3350,4 @@ def test_mixed_multimodal_group_actions():
 
 
 if __name__ == "__main__":
-    test_mixed_multimodal_group_actions()
+    test_independent_flow_loop_mechanics()
