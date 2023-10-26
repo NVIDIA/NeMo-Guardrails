@@ -350,6 +350,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "knowledge_base",
         "core",
         "rails",
+        "streaming",
     ]
 
     for field in additional_fields:
@@ -448,6 +449,11 @@ class RailsConfig(BaseModel):
     rails: Rails = Field(
         default_factory=Rails,
         description="Configuration for the various rails (input, output, etc.).",
+    )
+
+    streaming: bool = Field(
+        default=False,
+        description="Whether this configuration should use streaming mode or not.",
     )
 
     @staticmethod
@@ -572,3 +578,14 @@ class RailsConfig(BaseModel):
                 flow_data["elements"] = parse_flow_elements(flow_data["elements"])
 
         return RailsConfig.parse_obj(obj)
+
+    @property
+    def streaming_supported(self):
+        """Whether the current config supports streaming or not.
+
+        Currently, we don't support streaming if there are output rails.
+        """
+        if len(self.rails.output.flows) > 0:
+            return False
+
+        return True

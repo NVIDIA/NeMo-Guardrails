@@ -26,6 +26,7 @@ from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
+from nemoguardrails.context import streaming_handler_var
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.kb.kb import KnowledgeBase
@@ -68,6 +69,9 @@ class LLMRails:
         # TODO: when we update the interface to allow to return a "state object", this
         #   should be removed
         self.events_history_cache = {}
+
+        # Weather the main LLM supports streaming
+        self.main_llm_supports_streaming = False
 
         # We also load the default flows from the `llm_flows.co` file in the current folder.
         current_folder = os.path.dirname(__file__)
@@ -214,6 +218,15 @@ class LLMRails:
                         # The `__fields__` attribute is computed dynamically by pydantic.
                         if "model" in provider_cls.__fields__:
                             kwargs["model"] = llm_config.model
+
+                if self.config.streaming:
+                    if "streaming" in provider_cls.__fields__:
+                        kwargs["streaming"] = True
+                        self.main_llm_supports_streaming = True
+                    else:
+                        log.warning(
+                            f"The provider {provider_cls.__name__} does not support streaming."
+                        )
 
                 if llm_config.type == "main" or len(self.config.models) == 1:
                     self.llm = provider_cls(**kwargs)
@@ -372,6 +385,12 @@ class LLMRails:
 
         log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
         log.info("--- :: Stats: %s" % llm_stats)
+
+        # If there is a streaming handler, we make sure we close it now
+        streaming_handler = streaming_handler_var.get()
+        if streaming_handler:
+            # print("Closing the stream handler explicitly")
+            await streaming_handler.push_chunk(None)
 
         return new_message
 
