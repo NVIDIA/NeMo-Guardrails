@@ -22,12 +22,9 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (
-    ActionStatus,
-    InternalEvent,
-    State,
-    run_to_completion,
-)
+from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus,
+                                                      InternalEvent, State,
+                                                      run_to_completion)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -3415,5 +3412,53 @@ def test_mixed_multimodal_group_actions():
     )
 
 
+def test_iternal_unhandled_event():
+    """"""
+
+    content = """
+    flow undefined flows
+      match UnhandledEvent(event="StartFlow") as $event
+      await UtteranceBotAction(script="Undefined flow: {$event.arguments.flow_id}")
+
+    flow unexpected user utterance
+      match UnhandledEvent(event="UtteranceUserActionFinished") as $event
+      await UtteranceBotAction(script="Unexpected user utterance: {$event.arguments.final_transcript}")
+
+    flow main
+      activate undefined flows
+      activate unexpected user utterance
+      start test
+      match NeverComingEvent()
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Undefined flow: test",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "blabla",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Unexpected user utterance: blabla",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_mixed_multimodal_group_actions()
+    test_iternal_unhandled_event()

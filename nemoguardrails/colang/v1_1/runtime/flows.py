@@ -1863,10 +1863,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
             ):
                 arguments = event.arguments.copy()
                 arguments.update({"event": event.name})
-                event = create_internal_event(
+                internal_event = create_internal_event(
                     InternalEvents.UNHANDLED_EVENT, arguments, event.matching_scores
                 )
-                _push_internal_event(state, event)
+                _push_internal_event(state, internal_event)
 
             # Sort matching heads to prioritize more specific matches over the others
             heads_matching = sorted(
@@ -2655,12 +2655,15 @@ def _compute_event_matching_score(
     assert _is_match_op_element(element), f"Element '{element}' is not a match element!"
 
     ref_event = _get_event_from_element(state, flow_state, element)
-    if ref_event.name != event.name:
+    if not isinstance(ref_event, type(event)):
         return 0.0
 
     # Compute matching score based on event argument matching
     match_score: float = 1.0
-    if event.name == InternalEvents.START_FLOW:
+    if (
+        event.name == InternalEvents.START_FLOW
+        and ref_event.name == InternalEvents.START_FLOW
+    ):
         match_score = _compute_arguments_dict_matching_score(
             event.arguments, ref_event.arguments
         )
@@ -2715,7 +2718,7 @@ def _compute_event_matching_score(
 
     else:
         # Its an UMIM event
-        if (
+        if (ref_event.name != event.name) or (
             ref_event.action_uid is not None
             and ref_event.action_uid != event.action_uid
         ):
