@@ -15,10 +15,13 @@ sample_conversation: |
   user "Who is the CEO of Nvidia?"
       ask question
   bot answer question with sources
-      "Jensen Huang is the CEO of Nvidia according to Wikipedia"
+      "Jensen Huang is the CEO of Nvidia according to Wikipedia" 
   
 
 models:
   - type: main
     engine: openai
     model: text-davinci-003
+  - type: embeddings
+    engine: openai
+    model: text-embedding-ada-002

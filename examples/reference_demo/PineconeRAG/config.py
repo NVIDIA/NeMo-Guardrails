@@ -36,11 +36,13 @@ from nemoguardrails.actions.actions import ActionResult
 from langchain.llms import BaseLLM
 from typing import Optional
 import logging
+from nemoguardrails.embeddings.basic import OpenAIEmbeddingModel
+
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT")
-index_name = 'nemoguardrailsindex'
+index_name = 'nemoguardrailsindex' 
 model_name = 'text-embedding-ada-002'
 # todo different llm for different tasks
 # https://github.com/NVIDIA/NeMo-Guardrails/blob/aa07d889e9437dc687cd1c0acf51678ad435516e/tests/test_configs/with_openai_embeddings/config.yml#L4
@@ -51,7 +53,6 @@ model_name = 'text-embedding-ada-002'
 LOG_FILENAME = datetime.now().strftime('logs/mylogfile_%H_%M_%d_%m_%Y.log')
 log = logging.getLogger(__name__)
 logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
-#print(logging.getLoggerClass().root.handlers[0].baseFilename)
 
 @action(is_system_action=True)
 async def answer_question_with_sources(
@@ -62,10 +63,33 @@ async def answer_question_with_sources(
     user_message = context.get("last_user_message")
     text_field = "text"
     # switch back to normal index for langchain
+    
     embed = OpenAIEmbeddings(
         model=model_name,
         openai_api_key=OPENAI_API_KEY)
+    
+    """
+    
+        
+    def __init__(self, embedding_model: str):
+        self.model = embedding_model
+        self.embedding_size = len(self.encode(["test"])[0])
+
+    def encode(self, documents: List[str]) -> List[List[float]]:
+        import openai
+
+        # Make embedding request to OpenAI API
+        res = openai.Embedding.create(input=documents, engine=self.model)
+        embeddings = [record["embedding"] for record in res["data"]]
+        return embeddings
+    
+    vectorstore = Pinecone(index, embeddings.embed_query, "text")
+    OpenAIEmbeddingModel.embed_query
+    """
+    
     vectorstore = Pinecone(pinecone.Index(index_name), embed.embed_query, text_field)
+    #vectorstore = Pinecone(pinecone.Index(index_name), OpenAIEmbeddingModel.embed_query, text_field)
+    
     qa_with_sources = RetrievalQAWithSourcesChain.from_chain_type(
         llm=llm,
         chain_type="stuff",
@@ -78,6 +102,12 @@ async def answer_question_with_sources(
     source_ref = str(result['sources'])
 
     context_updates = {
+        "relevant_chunks": source_ref,
+        "user_question": user_message, 
+        "bot_response": answer}
+    
+    '''
+    context_updates = {
         "relevant_chunks": f"""
                 Question: {user_message}
                 Answer: {answer},
@@ -85,6 +115,8 @@ async def answer_question_with_sources(
                 Source : {source_ref}
         """
     }
+    '''
+    
 
     return ActionResult(
         return_value=context_updates["relevant_chunks"],
