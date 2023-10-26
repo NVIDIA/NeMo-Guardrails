@@ -88,7 +88,7 @@ flow user said something
   match UtteranceUserAction.Finished() as $event
 
 flow user was silent
-  match TimerBotActionFinished(timer_name="user_silence", was_stoppped=False)
+  match TimerBotActionFinished(timer_name="user_silence", was_stopped=False)
 
 # ----------------------------------
 # Bot UMIM event wrapper flows
@@ -191,9 +191,10 @@ flow user expressed greeting
 flow user asked how are you
   user said "how are you"
 
-flow user provide custom instructions
-  user said "do something" as $ref
-  $instruction = $ref.context.event.arguments.final_transcript
+flow user provided custom instructions
+  user said "do something"
+    or user said "can you do something"
+    or user said "please do"
 
 # ----------------------------------
 # Helper flows
@@ -298,6 +299,11 @@ flow do $instructions
   match FlowStarted(flow_id=$flow_info['name']) as $event_ref
   match $event_ref.flow.Finished()
 
+flow custom instructions
+  # llm: exclude
+  user provided custom instructions
+  $instructions = await GetLastUserMessageAction()
+  do $instructions
 # ----------------------------------
 # FAQs
 # -----------------------------------
@@ -312,9 +318,9 @@ flow how are you
     or bot express feeling bad
 
 flow faq
-  activate greeting
-    and how are you
-  wait
+  activate greeting faq
+    and how are you faq
+  wait indefinitely
 
 # ----------------------------------
 # Main story
@@ -332,9 +338,9 @@ flow main
   activate faq
   activate fallback
   activate flows fallback
-  activate custom instruction
+  activate custom instructions
   #bot express greeting
   bot say "Welcome! I'm the MVP bot."
   #bot inform about service
   #play number guessing game
-  wait
+  wait indefinitely

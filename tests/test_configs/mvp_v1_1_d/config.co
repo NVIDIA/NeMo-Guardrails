@@ -167,7 +167,6 @@ flow custom instructions
   # llm: exclude
   user provided custom instructions
   $instructions = await GetLastUserMessageAction()
-
   do $instructions
 
 flow main

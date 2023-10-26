@@ -3460,5 +3460,52 @@ def test_iternal_unhandled_event():
     )
 
 
+def test_references_in_groups():
+    """"""
+
+    content = """
+    flow bot say $script
+      await UtteranceBotAction(script=$script) as $action
+
+    flow bot greets
+      bot say "Hello" as $ref
+        or bot say "Hi" as $ref
+
+    flow main
+      bot greets as $ref
+      bot say $ref.context.ref.context.action.context.script
+      match NeverComingEvent()
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+            }
+        ],
+    )
+    answer = state.outgoing_events[0]["script"]
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": answer,
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": answer,
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_iternal_unhandled_event()
+    test_references_in_groups()

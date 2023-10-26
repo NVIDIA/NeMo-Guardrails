@@ -54,6 +54,7 @@
         "nemoguardrails",
         "popleft",
         "subflow",
+        "uids",
         "UMIM"
     ],
     "cSpell.enableFiletypes": ["co", "colang"],
@@ -61,10 +62,5 @@
     // FLAKE8
     "flake8.args": [
         "--max-line-length=120"
-    ],
-    "workbench.colorCustomizations": {
-        "activityBar.background": "#043425",
-        "titleBar.activeBackground": "#064934",
-        "titleBar.activeForeground": "#ECFEF8"
-    }
+    ]
 }

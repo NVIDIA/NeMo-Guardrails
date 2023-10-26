@@ -409,8 +409,11 @@ class RuntimeV1_1(Runtime):
                 # Record the event that we're about to process
                 state.last_events.append(event)
 
-                # Advance the state machine
-                run_to_completion(state, event)
+                try:
+                    # Advance the state machine
+                    run_to_completion(state, event)
+                except Exception as ex:
+                    log.error(ex)
 
                 # If we have context updates after this event, we first add that.
                 if state.context_updates:

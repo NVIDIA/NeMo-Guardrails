@@ -1099,9 +1099,12 @@ def _expand_await_element(
             start_elements.append([])
             match_elements.append([])
             for group_element in and_group["elements"]:
-                reference_name = f"_ref_{new_var_uid()}"
                 group_element_copy = copy.deepcopy(group_element)
-                group_element_copy.ref = _create_ref_ast_dict_helper(reference_name)
+                element_ref = group_element_copy.ref
+                if element_ref is None:
+                    element_ref = _create_ref_ast_dict_helper(f"_ref_{new_var_uid()}")
+
+                group_element_copy.ref = element_ref
                 start_elements[-1].append(
                     SpecOp(
                         op="start",
@@ -1110,7 +1113,7 @@ def _expand_await_element(
                 )
                 match_elements[-1].append(
                     Spec(
-                        var_name=reference_name,
+                        var_name=element_ref["elements"][0]["elements"][0].lstrip("$"),
                         members=_create_member_ast_dict_helper("Finished", {}),
                         spec_type=SpecType.REFERENCE,
                     )
