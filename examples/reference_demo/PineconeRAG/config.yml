@@ -9,14 +9,14 @@ sample_conversation: |
   bot express greeting
       "Hello"
   user "What does Nvidia do?"
-      ask question 
+      ask question
   bot answer question with sources
     "Nvidia is a technology company according to Wikipedia"
   user "Who is the CEO of Nvidia?"
       ask question
   bot answer question with sources
-      "Jensen Huang is the CEO of Nvidia according to Wikipedia" 
-  
+      "Jensen Huang is the CEO of Nvidia according to Wikipedia"
+
 
 models:
   - type: main

@@ -7,7 +7,7 @@ define bot express greeting
 
 define user ask question
   "What does Nvidia do?"
-  "Who is the CEO of Nvidia?" 
+  "Who is the CEO of Nvidia?"
 
 define flow
   user express greeting
