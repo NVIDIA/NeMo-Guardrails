@@ -22,8 +22,12 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, FlowEvent,
-                                                      State, run_to_completion)
+from nemoguardrails.colang.v1_1.runtime.flows import (
+    ActionStatus,
+    InternalEvent,
+    State,
+    run_to_completion,
+)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -35,7 +39,7 @@ logging.basicConfig(
     handlers=[RichHandler(markup=True)],
 )
 
-start_main_flow_event = FlowEvent(name="StartFlow", arguments={"flow_id": "main"})
+start_main_flow_event = InternalEvent(name="StartFlow", arguments={"flow_id": "main"})
 
 
 def _init_state(colang_content) -> State:

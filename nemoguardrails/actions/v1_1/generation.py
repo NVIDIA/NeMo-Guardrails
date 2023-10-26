@@ -130,13 +130,13 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
     @action(name="GenerateUserIntentAction", is_system_action=True, execute_async=True)
     async def generate_user_intent(
-        self, events: List[dict], llm: Optional[BaseLLM] = None
+        self,
+        events: List[dict],
+        user_utterance: str,
+        max_example_flows: int = 5,
+        llm: Optional[BaseLLM] = None,
     ):
         """Generate the canonical form for what the user said i.e. user intent."""
-
-        # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
-        event = get_last_user_utterance_event_v1_1(events)
-        assert event["type"] == "UtteranceUserActionFinished"
 
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
@@ -149,7 +149,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         if self.user_message_index:
             results = await self.user_message_index.search(
-                text=event["final_transcript"], max_results=5
+                text=user_utterance, max_results=max_example_flows
             )
 
             # We add these in reverse order so the most relevant is towards the end.

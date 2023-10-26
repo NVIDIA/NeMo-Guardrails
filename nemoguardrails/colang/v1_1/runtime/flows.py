@@ -62,7 +62,6 @@ log = logging.getLogger(__name__)
 random_seed = int(time.time())
 
 
-@dataclass
 class InternalEvents:
     """All internal event types."""
 
@@ -74,6 +73,8 @@ class InternalEvents:
     FLOW_FAILED = "FlowFailed"
     START_SIBLING_FLOW = "StartSiblingFlow"
     DISABLE_FLOW_INSTANCE_RESTART = "DisableFlowInstanceRestart"
+    UNHANDLED_EVENT = "UnhandledEvent"
+    DYNAMIC_FLOW_FINISHED = "DynamicFlowFinished"  # TODO: Check if this is needed
 
     ALL = {
         START_FLOW,
@@ -84,6 +85,8 @@ class InternalEvents:
         FLOW_FAILED,
         START_SIBLING_FLOW,
         DISABLE_FLOW_INSTANCE_RESTART,
+        UNHANDLED_EVENT,
+        DYNAMIC_FLOW_FINISHED,
     }
 
 
@@ -139,7 +142,7 @@ class ActionEvent(Event):
 
 
 @dataclass
-class FlowEvent(Event):
+class InternalEvent(Event):
     """The flow event class."""
 
     # An event can belong to a flow
@@ -469,49 +472,49 @@ class FlowState:
             "Failed": "failed_event",
         }
 
-    def get_event(self, name: str, arguments: dict) -> Callable[[], FlowEvent]:
+    def get_event(self, name: str, arguments: dict) -> Callable[[], InternalEvent]:
         """Returns the corresponding action event."""
         assert name in self._event_name_map, f"Event '{name}' not available!"
         func = getattr(self, self._event_name_map[name])
         return func(arguments)
 
     # Flow events to send
-    def start_event(self, args: dict) -> FlowEvent:
+    def start_event(self, args: dict) -> InternalEvent:
         """Starts the flow. Takes no arguments."""
-        return FlowEvent(
+        return InternalEvent(
             name=InternalEvents.START_FLOW, arguments={"flow_id": self.flow_id}
         )
 
-    def finish_event(self, args: dict) -> FlowEvent:
+    def finish_event(self, args: dict) -> InternalEvent:
         """Finishes the flow. Takes no arguments."""
-        return FlowEvent(
+        return InternalEvent(
             name=InternalEvents.FINISH_FLOW,
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
         )
 
-    def stop_event(self, args: dict) -> FlowEvent:
+    def stop_event(self, args: dict) -> InternalEvent:
         """Stops the flow. Takes no arguments."""
-        return FlowEvent(
+        return InternalEvent(
             name="StopFlow",
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
         )
 
-    def pause_event(self, args: dict) -> FlowEvent:
+    def pause_event(self, args: dict) -> InternalEvent:
         """Pauses the flow. Takes no arguments."""
-        return FlowEvent(
+        return InternalEvent(
             name="PauseFlow",
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
         )
 
-    def resume_event(self, args: dict) -> FlowEvent:
+    def resume_event(self, args: dict) -> InternalEvent:
         """Resumes the flow. Takes no arguments."""
-        return FlowEvent(
+        return InternalEvent(
             name="ResumeFlow",
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
         )
 
     # Flow events to match
-    def started_event(self, args: dict) -> FlowEvent:
+    def started_event(self, args: dict) -> InternalEvent:
         """Returns the flow Started event."""
         return self._create_event(InternalEvents.FLOW_STARTED, args)
 
@@ -523,15 +526,15 @@ class FlowState:
     #     """Returns the flow Resumed event."""
     #     return self._create_event(InternalEvents.FLOW_RESUMED, args)
 
-    def finished_event(self, args: dict) -> FlowEvent:
+    def finished_event(self, args: dict) -> InternalEvent:
         """Returns the flow Finished event."""
         return self._create_event(InternalEvents.FLOW_FINISHED, args)
 
-    def failed_event(self, args: dict) -> FlowEvent:
+    def failed_event(self, args: dict) -> InternalEvent:
         """Returns the flow Failed event."""
         return self._create_event(InternalEvents.FLOW_FAILED, args)
 
-    def _create_event(self, event_type: str, args: dict) -> FlowEvent:
+    def _create_event(self, event_type: str, args: dict) -> InternalEvent:
         arguments = args.copy()
         arguments["flow_id"] = self.flow_id
         arguments.update(
@@ -543,7 +546,7 @@ class FlowState:
                 ]
             )
         )
-        return FlowEvent(event_type, arguments)
+        return InternalEvent(event_type, arguments)
 
 
 @dataclass_json
@@ -1707,8 +1710,10 @@ def _create_event_reference(
     new_event = _get_event_from_element(state, flow_state, element)
     new_event.arguments.update(event.arguments)
 
-    if isinstance(new_event, FlowEvent):
-        new_event.flow = state.flow_states[event.arguments["source_flow_instance_uid"]]
+    if isinstance(new_event, InternalEvent):
+        flow_state_uid = event.arguments.get("source_flow_instance_uid", None)
+        if flow_state_uid is not None:
+            new_event.flow = state.flow_states[flow_state_uid]
     elif isinstance(new_event, ActionEvent):
         event = cast(ActionEvent, event)
         new_event.action_uid = event.action_uid
@@ -1728,7 +1733,7 @@ def _context_log(flow_state: FlowState) -> str:
         [
             {key: value}
             for key, value in flow_state.context.items()
-            if not isinstance(value, FlowEvent) and not isinstance(value, FlowState)
+            if not isinstance(value, InternalEvent) and not isinstance(value, FlowState)
         ]
     )
 
@@ -1820,7 +1825,6 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
             heads_matching: List[FlowHead] = []
             heads_not_matching: List[FlowHead] = []
             heads_failing: List[FlowHead] = []
-            match_order_score: float = 1.0
 
             # TODO: Create a head dict for all active flows to speed this up
             # Iterate over all flow states to check for the heads to match the event
@@ -1837,9 +1841,6 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         )
 
                         if matching_score > 0.0:
-                            # Make sure that we can always resolve conflicts, using the matching score
-                            # matching_score *= match_order_score
-                            # match_order_score *= 0.999999
                             head.matching_scores = event.matching_scores.copy()
                             head.matching_scores.append(matching_score)
 
@@ -1854,6 +1855,18 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                             )
                         else:
                             heads_not_matching.append(head)
+
+            # Create internal events for unhandled events
+            if (
+                len(heads_matching) == 0
+                and event.name != InternalEvents.UNHANDLED_EVENT
+            ):
+                arguments = event.arguments.copy()
+                arguments.update({"event": event.name})
+                event = create_internal_event(
+                    InternalEvents.UNHANDLED_EVENT, arguments, event.matching_scores
+                )
+                _push_internal_event(state, event)
 
             # Sort matching heads to prioritize more specific matches over the others
             heads_matching = sorted(
@@ -2078,7 +2091,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         if flow_finished or all_heads_at_real_match_elements:
             if flow_state.status == FlowStatus.STARTING:
                 flow_state.status = FlowStatus.STARTED
-                event = create_flow_internal_event(
+                event = create_internal_flow_event(
                     InternalEvents.FLOW_STARTED, flow_state, head.matching_scores
                 )
                 _push_internal_event(state, event)
@@ -2447,7 +2460,7 @@ def _abort_flow(
     flow_state.status = FlowStatus.STOPPED
 
     # Generate FlowFailed event
-    event = create_flow_internal_event(
+    event = create_internal_flow_event(
         InternalEvents.FLOW_FAILED, flow_state, matching_scores
     )
     _push_internal_event(state, event)
@@ -2507,7 +2520,7 @@ def _finish_flow(
     flow_state.status = FlowStatus.FINISHED
 
     # Generate FlowFinished event
-    event = create_flow_internal_event(
+    event = create_internal_flow_event(
         InternalEvents.FLOW_FINISHED, flow_state, matching_scores
     )
     _push_internal_event(state, event)
@@ -2642,7 +2655,7 @@ def _compute_event_matching_score(
     assert _is_match_op_element(element), f"Element '{element}' is not a match element!"
 
     ref_event = _get_event_from_element(state, flow_state, element)
-    if not isinstance(ref_event, type(event)):
+    if ref_event.name != event.name:
         return 0.0
 
     # Compute matching score based on event argument matching
@@ -2702,7 +2715,7 @@ def _compute_event_matching_score(
 
     else:
         # Its an UMIM event
-        if ref_event.name != event.name or (
+        if (
             ref_event.action_uid is not None
             and ref_event.action_uid != event.action_uid
         ):
@@ -2812,7 +2825,7 @@ def _get_event_from_element(
             event_arguments = _evaluate_arguments(event_arguments, flow_state.context)
             event = obj.get_event(event_name, event_arguments)
 
-            if isinstance(event, FlowEvent):
+            if isinstance(event, InternalEvent):
                 event.flow = obj
             elif isinstance(event, ActionEvent):
                 event.action_uid = obj.uid
@@ -2833,7 +2846,7 @@ def _get_event_from_element(
             flow_event_arguments = _evaluate_arguments(
                 flow_event_arguments, flow_state.context
             )
-            flow_event: FlowEvent = temp_flow_state.get_event(
+            flow_event: InternalEvent = temp_flow_state.get_event(
                 flow_event_name, flow_event_arguments
             )
             if element["op"] == "match":
@@ -2862,7 +2875,7 @@ def _get_event_from_element(
             event_arguments = _evaluate_arguments(
                 element_spec.arguments, flow_state.context
             )
-            flow_event = FlowEvent(element_spec.name, event_arguments)
+            flow_event = InternalEvent(element_spec.name, event_arguments)
             return flow_event
         else:
             # Action event
@@ -2896,7 +2909,7 @@ def _generate_action_event_from_actionable_element(
 
 def _create_restart_flow_internal_event(
     state: State, flow_state: FlowState, matching_scores: List[float]
-) -> FlowEvent:
+) -> InternalEvent:
     # TODO: Check if this creates unwanted side effects of arguments being passed and keeping their state
     arguments = dict([(arg, flow_state.context[arg]) for arg in flow_state.arguments])
     arguments.update(
@@ -2914,7 +2927,7 @@ def create_finish_flow_internal_event(
     flow_instance_uid: str,
     source_flow_instance_uid: str,
     matching_scores: List[float],
-) -> FlowEvent:
+) -> InternalEvent:
     """Returns 'FinishFlow' internal event"""
     arguments = {
         "flow_instance_uid": flow_instance_uid,
@@ -2932,7 +2945,7 @@ def create_stop_flow_internal_event(
     source_flow_instance_uid: str,
     matching_scores: List[float],
     deactivate_flow: bool = False,
-) -> FlowEvent:
+) -> InternalEvent:
     """Returns 'StopFlow' internal event"""
     arguments = {
         "flow_instance_uid": flow_instance_uid,
@@ -2948,12 +2961,12 @@ def create_stop_flow_internal_event(
     )
 
 
-def create_flow_internal_event(
+def create_internal_flow_event(
     event_name: str,
     source_flow_state: FlowState,
     matching_scores: List[float],
     arguments: Optional[dict] = None,
-) -> FlowEvent:
+) -> InternalEvent:
     """Creates and returns a internal flow event"""
     if arguments is None:
         arguments = dict()
@@ -2978,9 +2991,9 @@ def create_flow_internal_event(
 
 def create_internal_event(
     event_name: str, event_args: dict, matching_scores: List[float]
-) -> FlowEvent:
+) -> InternalEvent:
     """Returns an internal event for the provided event data"""
-    event = FlowEvent(
+    event = InternalEvent(
         name=event_name,
         arguments=event_args,
         matching_scores=matching_scores,

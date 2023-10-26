@@ -199,6 +199,14 @@ flow user provide custom instructions
 # Helper flows
 # -----------------------------------
 
+flow undefined flows
+  match UnhandledEvent(event="StartFlow") as $event
+  bot say "Undefined flow: {$event.arguments.flow_id}"
+
+flow unexpected user utterance
+  match UnhandledEvent(event="UtteranceUserActionFinished") as $event
+  bot say "Unexpected user utterance: {$event.arguments.final_transcript}"
+
 flow log $text
   """Little helper flow to log something as a bot utterance."""
   # llm: exclude
@@ -235,8 +243,7 @@ flow fallback
   """This is the fallback flow that takes care of unhandled user utterances and will generate a flow continuation."""
   # llm: exclude
 
-  priority 0.1
-  user said something
+  match UnhandledEvent(event="UtteranceUserActionFinished") as $event
 
   #log "Flow started -> fallback"
 
@@ -244,7 +251,7 @@ flow fallback
 
   #activate pooling timer 0.5 as $pooling_timer
 
-  $intent = await GenerateUserIntentAction()
+  $intent = await GenerateUserIntentAction(user_utterance=$event.arguments.final_transcript)
   $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
 
   #send $pooling_timer.Stop()
@@ -266,12 +273,11 @@ flow flows fallback
   """If we reach a point where we need to start a flow that does not exist, we generate it."""
   # llm: exclude
 
-  match StartFlow() as $event
+  match UnhandledEvent(event="StartFlow") as $event
 
   $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
 
-  if $event.arguments.flow_id != "flows fallback"
-    start_new_flow_instance:
+  start_new_flow_instance:
 
   if not $exists
     $flow_id = $event.arguments.flow_id
@@ -320,6 +326,8 @@ flow custom instruction
   do $ref.context.instruction
 
 flow main
+  #activate undefined flows
+  #activate unexpected user utterance
   #activate repeat previous utterance for user silence
   activate faq
   activate fallback

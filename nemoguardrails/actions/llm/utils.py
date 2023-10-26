@@ -22,7 +22,7 @@ from langchain.prompts.chat import ChatPromptValue
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import Flow
-from nemoguardrails.colang.v1_1.runtime.flows import FlowEvent
+from nemoguardrails.colang.v1_1.runtime.flows import InternalEvent, InternalEvents
 from nemoguardrails.logging.callbacks import logging_callbacks
 
 
@@ -78,12 +78,13 @@ def get_colang_history(
         return history
 
     # We try to automatically detect if we have a Colang 1.0 or a 1.1 history
+    # TODO: Think about more robust approach?
     colang_version = "1.0"
     for event in events:
-        if isinstance(event, FlowEvent):
+        if isinstance(event, InternalEvent):
             event = {"type": event.name, **event.arguments}
 
-        if event["type"] == "FlowFinished":
+        if event["type"] in InternalEvents.ALL:
             colang_version = "1.1"
 
     if colang_version == "1.0":
@@ -144,7 +145,7 @@ def get_colang_history(
         history = []
 
         for idx, event in enumerate(events):
-            if isinstance(event, FlowEvent):
+            if isinstance(event, InternalEvent):
                 event = {"type": event.name, **event.arguments}
 
             if event["type"] in ["FlowFinished", "DynamicFlowFinished"]:
