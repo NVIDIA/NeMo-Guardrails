@@ -1097,11 +1097,12 @@ def _expand_await_element(
             match_elements.append([])
             for group_element in and_group["elements"]:
                 reference_name = f"_ref_{new_var_uid()}"
-                group_element.ref = _create_ref_ast_dict_helper(reference_name)
+                group_element_copy = copy.deepcopy(group_element)
+                group_element_copy.ref = _create_ref_ast_dict_helper(reference_name)
                 start_elements[-1].append(
                     SpecOp(
                         op="start",
-                        spec=group_element,
+                        spec=group_element_copy,
                     )
                 )
                 match_elements[-1].append(
@@ -1116,7 +1117,7 @@ def _expand_await_element(
         if len(normalized_group["elements"]) == 1:
             # Single and-group
             and_group = normalized_group["elements"][0]
-            for idx, group_element in enumerate(and_group["elements"]):
+            for idx, _ in enumerate(and_group["elements"]):
                 new_elements.append(start_elements[0][idx])
             match_group = {"_type": "spec_and", "elements": match_elements[0]}
             new_elements.append(SpecOp(op="match", spec=match_group))
@@ -1127,7 +1128,7 @@ def _expand_await_element(
             for group_idx, and_group in enumerate(normalized_group["elements"]):
                 new_elements.append(group_label_elements[group_idx])
                 new_elements.append(begin_scope_elements[group_idx])
-                for idx, group_element in enumerate(and_group["elements"]):
+                for idx, _ in enumerate(and_group["elements"]):
                     new_elements.append(start_elements[group_idx][idx])
                 match_group = {
                     "_type": "spec_and",

@@ -22,12 +22,8 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (
-    ActionStatus,
-    FlowEvent,
-    State,
-    run_to_completion,
-)
+from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus, FlowEvent,
+                                                      State, run_to_completion)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -3388,6 +3384,30 @@ def test_mixed_multimodal_group_actions():
                 "type": "StartGestureBotAction",
             },
         ],
+    )
+    gesture_action_uid = state.outgoing_events[1]["action_uid"]
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": state.outgoing_events[0]["script"],
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "GestureBotActionFinished",
+            "action_uid": gesture_action_uid,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
     )
 
 
