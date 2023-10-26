@@ -67,26 +67,6 @@ async def answer_question_with_sources(
     embed = OpenAIEmbeddings(
         model=model_name,
         openai_api_key=OPENAI_API_KEY)
-    
-    """
-    
-        
-    def __init__(self, embedding_model: str):
-        self.model = embedding_model
-        self.embedding_size = len(self.encode(["test"])[0])
-
-    def encode(self, documents: List[str]) -> List[List[float]]:
-        import openai
-
-        # Make embedding request to OpenAI API
-        res = openai.Embedding.create(input=documents, engine=self.model)
-        embeddings = [record["embedding"] for record in res["data"]]
-        return embeddings
-    
-    vectorstore = Pinecone(index, embeddings.embed_query, "text")
-    OpenAIEmbeddingModel.embed_query
-    """
-    
     vectorstore = Pinecone(pinecone.Index(index_name), embed.embed_query, text_field)
     #vectorstore = Pinecone(pinecone.Index(index_name), OpenAIEmbeddingModel.embed_query, text_field)
     
