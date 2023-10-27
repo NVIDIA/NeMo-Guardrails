@@ -21,12 +21,14 @@ and registers them.
 Additional providers can be registered using the `register_llm_provider` function.
 """
 import logging
-from typing import Dict, List, Type
+from typing import Any, Dict, List, Optional, Type
 
 from langchain import llms
 from langchain.base_language import BaseLanguageModel
+from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.chat_models import ChatOpenAI
 from langchain.llms.base import LLM
+from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 
 from nemoguardrails.rails.llm.config import Model
 
@@ -36,6 +38,61 @@ log = logging.getLogger(__name__)
 
 # Initialize the providers with the default ones, for now only NeMo LLM.
 _providers: Dict[str, Type[BaseLanguageModel]] = {"nemollm": NeMoLLM}
+
+
+class HuggingFacePipelineCompatible(HuggingFacePipeline):
+    """
+    Hackish way to add backward-compatibility functions to the Langchain class.
+    TODO: Planning to add this fix directly to Langchain repo.
+    """
+
+    def _call(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> str:
+        """
+        Hackish way to perform a single llm call since Langchain dropped support
+        """
+        if not isinstance(prompt, str):
+            raise ValueError(
+                "Argument `prompt` is expected to be a string. Instead found "
+                f"{type(prompt)}. If you want to run the LLM on multiple prompts, use "
+                "`generate` instead."
+            )
+        llm_result = self._generate(
+            [prompt],
+            stop=stop,
+            run_manager=run_manager,
+            **kwargs,
+        )
+        return llm_result.generations[0][0].text
+
+    async def _acall(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> str:
+        """
+        Hackish way to add async support
+        """
+        if not isinstance(prompt, str):
+            raise ValueError(
+                "Argument `prompt` is expected to be a string. Instead found "
+                f"{type(prompt)}. If you want to run the LLM on multiple prompts, use "
+                "`generate` instead."
+            )
+        llm_result = await self._agenerate(
+            [prompt],
+            stop=stop,
+            run_manager=run_manager,
+            **kwargs,
+        )
+        return llm_result.generations[0][0].text
 
 
 async def _acall(self, *args, **kwargs):
