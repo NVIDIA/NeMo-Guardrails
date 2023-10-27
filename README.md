@@ -6,6 +6,7 @@
 [![PyPI version](https://badge.fury.io/py/nemoguardrails.svg)](https://badge.fury.io/py/nemoguardrails)
 [![Python 3.7+](https://img.shields.io/badge/python-3.7%2B-green)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![arXiv](https://img.shields.io/badge/arXiv-2310.10501-b31b1b.svg)](https://arxiv.org/abs/2310.10501)
 
 **LATEST RELEASE: You are currently on the main branch which tracks
 under-development progress towards the next release. The current release is
@@ -18,6 +19,8 @@ NeMo Guardrails is an open-source toolkit for easily adding programmable guardra
 This toolkit is currently in its early alpha stages, and we invite the community to contribute towards making the power of trustworthy, safe, and secure LLMs accessible to everyone. The examples provided within the documentation are for educational purposes to get started with NeMo Guardrails, and are not meant for use in production applications.
 
 We are committed to improving the toolkit in the near term to make it easier for developers to build production-grade trustworthy, safe, and secure LLM applications.
+
+[The paper](https://arxiv.org/abs/2310.10501) introducing NeMo Guardrails contains a technical overview of the system and of the current evaluation.
 
 #### **Key Benefits**
 
@@ -148,3 +151,14 @@ The example rails residing in the repository are excellent starting points. We e
 ## License
 
 This toolkit is licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
+
+## Hot to cite
+If you use this work, please cite [the paper](https://arxiv.org/abs/2310.10501) that introduces it.
+```bibtex
+@article{2023nemoguardrails,
+  title={NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications with Programmable Rails},
+  author={Rebedea, Traian and Dinu, Razvan and Sreedhar, Makesh and Parisien, Christopher and Cohen, Jonathan},
+  journal={arXiv preprint arXiv:2310.10501},
+  year={2023}
+}
+```
