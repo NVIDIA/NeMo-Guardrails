@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import re
-from typing import List, Union
+from typing import List, Optional, Union
 
 from langchain.base_language import BaseLanguageModel
 from langchain.prompts.base import StringPromptValue
@@ -142,29 +142,48 @@ def get_colang_history(
                 history = placeholder_text.join(split_history)
 
     else:
-        history = []
+        history: List[str] = []
 
         for idx, event in enumerate(events):
             if isinstance(event, InternalEvent):
                 event = {"type": event.name, **event.arguments}
 
+            new_item: Optional[str] = None
             if event["type"] in ["FlowFinished", "DynamicFlowFinished"]:
                 flow_id = event["flow_id"]
+
                 if flow_id.startswith("bot "):
                     if flow_id == "bot say":
-                        history.append(f"bot say \"{event['text']}\"")
+                        new_item = f"bot say \"{event['text']}\""
+                    elif flow_id == "bot inform":
+                        new_item = f"bot inform \"{event['text']}\""
+                    elif flow_id == "bot ask":
+                        new_item = f"bot ask \"{event['text']}\""
+                    elif flow_id == "bot express":
+                        new_item = f"bot express \"{event['text']}\""
+                    elif flow_id == "bot respond":
+                        new_item = f"bot respond \"{event['text']}\""
+                    elif flow_id == "bot gesture":
+                        new_item = f"bot gesture \"{event['gesture']}\""
                     else:
-                        history.append(f"{flow_id}")
+                        new_item = f"{flow_id}"
                 elif flow_id.startswith("user "):
                     if flow_id == "user said something":
                         continue
-                    elif flow_id.startswith("user said"):
-                        history.append(f"user said \"{event['text']}\"")
+                    elif (
+                        flow_id.startswith("user said")
+                        and flow_id != "user said something"
+                    ):
+                        new_item = f"user said \"{event['text']}\""
                     else:
-                        history.append(f"{flow_id}")
+                        new_item = f"{flow_id}"
 
             elif event["type"] == "UtteranceUserActionFinished":
-                history.append(f'user said "{event["final_transcript"]}"')
+                new_item = f'user said "{event["final_transcript"]}"'
+
+            # Make sure we don't record duplicated entries
+            if new_item is not None and (len(history) == 0 or new_item != history[-1]):
+                history.append(new_item)
 
         # We also want to switch the "bot say" with "bot xxx" events
         # and remove duplicate consecutive lines.
