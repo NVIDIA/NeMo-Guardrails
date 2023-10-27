@@ -68,6 +68,8 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
         # the queue or printed
         self.pipe_to = None
 
+        self.first_token = True
+
     def set_pattern(self, prefix: Optional[str] = None, suffix: Optional[str] = None):
         """Sets the patter that is expected.
 
@@ -222,6 +224,12 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
         **kwargs: Any,
     ) -> None:
         """Run on new LLM token. Only available when streaming is enabled."""
+        # If the first token is an empty one, we ignore.
+        if self.first_token:
+            self.first_token = False
+            if token == "":
+                return
+
         await self.push_chunk(chunk)
 
     async def on_llm_end(
