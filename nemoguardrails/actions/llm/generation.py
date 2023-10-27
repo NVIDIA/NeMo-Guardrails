@@ -87,7 +87,9 @@ class LLMGenerationActions:
             get_embedding_search_provider_instance
         )
 
-        if check_sync_call_from_async_loop():
+        # There are still some edge cases not covered by nest_asyncio.
+        # Using a separate thread always for now.
+        if True or check_sync_call_from_async_loop():
             t = threading.Thread(target=asyncio.run, args=(self.init(),))
             t.start()
             t.join()

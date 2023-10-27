@@ -148,7 +148,9 @@ class LLMRails:
         self.runtime.register_actions(self.llm_generation_actions, override=False)
 
         # Next, we initialize the Knowledge Base
-        if check_sync_call_from_async_loop():
+        # There are still some edge cases not covered by nest_asyncio.
+        # Using a separate thread always for now.
+        if True or check_sync_call_from_async_loop():
             t = threading.Thread(target=asyncio.run, args=(self._init_kb(),))
             t.start()
             t.join()
