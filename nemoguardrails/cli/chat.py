@@ -65,10 +65,13 @@ async def run_chat_async(
         if not server_url:
             # If we have streaming from a locally loaded config, we initialize the handler.
             if streaming and not server_url and rails_app.main_llm_supports_streaming:
-                streaming_handler_instance = StreamingHandler(enable_print=True)
-                streaming_handler_var.set(streaming_handler_instance)
+                streaming_handler = StreamingHandler(enable_print=True)
+            else:
+                streaming_handler = None
 
-            bot_message = await rails_app.generate_async(messages=history)
+            bot_message = await rails_app.generate_async(
+                messages=history, streaming_handler=streaming_handler
+            )
 
             if not streaming or not rails_app.main_llm_supports_streaming:
                 # We print bot messages in green.

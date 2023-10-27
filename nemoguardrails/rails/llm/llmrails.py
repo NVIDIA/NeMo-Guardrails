@@ -20,7 +20,7 @@ import logging
 import os
 import threading
 import time
-from typing import Any, List, Optional, Type, Union
+from typing import Any, AsyncIterator, List, Optional, Type, Union
 
 from langchain.llms.base import BaseLLM
 
@@ -36,6 +36,7 @@ from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
+from nemoguardrails.streaming import StreamingHandler
 
 log = logging.getLogger(__name__)
 
@@ -317,7 +318,10 @@ class LLMRails:
         return events
 
     async def generate_async(
-        self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None
+        self,
+        prompt: Optional[str] = None,
+        messages: Optional[List[dict]] = None,
+        streaming_handler: Optional[StreamingHandler] = None,
     ) -> Union[str, dict]:
         """Generate a completion or a next message.
 
@@ -336,11 +340,16 @@ class LLMRails:
         Args:
             prompt: The prompt to be used for completion.
             messages: The history of messages to be used to generate the next message.
+            streaming_handler: If specified, and the config supports streaming, the
+              provided handler will be used for streaming.
 
         Returns:
             The completion (when a prompt is provided) or the next message.
 
         System messages are not yet supported."""
+        if streaming_handler:
+            streaming_handler_var.set(streaming_handler)
+
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
             new_message = await self.generate_async(
@@ -395,6 +404,24 @@ class LLMRails:
             await streaming_handler.push_chunk(None)
 
         return new_message
+
+    def stream_async(
+        self,
+        prompt: Optional[str] = None,
+        messages: Optional[List[dict]] = None,
+    ) -> AsyncIterator[str]:
+        """Simplified interface for getting directly the streamed tokens from the LLM."""
+        streaming_handler = StreamingHandler()
+
+        asyncio.create_task(
+            self.generate_async(
+                prompt=prompt,
+                messages=messages,
+                streaming_handler=streaming_handler,
+            )
+        )
+
+        return streaming_handler
 
     def generate(
         self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None

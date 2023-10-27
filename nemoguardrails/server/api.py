@@ -30,7 +30,6 @@ from starlette.responses import JSONResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig
-from nemoguardrails.context import streaming_handler_var
 from nemoguardrails.streaming import StreamingHandler
 
 logging.basicConfig(level=logging.INFO)
@@ -195,13 +194,16 @@ async def chat_completion(body: RequestBody, request: Request):
             and llm_rails.main_llm_supports_streaming
         ):
             # Create the streaming handler instance
-            streaming_handler_instance = StreamingHandler()
-            streaming_handler_var.set(streaming_handler_instance)
+            streaming_handler = StreamingHandler()
 
             # Start the generation
-            asyncio.create_task(llm_rails.generate_async(messages=messages))
+            asyncio.create_task(
+                llm_rails.generate_async(
+                    messages=messages, streaming_handler=streaming_handler
+                )
+            )
 
-            return StreamingResponse(streaming_handler_instance)
+            return StreamingResponse(streaming_handler)
         else:
             bot_message = await llm_rails.generate_async(messages=messages)
             return {"messages": [bot_message]}
