@@ -23,6 +23,7 @@ from langchain.chains import RetrievalQA
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.llms import BaseLLM
 from langchain.vectorstores import Pinecone
+
 from nemoguardrails import LLMRails
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
@@ -42,20 +43,28 @@ logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
 async def answer_question_with_sources(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
-    llm: Optional[BaseLLM] = None
+    llm: Optional[BaseLLM] = None,
 ):
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     user_message = context.get("last_user_message")
     text_field = "text"
-    embed = OpenAIEmbeddings(model=[model.model for model in llm_task_manager.config.models if model.type == "embeddings"][0], 
-                             openai_api_key=OPENAI_API_KEY)
-    vectorstore = Pinecone(pinecone.Index(index_name),
-                           embed.embed_query, text_field)
+    embed = OpenAIEmbeddings(
+        model=[
+            model.model
+            for model in llm_task_manager.config.models
+            if model.type == "embeddings"
+        ][0],
+        openai_api_key=OPENAI_API_KEY,
+    )
+    vectorstore = Pinecone(pinecone.Index(index_name), embed.embed_query, text_field)
     qa_with_sources = RetrievalQA.from_chain_type(
-        llm=llm, chain_type="stuff",
+        llm=llm,
+        chain_type="stuff",
         retriever=vectorstore.as_retriever(
-            search_type="mmr", search_kwargs={'fetch_k': 30}),
-        return_source_documents=True)
+            search_type="mmr", search_kwargs={"fetch_k": 30}
+        ),
+        return_source_documents=True,
+    )
 
     start_time = time.time()
     result = qa_with_sources(user_message)
@@ -66,16 +75,16 @@ async def answer_question_with_sources(
     )
     answer = result["result"]
     source_ref = str(result["source_documents"])
-    '''
-    Note: Relevant chunks are stored in source_ref with the following format, 
+    """
+    Note: Relevant chunks are stored in source_ref with the following format,
     and urls are already contained inside the metadata tag of source_ref
     {'query': '',
     'result': '',
-    'source_documents': [Document(page_content='...', 
+    'source_documents': [Document(page_content='...',
     metadata={'chunk': int, 'id': 'int', 'source': '/path/to/file.pdf'}),
     ]
     }
-    '''
+    """
     context_updates = {
         "relevant_chunks": source_ref,
         "user_question": user_message,
@@ -85,6 +94,7 @@ async def answer_question_with_sources(
         return_value=context_updates["relevant_chunks"],
         context_updates=context_updates,
     )
+
+
 def init(app: LLMRails):
-    app.register_action(answer_question_with_sources,
-                        "answer_question_with_sources")
+    app.register_action(answer_question_with_sources, "answer_question_with_sources")
