@@ -134,13 +134,13 @@ flow scene show form $prompt
 # Bot say action semantic wrapper flows
 # -----------------------------------
 
-flow bot inform $information
+flow bot inform $text
   # llm: exclude
-  await bot say $information
+  await bot say $text
 
-flow bot ask $question
+flow bot ask $text
   # llm: exclude
-  await bot say $question
+  await bot say $text
 
 flow bot express $text
   # llm: exclude
@@ -151,7 +151,7 @@ flow bot respond $text
   await bot say $text
 
 # ----------------------------------
-# Bot action flows
+# Bot intents
 # -----------------------------------
 
 flow bot express greeting
@@ -180,7 +180,7 @@ flow bot ask how are you
     and bot gesture "Pay attention to user"
 
 # ----------------------------------
-# User action flows
+# User intents
 # -----------------------------------
 
 flow user expressed greeting
@@ -214,15 +214,19 @@ flow log $text
   # loop_id: NEW
   start bot say ">> logging: {$text}"
 
-flow wait
+flow wait indefinitely
   """Little helper flow to wait indefinitely."""
   # llm: exclude
   match NeverComingEvent()
 
-flow pooling timer $time_s
-  start TimerBotAction(timer_name="pooling_timer", duration=$time_s) as $timer_ref
-  match $timer_ref.Finished()
-  log "Pooling timer triggered"
+flow wait $time_s
+  """Wait for the time provided"""
+  await TimerBotAction(timer_name="pooling_timer", duration=$interval_s)
+
+flow repeating timer $interval_s
+  # llm: exclude
+  while True
+    await TimerBotAction(timer_name="pooling_timer", duration=$interval_s)
 
 flow user silence handling $time_s
   """This helper flow will start the "user_silence" timer whenever the user utterance finished."""
@@ -250,12 +254,11 @@ flow fallback
 
   start_new_flow_instance:
 
-  #activate pooling timer 0.5 as $pooling_timer
+  start repeating timer 0.5 as $pooling_timer
+  $intent = await GenerateUserIntentAction(user_utterance=$event.arguments.final_transcript, max_example_flows=10)
+  send $pooling_timer.Stop()
 
-  $intent = await GenerateUserIntentAction(user_utterance=$event.arguments.final_transcript)
   $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
-
-  #send $pooling_timer.Stop()
 
   if $exists
     send FinishFlow(flow_id=$intent)
@@ -263,7 +266,10 @@ flow fallback
     #log "'fallback' -> Generate new flow for intent '{$intent}'"
     send DynamicFlowFinished(flow_id=$intent)
 
+    start repeating timer 0.5 as $pooling_timer
     $flow_info = await GenerateFlowContinuationAction()
+    send $pooling_timer.Stop()
+
     await AddFlowsAction(config=$flow_info['body'])
 
     send StartFlow(flow_id=$flow_info['name'])
@@ -282,8 +288,12 @@ flow flows fallback
 
   if not $exists
     $flow_id = $event.arguments.flow_id
-    log "'flows fallback' -> generate new flow '{$event.arguments.flow_id}'"
+    #log "'flows fallback' -> generate new flow '{$event.arguments.flow_id}'"
+
+    start repeating timer 0.5 as $pooling_timer
     $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
+    send $pooling_timer.Stop()
+
     await AddFlowsAction(config=$flow_source)
     send StartFlow(flow_id=$flow_id)
 
@@ -293,7 +303,10 @@ flow do $instructions
 
   #log "Flow started -> do '{$instructions}'"
 
+  start repeating timer 0.5 as $pooling_timer
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
+  send $pooling_timer.Stop()
+
   await AddFlowsAction(config=$flow_info.body)
   send StartFlow(flow_id=$flow_info['name'])
   match FlowStarted(flow_id=$flow_info['name']) as $event_ref
@@ -308,11 +321,11 @@ flow custom instructions
 # FAQs
 # -----------------------------------
 
-flow greeting
+flow greeting faq
   user expressed greeting
   bot express greeting
 
-flow how are you
+flow how are you faq
   user asked how are you
   bot express feeling well
     or bot express feeling bad
@@ -325,11 +338,6 @@ flow faq
 # ----------------------------------
 # Main story
 # -----------------------------------
-
-flow custom instruction
-  user provide custom instructions as $ref
-  bot say "User instruction: {$ref.context.instruction}"
-  do $ref.context.instruction
 
 flow main
   #activate undefined flows
