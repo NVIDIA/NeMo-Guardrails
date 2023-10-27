@@ -87,6 +87,7 @@ Results on _chit-chat_ dataset, metric used is accuracy.
 | `gpt-3.5-turbo-instruct, single call`  | 0.90                   | N/A                    | 0.91                  | N/A                   | 0.91                   | N/A                    |
 | `gpt-3.5-turbo-instruct, compact`      | 0.89                   | N/A                    | 0.89                  | N/A                   | 0.90                   | N/A                    |
 | `gpt-3.5-turbo, k=all`                 | 0.44                   | 0.56                   | 0.50                  | 0.61                  | 0.54                   | 0.65                   |
+| `llama2-13b-chat, k=all`               | 0.87                   | N/A                    | 0.88                  | N/A                   | 0.89                   | N/A                    |
 | `dolly-v2-3b, k=all`                   | 0.80                   | 0.82                   | 0.81                  | 0.83                  | 0.81                   | 0.83                   |
 | `vicuna-7b-v1.3, k=all`                | 0.62                   | 0.75                   | 0.69                  | 0.77                  | 0.71                   | 0.79                   |
 | `mpt-7b-instruct, k=all`               | 0.73                   | 0.81                   | 0.78                  | 0.82                  | 0.80                   | 0.82                   |
@@ -106,6 +107,7 @@ Results on _banking_ dataset, metric used is accuracy.
 | `gpt-3.5-turbo-instruct, single call`  | 0.81                   | N/A                    | 0.83                  | N/A                   | N/A                    | N/A                    |
 | `gpt-3.5-turbo-instruct, compact`      | 0.86                   | N/A                    | 0.87                  | N/A                   | N/A                    | N/A                    |
 | `gpt-3.5-turbo, k=all`                 | 0.38                   | 0.73                   | 0.45                  | 0.73                  | N/A                    | N/A                    |
+| `llama2-13b-chat, k=all`               | 0.76                   | N/A                    | 0.77                  | N/A                   | N/A                    | N/A                    |
 | `dolly-v2-3b, k=all`                   | 0.32                   | 0.62                   | 0.40                  | 0.64                  | N/A                    | N/A                    |
 | `vicuna-7b-v1.3, k=all`                | 0.39                   | 0.62                   | 0.54                  | 0.65                  | N/A                    | N/A                    |
 | `mpt-7b-instruct, k=all`               | 0.45                   | 0.58                   | 0.50                  | 0.60                  | N/A                    | N/A                    |
