@@ -563,32 +563,40 @@ class LLMGenerationActions:
                 if event["type"] == "UserIntent":
                     bot_message_event = event["additional_info"]["bot_message_event"]
 
-                    text = bot_message_event["text"]
-                    # If the bot message is being generated in streaming mode
-                    if text.startswith('Bot message: "<<STREAMING['):
-                        # Format: `Bot message: "<<STREAMING[...]>>"`
-                        # Extract the streaming handler uid and get a reference.
-                        streaming_handler_uid = text[26:-4]
-                        _streaming_handler = local_streaming_handlers[
-                            streaming_handler_uid
-                        ]
+                    # We only need to use the bot message if it corresponds to the
+                    # generate bot intent as well.
+                    last_bot_intent = get_last_bot_intent_event(events)
 
-                        # We pipe the content from this handler to the main one.
-                        _streaming_handler.set_pipe_to(streaming_handler)
-                        await _streaming_handler.disable_buffering()
+                    if (
+                        last_bot_intent["intent"]
+                        == event["additional_info"]["bot_intent_event"]["intent"]
+                    ):
+                        text = bot_message_event["text"]
+                        # If the bot message is being generated in streaming mode
+                        if text.startswith('Bot message: "<<STREAMING['):
+                            # Format: `Bot message: "<<STREAMING[...]>>"`
+                            # Extract the streaming handler uid and get a reference.
+                            streaming_handler_uid = text[26:-4]
+                            _streaming_handler = local_streaming_handlers[
+                                streaming_handler_uid
+                            ]
 
-                        # And wait for it to finish.
-                        text = await _streaming_handler.wait()
-                        return ActionResult(
-                            events=[new_event_dict("BotMessage", text=text)]
-                        )
-                    else:
-                        if streaming_handler:
-                            await streaming_handler.push_chunk(
-                                bot_message_event["text"]
+                            # We pipe the content from this handler to the main one.
+                            _streaming_handler.set_pipe_to(streaming_handler)
+                            await _streaming_handler.disable_buffering()
+
+                            # And wait for it to finish.
+                            text = await _streaming_handler.wait()
+                            return ActionResult(
+                                events=[new_event_dict("BotMessage", text=text)]
                             )
+                        else:
+                            if streaming_handler:
+                                await streaming_handler.push_chunk(
+                                    bot_message_event["text"]
+                                )
 
-                        return ActionResult(events=[bot_message_event])
+                            return ActionResult(events=[bot_message_event])
 
             # We search for the most relevant similar bot utterance
             examples = ""
