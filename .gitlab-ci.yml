@@ -24,4 +24,5 @@ test:
     - pip install --cache-dir .cache/pip -r requirements.txt
     - pip install --cache-dir .cache/pip -r requirements-dev.txt
   script:
-    - python -m pytest
+    - python -m pytest --cov=./nemoguardrails --cov=./examples --no-cov-on-fail --cov-fail-under=65
+  coverage: /(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
