@@ -23,7 +23,7 @@ from nemoguardrails import LLMRails, RailsConfig
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "bots")
 
-NUM_TEST_RUNS = 10  # Number of times to average results over
+NUM_TEST_RUNS = 30  # Number of times to average results over
 
 TEST_QUESTIONS = [
     # chit-chat questions
