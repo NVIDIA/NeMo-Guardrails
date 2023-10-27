@@ -549,9 +549,11 @@ class RailsConfig(BaseModel):
 
     @staticmethod
     def from_content(
-        colang_content: Optional[str] = None, yaml_content: Optional[str] = None
+        colang_content: Optional[str] = None,
+        yaml_content: Optional[str] = None,
+        config: Optional[dict] = None,
     ):
-        """Loads a configuration from the provided colang/YAML content."""
+        """Loads a configuration from the provided colang/YAML content/config dict."""
         raw_config = {}
 
         if colang_content:
@@ -561,6 +563,9 @@ class RailsConfig(BaseModel):
 
         if yaml_content:
             _join_config(raw_config, yaml.safe_load(yaml_content))
+
+        if config:
+            _join_config(raw_config, config)
 
         # If there are no instructions, we use the default ones.
         if len(raw_config.get("instructions", [])) == 0:
