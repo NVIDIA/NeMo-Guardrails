@@ -21,7 +21,3 @@ define flow
 
 define bot inform capabilities
   "I am an AI assistant and I'm here to help."
-
-
-define bot generate text
-  "I don't want to write anything now."
