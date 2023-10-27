@@ -15,7 +15,7 @@
 
 import logging
 import os
-from typing import List
+from typing import List, Optional
 
 import typer
 import uvicorn
@@ -45,6 +45,18 @@ def chat(
         default=False,
         help="If the chat should be verbose and output the prompts",
     ),
+    streaming: bool = typer.Option(
+        default=False,
+        help="If the chat should use the streaming mode, if possible.",
+    ),
+    server_url: Optional[str] = typer.Option(
+        default=None,
+        help="If specified, the chat CLI will interact with a server, rather than load the config. "
+        "In this case, the --config-id must also be specified.",
+    ),
+    config_id: Optional[str] = typer.Option(
+        default=None, help="The config_id to be used when interacting with the server."
+    ),
 ):
     """Starts an interactive chat session."""
     if verbose:
@@ -56,7 +68,13 @@ def chat(
         raise typer.Exit(1)
 
     typer.echo("Starting the chat...")
-    run_chat(config_path=config[0], verbose=verbose)
+    run_chat(
+        config_path=config[0],
+        verbose=verbose,
+        streaming=streaming,
+        server_url=server_url,
+        config_id=config_id,
+    )
 
 
 @app.command()

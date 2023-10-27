@@ -1,0 +1,17 @@
+instructions:
+  - type: general
+    content: |
+      Below is a conversation between a bot and a user. The bot is talkative and
+      quirky. If the bot does not know the answer to a question, it truthfully says it does not know.
+
+models:
+  - type: main
+    engine: openai
+    model: gpt-4
+
+rails:
+  dialog:
+    single_call:
+      enabled: True
+
+streaming: True

@@ -14,9 +14,10 @@
 # limitations under the License.
 
 import re
-from typing import List, Union
+from typing import List, Optional, Union
 
 from langchain.base_language import BaseLanguageModel
+from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackManager
 from langchain.prompts.base import StringPromptValue
 from langchain.prompts.chat import ChatPromptValue
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
@@ -24,12 +25,24 @@ from langchain.schema import AIMessage, HumanMessage, SystemMessage
 from nemoguardrails.logging.callbacks import logging_callbacks
 
 
-async def llm_call(llm: BaseLanguageModel, prompt: Union[str, List[dict]]) -> str:
+async def llm_call(
+    llm: BaseLanguageModel,
+    prompt: Union[str, List[dict]],
+    custom_callback_handlers: Optional[List[AsyncCallbackHandler]] = None,
+) -> str:
     """Calls the LLM with a prompt and returns the generated text."""
+
+    if custom_callback_handlers and custom_callback_handlers != [None]:
+        all_callbacks = BaseCallbackManager(
+            handlers=logging_callbacks.handlers + custom_callback_handlers,
+            inheritable_handlers=logging_callbacks.handlers + custom_callback_handlers,
+        )
+    else:
+        all_callbacks = logging_callbacks
 
     if isinstance(prompt, str):
         result = await llm.agenerate_prompt(
-            [StringPromptValue(text=prompt)], callbacks=logging_callbacks
+            [StringPromptValue(text=prompt)], callbacks=all_callbacks
         )
 
         # TODO: error handling
@@ -47,7 +60,7 @@ async def llm_call(llm: BaseLanguageModel, prompt: Union[str, List[dict]]) -> st
             else:
                 raise ValueError(f"Unknown message type {_msg['type']}")
         result = await llm.agenerate_prompt(
-            [ChatPromptValue(messages=messages)], callbacks=logging_callbacks
+            [ChatPromptValue(messages=messages)], callbacks=all_callbacks
         )
 
         return result.generations[0][0].text
@@ -197,6 +210,15 @@ def get_last_user_intent_event(events: List[dict]):
     """Returns the last user intent from the events."""
     for event in reversed(events):
         if event["type"] == "UserIntent":
+            return event
+
+    return None
+
+
+def get_last_bot_intent_event(events: List[dict]):
+    """Returns the last user intent from the events."""
+    for event in reversed(events):
+        if event["type"] == "BotIntent":
             return event
 
     return None

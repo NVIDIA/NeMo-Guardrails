@@ -350,6 +350,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "knowledge_base",
         "core",
         "rails",
+        "streaming",
     ]
 
     for field in additional_fields:
@@ -450,6 +451,11 @@ class RailsConfig(BaseModel):
         description="Configuration for the various rails (input, output, etc.).",
     )
 
+    streaming: bool = Field(
+        default=False,
+        description="Whether this configuration should use streaming mode or not.",
+    )
+
     @staticmethod
     def from_path(
         config_path: str,
@@ -543,9 +549,11 @@ class RailsConfig(BaseModel):
 
     @staticmethod
     def from_content(
-        colang_content: Optional[str] = None, yaml_content: Optional[str] = None
+        colang_content: Optional[str] = None,
+        yaml_content: Optional[str] = None,
+        config: Optional[dict] = None,
     ):
-        """Loads a configuration from the provided colang/YAML content."""
+        """Loads a configuration from the provided colang/YAML content/config dict."""
         raw_config = {}
 
         if colang_content:
@@ -555,6 +563,9 @@ class RailsConfig(BaseModel):
 
         if yaml_content:
             _join_config(raw_config, yaml.safe_load(yaml_content))
+
+        if config:
+            _join_config(raw_config, config)
 
         # If there are no instructions, we use the default ones.
         if len(raw_config.get("instructions", [])) == 0:
@@ -572,3 +583,14 @@ class RailsConfig(BaseModel):
                 flow_data["elements"] = parse_flow_elements(flow_data["elements"])
 
         return RailsConfig.parse_obj(obj)
+
+    @property
+    def streaming_supported(self):
+        """Whether the current config supports streaming or not.
+
+        Currently, we don't support streaming if there are output rails.
+        """
+        if len(self.rails.output.flows) > 0:
+            return False
+
+        return True
