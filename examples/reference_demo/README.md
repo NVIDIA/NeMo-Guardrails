@@ -30,28 +30,15 @@ Bot:  thank you for providing me your user ID what is your name
 User:  my first name is siddha
 Bot:  what's your last name
 User:  ganju
-Bot:  awesome  I was able to authenticate you. I can summarize files in the directory  you have access to,  you can also ask me questions about the data in the directory and I will try my best to answer
-User:  how many files do I have access to
-Bot:  your user has access to three different files titled nvidia.pdf, mango.pdf, moon.pdf
-User:  can you summarize file nvidia.pdf for me
-Bot: sure, here is the summary <.....> 
-User: that's neat, how does this differ from moon.pdf
-Bot: well, file moon.pdf talks about …the moon…. versus talks about …. Nvidia the company…
-User: can I talk to file mango.pdf?
-Bot: yes you can ask me questions about a particular file and I will do my best to answer 
-User: what is a mango tree?
-Bot: well <answer and citation>
-User: oh and what about <detailed questions about mango trees>
-Bot: ….. Shows answer
+Bot:  You are authenticated!
+User:  What does Nvidia do?
+Bot:  ...answers the question...and provides citation...
+User: oh and what about <detailed questions about Nvidia>
+Bot: ...answers the question...and provides citation...
 User: can you tell me what an apple is
 Bot: the documents you have access to do not provide this information
-User: oh, can you look in other people's directories 
-Bot: I'm sorry I'm unable to do that 
-User: okay.
-Bot: is there anything else you'd like me to do?
-User: can you summarize all the files together?
-Bot: yes file 1 …., file 2 …, file 3 …. 
-User: thank you
+User: can you summarize this conversation
+Bot: ..provides summary... 
 ```
 
 Now, putting the developer hat on and going over the sample conversation I can see that there are a few sub-components, for example for the enterprise bot, authentication is one use case, summarization is another and question answering with references is yet another use case, but all these three ties into one enterprise workflow. There may be other enterprise workflows with a different set of use cases. This sample conversation can be as detailed as you want. The main advantage of building a sample conversation is you can see where certain rails are expected to be triggered and what the flow of functions and actions looks like. The sample conversation can also inform you if you need access to third-party APIs or if you will need to build certain features within the core of Nemo Guardrails. For example, to build question answering with references we can use third-party tools such as Pinecone vector database and Langchain.

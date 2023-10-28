@@ -15,16 +15,18 @@ Starting the chat...
 
 > what does nvidia do
  Nvidia is an American multinational technology company that designs graphics processing units (GPUs), application programming interfaces (APIs) for data science and high-performance computing, system on a chip units (SoCs) for the mobile computing and automotive market, and provides an API called CUDA for creating massively parallel software.
-Cited from: kb/nvidia.pdf
+ Cited from: kb/nvidia.pdf
 > can you tell me more about it
  Nvidia is a technology company that produces graphics processing units (GPUs), central processing units (CPUs), chipsets, drivers, collaborative software, tablet computers, TV accessories, GPU-chips for laptops, and data processing units. It is deployed in supercomputing sites around the world and has moved into the mobile computing market with Tegra mobile processors for smartphones and tablets, as well as vehicle navigation and entertainment systems. It also makes AI-powered software for audio and video processing.
-Cited from: kb/nvidia.pdf
+ Cited from: kb/nvidia.pdf
 > what is a gpu
  A GPU (Graphics Processing Unit) is a specialized electronic circuit designed to rapidly process graphical and mathematical operations. It is used in computer graphics and video games to generate high-quality graphics more quickly. Nvidia produces GPUs, as well as other products such as Central Processing Units (CPUs), Chipsets, Drivers, Collaborative Software, Tablet Computers, TV Accessories, GPU-chips for Laptops, and Data Processing Units (DPUs).
-Cited from: kb/nvidia.pdf
+ Cited from: kb/nvidia.pdf
 > where is the office for nvidia
  The headquarters for Nvidia is located in Santa Clara, California, U.S.
-Cited from: kb/nvidia.pdf
+ Cited from: kb/nvidia.pdf
+> can you summarize
+ Nvidia is a technology company based in Santa Clara, California. It produces Graphics Processing Units (GPUs), Central Processing Units, Chipsets, Drivers, Collaborative Software, Tablet Computers, TV Accessories, GPU-chips for laptops, Data Processing Units, and more. GPUs are specialized electronic circuits that are designed to rapidly process large amounts of data, making them ideal for powering applications like video games and AI-driven software. Nvidia is deployed in supercomputing sites around the world and has recently moved into the mobile computing market. They offer deep learning and accelerated analytics due to their API CUDA, and also have a cloud gaming service called GeForce Now.
 ```
 
 This example exhibits multi-turn conversations out of the box due to a key element. Note the comment `# Extract the full user query based on previous turns` in the `flow` as defined in [config.co](./config.co). This ensures that if the user question is related to a previous question such as `"can you repeat that?"`, the bot understands the relation and sends the correct question forward.
