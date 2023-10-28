@@ -19,6 +19,7 @@ from typing import Optional
 
 import pinecone
 from langchain.chains import RetrievalQA
+from langchain.docstore.document import Document
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.llms import BaseLLM
 from langchain.vectorstores import Pinecone
@@ -27,7 +28,6 @@ from nemoguardrails import LLMRails
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.llm.taskmanager import LLMTaskManager
-from langchain.docstore.document import Document
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
@@ -38,12 +38,14 @@ LOG_FILENAME = datetime.now().strftime("logs/mylogfile_%H_%M_%d_%m_%Y.log")
 log = logging.getLogger(__name__)
 logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
 
+
 @action(is_system_action=True)
-async def answer_question_with_sources(query,
-                                       llm_task_manager: LLMTaskManager,
-                                       context: Optional[dict] = None,
-                                       llm: Optional[BaseLLM] = None,
-                                       ):
+async def answer_question_with_sources(
+    query,
+    llm_task_manager: LLMTaskManager,
+    context: Optional[dict] = None,
+    llm: Optional[BaseLLM] = None,
+):
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
 
     # use any model, right now its fixed to OpenAI models
@@ -55,8 +57,7 @@ async def answer_question_with_sources(query,
         ][0],
         openai_api_key=OPENAI_API_KEY,
     )
-    vectorstore = Pinecone(pinecone.Index(index_name),
-                           embed.embed_query, "text")
+    vectorstore = Pinecone(pinecone.Index(index_name), embed.embed_query, "text")
 
     qa_with_sources = RetrievalQA.from_chain_type(
         llm=llm,
@@ -71,19 +72,19 @@ async def answer_question_with_sources(query,
     source_documents = result["source_documents"]
     relevant_chunks = []
     citations = []
-    
+
     for document in source_documents:
         relevant_chunks.append(document.page_content)
         if document.metadata["source"] not in citations:
             citations.append(document.metadata["source"])
-    
+
     context_updates = {
         "relevant_chunks": relevant_chunks,
         "user_question": query,
         "bot_response": answer,
-        "citations": citations
+        "citations": citations,
     }
-    
+
     return ActionResult(
         return_value=context_updates["bot_response"],
         context_updates=context_updates,
@@ -91,5 +92,4 @@ async def answer_question_with_sources(query,
 
 
 def init(app: LLMRails):
-    app.register_action(answer_question_with_sources,
-                        "answer_question_with_sources")
+    app.register_action(answer_question_with_sources, "answer_question_with_sources")
