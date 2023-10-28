@@ -2,8 +2,8 @@
 
 This document details how to go about building workflows and applications using Nemo Guardrails. The examples contained are increasingly complex ways to use NeMo Guardrails. There are two examples: 
 
-- [basic_auth]() 
-  Shows a simple authentication process.
+- [BasicAuth]() 
+  Shows a simple authentication process. One can replace this by integrating with third party Authentication services.
 - [PineconeRAG]()
   Uses Pinecone vector database for Retreival Augmented Generation.
 
@@ -21,7 +21,7 @@ Broadly the following steps are involved:
 
 ### Develop a workflow
 
-Start with the workflow in mind and ideally build a sample conversation. The sample conversation should include as many use cases as possible within the same workflow. As an example, When I think about what I want in this reference demo I build the following sample conversation: 
+Start with the workflow in mind and ideally build a sample conversation. The sample conversation should include as many use cases as possible within the same workflow. As an example, when I think about what I want in this reference demo I build the following sample conversation: 
 
 ```
 Bot: Hi what is your user ID

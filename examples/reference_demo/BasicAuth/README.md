@@ -1,4 +1,4 @@
-# Reference Demo
+# [Part 1] Basic Authentication
 
 This is a demo to show increasingly complex examples of the art of the possible with NeMo Guardrails. The Dialog manager based on Colang is a rich interface that enables basic and conditional branching, reusing conversation flows, and intelligently parsing entities and variables. The example will make extensive use of `actions` which makes the workflow more extensible because one can register any Python function as a Colang action. 
 
@@ -31,15 +31,11 @@ Starting the chat...
 What is your user id?
 > 12345
 Thank you for sharing your user id!
-Thank you for sharing your user id!
 What is your first name?
 > alice
 Good to meet you Alice!
-Good to meet you Alice!
 What is your last name?
 > ecila
-success till here
-Thank you for sharing your last name too, Alice ecila!
 Thank you for sharing your last name too, Alice ecila!
 You have been authenticated Alice ecila!
 > ^C
