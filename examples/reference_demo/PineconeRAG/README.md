@@ -6,6 +6,27 @@ This part enables Nemo Guardrails to talk to Pinecone. It first sends the query 
 
 In order to run this component of the reference demo, you will need to obtain a [Pinecone API key](https://www.pinecone.io/). The instructions to create a Pinecone database, and uploading a few select PDF files to the database are based on the [official examples](https://github.com/pinecone-io/examples/blob/master/docs/langchain-retrieval-augmentation.ipynb) provided by Pinecone. All the API key values are set in the environment and read from there.
 
+Here is an example run, detailing a few more of the salient features: 
+
+```
+user:/nemoguardrails/examples/reference_demo/PineconeRAG$ nemoguardrails chat --config=nemoguardrails/examples/reference_demo/PineconeRAG/
+
+Starting the chat...
+
+> what does nvidia do
+ Nvidia is an American multinational technology company that designs graphics processing units (GPUs), application programming interfaces (APIs) for data science and high-performance computing, system on a chip units (SoCs) for the mobile computing and automotive market, and provides an API called CUDA for creating massively parallel software.
+Cited from: kb/nvidia.pdf
+> can you tell me more about it
+ Nvidia is a technology company that produces graphics processing units (GPUs), central processing units (CPUs), chipsets, drivers, collaborative software, tablet computers, TV accessories, GPU-chips for laptops, and data processing units. It is deployed in supercomputing sites around the world and has moved into the mobile computing market with Tegra mobile processors for smartphones and tablets, as well as vehicle navigation and entertainment systems. It also makes AI-powered software for audio and video processing.
+Cited from: kb/nvidia.pdf
+> what is a gpu
+ A GPU (Graphics Processing Unit) is a specialized electronic circuit designed to rapidly process graphical and mathematical operations. It is used in computer graphics and video games to generate high-quality graphics more quickly. Nvidia produces GPUs, as well as other products such as Central Processing Units (CPUs), Chipsets, Drivers, Collaborative Software, Tablet Computers, TV Accessories, GPU-chips for Laptops, and Data Processing Units (DPUs).
+Cited from: kb/nvidia.pdf
+> where is the office for nvidia
+ The headquarters for Nvidia is located in Santa Clara, California, U.S.
+Cited from: kb/nvidia.pdf
+```
+
 This example exhibits multi-turn conversations out of the box due to a key element. Note the comment `# Extract the full user query based on previous turns` in the `flow` as defined in [config.co](./config.co). This ensures that if the user question is related to a previous question such as `"can you repeat that?"`, the bot understands the relation and sends the correct question forward.
 
 ```
@@ -16,6 +37,8 @@ define flow
   $answer = execute answer_question_with_sources(query=$full_user_query)
   bot $answer
 ```
+
+Within the multi-turn conversations, the NeMo Guardrails bot is able to resolve what `it` refers to based on the previous question. This is being taken care of by the Dialog manager under the hood.
 
 Another salient feature of the [config.co](./config.co) file is that there are two main flows defined. This ensures that the user can start asking questions straightaway without a greeting. Ofcourse, if the user chooses to greet the bot first, then that flow will be run.
 

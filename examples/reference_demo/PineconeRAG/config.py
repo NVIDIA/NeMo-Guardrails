@@ -67,6 +67,8 @@ async def answer_question_with_sources(
         ),
         return_source_documents=True,
     )
+    
+    result = qa_with_sources(query)
 
     answer = result["result"]
     source_documents = result["source_documents"]
@@ -78,6 +80,14 @@ async def answer_question_with_sources(
         if document.metadata["source"] not in citations:
             citations.append(document.metadata["source"])
 
+    if len(citations) == 1:
+        citations = "\nCited from: " + "".join(citations)
+    else:
+        citation_list = ""
+        for i, cite in enumerate(citations):
+            citation_list += str(i+1) + ': ' + cite + '\n'
+        citations = "\nCited from the following resources:\n" + citation_list
+    
     context_updates = {
         "relevant_chunks": relevant_chunks,
         "user_question": query,
@@ -86,7 +96,7 @@ async def answer_question_with_sources(
     }
 
     return ActionResult(
-        return_value=context_updates["bot_response"],
+        return_value=str(context_updates["bot_response"] + context_updates["citations"] ), 
         context_updates=context_updates,
     )
 

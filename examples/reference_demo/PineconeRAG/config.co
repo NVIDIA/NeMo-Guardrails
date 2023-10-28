@@ -19,3 +19,12 @@ define flow
   $full_user_query = ...
   $answer = execute answer_question_with_sources(query=$full_user_query)
   bot $answer
+
+define user request summarization
+  "Can you summarize this conversation for me?"
+  "Summarize all these answers for me."
+
+define flow
+  user request summarization
+  # Summarize all the conversation and print
+  bot answer
