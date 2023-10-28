@@ -14,7 +14,6 @@
 # limitations under the License.
 import logging
 import os
-import time
 from datetime import datetime
 from typing import Optional
 
@@ -28,6 +27,7 @@ from nemoguardrails import LLMRails
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.llm.taskmanager import LLMTaskManager
+from langchain.docstore.document import Document
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
@@ -38,16 +38,15 @@ LOG_FILENAME = datetime.now().strftime("logs/mylogfile_%H_%M_%d_%m_%Y.log")
 log = logging.getLogger(__name__)
 logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG)
 
-
 @action(is_system_action=True)
-async def answer_question_with_sources(
-    llm_task_manager: LLMTaskManager,
-    context: Optional[dict] = None,
-    llm: Optional[BaseLLM] = None,
-):
+async def answer_question_with_sources(query,
+                                       llm_task_manager: LLMTaskManager,
+                                       context: Optional[dict] = None,
+                                       llm: Optional[BaseLLM] = None,
+                                       ):
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
-    user_message = context.get("last_user_message")
-    text_field = "text"
+
+    # use any model, right now its fixed to OpenAI models
     embed = OpenAIEmbeddings(
         model=[
             model.model
@@ -56,7 +55,9 @@ async def answer_question_with_sources(
         ][0],
         openai_api_key=OPENAI_API_KEY,
     )
-    vectorstore = Pinecone(pinecone.Index(index_name), embed.embed_query, text_field)
+    vectorstore = Pinecone(pinecone.Index(index_name),
+                           embed.embed_query, "text")
+
     qa_with_sources = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
@@ -66,35 +67,29 @@ async def answer_question_with_sources(
         return_source_documents=True,
     )
 
-    start_time = time.time()
-    result = qa_with_sources(user_message)
-    print(
-        "Getting the answer back from pinecone took: ",
-        time.time() - start_time,
-        " seconds!",
-    )
     answer = result["result"]
-    source_ref = str(result["source_documents"])
-    """
-    Note: Relevant chunks are stored in source_ref with the following format,
-    and urls are already contained inside the metadata tag of source_ref
-    {'query': '',
-    'result': '',
-    'source_documents': [Document(page_content='...',
-    metadata={'chunk': int, 'id': 'int', 'source': '/path/to/file.pdf'}),
-    ]
-    }
-    """
+    source_documents = result["source_documents"]
+    relevant_chunks = []
+    citations = []
+    
+    for document in source_documents:
+        relevant_chunks.append(document.page_content)
+        if document.metadata["source"] not in citations:
+            citations.append(document.metadata["source"])
+    
     context_updates = {
-        "relevant_chunks": source_ref,
-        "user_question": user_message,
+        "relevant_chunks": relevant_chunks,
+        "user_question": query,
         "bot_response": answer,
+        "citations": citations
     }
+    
     return ActionResult(
-        return_value=context_updates["relevant_chunks"],
+        return_value=context_updates["bot_response"],
         context_updates=context_updates,
     )
 
 
 def init(app: LLMRails):
-    app.register_action(answer_question_with_sources, "answer_question_with_sources")
+    app.register_action(answer_question_with_sources,
+                        "answer_question_with_sources")

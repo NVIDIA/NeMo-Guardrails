@@ -12,6 +12,11 @@ define user ask question
 define flow
   user express greeting
   bot express greeting
+
+define flow
   user ask question
-  $answer = execute answer_question_with_sources()
+  # Extract the full user query based on previous turns
+  $full_user_query = ...
+  $answer = execute answer_question_with_sources(query=$full_user_query)
   bot $answer
+
