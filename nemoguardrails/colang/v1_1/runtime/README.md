@@ -26,6 +26,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Fix unit test helper function to work with stories that generate bot messages when started
 - Cleanup abort/stop naming convention
 - Add support for other actions than UtteranceBotAction in cli interface
+- Support raw string literals for regex expressions : `r"\bword\b"` instead `r"\\bword\\b"`
 
 ## To Discuss
 

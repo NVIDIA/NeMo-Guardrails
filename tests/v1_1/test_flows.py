@@ -3507,5 +3507,38 @@ def test_references_in_groups():
     )
 
 
+def test_regular_expressions():
+    """"""
+
+    content = """
+    flow main
+      match UtteranceUserAction.Finished(final_transcript=r"\\bmatch\\b")
+      send StartUtteranceBotAction(script="Success")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi! This is a match !",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_send_umim_event()
+    test_regular_expressions()

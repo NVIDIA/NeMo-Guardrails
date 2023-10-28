@@ -15,6 +15,7 @@
 
 import logging
 import re
+from typing import Any
 
 from simpleeval import EvalWithCompoundTypes
 
@@ -24,7 +25,7 @@ from nemoguardrails.colang.v1_1.runtime import system_functions
 from nemoguardrails.colang.v1_1.runtime.utils import AttributeDict
 
 
-def eval_expression(expr, context):
+def eval_expression(expr, context) -> Any:
     """Evaluates the provided expression in the given context."""
     # If it's not a string, we should return it as such
     if expr is None:
@@ -35,10 +36,9 @@ def eval_expression(expr, context):
 
         return expr
 
-    # We search for all expressions inside expressions mark inside curly brackets
-    # and evaluate them first
-    pattern = r"\{\{(.*?)\}\}"
-    inner_expressions = re.findall(pattern, expr)
+    # We search for all inner expressions and evaluate them first
+    inner_expression_pattern = r"\{\{(.*?)\}\}"
+    inner_expressions = re.findall(inner_expression_pattern, expr)
     if inner_expressions:
         inner_expression_values = []
         for inner_expression in inner_expressions:
@@ -49,7 +49,29 @@ def eval_expression(expr, context):
             if isinstance(value, str):
                 value = value.replace('"', '\\"')
             inner_expression_values.append(value)
-        expr = re.sub(pattern, lambda x: str(inner_expression_values.pop(0)), expr)
+        expr = re.sub(
+            inner_expression_pattern,
+            lambda x: str(inner_expression_values.pop(0)),
+            expr,
+        )
+
+    # If the expression contains the pattern r"(.*?)" it is considered a regular expression
+    regex_pattern = r"(r\"(.*?)\")|(r'(.*?)')"
+    matches = re.findall(regex_pattern, expr)
+    if len(matches) > 0:
+        if len(matches) == 1:
+            try:
+                regex = matches[0][1] if matches[0][1] != "" else matches[0][3]
+                compiled_regex = re.compile(regex)
+                return compiled_regex
+            except Exception as ex:
+                raise Exception(
+                    f"Error in compiling regular expression '{expr}': {str(ex)}"
+                )
+        else:
+            raise Exception(
+                f"Error in compiling regular expression '{expr}': Multiple expression not supported!"
+            )
 
     # We search for all variable names starting with $, remove the $ and add
     # the value in the globals dict for eval
