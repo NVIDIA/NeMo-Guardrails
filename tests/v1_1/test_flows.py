@@ -2165,7 +2165,7 @@ def test_values_in_strings():
     content = """
     flow main
       start UtteranceBotAction(script="Roger") as $ref
-      start UtteranceBotAction(script="Hi {$ref.start_event_arguments.script}!")
+      start UtteranceBotAction(script="Hi {{$ref.start_event_arguments.script}}!")
     """
 
     config = _init_state(content)
@@ -2209,7 +2209,7 @@ def test_flow_return_values():
       $result_a = await a
       $result_b = await b
       $result_c = await c
-      start UtteranceBotAction(script="{$result_a} {$result_b} {$result_c}")
+      start UtteranceBotAction(script="{{$result_a}} {{$result_b}} {{$result_c}}")
     """
 
     config = _init_state(content)
@@ -2236,14 +2236,14 @@ def test_break_continue_statement_a():
       $count = -1
       while True
         $count = $count + 1
-        start UtteranceBotAction(script="S:{$count}")
+        start UtteranceBotAction(script="S:{{$count}}")
         if $count < 1
           $count = $count
         elif $count < 3
           continue
         elif $count == 3
           break
-        start UtteranceBotAction(script="E:{$count}")
+        start UtteranceBotAction(script="E:{{$count}}")
       start UtteranceBotAction(script="Done")
     """
 
@@ -3072,7 +3072,7 @@ def test_event_action_wrapper_abstraction():
 
 #     flow user said failed $transcript
 #       match (user said $transcript).Failed()
-#       start UtteranceBotAction(script="flow user said {$transcript} failed")
+#       start UtteranceBotAction(script="flow user said {{$transcript}} failed")
 
 #     flow main
 #       activate user said failed "hi" and user said failed "bye"
@@ -3154,7 +3154,7 @@ def test_user_action_reference():
     content = """
     flow main
       match UtteranceUserAction.Started() as $event_ref
-      start UtteranceBotAction(script="Started user action: {$event_ref.action.name}")
+      start UtteranceBotAction(script="Started user action: {{$event_ref.action.name}}")
       match $event_ref.action.Finished(final_transcript="End")
       start UtteranceBotAction(script="Success")
     """
@@ -3418,11 +3418,11 @@ def test_iternal_unhandled_event():
     content = """
     flow undefined flows
       match UnhandledEvent(event="StartFlow") as $event
-      await UtteranceBotAction(script="Undefined flow: {$event.arguments.flow_id}")
+      await UtteranceBotAction(script="Undefined flow: {{$event.arguments.flow_id}}")
 
     flow unexpected user utterance
       match UnhandledEvent(event="UtteranceUserActionFinished") as $event
-      await UtteranceBotAction(script="Unexpected user utterance: {$event.arguments.final_transcript}")
+      await UtteranceBotAction(script="Unexpected user utterance: {{$event.arguments.final_transcript}}")
 
     flow main
       activate undefined flows
@@ -3508,4 +3508,4 @@ def test_references_in_groups():
 
 
 if __name__ == "__main__":
-    test_references_in_groups()
+    test_send_umim_event()

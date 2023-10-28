@@ -80,11 +80,11 @@ def test_check_for_active_flow_finished_match_action():
           match UtteranceUserAction().Finished(final_transcript="start")
           start a
           $ready = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id="b", param="test")
-          await UtteranceBotAction(script="message {$ready}")
+          await UtteranceBotAction(script="message {{$ready}}")
           $ready = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id="b", param="test1")
-          await UtteranceBotAction(script="message {$ready}")
+          await UtteranceBotAction(script="message {{$ready}}")
           $ready = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id="a")
-          await UtteranceBotAction(script="message {$ready}")
+          await UtteranceBotAction(script="message {{$ready}}")
         """,
         yaml_content="""
         colang_version: "1.1"

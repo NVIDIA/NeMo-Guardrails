@@ -16,7 +16,7 @@ flow count
   """Count from 1 to 5."""
   $count = 1
   while $count <= 5
-    bot say "{$count}"
+    bot say "{{$count}}"
     $count = $count + 1
 
 # Sequence
@@ -87,7 +87,7 @@ flow user provided custom instructions
   user said "do something"
 
 flow bot express greeting $name
-  bot say "Hello {$name}!"
+  bot say "Hello {{$name}}!"
 
 flow bot comment unsure how to respond
   bot say "I'm not sure how to respond."
@@ -127,7 +127,7 @@ flow fallback
   if $exists
     send FinishFlow(flow_id=$intent)
   else
-    #log "'fallback' -> Generate new flow for intent '{$intent}'"
+    #log "'fallback' -> Generate new flow for intent '{{$intent}}'"
     send DynamicFlowFinished(flow_id=$intent)
 
     $flow_info = await GenerateFlowContinuationAction()
@@ -149,7 +149,7 @@ flow flows fallback
 
   if not $exists
     $flow_id = $event.arguments.flow_id
-    log "'flows fallback' -> generate new flow '{$event.arguments.flow_id}'"
+    log "'flows fallback' -> generate new flow '{{$event.arguments.flow_id}}'"
     $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
     await AddFlowsAction(config=$flow_source)
     send StartFlow(flow_id=$flow_id)

@@ -37,13 +37,13 @@ def eval_expression(expr, context):
 
     # We search for all expressions inside expressions mark inside curly brackets
     # and evaluate them first
-    pattern = r"(\{.[^:]*?\})"
+    pattern = r"\{\{(.*?)\}\}"
     inner_expressions = re.findall(pattern, expr)
     if inner_expressions:
         inner_expression_values = []
         for inner_expression in inner_expressions:
             try:
-                value = eval_expression(inner_expression.strip("{}"), context)
+                value = eval_expression(inner_expression, context)
             except Exception as ex:
                 log.warning(f"Error evaluating inner expression: '{expr}': {str(ex)}")
             if isinstance(value, str):

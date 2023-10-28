@@ -40,7 +40,7 @@ flow count
   """Count from 1 to 5."""
   $count = 1
   while $count <= 5
-    bot say "{$count}"
+    bot say "{{$count}}"
     $count = $count + 1
 
 # Branching
@@ -202,17 +202,17 @@ flow user provided custom instructions
 
 flow undefined flows
   match UnhandledEvent(event="StartFlow") as $event
-  bot say "Undefined flow: {$event.arguments.flow_id}"
+  bot say "Undefined flow: {{$event.arguments.flow_id}}"
 
 flow unexpected user utterance
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
-  bot say "Unexpected user utterance: {$event.arguments.final_transcript}"
+  bot say "Unexpected user utterance: {{$event.arguments.final_transcript}}"
 
 flow log $text
   """Little helper flow to log something as a bot utterance."""
   # llm: exclude
   # loop_id: NEW
-  start bot say ">> logging: {$text}"
+  start bot say ">> logging: {{$text}}"
 
 flow wait indefinitely
   """Little helper flow to wait indefinitely."""
@@ -263,7 +263,7 @@ flow fallback
   if $exists
     send FinishFlow(flow_id=$intent)
   else
-    #log "'fallback' -> Generate new flow for intent '{$intent}'"
+    #log "'fallback' -> Generate new flow for intent '{{$intent}}'"
     send DynamicFlowFinished(flow_id=$intent)
 
     start repeating timer 0.5 as $pooling_timer
@@ -288,7 +288,7 @@ flow flows fallback
 
   if not $exists
     $flow_id = $event.arguments.flow_id
-    #log "'flows fallback' -> generate new flow '{$event.arguments.flow_id}'"
+    #log "'flows fallback' -> generate new flow '{{$event.arguments.flow_id}}'"
 
     start repeating timer 0.5 as $pooling_timer
     $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
@@ -301,7 +301,7 @@ flow do $instructions
   """This will create a new flow based on the provided instructions and start it."""
   # llm: exclude
 
-  #log "Flow started -> do '{$instructions}'"
+  #log "Flow started -> do '{{$instructions}}'"
 
   start repeating timer 0.5 as $pooling_timer
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
