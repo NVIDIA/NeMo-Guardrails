@@ -2778,7 +2778,7 @@ def _compute_arguments_dict_matching_score(args: dict, ref_args: dict) -> float:
                 score *= _compute_arguments_dict_matching_score(
                     args[key], ref_args[key]
                 )
-            elif isinstance(ref_args[key], re.Pattern):
+            elif isinstance(ref_args[key], re.Pattern) and isinstance(args[key], str):
                 match = ref_args[key].search(args[key])
                 if match:
                     continue

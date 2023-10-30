@@ -22,9 +22,12 @@ import sys
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (ActionStatus,
-                                                      InternalEvent, State,
-                                                      run_to_completion)
+from nemoguardrails.colang.v1_1.runtime.flows import (
+    ActionStatus,
+    InternalEvent,
+    State,
+    run_to_completion,
+)
 from nemoguardrails.utils import EnhancedJSONEncoder
 from tests.utils import convert_parsed_colang_to_flow_config, is_data_in_events
 
@@ -3538,6 +3541,46 @@ def test_regular_expressions():
             }
         ],
     )
+
+
+def test_regular_expressions_flow_parameters():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction.Finished(final_transcript=$transcript)
+
+    flow main
+      user said r"\\bmatch\\b"
+      send StartUtteranceBotAction(script="Success")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi! This is a match !",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
+
+
+if __name__ == "__main__":
+    test_regular_expressions_flow_parameters()
 
 
 if __name__ == "__main__":
