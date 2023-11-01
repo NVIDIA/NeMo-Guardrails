@@ -15,9 +15,11 @@
 
 import logging
 import re
-from typing import Any
+from typing import Any, List
 
 from simpleeval import EvalWithCompoundTypes
+
+from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
 
@@ -101,9 +103,20 @@ def eval_expression(expr, context) -> Any:
                 "len": len,
                 "flow": system_functions.flow,
                 "action": system_functions.action,
+                "search": regex_search,
+                "findall": regex_findall,
+                "uid": new_uid,
             },
             names=expr_locals,
         )
         return s.eval(updated_expr)
     except Exception as ex:
         raise Exception(f"Error evaluating '{expr}': {str(ex)}")
+
+
+def regex_search(pattern: str, string: str) -> bool:
+    return bool(re.search(pattern, string))
+
+
+def regex_findall(pattern: str, string: str) -> List[str]:
+    return re.findall(pattern, string)

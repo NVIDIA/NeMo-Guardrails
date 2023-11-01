@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from typing import Any, List, Optional
 
 from lark import Token, Transformer, Tree
@@ -145,15 +146,21 @@ class ColangTransformer(Transformer):
             )
         ]
 
+        source = self._remove_source_code_comments(
+            self.source[meta.start_pos : meta.end_pos]
+        )
+
         return Flow(
             name=name,
             elements=elements,
             parameters=param_defs,
             _source=self.__source(meta),
-            source_code=self.source[meta.start_pos : meta.end_pos]
-            if self.include_source_mapping
-            else None,
+            source_code=source if self.include_source_mapping else None,
         )
+
+    def _remove_source_code_comments(self, source: str) -> str:
+        pattern = r"#(?! llm:)[^\n]*"
+        return re.sub(pattern, "", source)
 
     def _spec_op(self, children, meta):
         """Processing for `spec_op` tree nodes.
@@ -383,11 +390,17 @@ class ColangTransformer(Transformer):
         return main_when_element
 
     def _return_stmt(self, children, meta):
-        assert len(children) == 1 and children[0]["_type"] == "expr"
-        return Return(
-            expression=children[0]["elements"][0],
-            _source=self.__source(meta),
-        )
+        assert len(children) == 1
+        if children[0] is None or children[0]["_type"] != "expr":
+            return Return(
+                expression="None",
+                _source=self.__source(meta),
+            )
+        else:
+            return Return(
+                expression=children[0]["elements"][0],
+                _source=self.__source(meta),
+            )
 
     def _abort_stmt(self, children, meta):
         assert len(children) == 0

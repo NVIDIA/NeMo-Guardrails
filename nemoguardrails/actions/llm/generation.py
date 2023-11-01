@@ -110,10 +110,11 @@ class LLMGenerationActions:
 
     def _extract_user_message_example(self, flow: Flow):
         """Heuristic to extract user message examples from a flow."""
-        if len(flow.elements) != 2:
+        elements = [item for item in flow.elements if item._type != "doc_string_stmt"]
+        if len(elements) != 2:
             return
 
-        el = flow.elements[1]
+        el = elements[1]
         if isinstance(el, SpecOp):
             if el.op == "match":
                 spec = cast(SpecOp, el).spec

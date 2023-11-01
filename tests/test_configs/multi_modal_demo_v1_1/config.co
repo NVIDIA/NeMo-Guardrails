@@ -1,8 +1,8 @@
 # Example flows with instructions
 
 # Simple bot utterance action
-flow answer question about france
-  """Answer the following question: What is the capital of France."""
+flow bot answer question about france
+  """Bot answers the following question: What is the capital of France."""
   bot say "The capital of France it's Paris."
 
 # User action
@@ -32,12 +32,12 @@ flow bot tell a joke
 flow bot ask user for age
   """Ask the user how old she is and response with 'You look younger!' when she answers something."""
   bot say "How old are you?"
-  user said "I am 16"
+  user said something
   bot say "You look younger!"
 
 # Loop
-flow count
-  """Count from 1 to 5."""
+flow bot count from a number to another number
+  """Bot counts from 1 to 5."""
   $count = 1
   while $count <= 5
     bot say "{{$count}}"
@@ -47,190 +47,203 @@ flow count
 flow bot ask user to pick a color
   """Ask user to choose from two offered colors: red and blue then give a answer depending on the user choice."""
   bot say "What color would you like? Red or blue?"
-  when user said "Red"
+  when user expressed a color choice red
     bot say "I like red!"
-  orwhen user said "Blue"
+  orwhen user expressed a color choice blue
     bot say "I don't like blue!"
 
 # A little game
-flow play number guessing game
+flow bot play number guessing game with user
   """Ask the user to guess a random number between 1 and 100; after each guess let the user know if the number was to low or high. If the user guesses the correct number, congratulate!"""
-  bot say "Hi, please guess the random number between 0 and 100"
+  start scene show information $title="guess the random number between 0 and 100" as $scene
 
-  $random_number = 66
-  $is_incorrect_number = True
-  while $is_incorrect_number
+  $random_number = """Give me a random number between 1 and 100, e.g. 66 but not 66"""
+  bot say "Hi, please guess the random number between 0 and 100 (hint: {{$random_number}})"
+    and bot gesture "Waving hands"
+
+  $attempts = 1
+  while True
     user said something
-    # The number of the user otherwise None
-    $number = None
-    $number = await GenerateValueAction(var_name="number", instructions="Extract the number the user guessed.")
-    if $number == None
-      bot say "Please guess a number between 0 and 100!"
-      continue
-    if $number < $random_number
-      bot say "Sorry, this number is too low!"
-    elif $number > $random_number
-      bot say "Sorry, this number is too high!"
+    $user_number = """What is the number the user said?. Return as a single number, e.g. 34. Return 'None' for no number."""
+    if $user_number == None
+      bot express "I don't think this is a number!"
+        and bot gesture "frown"
+      bot ask "Just guess a number between 0 and 100!"
+    elif $user_number < $random_number
+      #bot inform that the guessed number is too low
+      bot inform "Sorry, {{$user_number}} is too low!"
+        and bot gesture "sad face, index finger pointing down"
+    elif $user_number > $random_number
+      #bot inform that the guessed number is too high
+      bot inform "Sorry, {{$user_number}} is too high!"
+        and bot gesture "sad face, index finger pointing up"
     else
-      bot say "Congratulation! This is the correct number!"
-      $is_correct_number = False
+      #stop $scene
+      send $scene.Stop()
+      #bot express congratulation and shows happiness
+      bot express "Congratulation! {{$user_number}} is the correct number!"
+        and bot gesture "smiling, dancing cheerful"
+      break
+    $attempts = $attempts + 1
+
+  #bot inform about the number of attempts it took the user to find the number
+  bot inform "It took you {{$attempts}} attempts to find the correct number!"
 
 # -----------------------------------
 # User UMIM event wrapper flows
+# DON'T CHANGE! Currently, hard-wired with LLM prompt generation
 # -----------------------------------
 
 flow user said $text
-  # llm: exclude
+  # meta: exclude from llm
+  # meta: user action
   match UtteranceUserAction.Finished(final_transcript=$text) as $event
 
 flow user said something
-  # llm: exclude
+  # meta: exclude from llm
+  # meta: user intent
   match UtteranceUserAction.Finished() as $event
+  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
 
 flow user was silent
   match TimerBotActionFinished(timer_name="user_silence", was_stopped=False)
 
 # ----------------------------------
 # Bot UMIM event wrapper flows
+# DON'T CHANGE! Currently, hard-wired with LLM prompt generation
 # ----------------------------------
 
 flow bot started saying $text
-  # llm: exclude
+  # meta: exclude from llm
   match UtteranceBotAction(script=$text).Started() as $event
 
 flow bot said $text
-  # llm: exclude
+  # meta: exclude from llm
   match UtteranceBotAction(script=$text).Finished() as $event
 
 flow bot said something
-  # llm: exclude
+  # meta: exclude from llm
   match UtteranceBotAction().Finished() as $event
 
 # ----------------------------------
 # Bot UMIM action wrapper flows
+# DON'T CHANGE! Currently, hard-wired with LLM prompt generation
 # -----------------------------------
 
-flow bot say $text
-  # llm: exclude
+flow _bot_say $text
+  """It's an internal helper for higher semantic level flows"""
+  # meta: exclude from llm
   await UtteranceBotAction(script=$text) as $action
 
 flow bot gesture $gesture
-  # llm: exclude
+  # meta: exclude from llm
+  # meta: bot action
   await GestureBotAction(gesture=$gesture) as $action
 
 flow scene show choice $prompt
-  # llm: exclude
+  # meta: exclude from llm
+  # meta: bot action
   await VisualChoiceSceneAction(prompt=$prompt,choice_type="selection", allow_multiple_choices=False) as $action
 
-flow scene show information $prompt
-  # llm: exclude
-  await VisualInformationSceneAction(prompt=$prompt) as $action
+flow scene show information $title
+  # meta: exclude from llm
+  # meta: bot action
+  await VisualInformationSceneAction(title=$title, support_prompts=[], content=[]) as $action
 
 flow scene show form $prompt
-  # llm: exclude
+  # meta: exclude from llm
+  # meta: bot action
   await VisualInformationSceneAction(prompt=$prompt) as $action
 
 # ----------------------------------
-# Bot say action semantic wrapper flows
+# Bot action semantic wrapper flows
+# DON'T CHANGE! Currently, hard-wired with LLM prompt generation
 # -----------------------------------
+
+flow bot say $text
+  # meta: exclude from llm
+  # meta: bot action
+  await _bot_say $text
 
 flow bot inform $text
-  # llm: exclude
-  await bot say $text
+  # meta: exclude from llm
+  # meta: bot action
+  await _bot_say $text
 
 flow bot ask $text
-  # llm: exclude
-  await bot say $text
+  # meta: exclude from llm
+  # meta: bot action
+  await _bot_say $text
 
 flow bot express $text
-  # llm: exclude
-  await bot say $text
+  # meta: exclude from llm
+  # meta: bot action
+  await _bot_say $text
 
 flow bot respond $text
-  # llm: exclude
-  await bot say $text
+  # meta: exclude from llm
+  # meta: bot action
+  await _bot_say $text
+
+flow bot clarify $text
+  # meta: exclude from llm
+  # meta: bot action
+  await _bot_say $text
+
+flow bot suggest $text
+  # meta: exclude from llm
+  # meta: bot action
+  await _bot_say $text
 
 # ----------------------------------
-# Bot intents
+# Core mechanic flows
 # -----------------------------------
 
-flow bot express greeting
-  bot express "Hi there!"
-    or bot express "Welcome!"
-    or bot express "Hello!"
-    and bot gesture "Wave with one hand"
-
-flow bot express feeling well
-  bot express "I am good!"
-    or bot express "I am great!"
-    and (bot gesture "Thumbs up" or bot gesture "Smile")
-
-flow bot express feeling bad
-  bot express "I am not good!"
-    or bot express "I am a bit under the weather!"
-    and (bot gesture "Thumbs down" or bot gesture "Sad face")
-
-flow bot inform about service
-  bot inform "You can ask or instruct me whatever you want and I will do it!"
-    and bot gesture "Open up both hands making a presenting gesture"
-
-flow bot ask how are you
-  bot say "How are you doing?"
-    or bot say "How is it going?"
-    and bot gesture "Pay attention to user"
-
-# ----------------------------------
-# User intents
-# -----------------------------------
-
-flow user expressed greeting
-  user said "hi"
-    or user said "Welcome!"
-    or user said "Hello!"
-
-flow user asked how are you
-  user said "how are you"
-
-flow user provided custom instructions
-  user said "do something"
-    or user said "can you do something"
-    or user said "please do"
-
-# ----------------------------------
-# Helper flows
-# -----------------------------------
+flow llm response pooling $interval
+  match StartGenerateUserIntentAction() as $event_ref
+    or StartGenerateFlowContinuationAction() as $event_ref
+    or StartGenerateFlowFromNameAction() as $event_ref
+    or StartGenerateValueAction() as $event_ref
+  start repeating timer $interval as $pooling_timer
+  match $event_ref.action.Finished()
+  send $pooling_timer.Stop()
 
 flow undefined flows
+  """A flow to catch the start of undefined flows."""
+  # meta: exclude from llm
   match UnhandledEvent(event="StartFlow") as $event
   bot say "Undefined flow: {{$event.arguments.flow_id}}"
 
 flow unexpected user utterance
+  """A flow to catch unhandled user utterances."""
+  # meta: exclude from llm
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
   bot say "Unexpected user utterance: {{$event.arguments.final_transcript}}"
 
 flow log $text
   """Little helper flow to log something as a bot utterance."""
-  # llm: exclude
-  # loop_id: NEW
+  # meta: exclude from llm
+  # meta: loop_id=NEW
   start bot say ">> logging: {{$text}}"
 
 flow wait indefinitely
   """Little helper flow to wait indefinitely."""
-  # llm: exclude
+  # meta: exclude from llm
   match NeverComingEvent()
 
 flow wait $time_s
-  """Wait for the time provided"""
-  await TimerBotAction(timer_name="pooling_timer", duration=$interval_s)
+  """Wait the specified number of seconds before continuing."""
+  await TimerBotAction(timer_name="wait_timer", duration=$time_s)
 
 flow repeating timer $interval_s
-  # llm: exclude
+  """Repeating timer."""
+  # meta: exclude from llm
   while True
-    await TimerBotAction(timer_name="pooling_timer", duration=$interval_s)
+    await TimerBotAction(timer_name="repeating_timer", duration=$interval_s)
 
 flow user silence handling $time_s
   """This helper flow will start the "user_silence" timer whenever the user utterance finished."""
-  # llm: exclude
+  # meta: exclude from llm
   # loop_id: silence_handling
   user said something
   #log "Start silence timer!"
@@ -239,73 +252,77 @@ flow user silence handling $time_s
 
 flow repeat previous utterance for user silence
   """This helper flow will repeat the previous bot utterance when user was silent."""
-  # llm: exclude
+  # meta: exclude from llm
   activate user silence handling 5.0
   user was silent
   bot inform "Just talk to me!"
 
 flow fallback
   """This is the fallback flow that takes care of unhandled user utterances and will generate a flow continuation."""
-  # llm: exclude
+  # meta: exclude from llm
 
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
-
-  #log "Flow started -> fallback"
+  # We need to add the utterance to the action log
+  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=None)
 
   start_new_flow_instance:
 
-  start repeating timer 0.5 as $pooling_timer
   $intent = await GenerateUserIntentAction(user_utterance=$event.arguments.final_transcript, max_example_flows=10)
-  send $pooling_timer.Stop()
+
+  # We need to add the generated user intent to the intent log
+  send UserIntentLog(flow_id=$intent, parameter=None)
 
   $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
-
   if $exists
     send FinishFlow(flow_id=$intent)
   else
-    #log "'fallback' -> Generate new flow for intent '{{$intent}}'"
-    send DynamicFlowFinished(flow_id=$intent)
 
-    start repeating timer 0.5 as $pooling_timer
+    # Generate continuation based current interaction history
     $flow_info = await GenerateFlowContinuationAction()
-    send $pooling_timer.Stop()
 
-    await AddFlowsAction(config=$flow_info['body'])
+    $exists = await CheckIfFlowExistsAction(flow_id=$flow_info.name)
+    if $exists == False
+      await AddFlowsAction(config=$flow_info.body)
 
-    send StartFlow(flow_id=$flow_info['name'])
-    match FlowStarted(flow_id=$flow_info['name']) as $event_ref
+    $new_flow_start_uid = "{uid()}"
+    send StartFlow(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid)
+    match FlowStarted(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid) as $event_ref
     match $event_ref.flow.Finished()
 
 flow flows fallback
-  """If we reach a point where we need to start a flow that does not exist, we generate it."""
-  # llm: exclude
+  """We want to start an undefined flow."""
+  # meta: exclude from llm
 
   match UnhandledEvent(event="StartFlow") as $event
 
-  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
-
   start_new_flow_instance:
 
-  if not $exists
-    $flow_id = $event.arguments.flow_id
-    #log "'flows fallback' -> generate new flow '{{$event.arguments.flow_id}}'"
+  if "{{search('^user ',$event.arguments.flow_id)}}" == "True"
 
-    start repeating timer 0.5 as $pooling_timer
-    $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
-    send $pooling_timer.Stop()
+    # We have an undefined user intent, so we just fake it to be started by this fallback flow
+    send FlowStarted(flow_id=$event.arguments.flow_id, flow_start_uid=$event.arguments.flow_start_uid)
+    # Once this fallback flow receives the user intent it will finish and therefore also trigger the original matcher
+    match FlowFinished(flow_id=$event.arguments.flow_id)
+
+  else
+
+    # We have an undefined bot intent, let's generate a new flow for it
+
+    $flow_source = await GenerateFlowFromNameAction(name=$event.arguments.flow_id)
 
     await AddFlowsAction(config=$flow_source)
-    send StartFlow(flow_id=$flow_id)
+    $new_flow_start_uid = "{uid()}"
+    send StartFlow(flow_id=$event.arguments.flow_id, flow_start_uid=$new_flow_start_uid)
+    match FlowStarted(flow_id=$event.arguments.flow_id, flow_start_uid=$new_flow_start_uid) as $event_ref
+    match $event_ref.flow.Finished()
 
 flow do $instructions
   """This will create a new flow based on the provided instructions and start it."""
-  # llm: exclude
+  # meta: exclude from llm
 
   #log "Flow started -> do '{{$instructions}}'"
 
-  start repeating timer 0.5 as $pooling_timer
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
-  send $pooling_timer.Stop()
 
   await AddFlowsAction(config=$flow_info.body)
   send StartFlow(flow_id=$flow_info['name'])
@@ -313,10 +330,75 @@ flow do $instructions
   match $event_ref.flow.Finished()
 
 flow custom instructions
-  # llm: exclude
-  user provided custom instructions
+  # meta: exclude from llm
+  user requested a task
   $instructions = await GetLastUserMessageAction()
   do $instructions
+
+# ----------------------------------
+# Bot intents
+# Note: To enable the LLM prompt generation extraction use only one single statement
+# -----------------------------------
+
+flow bot express greeting
+  # meta: bot intent
+  (bot express "Hi there!"
+    or bot express "Welcome!"
+    or bot express "Hello!")
+    and bot gesture "Wave with one hand"
+
+flow bot express feeling well
+  # meta: bot intent
+  (bot express "I am good!"
+    or bot express "I am great!")
+    and (bot gesture "Thumbs up" or bot gesture "Smile")
+
+flow bot express feeling bad
+  # meta: bot intent
+  (bot express "I am not good!"
+    or bot express "I am a bit under the weather!")
+    and (bot gesture "Thumbs down" or bot gesture "Sad face")
+
+flow bot inform about service
+  # meta: bot intent
+  bot inform "You can ask or instruct me whatever you want and I will do it!"
+    and bot gesture "Open up both hands making a presenting gesture"
+
+flow bot ask how are you
+  # meta: bot intent
+  (bot say "How are you doing?"
+    or bot say "How is it going?")
+    and bot gesture "Pay attention to user"
+
+flow bot make short pause
+  # meta: bot intent
+  wait 2.0
+
+flow bot make long pause
+  # meta: bot intent
+  wait 5.0
+
+# ----------------------------------
+# User intents
+# Note: To enable the LLM prompt generation extraction use only one single statement
+# -----------------------------------
+
+flow user expressed greeting
+  # meta: user intent
+  user said "hi"
+    or user said "Welcome!"
+    or user said "Hello!"
+
+flow user asked how are you
+  # meta: user intent
+  user said "how are you"
+
+flow user requested a task
+  # meta: user intent
+  user said "do something"
+    or user said "can you do something"
+    or user said "please do"
+
 # ----------------------------------
 # FAQs
 # -----------------------------------
@@ -339,16 +421,33 @@ flow faq
 # Main story
 # -----------------------------------
 
+flow test llm
+  # meta: exclude from llm
+
+  match UnhandledEvent(event="UtteranceUserActionFinished") as $event
+
+  $intent = await GenerateUserIntentAction(user_utterance=$event.arguments.final_transcript, max_example_flows=10)
+
+  $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
+  if $exists
+    send FinishFlow(flow_id=$intent)
+  else
+    bot say "Intent '{{$intent}}' not found!"
+
 flow main
+  # meta: exclude from llm
   #activate undefined flows
   #activate unexpected user utterance
   #activate repeat previous utterance for user silence
-  activate faq
+  #activate test llm
+  #activate faq
+  activate llm response pooling 1.0
   activate fallback
   activate flows fallback
-  activate custom instructions
+  #activate custom instructions
   #bot express greeting
-  bot say "Welcome! I'm the MVP bot."
+  #bot say "Welcome! I'm the MVP bot."
+  bot play number guessing game with user
   #bot inform about service
   #play number guessing game
   wait indefinitely

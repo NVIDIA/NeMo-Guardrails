@@ -59,19 +59,19 @@ flow number guessing game
 # Common
 
 flow user said $text
-  # llm: exclude
+  # meta: exclude from llm
   match UtteranceUserAction.Finished(final_transcript=$text)
 
 flow user said something
-  # llm: exclude
+  # meta: exclude from llm
   match UtteranceUserAction.Finished() as $event
 
 flow bot say $text
-  # llm: exclude
+  # meta: exclude from llm
   await UtteranceBotAction(script=$text)
 
 flow wait
-  # llm: exclude
+  # meta: exclude from llm
   match SomeRandomEvent()
 
 # Custom
@@ -115,7 +115,7 @@ flow unknown intent
 
 flow fallback
   """This is the fallback flow that takes care of unhandled user utterances and will generate a flow continuation."""
-  # llm: exclude
+  # meta: exclude from llm
 
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
 
@@ -139,7 +139,7 @@ flow fallback
 
 flow flows fallback
   """If we reach a point where we need to start a flow that does not exist, we generate it."""
-  # llm: exclude
+  # meta: exclude from llm
 
   match UnhandledEvent(event="StartFlow") as $event
 
@@ -156,7 +156,7 @@ flow flows fallback
 
 
 flow do $instructions
-  # llm: exclude
+  # meta: exclude from llm
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
   await AddFlowsAction(config=$flow_info.body)
   send StartFlow(flow_id=$flow_info['name'])
@@ -164,13 +164,13 @@ flow do $instructions
   match $event_ref.flow.Finished()
 
 flow custom instructions
-  # llm: exclude
+  # meta: exclude from llm
   user provided custom instructions
   $instructions = await GetLastUserMessageAction()
   do $instructions
 
 flow main
-  # llm: exclude
+  # meta: exclude from llm
   activate greeting
   activate custom instructions
   activate unknown intent

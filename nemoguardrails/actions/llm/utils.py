@@ -142,74 +142,86 @@ def get_colang_history(
                 history = placeholder_text.join(split_history)
 
     else:
-        history: List[str] = []
+        new_history: List[str] = []
 
-        for idx, event in enumerate(events):
-            if isinstance(event, InternalEvent):
-                event = {"type": event.name, **event.arguments}
+        # Structure the user/bot intent/action events
+        action_group: List[InternalEvent] = []
+        current_intent_flow_id: Optional[str] = None
+        for event in events:
+            if not isinstance(event, InternalEvent):
+                continue
 
-            new_item: Optional[str] = None
-            if event["type"] in ["FlowFinished", "DynamicFlowFinished"]:
-                flow_id = event["flow_id"]
-
-                if flow_id.startswith("bot "):
-                    if flow_id == "bot say":
-                        new_item = f"bot say \"{event['text']}\""
-                    elif flow_id == "bot inform":
-                        new_item = f"bot inform \"{event['text']}\""
-                    elif flow_id == "bot ask":
-                        new_item = f"bot ask \"{event['text']}\""
-                    elif flow_id == "bot express":
-                        new_item = f"bot express \"{event['text']}\""
-                    elif flow_id == "bot respond":
-                        new_item = f"bot respond \"{event['text']}\""
-                    elif flow_id == "bot gesture":
-                        new_item = f"bot gesture \"{event['gesture']}\""
-                    else:
-                        new_item = f"{flow_id}"
-                elif flow_id.startswith("user "):
-                    if flow_id == "user said something":
-                        continue
-                    elif (
-                        flow_id.startswith("user said")
-                        and flow_id != "user said something"
-                    ):
-                        new_item = f"user said \"{event['text']}\""
-                    else:
-                        new_item = f"{flow_id}"
-
-            elif event["type"] == "UtteranceUserActionFinished":
-                new_item = f'user said "{event["final_transcript"]}"'
-
-            # Make sure we don't record duplicated entries
-            if new_item is not None and (len(history) == 0 or new_item != history[-1]):
-                history.append(new_item)
-
-        # We also want to switch the "bot say" with "bot xxx" events
-        # and remove duplicate consecutive lines.
-        final_history = []
-        i = 0
-        while i < len(history):
-            if i < len(history) - 1:
-                # Skip duplicate line
-                if history[i] == history[i + 1]:
-                    i += 1
-                    continue
-
-                # if we have a "bot say" followed by a "bot xxx", we reverse
-                if history[i].startswith("bot say") and history[i + 1].startswith(
-                    "bot "
+            if (
+                event.name == InternalEvents.BOT_ACTION_LOG
+                or event.name == InternalEvents.USER_ACTION_LOG
+            ):
+                if len(action_group) > 0 and (
+                    current_intent_flow_id is None
+                    or current_intent_flow_id != event.arguments["intent_flow_id"]
                 ):
-                    final_history.extend([history[i + 1], history[i]])
-                    i += 2
-                    continue
+                    new_history.append(events_to_dialog_history(action_group))
+                    new_history.append("")
+                    action_group.clear()
 
-            final_history.append(history[i])
-            i += 1
+                action_group.append(event)
+                current_intent_flow_id = event.arguments["intent_flow_id"]
+            elif (
+                event.name == InternalEvents.BOT_INTENT_LOG
+                or event.name == InternalEvents.USER_INTENT_LOG
+            ):
+                if event.arguments["flow_id"] == current_intent_flow_id:
+                    # Found parent of current group
+                    if event.name == InternalEvents.BOT_INTENT_LOG:
+                        new_history.append(events_to_dialog_history([event]))
+                        new_history.append(events_to_dialog_history(action_group))
+                    else:
+                        new_history.append(events_to_dialog_history(action_group))
+                        new_history.append(events_to_dialog_history([event]))
+                    new_history.append("")
+                else:
+                    # New unrelated intent
+                    new_history.append(events_to_dialog_history(action_group))
+                    new_history.append("")
+                    new_history.append(events_to_dialog_history([event]))
+                    new_history.append("")
+                # Start a new group
+                action_group.clear()
+                current_intent_flow_id = None
 
-        history = "\n".join(final_history)
+        if action_group:
+            new_history.append(events_to_dialog_history(action_group))
+
+        history = "\n".join(new_history)
 
     return history
+
+
+def events_to_dialog_history(events: List[InternalEvent]) -> str:
+    result = ""
+    for idx, event in enumerate(events):
+        identifier = from_log_event_to_identifier(event.name)
+        intent = f"{identifier}: {event.arguments['flow_id']}"
+        param_value = event.arguments["parameter"]
+        if param_value is not None:
+            if isinstance(param_value, str):
+                intent = f'{intent} "{param_value}"'
+            else:
+                intent = f"{intent} {param_value}"
+        result += intent
+        if idx + 1 < len(events):
+            result += "\n  and "
+    return result
+
+
+def from_log_event_to_identifier(event_name: str) -> str:
+    if event_name == InternalEvents.BOT_INTENT_LOG:
+        return "bot intent"
+    elif event_name == InternalEvents.BOT_ACTION_LOG:
+        return "bot action"
+    elif event_name == InternalEvents.USER_INTENT_LOG:
+        return "user intent"
+    elif event_name == InternalEvents.USER_ACTION_LOG:
+        return "user action"
 
 
 def flow_to_colang(flow: Union[dict, Flow]):

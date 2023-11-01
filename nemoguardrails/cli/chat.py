@@ -67,12 +67,25 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                     )
                 )
             if event["type"] == "StartGestureBotAction":
-                # We print bot messages in green.
+                # We print gesture messages in green.
                 print(f"\033[92mgesture: {event['gesture']}\033[0m")
 
                 input_events.append(
                     new_event_dict(
                         "GestureBotActionFinished",
+                        action_uid=event["action_uid"],
+                        is_success=True,
+                    )
+                )
+
+            if event["type"] == "StartVisualInformationSceneAction":
+                # We print scene messages in green.
+                print(f"\033[92mscene information: {event['title']}\033[0m")
+
+            if event["type"] == "StopVisualInformationSceneAction":
+                input_events.append(
+                    new_event_dict(
+                        "VisualInformationSceneActionFinished",
                         action_uid=event["action_uid"],
                         is_success=True,
                     )

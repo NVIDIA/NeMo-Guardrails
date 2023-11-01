@@ -18,14 +18,16 @@ import copy
 import json
 import logging
 import sys
+import time
 
 from rich.logging import RichHandler
 
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import (
+from nemoguardrails.colang.v1_1.runtime.statemachine import (
     ActionStatus,
     InternalEvent,
     State,
+    initialize_state,
     run_to_completion,
 )
 from nemoguardrails.utils import EnhancedJSONEncoder
@@ -54,7 +56,7 @@ def _init_state(colang_content) -> State:
 
     json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
     state = State(context={}, flow_states=[], flow_configs=config)
-    state.initialize()
+    initialize_state(state)
     print("---------------------------------")
     json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
 
@@ -1744,7 +1746,7 @@ def test_await_or_group_finish():
 
     content = """
     flow bot say $text
-      # llm: exclude
+      # meta: exclude from llm
       await UtteranceBotAction(script=$text) as $action
 
     flow bot express greeting
@@ -3261,7 +3263,7 @@ def test_independent_flow_loop_mechanics():
 
     content = """
     flow bot say $script
-      # loop_id: NEW
+      # meta: loop_id=NEW
       await UtteranceBotAction(script=$script)
 
     flow main
@@ -3350,15 +3352,15 @@ def test_mixed_multimodal_group_actions():
 
     content = """
     flow bot say $text
-      # llm: exclude
+      # meta: exclude from llm
       await UtteranceBotAction(script=$text) as $action
 
     flow bot gesture $gesture
-      # llm: exclude
+      # meta: exclude from llm
       await GestureBotAction(gesture=$gesture) as $action
 
     flow bot express $text
-      # llm: exclude
+      # meta: exclude from llm
       await bot say $text
 
     flow bot express feeling well
@@ -3510,7 +3512,7 @@ def test_references_in_groups():
     )
 
 
-def test_regular_expressions():
+def test_regular_expressions_action_parameters():
     """"""
 
     content = """
@@ -3579,9 +3581,51 @@ def test_regular_expressions_flow_parameters():
     )
 
 
-if __name__ == "__main__":
-    test_regular_expressions_flow_parameters()
+def test_expr_func_search():
+    """"""
+
+    content = """
+    flow main
+      $test = "{{search('\\\\bmatch\\\\b', 'dsfkjdsfhds match sfsd')}}"
+      if $test == "True"
+        send StartUtteranceBotAction(script="Success")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
+
+
+def test_generate_value_with_NLD():
+    """"""
+
+    content = """
+    flow main
+      #$test = await GenerateValueAction(var_name="number", instructions="Extract the number the user guessed.")
+      $test = '''Generate a random number'''
+      send StartUtteranceBotAction(script="{{$test}}")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGenerateValueAction",
+                "instructions": "Generate a random number",
+            }
+        ],
+    )
 
 
 if __name__ == "__main__":
-    test_regular_expressions()
+    test_generate_value_with_NLD()

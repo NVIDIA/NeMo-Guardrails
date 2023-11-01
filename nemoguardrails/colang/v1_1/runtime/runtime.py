@@ -25,7 +25,7 @@ from langchain.chains.base import Chain
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
-from nemoguardrails.colang.v1_1.runtime.flows import (
+from nemoguardrails.colang.v1_1.runtime.statemachine import (
     FlowConfig,
     InternalEvent,
     State,
@@ -33,6 +33,7 @@ from nemoguardrails.colang.v1_1.runtime.flows import (
     create_flow_instance,
     expand_elements,
     initialize_flow,
+    initialize_state,
     run_to_completion,
 )
 from nemoguardrails.rails.llm.config import RailsConfig
@@ -66,9 +67,12 @@ class RuntimeV1_1(Runtime):
                 filename="",
                 content=flow_content,
                 version="1.1",
+                include_source_mapping=True,
             )
         except Exception as e:
             log.warning(f"Could not parse the colang content! {e}")
+            error_message_event = new_event_dict("LLMFlowGenerationError", error=e)
+            state.outgoing_events.append(error_message_event)
             raise Exception(f"Could not parse the colang content! {e}")
 
         added_flows: List[str] = []
@@ -82,6 +86,7 @@ class RuntimeV1_1(Runtime):
                 loop_id=None,
                 elements=expand_elements(flow.elements, state.flow_configs),
                 parameters=flow.parameters,
+                source_code=flow.source_code,
             )
 
             initialize_flow(self, flow_config)
@@ -374,7 +379,7 @@ class RuntimeV1_1(Runtime):
 
         if state is None:
             state = State(context={}, flow_states={}, flow_configs=self.flow_configs)
-            state.initialize()
+            initialize_state(state)
             input_event = InternalEvent(name="StartFlow", arguments={"flow_id": "main"})
             input_events.insert(0, input_event)
             log.info("Start of story!")
@@ -409,11 +414,8 @@ class RuntimeV1_1(Runtime):
                 # Record the event that we're about to process
                 state.last_events.append(event)
 
-                try:
-                    # Advance the state machine
-                    run_to_completion(state, event)
-                except Exception as ex:
-                    log.error(ex)
+                # Advance the state machine
+                run_to_completion(state, event)
 
                 # If we have context updates after this event, we first add that.
                 if state.context_updates:
