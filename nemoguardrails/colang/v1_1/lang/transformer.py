@@ -159,7 +159,7 @@ class ColangTransformer(Transformer):
         )
 
     def _remove_source_code_comments(self, source: str) -> str:
-        pattern = r"#(?! llm:)[^\n]*"
+        pattern = r"#(?! (llm:|meta:))[^\n]*"
         return re.sub(pattern, "", source)
 
     def _spec_op(self, children, meta):
