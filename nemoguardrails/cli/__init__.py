@@ -28,7 +28,7 @@ from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
 
 app = typer.Typer()
-app.add_typer(evaluate.app, name="evaluate")
+app.add_typer(evaluate.app, name="evaluate", short_help="Run an evaluation task.")
 app.pretty_exceptions_enable = False
 
 logging.getLogger().setLevel(logging.WARNING)
@@ -58,7 +58,7 @@ def chat(
         default=None, help="The config_id to be used when interacting with the server."
     ),
 ):
-    """Starts an interactive chat session."""
+    """Start an interactive chat session."""
     if verbose:
         set_verbose(True)
 
@@ -101,7 +101,7 @@ def server(
         help="A prefix that should be added to all server paths. Should start with '/'.",
     ),
 ):
-    """Starts a NeMo Guardrails server."""
+    """Start a NeMo Guardrails server."""
     if config:
         api.app.rails_config_path = config[0]
     else:
@@ -136,6 +136,6 @@ def action_server(
         default=8001, help="The port that the server should listen on. "
     ),
 ):
-    """Starts a NeMo Guardrails actions server."""
+    """Start a NeMo Guardrails actions server."""
 
     uvicorn.run(actions_server.app, port=port, log_level="info", host="0.0.0.0")

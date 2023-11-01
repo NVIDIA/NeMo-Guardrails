@@ -1,5 +1,7 @@
 # Getting Started
 
+> **NOTE**: this needs to be focused only on the installation part.
+
 This is a getting started guide for users of the alpha version. This guide will cover:
 
 1. Installation of the NeMo Guardrails toolkit;
