@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import random
 import time
 
 import pandas as pd
@@ -24,7 +25,7 @@ from nemoguardrails.logging.stats import llm_stats
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "bots")
 
-NUM_TEST_RUNS = 1  # Number of times to average results over
+NUM_TEST_RUNS = 30  # Number of times to average results over
 
 TEST_QUESTIONS = [
     # chit-chat questions
@@ -55,6 +56,26 @@ TEST_CONFIGS = [
 ]
 
 
+def build_run_configs():
+    run_configs = []
+    for test_config in TEST_CONFIGS:
+        config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, test_config))
+        app = LLMRails(config)
+
+        for test_run_idx in range(NUM_TEST_RUNS):
+            for test_question_idx, test_question in enumerate(TEST_QUESTIONS):
+                run_configs.append(
+                    {
+                        "test_config": test_config,
+                        "test_question_idx": test_question_idx,
+                        "test_question": test_question,
+                        "test_run_idx": test_run_idx,
+                        "app": app,
+                    }
+                )
+    return run_configs
+
+
 def run_latency_report():
     latency_report_cols = [
         "config",
@@ -73,61 +94,53 @@ def run_latency_report():
 
     sleep_time = 0
 
-    for test_config in tqdm(TEST_CONFIGS):
-        config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, test_config))
+    run_configs = build_run_configs()
+    random.shuffle(
+        run_configs
+    )  # Based on review feedback to avoid time-of-hour effects affecting some config in order
 
-        app = LLMRails(config)
+    for run_config in tqdm(run_configs):
+        test_config = run_config["test_config"]
+        test_question_idx = run_config["test_question_idx"]
+        test_question = run_config["test_question"]
+        test_run_idx = run_config["test_run_idx"]
+        app = run_config["app"]
 
-        for test_run_idx in tqdm(range(NUM_TEST_RUNS)):
-            for test_question_idx, test_question in enumerate(TEST_QUESTIONS):
-                # This is to avoid rate-limiters from LLM APIs affecting measurements
-                time.sleep(2)
-                llm_stats.reset()
-                sleep_time += 2
-                start_time = time.time()
-                response = app.generate(
-                    messages=[{"role": "user", "content": test_question}]
-                )
-                end_time = time.time()
-                assert response["role"] == "assistant"
+        # This is to avoid rate-limiters from LLM APIs affecting measurements
+        time.sleep(1)
+        llm_stats.reset()
+        sleep_time += 1
+        start_time = time.time()
+        response = app.generate(messages=[{"role": "user", "content": test_question}])
+        end_time = time.time()
+        assert response["role"] == "assistant"
 
-                stats = llm_stats.get_stats()
-                latency_report_rows.append(
-                    [
-                        test_config,
-                        test_question_idx,
-                        test_question,
-                        test_run_idx,
-                        response["content"],
-                        end_time - start_time,
-                        stats["total_time"],
-                        stats["total_calls"],
-                        stats["total_prompt_tokens"],
-                        stats["total_completion_tokens"],
-                        stats["total_tokens"],
-                    ]
-                )
-
-    value_cols = [
-        "total_overall_time",
-        "total_llm_calls_time",
-        "num_llm_calls",
-        "num_prompt_tokens",
-        "num_completion_tokens",
-        "num_total_tokens",
-    ]
-    final_column_order = [
-        (value_column, config_name)
-        for config_name in TEST_CONFIGS
-        for value_column in value_cols
-    ]
+        stats = llm_stats.get_stats()
+        latency_report_rows.append(
+            [
+                test_config,
+                test_question_idx,
+                test_question,
+                test_run_idx,
+                response["content"],
+                end_time - start_time,
+                stats["total_time"],
+                stats["total_calls"],
+                stats["total_prompt_tokens"],
+                stats["total_completion_tokens"],
+                stats["total_tokens"],
+            ]
+        )
 
     latency_report_df = pd.DataFrame(latency_report_rows, columns=latency_report_cols)
+    latency_report_df = latency_report_df.sort_values(
+        by=["question_id", "config", "run_id"]
+    )
     print(latency_report_df)
     latency_report_df.to_csv("latency_report_detailed_openai.tsv", sep="\t")
 
     latency_report_grouped = latency_report_df.groupby(
-        by=["config", "question_id"]
+        by=["question_id", "question", "config"]
     ).agg(
         {
             "total_overall_time": "mean",
@@ -136,19 +149,12 @@ def run_latency_report():
             "num_prompt_tokens": "mean",
             "num_completion_tokens": "mean",
             "num_total_tokens": "mean",
+            "response": "min",
         }
     )
     print()
     print(latency_report_grouped)
-    latency_report_pivoted = pd.pivot_table(
-        latency_report_grouped,
-        values=value_cols,
-        index=["question_id"],
-        columns=["config"],
-    )
-    latency_report_pivoted = latency_report_pivoted.reindex(columns=final_column_order)
-    print(latency_report_pivoted)
-    latency_report_pivoted.to_csv("latency_report_openai.tsv", sep="\t")
+    latency_report_grouped.to_csv("latency_report_openai.tsv", sep="\t")
     return sleep_time
 
 
