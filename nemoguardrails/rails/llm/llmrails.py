@@ -84,6 +84,10 @@ class LLMRails:
                 default_flows_file, default_flows_content
             )["flows"]
 
+        # We mark all the default flows as system flows.
+        for flow_config in default_flows:
+            flow_config["is_system_flow"] = True
+
         # We add the default flows to the config.
         self.config.flows.extend(default_flows)
 
@@ -96,6 +100,10 @@ class LLMRails:
                 if file.endswith(".co"):
                     with open(full_path, "r", encoding="utf-8") as f:
                         content = parse_colang_file(file, content=f.read())
+
+                        # We mark all the flows coming from the guardrails library as system flows.
+                        for flow_config in content["flows"]:
+                            flow_config["is_system_flow"] = True
 
                         # We load all the flows
                         self.config.flows.extend(content["flows"])

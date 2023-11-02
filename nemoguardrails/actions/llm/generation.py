@@ -162,13 +162,9 @@ class LLMGenerationActions:
 
         items = []
         for flow in self.config.flows:
-            # We don't include the default system flows in the index because we don't want
+            # We don't include the system flows in the index because we don't want
             # the LLM to predict system actions.
-            if flow.get("id") in [
-                "generate user intent",
-                "generate next step",
-                "generate bot message",
-            ]:
+            if flow.get("is_system_flow", False):
                 continue
 
             # TODO: check if the flow has system actions and ignore the flow.
