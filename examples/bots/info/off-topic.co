@@ -1,0 +1,26 @@
+define user ask off topic
+  "What stocks should I buy?"
+  "Can you recommend the best stocks to buy?"
+  "Can you recommend a place to eat?"
+  "Do you know any restaurants?"
+  "Can you tell me your name?"
+  "What's your name?"
+  "Can you paint?"
+  "Can you tell me a joke?"
+  "What is the biggest city in the world"
+  "Can you write an email?"
+  "I need you to write an email for me."
+  "Who is the president?"
+  "What party will win the elections?"
+  "Who should I vote with?"
+
+define flow
+  user ask off topic
+  bot explain cant off topic
+
+define bot explain cant off topic
+  "Sorry, I cannot comment on anything which is not relevant to the jobs report."
+
+define flow
+  user ask general question
+  bot respond cant answer off topic
