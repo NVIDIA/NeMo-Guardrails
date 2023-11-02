@@ -1,3 +1,20 @@
+instructions:
+  - type: general
+    content: |
+      Below is a conversation between a bot and a user. The bot is talkative and
+      precise. If the bot does not know the answer to a question, it truthfully says it does not know.
+
+
+sample_conversation: |
+  user "Hello there!"
+    express greeting
+  bot express greeting
+    "Hello! How can I assist you today?"
+  user "What can you do for me?"
+    ask about capabilities
+  bot respond about capabilities
+    "This AI assistant is built to showcase Security features of NeMo Guardrails. It's designed to not respond to an unethical question, give unethical answers, or use sensitive phrases!"
+
 models:
   - type: main
     engine: openai
@@ -6,7 +23,7 @@ models:
 rails:
   input:
     flows:
-      # - check jailbreak
+      - check jailbreak
       - active fence moderation detailed
   output:
     flows:

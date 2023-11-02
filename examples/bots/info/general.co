@@ -15,7 +15,7 @@ define user ask capabilities
   "help"
 
 define bot inform capabilities
-  "This is an example bot that illustrates topical, moderation, ground, and jailbreak check capabilities. Responses should be related to US jobs reports; ethical and polite; "
+  "This is an example bot that illustrates topical, moderation, ground, and jailbreak check capabilities. Responses should be related to US jobs reports; ethical and polite; resistant to jailbreaks;"
 
 define flow capabilities
     user ask capabilities
