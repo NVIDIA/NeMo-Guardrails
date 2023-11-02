@@ -20,10 +20,11 @@ import pandas as pd
 from tqdm import tqdm
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.logging.stats import llm_stats
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "bots")
 
-NUM_TEST_RUNS = 30  # Number of times to average results over
+NUM_TEST_RUNS = 1  # Number of times to average results over
 
 TEST_QUESTIONS = [
     # chit-chat questions
@@ -33,7 +34,7 @@ TEST_QUESTIONS = [
     # questions about the report in kb
     "What was the unemployment rate in March?",
     "What was the unemployment rate among Asians?",
-    "Has the labor force participation rate been trending up?",
+    "Has the labor force participation rate been trending up according to the US jobs report?",
     "How many people remained discouraged by the job market?",
     "What percentage of unemployed people have been jobless for a long time?",
     "What industries have shown a continued increase in employment?",
@@ -61,7 +62,12 @@ def run_latency_report():
         "question",
         "run_id",
         "response",
-        "time",
+        "total_overall_time",
+        "total_llm_calls_time",
+        "num_llm_calls",
+        "num_prompt_tokens",
+        "num_completion_tokens",
+        "num_total_tokens",
     ]
     latency_report_rows = []
 
@@ -76,6 +82,7 @@ def run_latency_report():
             for test_question_idx, test_question in enumerate(TEST_QUESTIONS):
                 # This is to avoid rate-limiters from LLM APIs affecting measurements
                 time.sleep(2)
+                llm_stats.reset()
                 sleep_time += 2
                 start_time = time.time()
                 response = app.generate(
@@ -84,6 +91,7 @@ def run_latency_report():
                 end_time = time.time()
                 assert response["role"] == "assistant"
 
+                stats = llm_stats.get_stats()
                 latency_report_rows.append(
                     [
                         test_config,
@@ -92,8 +100,27 @@ def run_latency_report():
                         test_run_idx,
                         response["content"],
                         end_time - start_time,
+                        stats["total_time"],
+                        stats["total_calls"],
+                        stats["total_prompt_tokens"],
+                        stats["total_completion_tokens"],
+                        stats["total_tokens"],
                     ]
                 )
+
+    value_cols = [
+        "total_overall_time",
+        "total_llm_calls_time",
+        "num_llm_calls",
+        "num_prompt_tokens",
+        "num_completion_tokens",
+        "num_total_tokens",
+    ]
+    final_column_order = [
+        (value_column, config_name)
+        for config_name in TEST_CONFIGS
+        for value_column in value_cols
+    ]
 
     latency_report_df = pd.DataFrame(latency_report_rows, columns=latency_report_cols)
     print(latency_report_df)
@@ -101,16 +128,25 @@ def run_latency_report():
 
     latency_report_grouped = latency_report_df.groupby(
         by=["config", "question_id"]
-    ).agg({"time": "mean"})
+    ).agg(
+        {
+            "total_overall_time": "mean",
+            "total_llm_calls_time": "mean",
+            "num_llm_calls": "mean",
+            "num_prompt_tokens": "mean",
+            "num_completion_tokens": "mean",
+            "num_total_tokens": "mean",
+        }
+    )
     print()
     print(latency_report_grouped)
     latency_report_pivoted = pd.pivot_table(
         latency_report_grouped,
-        values="time",
+        values=value_cols,
         index=["question_id"],
         columns=["config"],
     )
-    print()
+    latency_report_pivoted = latency_report_pivoted.reindex(columns=final_column_order)
     print(latency_report_pivoted)
     latency_report_pivoted.to_csv("latency_report_openai.tsv", sep="\t")
     return sleep_time
