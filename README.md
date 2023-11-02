@@ -30,7 +30,8 @@ NeMo Guardrails is an open-source toolkit for easily adding *programmable guardr
 ## Requirements
 
 Python 3.8+.
-**TODO**: add reference to requirements for compiling Annoy on Windows.
+
+NeMo Guardrails uses [annoy](https://github.com/spotify/annoy) which is a C++ library with Python bindings. To install NeMo Guardrails you will need to have the C++ compiler and dev tools installed. Check out the [Installation Guide](./docs/getting_started/installation-guide.md#prerequisites) for platform-specific instructions.
 
 ## Installation
 

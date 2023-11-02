@@ -14,7 +14,10 @@ The documentation is divided into the following sections:
 
 The getting started section covers two topics:
 
-* [Installation Guide](./getting_started/installation-guide.md): This guide walks you through the process of setting up an environment to run Guardrails. It also showcases the various ways in which you can interact with the bot.
+* [Installation Guide](./getting_started/installation-guide.md): This guide walks you through the process of setting up your environment and installing NeMo Guardrails
+
+* [CLI](./getting_started/cli.md): This guide introduces the NeMo Guardrails CLI and walks you through playing with the example configurations using the Chat CLI and the Server.
+
 * [The "Hello World" example](./getting_started/hello-world.md): This example walks you through setting up basic rails along with peeling some layers for the Guardrail runtime to explain how the rails work.
 
 ## Examples

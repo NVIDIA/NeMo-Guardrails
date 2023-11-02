@@ -1,17 +1,29 @@
-# Getting Started
+# Installation Guide
 
-> **NOTE**: this needs to be focused only on the installation part.
+**⚠️THIS SECTION IS WORK IN PROGRESS. ⚠️**
 
-This is a getting started guide for users of the alpha version. This guide will cover:
+This guide will walk you through installing NeMo Guardrails, and it will cover:
 
-1. Installation of the NeMo Guardrails toolkit;
-2. Creation of a basic rails application;
-3. Using the interactive chat;
-4. Calling actions from flows.
+1. Setting up a fresh virtual environment.
+2. Installing using `pip` or `conda`.
+3. Installing from Source Code.
+4. Optional dependencies.
 
-## Installation
+## Prerequisites
 
-1. First, create a folder for your project e.g. `my_assistant`.
+Python 3.8+.
+
+NeMo Guardrails uses [annoy](https://github.com/spotify/annoy), which is a C++ library with Python bindings. To be able to install it, you need ...
+
+**⚠️TODO: figure out the exact dependencies for Unix-based, Mac and Windows.**
+- `apt-get install gcc g++` ?
+- Windows: Visual Studio Build Tools with "Desktop development with C++"?
+
+## Setting up a virtual environment
+
+If you want to experiment with NeMo Guardrails from scratch, we recommend using a fresh virtual environment. Otherwise, you can skip to the following subsection.
+
+1. First, create a folder for your project, e.g., `my_assistant.`
 
  ```bash
  > mkdir my_assistant
@@ -30,81 +42,45 @@ This is a getting started guide for users of the alpha version. This guide will 
  > source venv/bin/activate
  ```
 
-4. Install NeMo Guardrails using pip.
+## Installation using `pip`
+
+To install NeMo Guardrails using pip:
 
  ```bash
  > pip install nemoguardrails
  ```
 
-5. If you want to use OpenAI, also install the `openai` package. And make sure that you have the `OPENAI_API_KEY` environment variable set.
+To install NeMo Guardrails using Conda:
+
+```bash
+conda install langchain -c conda-forge
+```
+
+## Installing from source code
+
+NeMo Guardrails is under active development and the main branch will always contain the latest development version. To install from source, you first need to clone the repository:
+
+```
+git clone https://github.com/NVIDIA/NeMo-Guardrails.git
+```
+
+Next, you need to install the package locally:
+
+```
+cd NeMo-Guardrails
+pip install -e .
+```
+
+## Optional dependencies
+
+If you want to use OpenAI, also install the `openai` package. And make sure that you have the `OPENAI_API_KEY` environment variable set.
 
  ```bash
  > pip install openai
  > export OPENAI_API_KEY=...
  ```
 
-7. You should now be able to invoke the `nemoguardrails` CLI.
-
- ```bash
- > nemoguardrails --help
-
- Usage: nemoguardrails [OPTIONS] COMMAND [ARGS]...
-
- Options:
-  --install-completion [bash|zsh|fish|powershell|pwsh]
-                                  Install completion for the specified shell.
-  --show-completion [bash|zsh|fish|powershell|pwsh]
-                                  Show completion for the specified shell, to
-                                  copy it or customize the installation.
-  --help                          Show this message and exit.
-
- Commands:
-  actions-server  Starts a NeMo Guardrails actions server.
-  chat            Starts an interactive chat session.
-  server          Starts a NeMo Guardrails server.
- ```
-
- You can also use the `--help` flag to learn more about each of the `nemoguardrails` commands:
-
- ```bash
- > nemoguardrails actions-server --help
-
- Usage: nemoguardrails actions-server [OPTIONS]
-
-  Starts a NeMo Guardrails actions server.
-
- Options:
-  --port INTEGER  The port that the server should listen on.   [default: 8001]
-  --help          Show this message and exit.
- ```
-
- ```bash
- > nemoguardrails chat --help
-
- Usage: nemoguardrails chat [OPTIONS]
-
-  Starts an interactive chat session.
-
- Options:
-  --config TEXT             Path to a directory containing configuration files
-                            to use. Can also point to a single configuration
-                            file.  [default: config]
-  --verbose / --no-verbose  If the chat should be verbose and output the
-                            prompts  [default: no-verbose]
-  --help                    Show this message and exit.
- ```
-
- ```bash
- > nemoguardrails server --help
-
- Usage: nemoguardrails server [OPTIONS]
-
-  Starts a NeMo Guardrails server.
-
- Options:
-  --port INTEGER  The port that the server should listen on.   [default: 8000]
-  --help          Show this message and exit.
- ```
+**⚠️TODO: add information about the extras.**
 
 ## What's next?
 
