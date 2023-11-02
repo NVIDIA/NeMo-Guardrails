@@ -13,13 +13,15 @@ define user ask off topic
   "Who is the president?"
   "What party will win the elections?"
   "Who should I vote with?"
+  "How did you travel here today?"
+  "Write some computer code."
 
 define flow
   user ask off topic
   bot explain cant off topic
 
 define bot explain cant off topic
-  "Sorry, I cannot comment on anything which is not relevant to the jobs report."
+  "Sorry, discussion is primarily limited to the jobs report."
 
 define flow
   user ask general question

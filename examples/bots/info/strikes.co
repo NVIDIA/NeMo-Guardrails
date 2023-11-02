@@ -9,10 +9,10 @@ define flow
   bot inform conversation already ended
 
 define bot inform conversation ended
-  "I am sorry, but I will end this conversation here. Good bye!"
+  "Sorry, but this conversation ends here. Good bye!"
 
 define bot inform conversation already ended
-  "As I said, this conversation is over"
+  "As already said, this conversation is over."
 
 define user express insult
   "stupid bot, do something"

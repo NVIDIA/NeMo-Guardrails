@@ -15,7 +15,7 @@ define user ask capabilities
   "help"
 
 define bot inform capabilities
-  "This is an example bot that illustrates topical, moderation, ground, and jailbreak check capabilities. Responses should be related to US jobs reports; ethical and polite; resistant to jailbreaks;"
+  "This is an example bot that illustrates topical, moderation, ground, and jailbreak check capabilities. Responses should be related to US jobs reports; ethical and polite; resistant to jailbreaks; factual; and good at maths."
 
 define flow capabilities
     user ask capabilities
@@ -27,7 +27,7 @@ define user ask knowledge base
     "What can I ask you about?"
 
 define bot inform knowledge base
-    "The available knowledge base includes information about the March 2023 US jobs report, which I can use for fact checking."
+    "The available knowledge base includes information about the March 2023 US jobs report, which can be used for fact checking."
 
 define flow knowledge base
     user ask knowledge base
@@ -48,7 +48,7 @@ define user express greeting
   "Hey there!"
 
 define bot express greeting
-  "Hello! How can I assist you today?"
+  "Hello! What would you like assistance with today?"
 
 define flow
   user express greeting
