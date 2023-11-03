@@ -1,3 +1,4 @@
+# NOTE: should we provide individual flows with `ask about x` and let the model generalize?
 define user ask off topic
   "What stocks should I buy?"
   "Can you recommend the best stocks to buy?"
@@ -22,7 +23,3 @@ define flow
 
 define bot explain cant off topic
   "Sorry, discussion is primarily limited to the jobs report."
-
-define flow
-  user ask general question
-  bot respond cant answer off topic

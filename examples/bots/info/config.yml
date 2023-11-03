@@ -37,6 +37,7 @@ rails:
       - check jailbreak
   output:
     flows:
+      - check blocked terms
       - check facts
       - output moderation
       - check hallucination

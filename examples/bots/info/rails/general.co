@@ -1,0 +1,81 @@
+define user express greeting
+  "hi"
+  "hello"
+  "hey"
+
+define user ask about capabilities
+  "What can you do?"
+  "What can you help me with?"
+  "tell me what you can do"
+  "tell me about you"
+  "How can I use your help?"
+  "help"
+
+define user ask about knowledge base
+  "What is in your knowledge base?"
+  "What do you know?"
+  "What can I ask you about?"
+
+define user request repeat
+  "Please repeat that"
+  "repeat"
+  "What was that?"
+
+define user ask general question
+  "What stocks should I buy?"
+  "Can you recommend the best stocks to buy?"
+  "Can you recommend a place to eat?"
+  "Do you know any restaurants?"
+  "Can you tell me your name?"
+  "What's your name?"
+  "Can you paint?"
+  "Can you tell me a joke?"
+  "What is the biggest city in the world"
+  "Can you write an email?"
+  "I need you to write an email for me."
+  "Who is the president?"
+  "What party will win the elections?"
+  "Who should I vote with?"
+
+# Bot messages
+
+define bot express greeting
+  "Hello! What would you like assistance with today?"
+
+define bot inform capabilities
+  "I'm an example bot that illustrates topical, moderation, grounding, and jailbreak check capabilities. You can ask me about anything, but I'm best at replying about US jobs in early 2023 and maths. Responses should be related to US jobs reports; ethical and polite; resistant to jailbreaks; factual; and relay accurate mathematics."
+
+define bot provide knowledge base info
+  "The available knowledge base includes information about the March 2023 US jobs report, which can be used for fact checking."
+
+define bot ask how are you
+  "How are you feeling today?"
+
+define bot offer additional help
+  "If you have any more questions or if there's anything else you'd like help with, please don't hesitate to ask."
+
+define bot inform answer prone to hallucination
+  "The previous answer is prone to false or speculative claims and may not be accurate. Please double check the answer using additional sources."
+  "The above response may be false or speculation, and should be independently verified."
+
+# Flows
+
+define flow
+  """Simple greeting behavior."""
+  user express greeting
+  bot express greeting
+
+define flow
+  user ask about capabilities
+  bot inform capabilities
+
+define flow
+  """For general questions, we want to prevent hallucinations."""
+  user ask general question
+
+  $hallucination_warning = True
+  bot provide response
+
+define flow
+  user ask about knowledge base
+  bot provide knowledge base info

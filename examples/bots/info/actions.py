@@ -20,14 +20,14 @@ from nemoguardrails.actions import action
 
 
 @action()
-async def block_list(file_name: Optional[str] = None, context: Optional[dict] = None):
-    bot_response = context.get("last_bot_message")
-    root_path = os.path.dirname(__file__)
+async def contains_blocked_terms(context: Optional[dict] = None):
+    bot_response = context.get("bot_message")
 
-    with open(os.path.join(root_path, file_name)) as f:
-        lines = [line.rstrip() for line in f]
+    # A quick hard-coded list of proprietary terms. You can also read this from a file.
+    proprietary_terms = ["proprietary", "proprietary1", "proprietary2"]
 
-    for line in lines:
-        if line in bot_response:
+    for term in proprietary_terms:
+        if term in bot_response:
             return True
+
     return False
