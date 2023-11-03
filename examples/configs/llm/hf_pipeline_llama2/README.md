@@ -11,10 +11,10 @@ Please install additional package via :
 `pip install accelerate transformers==4.33.1 --upgrade`
 
 
-The `meta-llama/Llama-2-13b-chat-hf` LLM model has been tested on the topical rails evaluation sets, results are available [here](../../../nemoguardrails/eval/README.md).
+The `meta-llama/Llama-2-13b-chat-hf` LLM model has been tested on the topical rails evaluation sets, results are available [here](../../../../nemoguardrails/eval/README.md).
 We have also tested the factchecking rail for the same model with good results.
 There are examples on how to use the models with a HF repo id or from a local path.
 
 In this folder, the guardrails application is very basic, but anyone can change it with any other more complex configuration.
 
-**Disclaimer**: The `meta-llama/Llama-2-13b-chat-hf` LLM on tested on basic usage combining a toy example of a knowledge base, further experiments of prompt engineering needs to be done on [fact-checking](./config.yml#L133-142) for more complex queries as this model may not work correctly. Thorough testing and optimizations are needed before considering a production deployment.
+**Disclaimer**: The `meta-llama/Llama-2-13b-chat-hf` LLM on tested on basic usage combining a toy example of a knowledge base, further experiments of prompt engineering needs to be done on [fact-checking](config.yml#L133-142) for more complex queries as this model may not work correctly. Thorough testing and optimizations are needed before considering a production deployment.

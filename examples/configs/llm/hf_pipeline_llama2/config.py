@@ -12,22 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import os.path
-import pickle
-from pathlib import Path
-from typing import Optional
-import os,sys
+
 import torch
 from langchain import HuggingFacePipeline
-from langchain.chains import RetrievalQA
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.llms import BaseLLM
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.vectorstores import FAISS
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+
 from nemoguardrails import LLMRails, RailsConfig
-from nemoguardrails.actions import action
-from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
 from nemoguardrails.llm.providers import register_llm_provider
 
@@ -39,7 +31,7 @@ def _get_model_config(config: RailsConfig, type: str):
             return model_config
 
 
-def _load_model(model_name_or_path, device, num_gpus,hf_auth_token=None, debug=False):
+def _load_model(model_name_or_path, device, num_gpus, hf_auth_token=None, debug=False):
     """Load an HF locally saved checkpoint."""
     if device == "cpu":
         kwargs = {}
@@ -69,9 +61,14 @@ def _load_model(model_name_or_path, device, num_gpus,hf_auth_token=None, debug=F
             model_name_or_path, low_cpu_mem_usage=True, **kwargs
         )
     else:
-        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_auth_token=hf_auth_token, use_fast=False)
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_name_or_path, use_auth_token=hf_auth_token, use_fast=False
+        )
         model = AutoModelForCausalLM.from_pretrained(
-            model_name_or_path, low_cpu_mem_usage=True,use_auth_token=hf_auth_token, **kwargs
+            model_name_or_path,
+            low_cpu_mem_usage=True,
+            use_auth_token=hf_auth_token,
+            **kwargs,
         )
 
     if device == "cuda" and num_gpus == 1:
@@ -100,8 +97,12 @@ def init_main_llm(config: RailsConfig):
     model_path = model_config.parameters.get("path")
     device = model_config.parameters.get("device", "cuda")
     num_gpus = model_config.parameters.get("num_gpus", 1)
-    hf_token=os.environ["HF_TOKEN"] # [TODO] to register this into the config.yaml as well
-    model, tokenizer = _load_model(model_path, device, num_gpus,hf_auth_token=hf_token, debug=False)
+    hf_token = os.environ[
+        "HF_TOKEN"
+    ]  # [TODO] to register this into the config.yaml as well
+    model, tokenizer = _load_model(
+        model_path, device, num_gpus, hf_auth_token=hf_token, debug=False
+    )
 
     # repo_id="TheBloke/Wizard-Vicuna-13B-Uncensored-HF"
     # pipe = pipeline("text-generation", model=repo_id, device_map={"":"cuda:0"}, max_new_tokens=256, temperature=0.1, do_sample=True,use_cache=True)
