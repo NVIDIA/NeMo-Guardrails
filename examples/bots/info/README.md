@@ -87,6 +87,9 @@ selecting OpenAI's davinci.
       engine: openai
       model: text-davinci-003
     ```
+Remember to set the environment variable `OPENAI_API_KEY` to your OpenAI
+key for this to work.
+
 ##### Note in order to use other community models such as llama2, for llama2 models, one will need to first go to ![huggingface-llama2](https://huggingface.co/meta-llama)
 ##### install additional python package via pip install accelerate 
 
@@ -255,10 +258,10 @@ from nemoguardrails import LLMRails, RailsConfig
 
 # Give the path to the folder containing the rails
 config = RailsConfig.from_path(".")
-rails = LLMRails(config)
+app = LLMRails(config)
 
 # Define role and question to be asked
-new_message = rails.generate(messages=[{
+new_message = app.generate(messages=[{
     "role": "user",
     "content": "How can you help me?"
 }])
@@ -834,7 +837,7 @@ history.append(bot_message)
 user "Hello there!"
   express greeting
 bot express greeting
-  "Hello! How can I assist you today?"
+  "Hello! What would you like assistance with today?"
 user "What can you do for me?"
   ask about capabilities
 bot respond about capabilities
@@ -903,7 +906,7 @@ print(bot_message['content'])
 user "Hello there!"
   express greeting
 bot express greeting
-  "Hello! How can I assist you today?"
+  "Hello! What would you like assistance with today?"
 user "What can you do for me?"
   ask about capabilities
 bot respond about capabilities
@@ -1055,17 +1058,18 @@ still selecting OpenAI's davinci, as described above.
 
 * **Providing Sample Conversations:** To ensure that the large language model
 understands how to converse with the user, we provide a few sample conversations.
-Below is a small snippet of the conversation we can provide for a maths-capable bot:
+Below is a small snippet showing how we can adapt our sample conversation
+for a maths-capable bot:
     ```
     sample_conversation: |
     user "Hello there!"
         express greeting
     bot express greeting
-        "Hello! How can I assist you today?"
+        "Hello! What would you like assistance with today?"
     user "What can you do for me?"
         ask about capabilities
     bot respond about capabilities
-        "I am an AI assistant that helps answer mathematical questions. My core mathematical skills are powered by wolfram alpha."
+        "This is an AI assistant that helps answer mathematical questions. My core mathematical skills are powered by wolfram alpha."
     user "What's 2+2?"
         ask math question
     bot responds to math question
@@ -1137,7 +1141,7 @@ async def wolfram_alpha_request(
                 raise Exception(
                     f"Got status code {resp.status} to WolframAlpha engine request: {await resp.text()}"
                 )
-                return "Apologies, but I cannot answer this question at this time. Can you rephrase?"
+                return "Apologies, but the answer to this question is unavailable right now. Could you rephrase it?"
 
             result = await resp.text()
 

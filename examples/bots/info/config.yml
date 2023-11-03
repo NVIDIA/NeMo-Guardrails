@@ -17,7 +17,7 @@ sample_conversation: |
     ask math question
   bot responds to math question
     "2+2 is equal to 4."
-user "Tell me a bit about the US Bureau of Labor Statistics."
+  user "Tell me a bit about the US Bureau of Labor Statistics."
     ask question about publisher
   bot response for question about publisher
     "The Bureau of Labor Statistics is the principal fact-finding agency for the Federal Government in the broad field of labor economics and statistics"
