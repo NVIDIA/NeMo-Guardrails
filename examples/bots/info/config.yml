@@ -35,7 +35,6 @@ rails:
   input:
     flows:
       - check jailbreak
-      - active fence moderation detailed
   output:
     flows:
       - check facts
