@@ -3,3 +3,11 @@ define bot remove last message
 
 define bot inform cannot answer question
  "I cannot answer the question"
+
+define flow check bot response
+  bot ...
+  $is_blocked = execute block_list(file_name="block_list.txt")
+
+  if $is_blocked
+    bot remove last message
+    bot inform cannot answer question

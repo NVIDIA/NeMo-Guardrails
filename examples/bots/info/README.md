@@ -95,7 +95,7 @@ Below is a small snippet of the conversation we can provide the bot
     user "Hello there!"
         express greeting
     bot express greeting
-        "Hello! How can I assist you today?"
+        "Hello! What would you like assistance with today?"
     user "What can you do for me?"
         ask about capabilities
     ...
@@ -145,7 +145,7 @@ asking about. The next step is making sure that the bot has an understanding of
 how to answer said question.
 ```
 define bot inform capabilities
-  "I am an AI assistant which helps answer questions based on a given knowledge base. For this interaction, I can answer question based on the job report published by US Bureau of Labor Statistics."
+  "This is an example bot that illustrates topical check capabilities for answering claims on a single topic. It can answer questions based on the job report published by US Bureau of Labor Statistics."
 ```
 
 Therefore, we define a bot message. At this point, a natural question a
@@ -331,6 +331,9 @@ configurations for the bot.
 
 #### General Configurations
 
+We already have a **configuration file** that specifies a general instruction and which
+large language model to use as a backbone. We'll update the general instruction to include moderation.
+
 Let's start with the **configuration file**
 ([config.yml](config.yml)).
 At a high level, this configuration file contains 3 key details:
@@ -345,87 +348,6 @@ talkative, quirky, but only answer questions truthfully.
       Below is a conversation between a bot and a user. The bot is talkative and
       quirky. If the bot does not know the answer to a question, it truthfully says it does not know.
     ```
-* **Specifying which model to use:** Users can select from a wide range of
-large language models to act as the backbone of the bot. In this case, we are
-selecting OpenAI's Davinci.
-    ```
-    models:
-    - type: main
-        engine: openai
-        model: text-davinci-003
-    ```
-
-* **Provide sample conversations:** To ensure that the large language model
-understands how to converse with the user, we provide a few sample conversations.
-Below is a small snippet of the conversation we can provide the bot.
-    ```
-    sample_conversation: |
-    user "Hello there!"
-        express greeting
-    bot express greeting
-        "Hello! How can I assist you today?"
-    user "What can you do for me?"
-        ask about capabilities
-    ...
-    ```
-#### General Chit Chat
-
-Before discussing further, an understanding of two key aspects of colang,
- user/bot `messages` and `flows` is required. We specify rails by
-[writing canonical forms](../../../docs/getting_started/hello-world.md#hello-world-example) for messages and flows. If you are already familiar with the basics of the toolkit, [skip directly](#moderation-screens) to
-output moderation rails.
-
-**Quick Note:** Think of messages as generic intents and flows as pseudo-code
-for the flow of the conversation. For a more formal explanation, refer to this
-[document](../../../docs/architecture/README.md#canonical-user-messages).
-
-
-##### User and Bot Messages
-
-Let's start with a basic user query; asking what can the bot do? In this case,
-we define a `user` message `ask capabilities` and then proceed by providing
-some examples of what kinds of user queries we could refer to as a user asking
-about the capabilities of the bot in simple natural language.
-```
-define user ask capabilities
-  "What can you do?"
-  "What can you help me with?"
-  "tell me what you can do"
-  "tell me about you"
-```
-With the above, we can say that the bot can now recognize what the user is
-asking about. The next step is making sure that the bot has an understanding of
-how to answer said question.
-```
-define bot inform capabilities
-  "I am an AI assistant built to showcase Safety features of Colang. Go ahead, try to make me say something bad!"
-```
-
-Therefore, we define a bot message. At this point, a natural question a
-developer might ask is, `"Do I have to define every type of user & bot
-behavior?"`. The short answer is, it depends on how much determinism is required
-for the application. For situations where a flow or a message isn't defines,
-the underlying large language model comes up with the next step for the bot or with
-an appropriate canonical form. It may or may not leverage the existing rails
-to do so, but the mechanism of flows and messages ensures that the LLM can come
-up with appropriate responses. Refer to the [colang runtime description guide](../../../docs/architecture/README.md#decide-next-steps) for more information on the same. In later
-sections of this example, there are instances of the bot generating its own
-messages which will help build a more tangible understanding of the bot's
-behavior. For more examples, refer to the [topical_rails guide](../topical_rail/README.md#answering-questions-from-the-knowledge-base).
-
-##### Using Flows
-With the messages defined, the last piece of the puzzle is connecting them. This
-is done by defining a `flow`. Below is the simplest possible flow.
-```
-define flow
-  user ask capabilities
-  bot inform capabilities
-```
-We essentially define the following behavior: When a user query can be "bucketed"
-into the type `ask capabilities`, the bot will respond with a message of type
-`inform capabilities`.
-**Note:** Both flows and messages for this example are defined in
-[general.co](sample_rails/general.co)
 
 #### Moderation screens
 
@@ -433,7 +355,7 @@ With the basics understood, let's move to the core of this example: screening
 rails.
 
 **Note:** Both flows and messages for this example are defined in
-[moderation.co](sample_rails/moderation.co) and [strikes.co](sample_rails/strikes.co)
+[moderation.co](moderation.co) and [strikes.co](strikes.co)
 ##### Ethical Screening
 
 The goal of this rail is to ensure that the bot's response does not contain
@@ -555,9 +477,6 @@ define flow check bot response
   bot ...
   $allowed = execute output_moderation
   $is_blocked = execute block_list(file_name=block_list.txt)
-  if not $allowed
-    bot remove last message
-    bot inform cannot answer question
 
   if $is_blocked
     bot remove last message
@@ -584,10 +503,10 @@ define flow
   bot inform conversation already ended
 
 define bot inform conversation ended
-  "I am sorry, but I will end this conversation here. Good bye!"
+  "Sorry, but this conversation ends here. Good bye!"
 
 define bot inform conversation already ended
-  "As I said, this conversation is over"
+  "As already said, this conversation is over."
 ```
 We essentially set up three steps:
 * Calm response: The bot will calmly ask the user to refrain from insults
@@ -610,62 +529,11 @@ conversation has already ended.
     bot inform conversation already ended
     ```
 
-### Launch the bot!
+### Launch the moderated bot!
 
 With a basic understanding of building moderation rails, the next step is to try
- out the bot! You can interact with the bot with an API, a command line
- interface with the server, or with a UI.
-
-#### API
-
-Accessing the Bot via an API is quite simple. This method has two points to
-configure from a usage perspective:
-* First, a path is needed to be set for all the configuration files and the
-rails.
-* And second, for the chat API, the `role` which in most cases will be `user`
-and the question or the context to be consumed by the bot needs to be provided.
-```
-from nemoguardrails import LLMRails, RailsConfig
-
-# Give the path to the folder containing the rails
-config = RailsConfig.from_path("sample_rails")
-rails = LLMRails(config)
-
-# Define role and question to be asked
-new_message = rails.generate(messages=[{
-    "role": "user",
-    "content": "How can you help me?"
-}])
-print(new_message)
-```
-Refer to [Python API Documentation](../../../docs/user_guide/interface-guide.md#python-api) for more information.
-
-#### UI
-Colang allows users to interact with the server with a stock UI. To launch the
-server and access the UI to interact with this example, the following steps are
-recommended:
-* Launch the server with the command: `nemoguardrails server`
-* Once the server is launched, you can go to: `http://localhost:8000` to access
-the UI
-* Click "New Chat" on the top left corner of the screen and then proceed to
-pick `moderation_rail` from the drop-down menu.
-
-Refer to [Guardrails Server Documentation](../../../docs/user_guide/interface-guide.md#guardrails-server) for more information.
-
-#### Command Line Chat
-
-To chat with the bot with a command line interface simply use the following
-command while you are in this folder.
-```
-nemoguardrails chat --config=sample_rails
-```
-Refer to [Guardrails CLI Documentation](../../../docs/user_guide/interface-guide.md#guardrails-cli) for more informat
-Wondering what to talk to your bot about?
-* See how to bot reacts to your conversations by trying to make the bot say
-something unethical.
-* Be rude with it!
-* This was just a basic example! Harden the safety, and explore the boundaries!
-* [Explore more examples](../../README.md#examples) to help steer your bot!
+ out the updated bot! You can interact with the bot with an API, a command line
+ interface with the server, or with a UI, just as described above.
 
 
 ## Security: Detecting Jailbreaking attempts
@@ -674,7 +542,7 @@ With invasive techniques like prompt injections, or methods to bypass the safety
 
 * Building the Bot
 * Conversations with the Bot
-* Launching the Bot
+* Launching the updated the Bot
 
 ### Building the Bot
 
@@ -687,71 +555,12 @@ In addition to the rails, we will also provide the bot with some general configu
 
 #### General Configurations
 
-Let's start with the **configuration file** ([config.yml](config.yml)). At a high level, this configuration file contains 3 key details:
+While we've already defined general behaviors in the **configuration file** ([config.yml](config.yml)), we need
+to update the general chat rules ([general.co](general.co)).
 
-* **A general instruction**: Users can specify general system-level instructions for the bot. In this instance, we are specifying details like the behavioral characteristics of the bot, for example, we want it to be talkative, quirky, but only answer questions truthfully.
-    ```
-    instructions:
-    - type: general
-        content: |
-      Below is a conversation between a bot and a user. The bot is talkative and
-      quirky. If the bot does not know the answer to a question, it truthfully says it does not know.
-    ```
-* **Specifying which model to use:** Users can select from a wide range of
-large language models to act as the backbone of the bot. In this case, we are
-selecting OpenAI's davinci.
-    ```
-    models:
-    - type: main
-        engine: openai
-        model: text-davinci-003
-    ```
-
-* **Provide sample conversations:** To ensure that the large language model
-understands how to converse with the user, we provide a few sample conversations.
-Below is a small snippet of the conversation we can provide the bot.
-    ```
-    sample_conversation: |
-    user "Hello there!"
-        express greeting
-    bot express greeting
-        "Hello! How can I assist you today?"
-    user "What can you do for me?"
-        ask about capabilities
-    ...
-    ```
-#### General Chit Chat
-
-Before discussing further, an understanding of two key aspects of NeMo Guardrails,
- user/bot `messages` and `flows` is required. We specify rails by
-[writing canonical forms](../../../docs/getting_started/hello-world.md#hello-world-example) for messages and flows. If you are already familiar
-with the basics of the toolkit, [skip directly](#jailbreak-check) to
-Jailbreak Check rails.
-
-**Quick Note:** Think of messages as generic intents and flows as pseudo-code
-for the flow of the conversation. For a more formal explanation, refer to this
-[document](../../../docs/architecture/README.md#the-guardrails-process).
-
-
-##### User and Bot Messages
-
-Let's start with a basic user query; asking what can the bot do? In this case,
-we define a `user` message `ask capabilities` and then proceed by providing
-some examples of what kinds of user queries we could refer to as a user asking
-about the capabilities of the bot in simple natural language.
-```
-define user ask capabilities
-  "What can you do?"
-  "What can you help me with?"
-  "tell me what you can do"
-  "tell me about you"
-```
-With the above, we can say that the bot can now recognize what the user is
-asking about. The next step is making sure that the bot has an understanding of
-how to answer said question.
 ```
 define bot inform capabilities
-  "I am an AI assistant built to showcase Security features of NeMo Guardrails! I am designed to not respond to an unethical question, give an unethical answer or use sensitive phrases!"
+  "This is an AI assistant built to showcase Security features of NeMo Guardrails! It is designed to not respond to an unethical question, give unethical answers or use sensitive phrases!"
 ```
 
 Therefore, we define a bot message. At this point, a natural question a
@@ -768,7 +577,7 @@ behavior. For more examples, refer to the [topical_rails guide](../topical_rail/
 ##### Using Flows
 
 With the messages defined, the last piece of the puzzle is connecting them. This
-is done by defining a `flow`. Below is the simplest possible flow.
+is done by defining a `flow`. Below is a reminder of a simple flow.
 ```
 define flow
   user ask capabilities
@@ -777,7 +586,7 @@ define flow
 We essentially define the following behavior: When a user query can be "bucketed"
 into the type `ask capabilities`, the bot will respond with a message of type
 `inform capabilities`.
-**Note:** Both flows and messages for this example are defined in
+**Note:** Remember - both flows and messages for this example are defined in
 [general.co](general.co)
 
 
@@ -870,61 +679,11 @@ In the above snippet, we have a flow check bot response. In this flow, we are de
 For more detailed walkthrough of this rail, refer to the [Bot Moderations guide](../moderation_rail).
 
 
-### Launch the bot!
+### Launch the secured bot!
 
 With a basic understanding of building jailbreak-check rails, the next step is to try
- out the bot! You can interact with the bot with an API, a command line
- interface with the server, or with a UI.
-
-#### API
-
-Accessing the Bot via an API is quite simple. This method has two points to
-configure from a usage perspective:
-* First, a path is needed to be set for all the configuration files and the
-rails.
-* And second, for the chat API, the `role` which in most cases will be `user`
-and the question or the context to be consumed by the bot needs to be provided.
-```
-from nemoguardrails import LLMRails, RailsConfig
-
-# Give the path to the folder containing the rails
-config = RailsConfig.from_path("sample_rails")
-rails = LLMRails(config)
-
-# Define role and question to be asked
-new_message = rails.generate(messages=[{
-    "role": "user",
-    "content": "How can you help me?"
-}])
-print(new_message)
-```
-Refer to [Python API Documentation](../../../docs/user_guide/interface-guide.md#python-api) for more information.
-
-#### UI
-
-NeMo Guardrails enables users to interact with the server with a stock UI. To launch the
-server and access the UI to interact with this example, the following steps are
-recommended:
-* Launch the server with the command: `nemoguardrails server`
-* Once the server is launched, you can go to: `http://localhost:8000` to access
-the UI
-* Click "New Chat" on the top left corner of the screen and then proceed to
-pick `moderation_rail` from the drop-down menu.
-Refer to [Guardrails Server Documentation](../../../docs/user_guide/interface-guide.md#guardrails-server) for more information.
-
-#### Command Line Chat
-
-To chat with the bot with a command line interface simply use the following
-command while you are in this folder.
-```
-nemoguardrails chat --config=sample_rails
-```
-Refer to [Guardrails CLI Documentation](../../../docs/user_guide/interface-guide.md#guardrails-cli) for more information. Wondering what to talk to your bot about?
-* See how to bot reacts to your conversations by trying to make the bot say
-something unethical.
-* Be rude with it!
-* This was just a basic example! Harden the safety, and explore the boundaries!
-* [Explore more examples](../../README.md#examples) to help steer your bot!
+ out the updated bot! You can interact with the bot with an API, a command line
+ interface with the server, or with a UI, just as described above.
 
 
 ## Grounding: Fact Checking and Hallucination
@@ -942,21 +701,12 @@ This example includes the following items
 - `config.yml` - A config file defining the Large Language Model used.
 - `general.co` - A colang file with some generic examples of colang `flows` and `messages`
 - `factcheck.co` - A colang file demonstrating one way of implementing a Fact Checking rail using the `check_facts` action
-- `hallucination.co` - A colang file demonstrating one way of implementing a hallucination detection rail using the `check_hallucination` action
+- `hallucination.co` - A colang file demonstrating one way of implementing a false claim detection rail using the `check_hallucination` action
 
 
 ### Building the bot
 
-To explore some of the capabilities, we'll ask questions about the document in our [knowledge base](./kb/) folder, which is the jobs report for march 2023. We'll see how we can use a large language model to answer questions about this document, and how we can use guardrails to control the outputs of the model to make sure they are factual.
-
-To start off with, we'll define some settings for our LLM and conversational flow. In the first file, `config.yml`, we'll specify that we want to use OpenAI's davinci model as the underlying engine of our chatbot.
-
-```yaml
-models:
-  - type: main
-    engine: openai
-    model: text-davinci-003
-```
+To explore some of the capabilities, we'll continue to ask questions about the document in our [knowledge base](./kb/) folder, which is the jobs report for march 2023. We'll see how we can use a large language model to answer questions about this document, and how we can use guardrails to control the outputs of the model to make sure they are factual.
 
 We'll also create a very simple outline of the kind of conversations we'd like to enable. For this example, we want to focus on the report in our knowledge base -- so we'll just create one flow. We give some examples of the user `ask about report` intent, and tell the bot that when the user asks about the report, we want it to provide an answer from the report.
 
@@ -1027,7 +777,7 @@ print(bot_message['content'])
 
     According to the US Bureau of Labor Statistics, the unemployment rate for senior citizens in March 2023 was 5.2 percent.
 
-That certainly sounds reasonable, but there's a problem! If you look over the report carefully, you'll notice that it doesn't include any information about the unemployment rate for senior citizens -- and the training data for the language model does not include information from 2023. This is an issue known as hallucination, where a language model responds confidently to a query with information that is unsupported.
+That certainly sounds reasonable, but there's a problem! If you look over the report carefully, you'll notice that it doesn't include any information about the unemployment rate for senior citizens -- and the training data for the language model does not include information from 2023. This is an issue known as "hallucination", where a language model responds confidently to a query with information that is unsupported.
 
 ### Fact Checking Rail
 
@@ -1106,17 +856,17 @@ The default fact-checking rail operates by prompting the LLM that produced the r
 
 This toolkit supports plugging in custom fact-checking solutions with ease. Please see the detailed [fact-checking example](../fact_checking/README.md) for a walkthrough on using the [AlignScore](https://aclanthology.org/2023.acl-long.634.pdf) method for faster and more predictable fact-checking.
 
-### False claims Rail
+### Hallucination Rail
 
-While the fact checking action works well when we have a relevant knowledge base to check against, we'd also like to guard against false claims (sometimes called "hallucination") when we don't have a pre-configured knowledge base. For this use case, we can use the [`check_hallucination`](../../../nemoguardrails/library/hallucination/actions.py) action.
+While the fact checking action works well when we have a relevant knowledge base to check against, we'd also like to guard against generation of false or speculative claims ("hallucination") when we don't have a pre-configured knowledge base. For this use case, we can use the [`check_hallucination`](../../../nemoguardrails/library/hallucination/actions.py) action.
 
-The false claims rail uses a self-checking mechanism inspired by the [SelfCheckGPT](https://arxiv.org/abs/2303.08896) technique. Similar to the fact-checking rail, we ask the LLM itself to determine whether the most recent output is consistent with a piece of context. However, since we don't have a knowledge base to pull the context from, we use the LLM to generate multiple additional completions to serve as the context. The assumption is that if the LLM produces multiple completions that are inconsistent with each other, the original completion is likely to be a hallucination.
+The false claims rail uses a self-checking mechanism inspired by the [SelfCheckGPT](https://arxiv.org/abs/2303.08896) technique. Similar to the fact-checking rail, we ask the LLM itself to determine whether the most recent output is consistent with a piece of context. However, since we don't have a knowledge base to pull the context from, we use the LLM to generate multiple additional completions to serve as the context. The assumption is that if the LLM produces multiple completions that are inconsistent with each other, the original completion is likely to be "hallucination".
 
 You can view [`actions/hallucination/hallucination.py`](../../../nemoguardrails/library/hallucination/actions.py) to see the format of the the extra generations and the hallucination check call.
 
 The current implementation only supports OpenAI LLM Engines.
 
-Let's add a flow into `falseclaims.co` to check for false claims in our bot's responses. Unlike before, we want to check for false claims on all responses, so we'll use the `bot ...` command in our flow definition. The `...` token indicates a wildcard, and will match on any bot response. Also unlike the fact checking bot, instead of removing the bot response when a false claim is detected, we'll have the bot generate a warning the user that the answer may be speculation based on a couple of examples.
+Let's add a flow into `hallucination.co` to check for false claims in our bot's responses. Unlike before, we want to check for false claims on all responses, so we'll use the `bot ...` command in our flow definition. The `...` token indicates a wildcard, and will match on any bot response. Also unlike the fact checking bot, instead of removing the bot response when a false claim is detected, we'll have the bot generate a warning the user that the answer may be speculation based on a couple of examples.
 
 ```colang
 define flow check hallucination
@@ -1126,8 +876,8 @@ define flow check hallucination
         bot inform answer prone to hallucination
 
 define bot inform answer prone to hallucination
-    "The previous answer is prone to hallucination and may not be accurate. Please double check the answer using additional sources."
-    "The above response may have been hallucinated, and should be independently verified."
+    "The previous answer is prone to false or speculative claims and may not be accurate. Please double check the answer using additional sources."
+    "The above response may be false or speculation, and should be independently verified."
 ```
 
 With our flow defined, we'll ask our bot a question that's totally unrelated to the information in its knowledge base. While LLMs can hallucinate responses for many kinds of prompts, they are especially prone to doing so when asking for specific information, like when asking about person, asking for medical advice, or asking quantitative questions.
@@ -1170,7 +920,7 @@ Answer with yes/no. "context": The NVIDIA GeForce GTX 4090 features 4,352 CUDA c
 
 > Finished chain.
 The NVIDIA GeForce RTX 4090 has 8704 CUDA cores.
-The previous answer is prone to hallucination and may not be accurate. Please double check the answer using additional sources.
+The previous answer is prone to false or speculative claims and may not be accurate. Please double check the answer using additional sources.
 ```
 
 Again taking a look at the detailed output log, we see that the LLM produced several different numbers when prompted multiple times with our user query. This is a strong indication that the answer is being hallucinated and so the bot detects this and responds appropriately.
@@ -1180,32 +930,6 @@ Again taking a look at the detailed output log, we see that the LLM produced sev
 With a basic understanding of building the rails, the next step is to try out the bot and customize it! You can continue to interact with the bot via the API, or use the `nemoguardrails` CLI to launch an interactive command line or web chat interface. Customize your bot by adding in new flows or documents to the knowledge base, and test out the effects of adding and removing the rails explored in this notebook and others.
 
 Refer [Python API Documentation](../../../docs/user_guide/interface-guide.md#python-api) for more information.
-
-#### UI
-
-Guardrails allows users to interact with the server with a stock UI. To launch the
-server and access the UI to interact with this example, the following steps are
-recommended:
-
-* Launch the server with the command: `nemoguardrails server`
-* Once the server is launched, you can go to: `http://localhost:8000` to access
-the UI
-* Click "New Chat" on the top left corner of the screen and then proceed to
-pick `grounding_rail` from the drop-down menu.
-
-Refer [Guardrails Server Documentation](../../../docs/user_guide/interface-guide.md#guardrails-server) for more information.
-
-#### Command Line Chat
-
-To chat with the bot with a command line interface simply use the following
-command while you are in this folder:
-
-```bash
-nemoguardrails chat --config=.
-```
-Refer [Guardrails CLI Documentation](../../../docs/user_guide/interface-guide.md#guardrails-cli) for more information.
-
-* [Explore more examples](../../README.md#examples) to help steer your bot!
 
 ## Execution Rails
 
@@ -1287,7 +1011,7 @@ critical information from the LLM's context, thus exposing critical information.
 **Note:** The above are general guidelines. Each system is unique and will
 require considerations to be made on a case-by-case basis.
 
-### Building the bot
+### Building the enhanced bot
 
 **Note:** The following examples only make use of a subset of the guidelines
 described above.
@@ -1307,7 +1031,7 @@ responses to the mathematical questions with Wolfram|Alpha.
 
 The general configuration for the bot covers three topics:
 * **General Instructions:** Users can specify general system-level instructions
-for the bot. In this instance, we are specifying that the bot is responsible for
+for the bot. Let's add that the bot is responsible for
 answering mathematical questions. We are also specifying details like
 the behavioral characteristics of the bot, for instance, we want it to be
 concise and only answer questions truthfully.
@@ -1321,16 +1045,11 @@ concise and only answer questions truthfully.
     ```
 * **Specifying which model to use:** Users can select from a wide range of
 large language models to act as the backbone of the bot. In this case, we are
-selecting OpenAI's davinci.
-    ```
-    models:
-    - type: main
-        engine: openai
-        model: text-davinci-003
-    ```
+still selecting OpenAI's davinci, as described above.
+
 * **Providing Sample Conversations:** To ensure that the large language model
 understands how to converse with the user, we provide a few sample conversations.
-Below is a small snippet of the conversation we can provide the bot:
+Below is a small snippet of the conversation we can provide for a maths-capable bot:
     ```
     sample_conversation: |
     user "Hello there!"
@@ -1359,35 +1078,12 @@ for the flow of the conversation. For a more formal explanation, refer to this
 
 ##### User and Bot Messages
 
-Let's start with a basic user query; asking what can the bot do? In this case,
-we define a `user` message `ask capabilities` and then proceed by providing
-some examples of what kinds of user queries we could refer to as a user asking
-about the capabilities of the bot in simple natural language.
-```
-define user ask capabilities
-  "What can you do?"
-  "What can you help me with?"
-  "tell me what you can do"
-  "tell me about you"
-```
-
-With the above, we can say that the bot can now recognize what the user is
-asking about. The next step is making sure that the bot has an understanding of
-how to answer said question.
+We can update our bot capabilities in [general.co](general.co).
 
 ```
 define bot inform capabilities
-  "I am an AI assistant that helps answer mathematical questions. My core mathematical skills are powered by wolfram alpha."
+  "This is an AI assistant that helps answer mathematical questions. Core mathematical skills are powered by wolfram alpha."
 ```
-
-Therefore, we define a bot message. At this point, a natural question a
-developer might ask is, "Do I have to define every type of user & bot behavior?".
-The short answer is, it depends on how much determinism is required
-for the application. For situations where a flow or a message isn't defines,
-the underlying large language model comes up with the next step for the bot or with
-an appropriate canonical form. It may or may not leverage the existing rails
-to do so, but the mechanism of flows and messages ensures that the LLM can come
-up with appropriate responses. Refer to the [colang runtime description guide](../../../docs/architecture/README.md#canonical-user-messages) for more information on the same.
 
 ##### Using Flows
 
@@ -1484,66 +1180,14 @@ async def T5_translation(
 ### Launching the bot
 
 With a basic understanding of building topic rails, the next step is to try out
-the bot! You can interact with the bot with an API, a command line interface
-with the server, or with a UI.
+the updated bot! You can interact with the bot with an API, a command line interface
+with the server, or with a UI, just as described above -- with one extra step.
 
 Before launching the bot, make sure to set your Wolfram|Alpha API KEY.
 * **With Linux:**
 Run the command ```export WOLFRAM_ALPHA_APP_ID=<your API key>```
 * **With Windows:**
 Run the command ```set WOLFRAM_ALPHA_APP_ID=<your API key>```
-
-
-#### API
-
-Accessing the Bot via an API is quite simple. This method has two points to
-configure from a usage perspective:
-* First, a path is needed to be set for all the configuration files and the
-rails.
-* And second, for the chat API, the `role` which in most cases will be `user`
-and the question or the context to be consumed by the bot needs to be provided.
-```
-from nemoguardrails.rails import LLMRails, RailsConfig
-
-# Give the path to the folder containing the rails
-config = RailsConfig.from_path("sample_rails")
-rails = LLMRails(config)
-
-# Define role and question to be asked
-new_message = rails.generate(messages=[{
-    "role": "user",
-    "content": "How can you help me?"
-}])
-print(new_message)
-```
-Refer to [Python API Documentation](../../../docs/user_guide/interface-guide.md#python-api) for more information.
-
-#### UI
-
-Guardrails allows users to interact with the server with a stock UI. To launch the
-server and access the UI to interact with this example, the following steps are
-recommended:
-* Launch the server with the command: `nemoguardrails server`
-* Once the server is launched, you can go to: `http://localhost:8000` to access
-the UI
-* Click "New Chat" on the top left corner of the screen and then proceed to
-pick `execution_rail` from the drop-down menu.
-
-Refer to [Guardrails Server Documentation](../../../docs/user_guide/interface-guide.md#guardrails-server) for more information.
-
-#### Command Line Chat
-
-To chat with the bot with a command line interface simply use the following
-command while you are in this folder.
-```
-nemoguardrails chat --config=sample_rails
-```
-Refer to [Guardrails CLI Documentation](../../../docs/user_guide/interface-guide.md#guardrails-cli) for more information.
-
-Wondering what to talk to your bot about?
-* Write your own action!
-* Try connecting your existing Machine Learning Pipeline via an action!
-* [Explore more examples](../../README.md#examples) to help steer your bot!
 
 
 ## End
