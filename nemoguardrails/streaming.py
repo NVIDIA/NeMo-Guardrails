@@ -151,7 +151,7 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
                     self.top_k_nonempty_lines_event.set()
             else:
                 if self.enable_print and chunk is not None:
-                    print(f"\033[92m{chunk}\033[0m", end="")
+                    print(f"\033[92m{chunk}\033[0m", end="", flush=True)
                 await self.queue.put(chunk)
 
                 if chunk is None or chunk == "":
