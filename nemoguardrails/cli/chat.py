@@ -45,6 +45,28 @@ async def _run_chat_v1_1(rails_app: LLMRails):
     """Simple chat loop for v1.1 using the stateful events API."""
     state = None
     waiting_user_input = False
+    pending_timers = {}
+    running_timer_tasks = {}
+    output_events = []
+    output_state = None
+
+    # Start an asynchronous timer
+    async def _start_timer(timer_name: str, delay_seconds: float, action_uid: str):
+        nonlocal input_events
+        print(f"Timer {timer_name}/{action_uid} started.")
+        await asyncio.sleep(delay_seconds)
+        print(f"Timer {timer_name}/{action_uid} is up!")
+        input_events.append(
+            new_event_dict(
+                "TimerBotActionFinished",
+                action_uid=action_uid,
+                is_success=True,
+                timer_name=timer_name,
+            )
+        )
+        running_timer_tasks.pop(action_uid)
+        if waiting_user_input:
+            await _process_input_events()
 
     def _process_output():
         """Helper to process the output events."""
@@ -66,7 +88,7 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                         final_script=event["script"],
                     )
                 )
-            if event["type"] == "StartGestureBotAction":
+            elif event["type"] == "StartGestureBotAction":
                 # We print gesture messages in green.
                 print(f"\033[92mgesture: {event['gesture']}\033[0m")
 
@@ -78,11 +100,16 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                     )
                 )
 
-            if event["type"] == "StartVisualInformationSceneAction":
+            elif event["type"] == "StartVisualInformationSceneAction":
                 # We print scene messages in green.
-                print(f"\033[92mscene information: {event['title']}\033[0m")
+                print(
+                    f"\033[92mshow: scene information (title={event['title']}, action_uid={event['action_uid']})\033[0m"
+                )
 
-            if event["type"] == "StopVisualInformationSceneAction":
+            elif event["type"] == "StopVisualInformationSceneAction":
+                print(
+                    f"\033[92mhide: scene information (action_uid={event['action_uid']})\033[0m"
+                )
                 input_events.append(
                     new_event_dict(
                         "VisualInformationSceneActionFinished",
@@ -90,6 +117,36 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                         is_success=True,
                     )
                 )
+
+            elif event["type"] == "StartVisualChoiceSceneAction":
+                # We print scene messages in green.
+                print(
+                    f"\033[92mshow: scene choice (prompt={event['prompt']}, action_uid={event['action_uid']})\033[0m"
+                )
+
+            elif event["type"] == "StopVisualChoiceSceneAction":
+                print(
+                    f"\033[92mhide: scene choice (action_uid={event['action_uid']})\033[0m"
+                )
+                input_events.append(
+                    new_event_dict(
+                        "VisualChoiceSceneActionFinished",
+                        action_uid=event["action_uid"],
+                        is_success=True,
+                    )
+                )
+
+            elif event["type"] == "StartTimerBotAction":
+                # print(f"\033[92mstart timer: {event['timer_name']} {event['duration']}\033[0m")
+                timer = _start_timer(
+                    event["timer_name"], event["duration"], event["action_uid"]
+                )
+                pending_timers.update({event["action_uid"]: timer})
+
+            elif event["type"] == "StopTimerBotAction":
+                # print(f"\033[92mstart timer: {event['timer_name']} {event['duration']}\033[0m")
+                if event["action_uid"] in running_timer_tasks:
+                    running_timer_tasks[event["action_uid"]].cancel()
 
         # TODO: deserialize the output state
         # state = State.from_dict(output_state)
@@ -130,6 +187,29 @@ async def _run_chat_v1_1(rails_app: LLMRails):
 
             await asyncio.sleep(0.2)
 
+    async def _process_input_events():
+        nonlocal first_time, output_events, output_state, input_events, check_task
+        while input_events or first_time:
+            output_events, output_state = await rails_app.process_events_async(
+                input_events, state
+            )
+            _process_output()
+            # If we don't have a check task, we start it
+            if check_task is None:
+                check_task = asyncio.create_task(_check_local_async_actions())
+
+            # Manage timer tasks
+            for action_uid, timer in pending_timers.items():
+                if timer in running_timer_tasks:
+                    if running_timer_tasks[action_uid].done():
+                        running_timer_tasks.pop(action_uid)
+                else:
+                    task = asyncio.create_task(timer)
+                    running_timer_tasks.update({action_uid: task})
+            pending_timers.clear()
+
+            first_time = False
+
     # Start the task for checking async actions
     check_task = asyncio.create_task(_check_local_async_actions())
 
@@ -160,16 +240,7 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                         }
                     ]
 
-            while input_events or first_time:
-                output_events, output_state = await rails_app.process_events_async(
-                    input_events, state
-                )
-                _process_output()
-                # If we don't have a check task, we start it
-                if check_task is None:
-                    check_task = asyncio.create_task(_check_local_async_actions())
-
-                first_time = False
+            await _process_input_events()
 
 
 async def input_async(prompt_message: str = "") -> str:

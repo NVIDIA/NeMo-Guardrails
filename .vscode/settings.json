@@ -37,7 +37,8 @@
     "[python]": {
         "editor.codeActionsOnSave": {
             "source.organizeImports": true
-        }
+        },
+        "editor.defaultFormatter": "ms-python.black-formatter"
     },
     "python.envFile": "${workspaceFolder}/.venv",
     "python.languageServer": "Pylance",
@@ -60,7 +61,11 @@
     "cSpell.enableFiletypes": ["co", "colang"],
 
     // FLAKE8
-    "flake8.args": [
-        "--max-line-length=120"
-    ]
+    "flake8.args": ["--max-line-length=120"],
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#043425",
+        "titleBar.activeBackground": "#064934",
+        "titleBar.activeForeground": "#ECFEF8"
+    },
+    "python.formatting.provider": "none"
 }

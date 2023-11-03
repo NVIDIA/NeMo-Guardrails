@@ -1166,6 +1166,41 @@ def test_activate_flow_mechanism():
     )
 
 
+def test_stop_activate_flow_mechanism():
+    """Test the activate a flow mechanism"""
+
+    content = """
+    flow a
+      while True
+        start UtteranceBotAction(script="Start")
+        match UtteranceUserAction().Finished(final_transcript="Hi")
+
+    flow main
+      activate a as $ref
+      send $ref.Stop()
+      start UtteranceBotAction(script="End")
+      match WaitAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "End",
+            },
+        ],
+    )
+
+
 def test_finish_flow_event():
     """Test the FinishFlow event that will immediately finish a flow"""
 
@@ -3628,4 +3663,4 @@ def test_generate_value_with_NLD():
 
 
 if __name__ == "__main__":
-    test_generate_value_with_NLD()
+    test_stop_activate_flow_mechanism()

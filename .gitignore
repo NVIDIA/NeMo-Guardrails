@@ -25,3 +25,4 @@ original_dataset
 eval_outputs
 /**/chitchat/user.co
 /**/banking/user.co
+.mypy_cache

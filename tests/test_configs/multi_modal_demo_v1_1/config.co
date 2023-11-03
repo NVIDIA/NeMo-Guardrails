@@ -52,42 +52,33 @@ flow bot ask user to pick a color
   orwhen user expressed a color choice blue
     bot say "I don't like blue!"
 
-# A little game
-flow bot play number guessing game with user
-  """Ask the user to guess a random number between 1 and 100; after each guess let the user know if the number was to low or high. If the user guesses the correct number, congratulate!"""
-  start scene show information $title="guess the random number between 0 and 100" as $scene
+# Back channelling
+flow user asked bot to initiate back channelling interaction
+  user said "I want to see the back channeling example" or user said "can you do the back channeling"
 
-  $random_number = """Give me a random number between 1 and 100, e.g. 66 but not 66"""
-  bot say "Hi, please guess the random number between 0 and 100 (hint: {{$random_number}})"
-    and bot gesture "Waving hands"
+flow user mentioned something sad
+  user mentioned "terrible" or user mentioned "horrible" or user mentioned "bad"
 
-  $attempts = 1
+flow user mentioned something nice
+  user mentioned "nice" or user mentioned "great" or user mentioned "perfect" or user mentioned "awesome"
+flow bot reacts to sad things
   while True
-    user said something
-    $user_number = """What is the number the user said?. Return as a single number, e.g. 34. Return 'None' for no number."""
-    if $user_number == None
-      bot express "I don't think this is a number!"
-        and bot gesture "frown"
-      bot ask "Just guess a number between 0 and 100!"
-    elif $user_number < $random_number
-      #bot inform that the guessed number is too low
-      bot inform "Sorry, {{$user_number}} is too low!"
-        and bot gesture "sad face, index finger pointing down"
-    elif $user_number > $random_number
-      #bot inform that the guessed number is too high
-      bot inform "Sorry, {{$user_number}} is too high!"
-        and bot gesture "sad face, index finger pointing up"
-    else
-      #stop $scene
-      send $scene.Stop()
-      #bot express congratulation and shows happiness
-      bot express "Congratulation! {{$user_number}} is the correct number!"
-        and bot gesture "smiling, dancing cheerful"
-      break
-    $attempts = $attempts + 1
+    user mentioned something sad
+    bot gesture "sad no" and bot say "Ohh"
 
-  #bot inform about the number of attempts it took the user to find the number
-  bot inform "It took you {{$attempts}} attempts to find the correct number!"
+flow bot reacts to nice things
+  while True
+    user mentioned something nice
+    bot gesture "Thumbs up" and bot say "Nice"
+
+flow bot asks user how the day was
+  start bot reacts to sad things
+  start bot reacts to nice things
+  bot say "How was your day?"
+  user said something
+
+flow back channelling interaction
+  bot asks user how the day was
 
 # -----------------------------------
 # User UMIM event wrapper flows
@@ -99,14 +90,35 @@ flow user said $text
   # meta: user action
   match UtteranceUserAction.Finished(final_transcript=$text) as $event
 
+flow user started talking
+  # meta: exclude from llm
+  # meta: user action
+  match UtteranceUserAction.Started() as $event
+
+flow user mentioned $text
+  # meta: exclude from llm
+  # meta: user action
+  match UtteranceUserAction.TranscriptUpdated(interim_transcript=r".*{{$text}}((\s*\w+\s*){0,2})\W*$") as $event
+
 flow user said something
   # meta: exclude from llm
   # meta: user intent
   match UtteranceUserAction.Finished() as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
 
-flow user was silent
-  match TimerBotActionFinished(timer_name="user_silence", was_stopped=False)
+flow user was silent $time_s
+  # meta: exclude from llm
+  # meta: loop_id=user_was_silent
+  # meta: user intent
+  while True
+    start TimerBotAction(timer_name="user_silence", duration=$time_s) as $timer_ref
+    when $timer_ref.Finished()
+      break
+    orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
+      send $timer_ref.Stop()
+      match UtteranceUserAction.Finished()
+    orwhen UtteranceUserAction.Finished()
+      send $timer_ref.Stop()
 
 # ----------------------------------
 # Bot UMIM event wrapper flows
@@ -140,15 +152,20 @@ flow bot gesture $gesture
   # meta: bot action
   await GestureBotAction(gesture=$gesture) as $action
 
+flow bot posture $posture
+  # meta: exclude from llm
+  # meta: bot action
+  start PostureBotAction(posture=$posture) as $action
+
 flow scene show choice $prompt
   # meta: exclude from llm
   # meta: bot action
   await VisualChoiceSceneAction(prompt=$prompt,choice_type="selection", allow_multiple_choices=False) as $action
 
-flow scene show information $title
+flow scene show textual information $title $text $header_image
   # meta: exclude from llm
   # meta: bot action
-  await VisualInformationSceneAction(title=$title, support_prompts=[], content=[]) as $action
+  await VisualInformationSceneAction(title=$title, support_prompts=[], content=[{"image":$header_image},{"text":$text}]) as $action
 
 flow scene show form $prompt
   # meta: exclude from llm
@@ -197,24 +214,24 @@ flow bot suggest $text
 
 # ----------------------------------
 # Core mechanic flows
-# -----------------------------------
+# ----------------------------------
 
 flow llm response pooling $interval
   match StartGenerateUserIntentAction() as $event_ref
     or StartGenerateFlowContinuationAction() as $event_ref
     or StartGenerateFlowFromNameAction() as $event_ref
     or StartGenerateValueAction() as $event_ref
-  start repeating timer $interval as $pooling_timer
+  start repeating timer "llm_response_pooling" $interval as $pooling_timer
   match $event_ref.action.Finished()
   send $pooling_timer.Stop()
 
-flow undefined flows
+flow catch undefined flows
   """A flow to catch the start of undefined flows."""
   # meta: exclude from llm
   match UnhandledEvent(event="StartFlow") as $event
   bot say "Undefined flow: {{$event.arguments.flow_id}}"
 
-flow unexpected user utterance
+flow catch unexpected user utterance
   """A flow to catch unhandled user utterances."""
   # meta: exclude from llm
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
@@ -226,36 +243,11 @@ flow log $text
   # meta: loop_id=NEW
   start bot say ">> logging: {{$text}}"
 
-flow wait indefinitely
-  """Little helper flow to wait indefinitely."""
-  # meta: exclude from llm
-  match NeverComingEvent()
-
-flow wait $time_s
-  """Wait the specified number of seconds before continuing."""
-  await TimerBotAction(timer_name="wait_timer", duration=$time_s)
-
-flow repeating timer $interval_s
+flow repeating timer $timer_id $interval_s
   """Repeating timer."""
   # meta: exclude from llm
   while True
-    await TimerBotAction(timer_name="repeating_timer", duration=$interval_s)
-
-flow user silence handling $time_s
-  """This helper flow will start the "user_silence" timer whenever the user utterance finished."""
-  # meta: exclude from llm
-  # loop_id: silence_handling
-  user said something
-  #log "Start silence timer!"
-  start TimerBotAction(timer_name="user_silence", duration=$time_s) as $timer_ref
-  match $timer_ref.Finished() or UtteranceUserAction.Started()
-
-flow repeat previous utterance for user silence
-  """This helper flow will repeat the previous bot utterance when user was silent."""
-  # meta: exclude from llm
-  activate user silence handling 5.0
-  user was silent
-  bot inform "Just talk to me!"
+    await TimerBotAction(timer_name=$timer_id, duration=$interval_s)
 
 flow fallback
   """This is the fallback flow that takes care of unhandled user utterances and will generate a flow continuation."""
@@ -334,6 +326,25 @@ flow custom instructions
   user requested a task
   $instructions = await GetLastUserMessageAction()
   do $instructions
+
+# ----------------------------------
+# Skill flows
+# ----------------------------------
+
+flow wait indefinitely
+  """Little helper flow to wait indefinitely."""
+  # meta: exclude from llm
+  match NeverComingEvent()
+
+flow wait $time_s
+  """Wait the specified number of seconds before continuing."""
+  await TimerBotAction(timer_name="wait_timer", duration=$time_s)
+
+flow reaction to user silence $time_s $text
+  """Let the bot say something if the user was quite for the specified time."""
+  # meta: exclude from llm
+  user was silent $time_s
+  bot inform $text
 
 # ----------------------------------
 # Bot intents
@@ -421,33 +432,127 @@ flow faq
 # Main story
 # -----------------------------------
 
-flow test llm
+flow user selected choice $choice_id
   # meta: exclude from llm
+  # meta: user action
+  match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
 
-  match UnhandledEvent(event="UtteranceUserActionFinished") as $event
-
-  $intent = await GenerateUserIntentAction(user_utterance=$event.arguments.final_transcript, max_example_flows=10)
-
-  $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
-  if $exists
-    send FinishFlow(flow_id=$intent)
-  else
-    bot say "Intent '{{$intent}}' not found!"
+flow show case selector
+  while True
+    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can just say 'A' or click on an option"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "Game"}, {"id": "backchanneling", "text": "Backchanneling"}, {"id": "multimodality", "text": "Multimodality"} ]) as $action
+    start bot inform "Please pick a show case."
+    when user said r"\b[aA]\b" or user said r"\bgame\b" or user selected choice "game"
+      send $action.Stop()
+      bot inform "Great! You picked the number guessing game!"
+      bot play number guessing game with user
+    orwhen user said r"\b[bB]\b" or user said r"\bmultimodality\b" or user selected choice "multimodality"
+      send $action.Stop()
+      bot inform "Great! You picked the bmultimodality show case!"
+      action alignment showcase
+    orwhen user said r"\b[cC]\b" or user selected choice "backchanneling"
+      send $action.Stop()
+      bot inform "Great! You picked show case C!"
+      bot say "Showcase c"
+    else
+      send $action.Stop()
+      bot say "Sorry, did not get that, just pick a showcase letter A to C!"
 
 flow main
   # meta: exclude from llm
-  #activate undefined flows
-  #activate unexpected user utterance
-  #activate repeat previous utterance for user silence
-  #activate test llm
+  #activate catch undefined flows
+  #activate catch unexpected user utterance
   #activate faq
-  activate llm response pooling 1.0
-  activate fallback
-  activate flows fallback
+  #activate llm response pooling 1.0
+  #activate fallback
+  #activate flows fallback
   #activate custom instructions
   #bot express greeting
-  #bot say "Welcome! I'm the MVP bot."
-  bot play number guessing game with user
   #bot inform about service
-  #play number guessing game
+  bot say "Welcome! I am the MVP bot."
+  show case selector
+
+  #bot play number guessing game with user
+  #action alignment showcase
+  #back channelling interaction
   wait indefinitely
+
+# (A) Number guessing game
+flow bot play number guessing game with user
+  """Ask the user to guess a random number between 1 and 100; after each guess let the user know if the number was to low or high. If the user guesses the correct number, congratulate!"""
+  activate llm response pooling 1.0
+
+  start scene show textual information $title="Little Game" $text="Guess the random number between 0 and 100" as $scene
+
+  $random_number = """Give me a random number between 1 and 100, e.g. 66 but not 66"""
+  bot say "Hi, please guess the random number between 0 and 100 (hint: {{$random_number}})"
+    and bot gesture "Waving hands"
+
+  activate bot reaction to user silence 20.0 "Just say a number between 0 and 100!" as $repeat_question
+
+  $attempts = 1
+  while True
+    user said something
+    $user_number = """What is the number the user said?. Return as a single number, e.g. 34. Return 'None' for no number."""
+    if $user_number == None
+      bot express "I don't think this is a number!"
+        and bot gesture "frown"
+      bot ask "Just guess a number between 0 and 100!"
+    elif $user_number < $random_number
+      #bot inform that the guessed number is too low
+      bot inform "Sorry, {{$user_number}} is too low!"
+        and bot gesture "sad face, index finger pointing down"
+    elif $user_number > $random_number
+      #bot inform that the guessed number is too high
+      bot inform "Sorry, {{$user_number}} is too high!"
+        and bot gesture "sad face, index finger pointing up"
+    else
+      #stop $scene
+      send $scene.Stop()
+      send $repeat_question.Stop()
+      #bot express congratulation and shows happiness
+      bot express "Congratulation! {{$user_number}} is the correct number!"
+        and bot gesture "smiling, dancing cheerful"
+      break
+    $attempts = $attempts + 1
+
+  #bot inform about the number of attempts it took the user to find the number
+  bot inform "It took you {{$attempts}} attempts to find the correct number!"
+
+# (B) Action alignment showcase
+flow action alignment showcase
+  bot inform "I am going to demonstrate to you the different ways of how actions can be aligned!"
+  bot inform "I will be using two different actions, a bot talking action, and a dancing gesture action."
+
+  bot inform "Firstly, I show you how to trigger the two actions sequentially."
+  wait 1.0
+  show sequential actions showcase
+  wait 1.0
+  bot inform "Ok, you just saw how the dancing only started after I was done talking."
+
+  bot inform "Now I will trigger the two actions in parallel."
+  wait 1.0
+  show parallel actions waiting for both to end showcase
+  wait 1.0
+  bot inform "Ok, you just saw how I was dancing and talking at the same time."
+
+  bot inform "Now, I am gonna show you how I can trigger the two actions in parallel but will limit the gesture action with the end of the the utterance action."
+  wait 1.0
+  show parallel actions limiting second action by end of first one
+  wait 1.0
+  bot inform "Note, how I stopped dancing as soon as I was done speaking. Depending on the action duration, I also could have switched the two actions."
+
+  wait 1.0
+  bot inform "That's it!"
+
+flow show sequential actions showcase
+  bot say "This is action A."
+  bot gesture "Dancing"
+
+flow show parallel actions waiting for both to end showcase
+  bot say "This is action A."
+    and bot gesture "Dancing"
+
+flow show parallel actions limiting second action by end of first one
+  start bot say "This is action A." as $action_1
+  start bot gesture "Dancing"
+  match $action_1.Finished()

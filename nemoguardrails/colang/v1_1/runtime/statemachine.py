@@ -259,7 +259,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                             state=state,
                             flow_state=flow_state,
                             matching_scores=event.matching_scores,
-                            deactivate_flow=event.arguments.get("activated", False),
+                            deactivate_flow=flow_state.activated,
                         )
                 elif "flow_id" in event.arguments:
                     for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
@@ -268,7 +268,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                                 state=state,
                                 flow_state=flow_state,
                                 matching_scores=event.matching_scores,
-                                deactivate_flow=event.arguments.get("activated", False),
+                                deactivate_flow=flow_state.activated,
                             )
                 # TODO: Add support for all flow instances of same flow with "flow_id"
             # elif event.name == "ResumeFlow":
@@ -522,7 +522,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         flow_finished = False
         flow_aborted = False
         if head.position >= len(flow_config.elements):
-            if flow_state.status == FlowStatus.STOPPED:
+            if flow_state.status == FlowStatus.STOPPING:
                 flow_aborted = True
             else:
                 flow_finished = True
@@ -756,14 +756,11 @@ def slide(
 
         elif isinstance(element, Abort):
             if head.catch_pattern_failure_label:
-                head.catch_pattern_failure_label = element.label
-                head.position += 1
+                head.position = (
+                    flow_config.element_labels[head.catch_pattern_failure_label] + 1
+                )
             else:
                 flow_state.status = FlowStatus.STOPPING
-                new_event = create_stop_flow_internal_event(
-                    flow_state.uid, flow_state.uid, head.matching_scores
-                )
-                _push_internal_event(state, new_event)
                 head.position = len(flow_config.elements)
 
         elif isinstance(element, Continue) or isinstance(element, Break):

@@ -539,7 +539,8 @@ def _expand_activate_element(
         # Single match element
         if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
-            element.spec.arguments.update(
+            element_copy = copy.deepcopy(element)
+            element_copy.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
                     "flow_start_uid": f"'{new_var_uid()}'",
@@ -548,23 +549,8 @@ def _expand_activate_element(
             )
             new_elements.append(
                 SpecOp(
-                    op="send",
-                    spec=Spec(
-                        name=InternalEvents.START_FLOW,
-                        arguments=element.spec.arguments,
-                        spec_type=SpecType.EVENT,
-                    ),
-                )
-            )
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        name=InternalEvents.FLOW_STARTED,
-                        arguments=element.spec.arguments,
-                        spec_type=SpecType.EVENT,
-                    ),
-                    info={"internal": True},
+                    op="start",
+                    spec=element_copy.spec,
                 )
             )
         else:

@@ -210,7 +210,14 @@ class Action:
 
     def get_event(self, name: str, arguments: dict) -> Callable[[], ActionEvent]:
         """Returns the corresponding action event."""
-        assert name in Action._event_name_map, f"Event '{name}' not available!"
+        if name.endswith("Updated"):
+            split_name = name.rsplit("Updated", 1)
+            if split_name[0] == "":
+                raise ColangSyntaxError(f"Invalid action event {name}!")
+            arguments.update({"event_parameter_name": split_name[0]})
+            name = "Updated"
+        if name not in Action._event_name_map:
+            raise ColangSyntaxError(f"Invalid action event {name}!")
         func = getattr(self, Action._event_name_map[name])
         return func(arguments)
 
@@ -247,7 +254,7 @@ class Action:
         arguments = args.copy()
         arguments["action_arguments"] = self.start_event_arguments
         return ActionEvent(
-            name=f"{self.name}{args['parameter_name']}Updated",
+            name=f"{self.name}{args['event_parameter_name']}Updated",
             arguments=arguments,
             action_uid=self.uid,
         )
