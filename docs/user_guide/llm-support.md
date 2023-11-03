@@ -17,27 +17,23 @@ Any new LLM available in Guardrails should be evaluated using at least this set 
 
 ## LLM Support and Guidance
 
-The following tables summarize the LLM support for each type of rail.
-
-:heavy_check_mark: - Supported
-
-:white_check_mark: - Partial Support
+The following tables summarize the LLM support for the main features of NeMo Guardrails, focusing on the different rails available out of the box.
 
 
-### Dialog rails
+| Feature                                          | text-davinci-003   | gpt-3.5-turbo-instruct | nemollm-43b-chat   | llama-2-13b-chat   | falcon-7b-instruct | gpt-3.5-turbo | gpt-4 | vicuna-7b-v1.3 | mpt-7b-instruct | dolly-v2-3b |
+|--------------------------------------------------|--------------------|------------------------|--------------------|--------------------|--------------------|---------------|-------|----------------|-----------------|-------------|
+| Dialog Rails                                     | :heavy_check_mark: | :heavy_check_mark:     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: ||||
+| - Single LLM call                                | :heavy_check_mark: | :heavy_check_mark:     | :heavy_check_mark: | :x:                | :x:                | :x:           | :x:   | :x:            |
+| - Multi-step flow generation                     | EXPERIMENTAL       | :x:                    | :x:                | :x:                | :x:                | :x:           | :x:   | :x:            | :x:             | :x:         |
+| Streaming  	                                     | :heavy_check_mark: | :heavy_check_mark:     | :x:                ||||||
+| Hallucination detection (SelfCheckGPT with LLM ) | :heavy_check_mark: | :x:                    | :x:                | :x:                | :x:                | :x:           | :x:   | :x:            | :x:             | :x:         |
+| AskLLM                                           | :heavy_check_mark: ||||||||
+| - Jailbreak detection                            | :heavy_check_mark: | :x:                    | :heavy_check_mark: | :x:                | :x:                | :x:           | :x:   | :x:            | :x:             | :x:         |
+| - Output moderation                              | :heavy_check_mark: | :x:                    | :heavy_check_mark: | :x:                | :x:                | :x:           | :x:   | :x:            | :x:             | :x:         |
+| - Fact-checking                                  | :heavy_check_mark: | :x:                    | :heavy_check_mark: | :heavy_check_mark: | :x:                | :x:           | :x:   | :x:            | :x:             | :x:         |
+ | AlignScore fact-checking (LLM independent)       | :heavy_check_mark: ||||||||
+| ActiveFence moderation (LLM independent)         | :heavy_check_mark: ||||||||
 
-| LLM                    | Support            |
-|------------------------|--------------------|
-| text-davinci-003       | :heavy_check_mark: |
-| gpt-3.5-turbo-instruct | :heavy_check_mark: |
-| llama-2-13b-chat       | :heavy_check_mark: |
-| falcon-7b-instruct  	  | :heavy_check_mark: |
-| gpt-3.5-turbo          | :white_check_mark: |
-| gpt-4                  | :white_check_mark: |
-| dolly-v2-3b            | :white_check_mark: |
-| vicuna-7b-v1.3         | :white_check_mark: |
-| mpt-7b-instruct        | :white_check_mark: |
-
-### Input and output rails
-
-TO ADD
+Table legend:
+- :heavy_check_mark: - Supported
+- :x: - Not Supported
