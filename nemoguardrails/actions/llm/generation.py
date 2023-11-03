@@ -285,7 +285,8 @@ class LLMGenerationActions:
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
                     examples += f"user \"{result.text}\"\n  {result.meta['intent']}\n\n"
-                    potential_user_intents.append(result.meta["intent"])
+                    if result.meta["intent"] not in potential_user_intents:
+                        potential_user_intents.append(result.meta["intent"])
 
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERATE_USER_INTENT,
@@ -783,7 +784,8 @@ class LLMGenerationActions:
 
                 # We fill in the list of potential user intents
                 for result in intent_results:
-                    potential_user_intents.append(result.meta["intent"])
+                    if result.meta["intent"] not in potential_user_intents:
+                        potential_user_intents.append(result.meta["intent"])
 
             if self.flows_index:
                 for intent in potential_user_intents:
@@ -792,6 +794,8 @@ class LLMGenerationActions:
                     )
                     flow_results[intent] = flow_results_intent
 
+            
+                    
             # We add the intent to the examples in reverse order
             # so the most relevant is towards the end.
             for result in intent_results:
