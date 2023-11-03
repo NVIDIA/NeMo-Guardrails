@@ -38,7 +38,7 @@ define user ask additional help
 define bot offer additional help
   "If you have any more questions or if there's anything else I can help you with, please don't hesitate to ask."
 
-define flow 
+define flow
   user ask additional help
   bot offer additional help
 
