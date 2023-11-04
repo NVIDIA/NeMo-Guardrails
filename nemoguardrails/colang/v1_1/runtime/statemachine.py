@@ -442,7 +442,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         head.position
                     ]
                     competing_flow_state = get_flow_state_from_head(state, head)
-                    competing_event: ActionEvent = get_event_from_element(
+                    competing_event = get_event_from_element(
                         state, competing_flow_state, competing_element
                     )
                     if winning_event.is_equal(competing_event):
@@ -459,13 +459,14 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                                 competing_flow_state.context[key] = state.actions[
                                     winning_event.action_uid
                                 ]
-                        index = competing_flow_state.action_uids.index(
-                            competing_event.action_uid
-                        )
-                        competing_flow_state.action_uids[
-                            index
-                        ] = winning_event.action_uid
-                        state.actions.pop(competing_event.action_uid, None)
+                        if isinstance(competing_event, ActionEvent):
+                            index = competing_flow_state.action_uids.index(
+                                competing_event.action_uid
+                            )
+                            competing_flow_state.action_uids[
+                                index
+                            ] = winning_event.action_uid
+                            state.actions.pop(competing_event.action_uid, None)
 
                         advancing_heads.append(head)
                         log.info(
@@ -890,10 +891,10 @@ def _abort_flow(
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
             child_flow_state.status = FlowStatus.STOPPING
-            event = create_stop_flow_internal_event(
+            internal_event = create_stop_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, matching_scores
             )
-            _push_internal_event(state, event)
+            _push_internal_event(state, internal_event)
 
     # Abort all stared actions that have not finished yet
     for action_uid in flow_state.action_uids:
@@ -902,9 +903,9 @@ def _abort_flow(
             action.status == ActionStatus.STARTING
             or action.status == ActionStatus.STARTED
         ):
-            event = action.stop_event({})
+            action_event = action.stop_event({})
             action.status = ActionStatus.STOPPING
-            _generate_action_event(state, event)
+            _generate_action_event(state, action_event)
 
     # Cleanup all head from flow
     flow_state.heads.clear()
@@ -950,10 +951,10 @@ def _finish_flow(
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
             child_flow_state.status = FlowStatus.STOPPING
-            event = create_stop_flow_internal_event(
+            internal_event = create_stop_flow_internal_event(
                 child_flow_state.uid, flow_state.uid, matching_scores, True
             )
-            _push_internal_event(state, event)
+            _push_internal_event(state, internal_event)
 
     # Abort all started actions that have not finished yet
     for action_uid in flow_state.action_uids:
@@ -962,9 +963,9 @@ def _finish_flow(
             action.status == ActionStatus.STARTING
             or action.status == ActionStatus.STARTED
         ):
-            event = action.stop_event({})
+            action_event = action.stop_event({})
             action.status = ActionStatus.STOPPING
-            _generate_action_event(state, event)
+            _generate_action_event(state, action_event)
 
     # Cleanup all head from flow
     flow_state.heads.clear()
@@ -1076,11 +1077,18 @@ def _is_inactive_flow(flow_state: FlowState) -> bool:
     )
 
 
-def _generate_action_event(state: State, event: ActionEvent) -> None:
-    umim_event = create_umim_action_event(event, event.arguments)
+def _generate_action_event(state: State, event: Event) -> None:
+    if event.name == "HeadSyncEvent":
+        # We don't publish the HeadSyncEvent since it is used only to enforce flow/head competition resolution
+        # before merging heads
+        return
+    umim_event = create_umim_event(event, event.arguments)
     state.outgoing_events.append(umim_event)
     # Also push them on the internal event queue
-    state.internal_events.append(ActionEvent.from_umim_event(umim_event))
+    if isinstance(event, Event):
+        state.internal_events.append(Event.from_umim_event(umim_event))
+    elif isinstance(event, ActionEvent):
+        state.internal_events.append(ActionEvent.from_umim_event(umim_event))
     log.info(f"[bold violet]<- Action[/]: {event}")
 
     # Update the status of relevant actions by event
@@ -1192,10 +1200,15 @@ def _compute_event_matching_score(
                 and ref_event.arguments["flow_id"] == event.arguments["flow_id"]
             )
     elif event.name in InternalEvents.ALL and ref_event.name in InternalEvents.ALL:
+        assert isinstance(event, InternalEvent) and isinstance(ref_event, InternalEvent)
         if (
             "flow_id" in ref_event.arguments
             and "flow_id" in event.arguments
             and ref_event.arguments["flow_id"] != event.arguments["flow_id"]
+        ) or (
+            ref_event.flow is not None
+            and "source_flow_instance_uid" in event.arguments
+            and ref_event.flow.uid != event.arguments["source_flow_instance_uid"]
         ):
             return 0.0
 
@@ -1314,7 +1327,9 @@ def _compute_arguments_dict_matching_score(args: dict, ref_args: dict) -> float:
     return score
 
 
-def get_event_from_element(state: State, flow_state: FlowState, element: dict) -> Event:
+def get_event_from_element(
+    state: State, flow_state: FlowState, element: SpecOp
+) -> Event:
     """
     Converts the element into the corresponding event if possible.
 
@@ -1324,6 +1339,7 @@ def get_event_from_element(state: State, flow_state: FlowState, element: dict) -
     3) Event as member of a action or flow reference: send/match $ref.Finished(args) (This is action/flow specific)
     """
 
+    assert isinstance(element.spec, Spec)
     element_spec: Spec = element.spec
 
     action: Action
@@ -1336,10 +1352,11 @@ def get_event_from_element(state: State, flow_state: FlowState, element: dict) -
         # Resolve variable and member attributes
         obj = flow_state.context[variable_name]
         member = None
-        for member in element_spec.members[:-1]:
-            if not hasattr(obj, member.name):
-                raise ColangValueError(f"No attribute '{member.name}' in {obj}")
-            obj = getattr(obj, member.name)
+        if element_spec.members is not None:
+            for member in element_spec.members[:-1]:
+                if not hasattr(obj, member.name):
+                    raise ColangValueError(f"No attribute '{member.name}' in {obj}")
+                obj = getattr(obj, member.name)
         if element_spec.members is not None:
             member = element_spec.members[-1]
 
@@ -1405,15 +1422,26 @@ def get_event_from_element(state: State, flow_state: FlowState, element: dict) -
             event_arguments = _evaluate_arguments(
                 element_spec.arguments, flow_state.context
             )
-            flow_event = InternalEvent(element_spec.name, event_arguments)
+            flow_event = InternalEvent(
+                name=element_spec.name, arguments=event_arguments
+            )
             return flow_event
-        else:
+        elif "Action" in element_spec.name:
             # Action event
             event_arguments = _evaluate_arguments(
                 element_spec.arguments, flow_state.context
             )
-            action_event = ActionEvent(element_spec.name, event_arguments)
+            action_event = ActionEvent(
+                name=element_spec.name, arguments=event_arguments
+            )
             return action_event
+        else:
+            # Event
+            event_arguments = _evaluate_arguments(
+                element_spec.arguments, flow_state.context
+            )
+            event = Event(name=element_spec.name, arguments=event_arguments)
+            return event
 
     return None
 
@@ -1431,6 +1459,7 @@ def _generate_action_event_from_actionable_element(
 
     if element.op == "send":
         event = get_event_from_element(state, flow_state, element)
+        assert isinstance(event, ActionEvent) or isinstance(event, Event)
         _generate_action_event(state, event)
 
     # Extract the comment, if any
@@ -1531,11 +1560,11 @@ def create_internal_event(
     return event
 
 
-def create_umim_action_event(event: ActionEvent, event_args: dict) -> Dict[str, Any]:
+def create_umim_event(event: Event, event_args: dict) -> Dict[str, Any]:
     """Returns an outgoing UMIM event for the provided action data"""
     new_event_args = event_args.copy()
     new_event_args["source_uid"] = "NeMoGuardrails-Colang-1.1"
-    if event.action_uid is not None:
+    if isinstance(event, ActionEvent) and event.action_uid is not None:
         return new_event_dict(event.name, action_uid=event.action_uid, **new_event_args)
     else:
         return new_event_dict(event.name, **new_event_args)

@@ -27,7 +27,6 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Tuple, Union
 from dataclasses_json import dataclass_json
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import Element, FlowParamDef, SpecOp
-from nemoguardrails.colang.v1_1.runtime.utils import new_readable_uid
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
@@ -96,6 +95,15 @@ class Event:
 
     def __str__(self) -> str:
         return f"[bold blue]{self.name}[/] {self.arguments}"
+
+    @classmethod
+    def from_umim_event(cls, event: dict) -> Event:
+        """Creates an event from a flat dictionary."""
+        new_event = Event(event["type"], {})
+        new_event.arguments = dict(
+            [(key, event[key]) for key in event if key not in ["type"]]
+        )
+        return new_event
 
 
 @dataclass

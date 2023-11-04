@@ -100,6 +100,24 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                     )
                 )
 
+            elif event["type"] == "StartPostureBotAction":
+                # We print posture messages in green.
+                print(
+                    f"\033[92mstart: posture (posture={event['posture']}, action_uid={event['action_uid']}))\033[0m"
+                )
+
+            elif event["type"] == "StopPostureBotAction":
+                print(
+                    f"\033[92mstop: posture (action_uid={event['action_uid']})\033[0m"
+                )
+                input_events.append(
+                    new_event_dict(
+                        "PostureBotActionFinished",
+                        action_uid=event["action_uid"],
+                        is_success=True,
+                    )
+                )
+
             elif event["type"] == "StartVisualInformationSceneAction":
                 # We print scene messages in green.
                 print(

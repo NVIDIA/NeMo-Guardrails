@@ -52,34 +52,6 @@ flow bot ask user to pick a color
   orwhen user expressed a color choice blue
     bot say "I don't like blue!"
 
-# Back channelling
-flow user asked bot to initiate back channelling interaction
-  user said "I want to see the back channeling example" or user said "can you do the back channeling"
-
-flow user mentioned something sad
-  user mentioned "terrible" or user mentioned "horrible" or user mentioned "bad"
-
-flow user mentioned something nice
-  user mentioned "nice" or user mentioned "great" or user mentioned "perfect" or user mentioned "awesome"
-flow bot reacts to sad things
-  while True
-    user mentioned something sad
-    bot gesture "sad no" and bot say "Ohh"
-
-flow bot reacts to nice things
-  while True
-    user mentioned something nice
-    bot gesture "Thumbs up" and bot say "Nice"
-
-flow bot asks user how the day was
-  start bot reacts to sad things
-  start bot reacts to nice things
-  bot say "How was your day?"
-  user said something
-
-flow back channelling interaction
-  bot asks user how the day was
-
 # -----------------------------------
 # User UMIM event wrapper flows
 # DON'T CHANGE! Currently, hard-wired with LLM prompt generation
@@ -129,6 +101,10 @@ flow bot started saying $text
   # meta: exclude from llm
   match UtteranceBotAction(script=$text).Started() as $event
 
+flow bot started saying something
+  # meta: exclude from llm
+  match UtteranceBotAction().Started() as $event
+
 flow bot said $text
   # meta: exclude from llm
   match UtteranceBotAction(script=$text).Finished() as $event
@@ -136,6 +112,30 @@ flow bot said $text
 flow bot said something
   # meta: exclude from llm
   match UtteranceBotAction().Finished() as $event
+
+flow bot informed something
+  # meta: exclude from llm
+  match FlowFinished(flow_id="bot inform") as $event
+
+flow bot asked something
+  # meta: exclude from llm
+  match FlowFinished(flow_id="bot ask") as $event
+
+flow bot expressed something
+  # meta: exclude from llm
+  match FlowFinished(flow_id="bot express") as $event
+
+flow bot responded something
+  # meta: exclude from llm
+  match FlowFinished(flow_id="bot respond") as $event
+
+flow bot clarified something
+  # meta: exclude from llm
+  match FlowFinished(flow_id="bot clarify") as $event
+
+flow bot suggested something
+  # meta: exclude from llm
+  match FlowFinished(flow_id="bot suggest") as $event
 
 # ----------------------------------
 # Bot UMIM action wrapper flows
@@ -155,7 +155,7 @@ flow bot gesture $gesture
 flow bot posture $posture
   # meta: exclude from llm
   # meta: bot action
-  start PostureBotAction(posture=$posture) as $action
+  await PostureBotAction(posture=$posture) as $action
 
 flow scene show choice $prompt
   # meta: exclude from llm
@@ -228,14 +228,16 @@ flow llm response pooling $interval
 flow catch undefined flows
   """A flow to catch the start of undefined flows."""
   # meta: exclude from llm
+  priority 0.1
   match UnhandledEvent(event="StartFlow") as $event
-  bot say "Undefined flow: {{$event.arguments.flow_id}}"
+  bot say "Warning: Undefined flow '{{$event.arguments.flow_id}}'"
 
 flow catch unexpected user utterance
   """A flow to catch unhandled user utterances."""
   # meta: exclude from llm
+  priority 0.1
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
-  bot say "Unexpected user utterance: {{$event.arguments.final_transcript}}"
+  bot say "Warning: Unexpected user utterance '{{$event.arguments.final_transcript}}'"
 
 flow log $text
   """Little helper flow to log something as a bot utterance."""
@@ -400,6 +402,13 @@ flow user expressed greeting
     or user said "Welcome!"
     or user said "Hello!"
 
+flow user expressed done
+  # meta: user intent
+  user said "that is all"
+    or user said "I am done"
+    or user said "nothing more to add"
+    or user said "done"
+
 flow user asked how are you
   # meta: user intent
   user said "how are you"
@@ -439,27 +448,31 @@ flow user selected choice $choice_id
 
 flow show case selector
   while True
-    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can just say 'A' or click on an option"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "Game"}, {"id": "backchanneling", "text": "Backchanneling"}, {"id": "multimodality", "text": "Multimodality"} ]) as $action
-    start bot inform "Please pick a show case."
+    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can just say 'A' or click on an option"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}  ]) as $action
+    bot inform "Please pick one of the show cases."
     when user said r"\b[aA]\b" or user said r"\bgame\b" or user selected choice "game"
       send $action.Stop()
       bot inform "Great! You picked the number guessing game!"
       bot play number guessing game with user
     orwhen user said r"\b[bB]\b" or user said r"\bmultimodality\b" or user selected choice "multimodality"
       send $action.Stop()
-      bot inform "Great! You picked the bmultimodality show case!"
+      bot inform "Great! You picked the multimodality show case!"
       action alignment showcase
     orwhen user said r"\b[cC]\b" or user selected choice "backchanneling"
       send $action.Stop()
-      bot inform "Great! You picked show case C!"
-      bot say "Showcase c"
-    else
+      bot inform "Great! You picked the backchanneling example!"
+      backchannelling interaction
+    orwhen user said r"\b[dD]\b" or user selected choice "posture"
       send $action.Stop()
-      bot say "Sorry, did not get that, just pick a showcase letter A to C!"
+      bot inform "Great! You picked the posture show case!"
+      showcase posture capabilities
+    orwhen user said something
+      send $action.Stop()
+      bot say "Sorry, did not get that!"
 
 flow main
   # meta: exclude from llm
-  #activate catch undefined flows
+  activate catch undefined flows
   #activate catch unexpected user utterance
   #activate faq
   #activate llm response pooling 1.0
@@ -467,13 +480,13 @@ flow main
   #activate flows fallback
   #activate custom instructions
   #bot express greeting
-  #bot inform about service
-  bot say "Welcome! I am the MVP bot."
+  bot say "Welcome to the demo of my upcoming features!"
   show case selector
 
-  #bot play number guessing game with user
-  #action alignment showcase
-  #back channelling interaction
+  #backchannelling interaction
+  #bot inform about service
+  #play number guessing game
+  #showcase posture capabilities
   wait indefinitely
 
 # (A) Number guessing game
@@ -487,7 +500,7 @@ flow bot play number guessing game with user
   bot say "Hi, please guess the random number between 0 and 100 (hint: {{$random_number}})"
     and bot gesture "Waving hands"
 
-  activate bot reaction to user silence 20.0 "Just say a number between 0 and 100!" as $repeat_question
+  activate reaction to user silence 20.0 "Just say a number between 0 and 100!" as $repeat_question
 
   $attempts = 1
   while True
@@ -521,21 +534,25 @@ flow bot play number guessing game with user
 # (B) Action alignment showcase
 flow action alignment showcase
   bot inform "I am going to demonstrate to you the different ways of how actions can be aligned!"
+  wait 1.0
   bot inform "I will be using two different actions, a bot talking action, and a dancing gesture action."
+  wait 1.0
 
-  bot inform "Firstly, I show you how to trigger the two actions sequentially."
+  bot inform "Now, I show you how to trigger the two actions sequentially!"
   wait 1.0
   show sequential actions showcase
   wait 1.0
   bot inform "Ok, you just saw how the dancing only started after I was done talking."
+  wait 1.0
 
   bot inform "Now I will trigger the two actions in parallel."
   wait 1.0
   show parallel actions waiting for both to end showcase
   wait 1.0
   bot inform "Ok, you just saw how I was dancing and talking at the same time."
+  wait 1.0
 
-  bot inform "Now, I am gonna show you how I can trigger the two actions in parallel but will limit the gesture action with the end of the the utterance action."
+  bot inform "Now, I am gonna show you how I can trigger the two actions in parallel but will limit the gesture action with the end of the utterance action."
   wait 1.0
   show parallel actions limiting second action by end of first one
   wait 1.0
@@ -543,6 +560,7 @@ flow action alignment showcase
 
   wait 1.0
   bot inform "That's it!"
+  wait 1.0
 
 flow show sequential actions showcase
   bot say "This is action A."
@@ -556,3 +574,83 @@ flow show parallel actions limiting second action by end of first one
   start bot say "This is action A." as $action_1
   start bot gesture "Dancing"
   match $action_1.Finished()
+
+# (C) Back channelling
+flow user asked bot to initiate back channelling interaction
+  user said "I want to see the back channeling example"
+    or user said "can you do the back channeling"
+
+flow user mentioned something sad
+  user mentioned "terrible"
+    or user mentioned "horrible"
+    or user mentioned "bad"
+
+flow user mentioned something nice
+  user mentioned "nice"
+    or user mentioned "great"
+    or user mentioned "perfect"
+    or user mentioned "awesome"
+
+flow bot reacts to sad things
+  when user mentioned something sad
+    bot say "Ohh"
+      and bot gesture "shake head"
+
+flow bot reacts to nice things
+  when user mentioned something nice
+    bot say "Nice"
+      and bot gesture "celebrate something going well"
+
+flow bot asks user how the day was
+  bot say "How was your day?"
+  start bot posture "attentive"
+
+  activate bot reacts to sad things
+  activate bot reacts to nice things
+
+  when user said r".*terribl|horribl|bad.*"
+    bot say "I hope you are alright now?"
+      and bot gesture "looking concerned to the user"
+  orwhen user said something
+    bot say "Great. And any plans for the rest of the day?"
+
+  user said something
+  bot say "Thanks for sharing"
+
+flow backchannelling interaction
+  bot asks user how the day was
+
+# (D) Posture capabilities
+flow update bot posture
+  # meta: loop_id=posture_loop
+  start bot posture "idle" as $current_posture
+  while True
+    when user started talking
+      send $current_posture.Stop()
+      start bot posture "listening" as $current_posture
+    orwhen bot started saying something
+      send $current_posture.Stop()
+      start bot posture "talking" as $current_posture
+    orwhen bot asked something
+      send $current_posture.Stop()
+      start bot posture "attentive" as $current_posture
+    orwhen bot said something or user said something
+      send $current_posture.Stop()
+      start bot posture "idle" as $current_posture
+
+flow showcase posture capabilities
+  #bot inform "Now I am going to show you how my posture can be controlled based on me or you talking."
+  wait 1.0
+  #bot inform "I will switch between listening, talking, and an attentive posture."
+  wait 1.0
+
+  activate update bot posture
+
+  bot inform "So now observe how my posture changes when I am talking."
+  bot ask "And now it is your turn, you can say something now."
+  while True
+    when user expressed done
+      bot inform "That was fun."
+      break
+    orwhen user said something
+      bot say "Now I would say something or maybe ask a question. To end this show case just say 'I am done'"

@@ -28,6 +28,7 @@ from nemoguardrails.actions.llm.utils import (
     llm_call,
 )
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
+from nemoguardrails.colang.v1_1.runtime.flows import InternalEvent
 from nemoguardrails.colang.v1_1.runtime.statemachine import (
     Event,
     InternalEvents,
@@ -231,7 +232,11 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
     async def check_for_active_flow_finished_match(
         self, state: "State", name: str, **arguments: Any
     ):
-        event = Event(name=name, arguments=arguments)
+        event: Event
+        if name in InternalEvents.ALL:
+            event = InternalEvent(name=name, arguments=arguments)
+        else:
+            event = Event(name=name, arguments=arguments)
         heads = find_all_active_event_matchers(state, event)
         return len(heads) > 0
 

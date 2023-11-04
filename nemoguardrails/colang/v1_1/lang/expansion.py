@@ -134,6 +134,7 @@ def _expand_element_group(element: SpecOp) -> List[ElementType]:
         new_elements.append(CatchPatternFailure(label=None))
         new_elements.append(Abort())
         new_elements.append(end_label_element)
+        new_elements.append(_create_new_head_sync_event())
         new_elements.append(MergeHeads(head_uids=fork_head_uids))
 
     return new_elements
@@ -401,6 +402,7 @@ def _expand_match_element(
                     element_idx += 1
                 new_elements.append(group_label_elements[group_idx])
                 new_elements.append(wait_for_heads_elements[group_idx])
+                new_elements.append(_create_new_head_sync_event())
                 new_elements.append(MergeHeads(head_uids=fork_head_uids))
                 new_elements.append(goto_end_element)
             new_elements.append(end_label_element)
@@ -523,6 +525,7 @@ def _expand_await_element(
             new_elements.append(CatchPatternFailure(label=None))
             new_elements.append(Abort())
             new_elements.append(end_label_element)
+            new_elements.append(_create_new_head_sync_event())
             new_elements.append(MergeHeads(head_uids=fork_head_uids))
             new_elements.append(CatchPatternFailure(label=None))
             for group_idx, _ in enumerate(normalized_group["elements"]):
@@ -778,6 +781,7 @@ def _expand_when_stmt_element(
 
             # Case groups
             new_elements.append(Label(name=case_label_names[case_idx]))
+            new_elements.append(_create_new_head_sync_event())
             new_elements.append(MergeHeads(head_uids=cases_fork_head_uids))
             new_elements.append(CatchPatternFailure(label=None))
             for scope_labels in scope_label_names:
@@ -922,6 +926,7 @@ def _expand_when_stmt_element_old(
     for idx, when_group_label in enumerate(when_group_labels):
         new_elements.append(when_group_label)
         new_elements.append(when_elements[idx])
+        new_elements.append(_create_new_head_sync_event())
         new_elements.append(MergeHeads())
         new_elements.extend(expand_elements(element.then_elements[idx], flow_configs))
         new_elements.append(goto_end_label)
@@ -1041,3 +1046,14 @@ def _create_member_ast_dict_helper(name: str, arguments: dict) -> list:
             "var_name": None,
         }
     ]
+
+
+def _create_new_head_sync_event() -> SpecOp:
+    return SpecOp(
+        op="send",
+        spec=Spec(
+            name="HeadSyncEvent",
+            arguments={"uid": f"'{new_var_uid()}'"},
+            spec_type=SpecType.EVENT,
+        ),
+    )

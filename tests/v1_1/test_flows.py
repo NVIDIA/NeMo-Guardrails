@@ -3662,5 +3662,203 @@ def test_generate_value_with_NLD():
     )
 
 
+def test_when_else_deep_hierarchy_case_match():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction().Finished(final_transcript=$transcript)
+
+    flow bot say $script
+      await UtteranceBotAction(script=$script)
+
+    flow bot said something
+      match UtteranceBotAction().Finished()
+
+    flow bot asked something
+      match FlowFinished(flow_id="bot ask")
+
+    flow bot ask $text
+      await bot say $text
+
+    flow observer
+      # meta: loop_id=observer
+      while True
+        when bot asked something
+          start GestureBotAction(gesture="Case 1")
+        orwhen bot said something
+          start GestureBotAction(gesture="Case 2")
+
+    flow main
+      activate observer
+      bot say "Hi"
+      bot ask "How are you"
+      match WaitAction().Finished()
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": state.outgoing_events[0]["script"],
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "How are you",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "Case 2",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": state.outgoing_events[0]["script"],
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "Case 1",
+            },
+        ],
+    )
+
+
+def test_when_conflict_issue():
+    """"""
+
+    content = """
+    flow user said something
+      match UtteranceUserAction.Finished() as $event
+
+    flow bot say $script
+      await UtteranceBotAction(script=$script)
+
+    flow bot said something
+      match UtteranceBotAction().Finished()
+
+    flow observer
+      # meta: loop_id=observer
+      while True
+        when bot said something or user said something
+          start GestureBotAction(gesture="test")
+
+    flow main
+      activate observer
+      bot say "Start"
+      when user said something
+        bot say "Ok"
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": state.outgoing_events[0]["script"],
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "test",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Something",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "test",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Ok",
+            },
+        ],
+    )
+
+
+def test_flow_event_competition():
+    """"""
+
+    content = """
+    flow a
+      match UtteranceUserAction.Finished(final_transcript="Start")
+      send TestEvent1()
+
+    flow main
+      start a
+      match UtteranceUserAction.Finished()
+      send TestEvent2()
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Start",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "TestEvent1",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_stop_activate_flow_mechanism()
+    test_flow_event_competition()
