@@ -639,9 +639,9 @@ flow update bot posture
       start bot posture "idle" as $current_posture
 
 flow showcase posture capabilities
-  #bot inform "Now I am going to show you how my posture can be controlled based on me or you talking."
+  bot inform "Now I am going to show you how my posture can be controlled based on me or you talking."
   wait 1.0
-  #bot inform "I will switch between listening, talking, and an attentive posture."
+  bot inform "I will switch between listening, talking, and an attentive posture."
   wait 1.0
 
   activate update bot posture
