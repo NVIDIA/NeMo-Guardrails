@@ -20,6 +20,8 @@ NeMo Guardrails is an open-source toolkit for easily adding *programmable guardr
 
 ## Learn More
 
+**TODO**: update the links below.
+
 * [Documentation](./docs/README.md)
 * [Examples](./examples/README.md)
 * [Understanding the architecture](./docs/architecture/README.md)
@@ -58,6 +60,8 @@ Key benefits of adding *programmable guardrails* include:
 - **Building Trustworthy, Safe, and Secure LLM-based Applications:** you can define rails to guide and safeguard conversations; you can choose to define the behavior of your LLM-based application on specific topics and prevent it from engaging in discussions on unwanted topics.
 
 - **Connecting models, chains, and other services securely:** you can connect an LLM to other services (a.k.a. tools) seamlessly and securely.
+
+** TODO: add a bullet related to controllable dialog / steering.
 
 ### Use Cases
 
@@ -100,7 +104,7 @@ NeMo Guardrails is an async-first toolkit, i.e., the core mechanics are implemen
 
 ### Supported LLMs
 
-You can use NeMo Guardrails with multiple LLMs like OpenAI GPT-3.5, GPT-4, LLaMa-2, Falcon, Vicuna, or Mistral. For more details, check out the [Supported LLM Models](./docs/user_guide/configuration-guide.md#supported-llm-models) section in the Configuration Guide.
+You can use NeMo Guardrails with multiple LLMs like OpenAI GPT-3.5, GPT-4, LLaMa-2, Falcon, Vicuna, or Mosaic. For more details, check out the [Supported LLM Models](./docs/user_guide/configuration-guide.md#supported-llm-models) section in the Configuration Guide.
 
 ### Types of Guardrails
 
@@ -144,7 +148,7 @@ Below is an example `config.yml`:
 models:
   - type: main
     engine: openai
-    model: gpt-3.5-turbo
+    model: text-davinci-003
 
 rails:
   # Input rails are invoked when new input from the user is received.
