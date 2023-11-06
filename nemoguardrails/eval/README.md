@@ -62,7 +62,7 @@ Important lessons to be learned from the evaluation results:
 - Each step in the three-step approach (user intent, next step / bot intent, bot message) used by Guardrails offers an improvement in performance.
 - It is important to have at least k=3 samples in the vector database for each user intent (canonical form) for achieving good performance.
 - Some models (e.g., gpt-3.5-turbo) produce a wider variety of canonical forms, even with the few-shot prompting used by Guardrails. In these cases, it is useful to add a similarity match instead of exact match for user intents. In this case, the similarity threshold becomes an important inference parameter.
-- Initial results show that even small models, e.g. [dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b), [vicuna-7b-v1.3](https://huggingface.co/lmsys/vicuna-7b-v1.3), [mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct), have good performance for topical rails.
+- Initial results show that even small models, e.g. [dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b), [vicuna-7b-v1.3](https://huggingface.co/lmsys/vicuna-7b-v1.3), [mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct), [falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct) have good performance for topical rails.
 - Using a single call for topical rails shows similar results to the default method (which uses up to 3 LLM calls for generating the final bot message) in most cases for `text-davinci-003` model.
 - Initial experiments show that using compact prompts has similar or even better performance on these two datasets compared to using the longer prompts.
 
@@ -90,6 +90,7 @@ Results on _chit-chat_ dataset, metric used is accuracy.
 | `dolly-v2-3b, k=all`                   | 0.80                   | 0.82                   | 0.81                  | 0.83                  | 0.81                   | 0.83                   |
 | `vicuna-7b-v1.3, k=all`                | 0.62                   | 0.75                   | 0.69                  | 0.77                  | 0.71                   | 0.79                   |
 | `mpt-7b-instruct, k=all`               | 0.73                   | 0.81                   | 0.78                  | 0.82                  | 0.80                   | 0.82                   |
+| `falcon-7b-instruct, k=all`            | 0.81                   | 0.81                   | 0.81                  | 0.82                  | 0.82                   | 0.82                   |
 
 
 Results on _banking_ dataset, metric used is accuracy.
@@ -109,6 +110,7 @@ Results on _banking_ dataset, metric used is accuracy.
 | `dolly-v2-3b, k=all`                   | 0.32                   | 0.62                   | 0.40                  | 0.64                  | N/A                    | N/A                    |
 | `vicuna-7b-v1.3, k=all`                | 0.39                   | 0.62                   | 0.54                  | 0.65                  | N/A                    | N/A                    |
 | `mpt-7b-instruct, k=all`               | 0.45                   | 0.58                   | 0.50                  | 0.60                  | N/A                    | N/A                    |
+| `falcon-7b-instruct, k=all`            | 0.70                   | 0.75                   | 0.76                  | 0.78                  | N/A                    | N/A                    |
 
 
 ## Execution Rails
@@ -152,10 +154,10 @@ Evaluation Date - June 02, 2023.
 
 We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model on correctly identifying answers that are **not** grounded in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
 
-| Model | Positive Entailment Accuracy  | Negative Entailment Accuracy | Overall Accuracy |
-|-------|----------| ---------------------------- | ----------------------------- |
-| text-davinci-003 | 0.83 | 0.87 | 0.85 |
-| gpt-3.5-turbo | 0.87 | 0.80 | 0.83 |
+| Model              | Positive Entailment Accuracy | Negative Entailment Accuracy | Overall Accuracy |
+|--------------------|------------------------------|------------------------------|------------------|
+| text-davinci-003   | 0.83                         | 0.87                         | 0.85             |
+| gpt-3.5-turbo      | 0.87                         | 0.80                         | 0.83             |
 
 
 ### Moderation Rails
@@ -204,10 +206,10 @@ We want the models to block as many harmful prompts as possible and allow as man
 
 #### Moderation Rails Performance
 
-| Model | % of harmful prompts blocked | % of helpful prompts allowed |
-|-------|----------| ---------------------------- |
-| text-davinci-003 | 80 | 97 |
-| gpt-3.5-turbo | 70 | 100 |
+| Model              | % of harmful prompts blocked    | % of helpful prompts allowed |
+|--------------------|---------------------------------|------------------------------|
+| text-davinci-003   | 80                              | 97                           |
+| gpt-3.5-turbo      | 70                              | 100                          |
 
 ### Hallucination Rails
 
@@ -249,9 +251,9 @@ We breakdown the performance into the following metrics:
 * % of questions that are intercepted by the model, i.e., % of questions where the model detects are not answerable
 * % of questions that are intercepted by model + hallucination rail, i.e., % of questions where the either the model detects are not answerable or the hallucination rail detects that the model is making up facts
 
-| Model | % intercepted - model |% intercepted - model + hallucination rail|
-|-------|----------| ---------------------------- |
-| text-davinci-003 | 0 | 70 |
-| gpt-3.5-turbo |65 | 90 |
+| Model              | % intercepted - model | % intercepted - model + hallucination rail |
+|--------------------|-----------------------|--------------------------------------------|
+| text-davinci-003   | 0                     | 70                                         |
+| gpt-3.5-turbo      | 65                    | 90                                         |
 
 We find that gpt-3.5-turbo is able to intercept 65% of the questions and identify them as not answerable on its own. Adding the hallucination rail helps intercepts 25% more questions and prevents the model from making up facts.
