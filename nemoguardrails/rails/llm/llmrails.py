@@ -223,6 +223,7 @@ class LLMRails:
                         "gooseai",
                         "nlpcloud",
                         "petals",
+                        "trt_llm",
                     ]:
                         kwargs["model_name"] = llm_config.model
                     else:
