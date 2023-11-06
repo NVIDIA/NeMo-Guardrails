@@ -4,6 +4,8 @@
 
 NeMo Guardrails comes with a set of pre-built guardrails that you can activate:
 
+> DISCLAIMER: The built-in rails are only intended to enable you to get started quickly with NeMo Guardrails. For production use cases, further development and testing of the rails are needed.
+
 - Jailbreak detection
 - Output moderation
 - Fact-checking
@@ -257,3 +259,8 @@ rails:
 ### Custom Detection
 
 If you want to implement a completely different sensitive data detection mechanism, you can override the default actions [`detect_sensitive_data`](../../nemoguardrails/library/sensitive_data_detection/actions.py) and [`mask_sensitive_data`](../../nemoguardrails/library/sensitive_data_detection/actions.py).
+
+
+## Hallucination detection
+
+**TODO**: document

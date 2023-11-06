@@ -8,36 +8,32 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![arXiv](https://img.shields.io/badge/arXiv-2310.10501-b31b1b.svg)](https://arxiv.org/abs/2310.10501)
 
-**LATEST RELEASE: You are currently on the main branch which tracks
+> **LATEST RELEASE: You are currently on the main branch, which tracks
 under-development progress towards the next release. The current release is
 an alpha version, [0.5.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.5.0)**.
 
-> **DISCLAIMER**: The alpha release is undergoing active development and may be subject to changes and improvements, which could potentially cause instability and unexpected behavior. We currently do not recommend deploying this alpha version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback is invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit.
+> **DISCLAIMER**: The alpha release is undergoing active development and may be subject to changes and improvements, which could cause instability and unexpected behavior. We currently do not recommend deploying this alpha version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback are invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit. The examples provided within the documentation are for educational purposes to get started with NeMo Guardrails, and are not meant for use in production applications.
 
-NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems. Guardrails (or "rails" for short) are specific ways of controlling the output of a large language model, such as not talking about politics, responding in a particular way to specific user requests, following a predefined dialog path, using a particular language style, extracting structured data, and more.
+NeMo Guardrails is an open-source toolkit for easily adding *programmable guardrails* to LLM-based conversational applications. Guardrails (or "rails" for short) are specific ways of controlling the output of a large language model, such as not talking about politics, responding in a particular way to specific user requests, following a predefined dialog path, using a particular language style, extracting structured data, and more.
 
-This toolkit is currently in its early alpha stages, and we invite the community to contribute towards making the power of trustworthy, safe, and secure LLMs accessible to everyone. The examples provided within the documentation are for educational purposes to get started with NeMo Guardrails, and are not meant for use in production applications.
-
-We are committed to improving the toolkit in the near term to make it easier for developers to build production-grade trustworthy, safe, and secure LLM applications.
-
-[The paper](https://arxiv.org/abs/2310.10501) introducing NeMo Guardrails contains a technical overview of the system and of the current evaluation.
-
-#### **Key Benefits**
-
-- **Building Trustworthy, Safe, and Secure LLM Conversational Systems:** The core
-value of using NeMo Guardrails is the ability to write rails to guide conversations. You
-can choose to define the behavior of your LLM-powered application on specific topics and prevent it from engaging in discussions on unwanted topics.
-
-- **Connect models, chains, services, and more via actions:** NeMo Guardrails provides the ability to connect an LLM to other services (a.k.a. tools) seamlessly and securely.
+[This paper](https://arxiv.org/abs/2310.10501) introduces NeMo Guardrails and contains a technical overview of the system and the current evaluation.
 
 ## Learn More
+
+**TODO**: update the links below.
 
 * [Documentation](./docs/README.md)
 * [Examples](./examples/README.md)
 * [Understanding the architecture](./docs/architecture/README.md)
 * [FAQs](./docs/faqs.md)
 * [Security Guidelines](./docs/security/guidelines.md)
+* [Python API Reference](./docs/api/README.md)
 
+## Requirements
+
+Python 3.8+.
+
+NeMo Guardrails uses [annoy](https://github.com/spotify/annoy) which is a C++ library with Python bindings. To install NeMo Guardrails you will need to have the C++ compiler and dev tools installed. Check out the [Installation Guide](./docs/getting_started/installation-guide.md#prerequisites) for platform-specific instructions.
 
 ## Installation
 
@@ -47,80 +43,137 @@ To install using pip:
 > pip install nemoguardrails
 ```
 
-## Usage
+For more detailed instructions, see the [Installation Guide](./docs/getting_started/installation-guide.md).
 
-To apply guardrails, you first create an `LLMRails` instance, configure the desired rails and then use it to interact with the LLM.
+### Optional Dependencies
 
-```python
-from nemoguardrails import LLMRails, RailsConfig
+**TODO**: include info related to installing the extras, e.g. `pip install nemoguardrails[openai]` / `pip install nemoguardrails[alignscore]` / `pip install nemoguardrails[all]`
 
-config = RailsConfig.from_path("path/to/config")
-app = LLMRails(config)
+## Overview
 
-new_message = app.generate(messages=[{
-    "role": "user",
-    "content": "Hello! What can you do for me?"
-}])
-```
+NeMo Guardrails enables developers building LLM-based applications to easily add a **programmable guardrails** layer between the application code and the LLM.
 
-If you're using `LLMRails` from an async code base or from a Jupyter notebook, you should use the `generate_async` function:
+![img_5.png](./docs/images/img_5.png)
 
-```python
-new_message = await app.generate_async(messages=[{
-    "role": "user",
-    "content": "Hello! What can you do for me?"
-}])
-```
+Key benefits of adding *programmable guardrails* include:
 
-### With LangChain
+- **Building Trustworthy, Safe, and Secure LLM-based Applications:** you can define rails to guide and safeguard conversations; you can choose to define the behavior of your LLM-based application on specific topics and prevent it from engaging in discussions on unwanted topics.
 
-You can easily add guardrails on top of existing [LangChain](https://github.com/hwchase17/langchain) chains. For example, you can integrate a RetrievalQA chain for questions answering next to a basic guardrail against insults, as shown below.
+- **Connecting models, chains, and other services securely:** you can connect an LLM to other services (a.k.a. tools) seamlessly and securely.
 
-Guardrails configuration:
+** TODO: add a bullet related to controllable dialog / steering.
 
-```colang
-define user express insult
-  "You are stupid"
+### Use Cases
 
-# Basic guardrail against insults.
-define flow
-  user express insult
-  bot express calmly willingness to help
+You can use programmable guardrails in different types of use cases:
 
-# Here we use the QA chain for anything else.
-define flow
-  user ...
-  $answer = execute qa_chain(query=$last_user_message)
-  bot $answer
-```
+1. **Question Answering** over a set of documents (a.k.a. Retrieval Augmented Generation): Enforce fact-checking and output moderation.
+2. **Domain-specific Assistants** (a.k.a. chatbots): Ensure the assistant stays on topic and follows the designed conversational flows.
+3. **LLM Endpoints**: Add guardrails to your custom LLM for safer customer interaction.
+4. **LangChain Chains**: If you use LangChain for any use case, you can add a guardrails layer around your chains.
+5. **Agents (COMING SOON)**: Add guardrails to your LLM-based agent.
 
-Python code:
+### Usage
+
+To add programmable guardrails to your application you can use the Python API or a guardrails server (see the [Server Guide](./docs/user_guide/server-guide.md) for more details). Using the Python API is similar to using the LLM directly. Calling the guardrails layer instead of the LLM requires only minimal changes to the code base, and it involves two simple steps:
+
+1. Loading a guardrails configuration and creating an `LLMRails` instance.
+2. Making the calls to the LLM using the `generate`/`generate_async` methods.
 
 ```python
 from nemoguardrails import LLMRails, RailsConfig
 
-config = RailsConfig.from_path("path/to/config")
-app = LLMRails(config)
+# Load a guardrails configuration from the specified path.
+config = RailsConfig.from_path("PATH/TO/CONFIG")
+rails = LLMRails(config)
 
-# ... initialize `docsearch`
-
-qa_chain = RetrievalQA.from_chain_type(
-    llm=app.llm, chain_type="stuff", retriever=docsearch.as_retriever()
+completion = rails.generate(
+    messages=[{"role": "user", "content": "Hello world!"}]
 )
-app.register_action(qa_chain, name="qa_chain")
-
-history = [
-    {"role": "user", "content": "What is the current unemployment rate?"}
-]
-result = app.generate(messages=history)
-print(result)
+```
+Sample output:
+```json
+{"role": "assistant", "content": "Hi! How can I help you?"}
 ```
 
-## Guardrails Configuration
+The input and output format for the `generate` method is similar to the [Chat Completions API](https://platform.openai.com/docs/guides/gpt/chat-completions-api) from OpenAI.
 
-This toolkit introduces Colang, a modeling language specifically created for designing flexible, yet controllable, dialogue flows. Colang has a python-like syntax and is designed to be simple and intuitive, especially for developers.
+#### Async API
 
-To configure guardrails, you place one or more .co files in a configuration folder. Below is a basic example of controlling the greeting behavior.
+NeMo Guardrails is an async-first toolkit, i.e., the core mechanics are implemented using the Python async model. The public methods have both a sync and an async version (e.g., [`LLMRails.generate`](./docs/api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate) and [`LLMRails.generate_async`](./docs/api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async))
+
+### Supported LLMs
+
+You can use NeMo Guardrails with multiple LLMs like OpenAI GPT-3.5, GPT-4, LLaMa-2, Falcon, Vicuna, or Mosaic. For more details, check out the [Supported LLM Models](./docs/user_guide/configuration-guide.md#supported-llm-models) section in the Configuration Guide.
+
+### Types of Guardrails
+
+NeMo Guardrails supports five main types of guardrails:
+
+![img_6.png](./docs/images/img_6.png)
+
+1. **Input rails**: applied to the input from the user; an input rail can reject the input, stopping any additional processing, or alter the input (e.g., to mask potentially sensitive data, to rephrase).
+
+2. **Dialog rails**: influence how the LLM is prompted; dialog rails operate on canonical form messages (more details [here](./docs/user_guide/colang-language-syntax-guide.md)) and determine if an action should be executed, if the LLM should be invoked to generate the next step or a response, if a predefined response should be used instead, etc.
+
+3. **Retrieval rails**: applied to the retrieved chunks in the case of a RAG (Retrieval Augmented Generation) scenario; a retrieval rail can reject a chunk, preventing it from being used to prompt the LLM, or alter the relevant chunks (e.g., to mask potentially sensitive data).
+
+4. **Execution rails**: applied to input/output of the custom actions (a.k.a. tools), that need to be called by the LLM.
+
+5. **Output rails**: applied to the output generated by the LLM; an output rail can reject the output, preventing it from being returned to the user, or alter it (e.g., removing sensitive data).
+
+### Guardrails Configuration
+
+A guardrails configuration defines the **LLM(s)** to be used and **one or more guardrails**. A guardrails configuration can include any number of input/dialog/output/retrieval/execution rails. A configuration without any configured rails will essentially forward the requests to the LLM.
+
+The standard structure for a guardrails configuration folder looks like this:
+
+```
+.
+├── config
+│   ├── config.yml
+│   ├── config.py
+│   ├── actions.py
+│   ├── file_1.co
+│   ├── file_2.co
+│   ├── ...
+```
+
+The `config.yml` contains all the general configuration options (e.g., LLM models, active rails, custom configuration data), the `config.py` contains any custom initialization code and the `actions.py` contains any custom python actions. For a complete overview, check out the [Configuration Guide](./docs/user_guide/configuration-guide.md)
+
+Below is an example `config.yml`:
+
+```yaml
+# config.yml
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003
+
+rails:
+  # Input rails are invoked when new input from the user is received.
+  input:
+    flows:
+      - check jailbreak
+      - mask sensitive data on input
+
+  # Output rails are triggered after a bot message has been generated.
+  output:
+    flows:
+      - check facts
+      - check hallucination
+      - active fence moderation
+
+  config:
+    # Configure the types of entities that should be masked on user input.
+    sensitive_data_detection:
+      input:
+        entities:
+          - PERSON
+          - EMAIL_ADDRESS
+```
+
+The `.co` files included in a guardrails configuration contain the Colang definitions that define various types of rails. Below is an example `greeting.co` file which defines the dialog rails for greeting the user.
 
 ```colang
 define user express greeting
@@ -139,9 +192,92 @@ define bot offer to help
   "How can I help you today?"
 ```
 
-**Warning:** Colang files can be written to perform complex activities, such as calling python scripts and performing multiple calls to the underlying language model. You should avoid loading Colang files from untrusted sources without careful inspection.
+Below is an additional example of Colang definitions for a dialog rail against insults:
+```colang
+define user express insult
+  "You are stupid"
 
-For a brief introduction to the Colang syntax, check out the [Colang Language Syntax Guide](./docs/user_guide/colang-language-syntax-guide.md).
+define flow
+  user express insult
+  bot express calmly willingness to help
+```
+
+### Colang
+
+To configure and implement various types of guardrails, this toolkit introduces **Colang**, a modeling language specifically created for designing flexible, yet controllable, dialogue flows. Colang has a python-like syntax and is designed to be simple and intuitive, especially for developers. For a brief introduction to the Colang syntax, check out the [Colang Language Syntax Guide](./docs/user_guide/colang-language-syntax-guide.md).
+
+
+### Guardrails Library
+
+NeMo Guardrails comes with a set of [built-in guardrails](./docs/user_guide/guardrails-library.md).
+
+> **NOTE**: The built-in guardrails are only intended to enable you to get started quickly with NeMo Guardrails. For production use cases, further development and testing of the rails are needed.
+
+Currently, the guardrails library includes guardrails for: [jailbreak detection](./docs/user_guide/guardrails-library.md#jailbreak-detection), [output moderation](./docs/user_guide/guardrails-library.md#output-moderation), [fact-checking](./docs/user_guide/guardrails-library.md#fact-checking), [sensitive data detection](./docs/user_guide/guardrails-library.md#sensitive-data-detection), [hallucination detection](./docs/user_guide/guardrails-library.md#hallucination-detection) and [input moderation using ActiveFence](./docs/user_guide/guardrails-library.md#active-fence).
+
+## CLI
+
+NeMo Guardrails also comes with a built-in CLI.
+
+```bash
+> nemoguardrails --help
+
+Usage: nemoguardrails [OPTIONS] COMMAND [ARGS]...
+
+actions-server    Start a NeMo Guardrails actions server.
+chat              Start an interactive chat session.
+evaluate          Run an evaluation task.
+server            Start a NeMo Guardrails server.
+```
+
+
+### Guardrails Server
+
+You can use the NeMo Guardrails CLI to start a guardrails server. The server can load one or more configurations from the specified folder and expose and HTTP API for using them.
+
+```
+> nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT]
+```
+
+For example, to get a chat completion for a `sample` config, you can use the `/v1/chat/completions` endpoint:
+```
+POST /v1/chat/completions
+```
+```json
+{
+    "config_id": "sample",
+    "messages": [{
+      "role":"user",
+      "content":"Hello! What can you do for me?"
+    }]
+}
+```
+Sample output:
+```json
+{"role": "assistant", "content": "Hi! How can I help you?"}
+```
+
+#### Docker
+
+To start a guardrails server, you can also use a Docker container. NeMo Guardrails provides a [Dockerfile](./Dockerfile) that you can use to build a `nemoguardrails` image. For more details, check out the guide for [using Docker](./docs/user_guide/advanced/using-docker.md).
+
+## Evaluation
+
+Evaluating the safety of a LLM-based conversational application is a complex task and still an open research question. To support proper evaluation, NeMo Guardrails provides the following:
+
+1. An [evaluation tool](./nemoguardrails/eval/README.md), i.e. `nemoguardrails evaluate`, with support for topical rails, fact-checking, moderation (jailbreak and output moderation) and hallucination.
+2. An experimental [red-teaming interface](./docs/user_guide/advanced/red-teaming.md).
+
+
+## How is this different?
+
+There are many ways guardrails can be added to an LLM-based conversational application. For example: explicit moderation endpoints (e.g., OpenAI, ActiveFence), critique chains (e.g. constitutional chain), parsing the output (e.g. guardrails.ai), individual guardrails (e.g., LLM-Guard).
+
+NeMo Guardrails aims to provide a flexible toolkit that can integrate all these complementary approaches into a cohesive LLM guardrails layer. For example, the toolkit provides out-of-the-box integration with ActiveFence, AlignScore, LangChain chains.
+
+To the best of our knowledge, NeMo Guardrails is the only guardrails toolkit that also offers a solution for modeling the dialog between the user and the LLM. This enables on one hand the ability to guide the dialog in a precise way. On the other hand it enables fine-grained control for when certain guardrails should be used, e.g., use fact-checking only for certain types of questions.
+
+
 
 
 ## Inviting the community to contribute!
