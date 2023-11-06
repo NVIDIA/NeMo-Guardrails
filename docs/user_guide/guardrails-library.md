@@ -105,7 +105,7 @@ define flow
   bot provide report answer
 ```
 
-This will trigger the fact-checking output rail every time the bot responds to a question about the report (for a complete example, check out [this example config](../../examples/configs/fact_checking)).
+This will trigger the fact-checking output rail every time the bot responds to a question about the report (for a complete example, check out [this example config](../../examples/configs/rag/fact_checking)).
 
 
 ## Active Fence

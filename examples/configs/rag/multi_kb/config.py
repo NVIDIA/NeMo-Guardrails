@@ -28,7 +28,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
-from examples.configs.multi_kb.tabular_llm import TabularLLM
+from examples.configs.rag.multi_kb.tabular_llm import TabularLLM
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult

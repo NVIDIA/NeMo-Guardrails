@@ -29,7 +29,7 @@ Starting the chat...
  Nvidia is a technology company based in Santa Clara, California. It produces Graphics Processing Units (GPUs), Central Processing Units, Chipsets, Drivers, Collaborative Software, Tablet Computers, TV Accessories, GPU-chips for laptops, Data Processing Units, and more. GPUs are specialized electronic circuits that are designed to rapidly process large amounts of data, making them ideal for powering applications like video games and AI-driven software. Nvidia is deployed in supercomputing sites around the world and has recently moved into the mobile computing market. They offer deep learning and accelerated analytics due to their API CUDA, and also have a cloud gaming service called GeForce Now.
 ```
 
-This example exhibits multi-turn conversations out of the box due to a key element. Note the comment `# Extract the full user query based on previous turns` in the `flow` as defined in [config.co](./config.co). This ensures that if the user question is related to a previous question such as `"can you repeat that?"`, the bot understands the relation and sends the correct question forward.
+This example exhibits multi-turn conversations out of the box due to a key element. Note the comment `# Extract the full user query based on previous turns` in the `flow` as defined in [config.co](config.co). This ensures that if the user question is related to a previous question such as `"can you repeat that?"`, the bot understands the relation and sends the correct question forward.
 
 ```
 define flow
@@ -42,7 +42,7 @@ define flow
 
 Within the multi-turn conversations, the NeMo Guardrails bot is able to resolve what `it` refers to based on the previous question. This is being taken care of by the Dialog manager under the hood.
 
-Another salient feature of the [config.co](./config.co) file is that there are two main flows defined. This ensures that the user can start asking questions straightaway without a greeting. Ofcourse, if the user chooses to greet the bot first, then that flow will be run.
+Another salient feature of the [config.co](config.co) file is that there are two main flows defined. This ensures that the user can start asking questions straightaway without a greeting. Ofcourse, if the user chooses to greet the bot first, then that flow will be run.
 
 If one wants to develop a more complex example, one can choose to extend or override certain functionalities in the `Simple Embedding Search Provider API`` that is provided within NeMo Guardrails core. The Simple Embedding Search Provider has three atomic functions:
 - The initialisation
