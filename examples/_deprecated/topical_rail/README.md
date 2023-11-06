@@ -77,7 +77,7 @@ selecting OpenAI's davinci.
       model: text-davinci-003
     ```
 #### Note in order to use other community models such as llama2, for llama2 models, one will need to first go to ![huggingface-llama2](https://huggingface.co/meta-llama)
-#### install additional python package via pip install accelerate 
+#### install additional python package via pip install accelerate
 
 * **Provide sample conversations:** To ensure that the large language model
 understands how to converse with the user, we provide a few sample conversations.

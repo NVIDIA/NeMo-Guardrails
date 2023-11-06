@@ -794,8 +794,6 @@ class LLMGenerationActions:
                     )
                     flow_results[intent] = flow_results_intent
 
-            
-                    
             # We add the intent to the examples in reverse order
             # so the most relevant is towards the end.
             for result in intent_results:

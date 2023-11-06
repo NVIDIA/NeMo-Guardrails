@@ -28,7 +28,7 @@ sample_conversation: |
       "Thank you for giving your last name too, Taylor Swift"
   bot authenticate_user
       "Let me authenticate the details you provided, Taylor Swift, user id 67898"
-  
+
 
 models:
   - type: main
