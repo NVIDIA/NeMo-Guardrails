@@ -13,22 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, List, Mapping, Optional
 
 import aiohttp
+import httpx
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
-from langchain.llms.base import LLM
-from pydantic.class_validators import root_validator
+from langchain.llms.base import BaseLLM
+from langchain.pydantic_v1 import BaseModel, root_validator
+from langchain.schema import Generation
+from langchain.schema.output import GenerationChunk, LLMResult
 
 log = logging.getLogger(__name__)
 
 
-class NeMoLLM(LLM):
+class NeMoLLM(BaseLLM, BaseModel):
     """Wrapper around NeMo LLM large language models.
 
     If NGC_API_HOST, NGC_API_KEY and NGC_ORGANIZATION_ID environment variables are set,
@@ -40,11 +44,12 @@ class NeMoLLM(LLM):
     tokens_to_generate: int = 256
     stop: Optional[List[str]] = ["<extra_id_1>"]
     api_host: Optional[str] = os.environ.get(
-        "NGC_API_HOST", "https://api.llm.ngc.nvidia.com"
+        "NGC_API_HOST", "https://api.llm.ngc.nvidia.com/v1"
     )
     api_key: Optional[str] = os.environ.get("NGC_API_KEY")
     organization_id: Optional[str] = os.environ.get("NGC_ORGANIZATION_ID")
     customization_id: Optional[str] = None
+    streaming: bool = False
 
     @root_validator(pre=True, allow_reuse=True)
     def check_env_variables(cls, values):
@@ -76,6 +81,62 @@ class NeMoLLM(LLM):
         """Return type of llm."""
         return "nemollm"
 
+    def _get_request_url(self) -> str:
+        if self.customization_id is None:
+            url = f"{self.api_host}/models/{self.model}/completions"
+        else:
+            url = f"{self.api_host}/models/{self.model}/customizations/{self.customization_id}/completions"
+        return url
+
+    def _get_request_headers(self) -> Dict[str, str]:
+        # nemo_llm_org_id is only needed for users in more than one LLM org
+        # or if more than one LLM team within an LLM org
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+        }
+        if self.organization_id is not None:
+            headers["Organization-ID"] = self.organization_id
+        if self.streaming:
+            headers["x-stream"] = "true"
+        return headers
+
+    def _get_request_json(self, prompt: str, stop: Optional[List[str]] = None) -> Dict:
+        if stop is None:
+            stop = []
+
+        return {
+            "prompt": prompt,
+            "stop": stop,
+            **self._default_params,
+        }
+
+    def _get_timeout(self) -> httpx.Timeout:
+        return httpx.Timeout(60.0, connect=10.0)
+
+    def _stream(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> Iterator[GenerationChunk]:
+        with httpx.Client(timeout=self._get_timeout()) as client:
+            with client.stream(
+                "POST",
+                url=self._get_request_url(),
+                headers=self._get_request_headers(),
+                json=self._get_request_json(prompt, stop),
+            ) as r:
+                for json_line in r.iter_lines():
+                    if not json_line:
+                        break
+                    text = json.loads(json_line)["text"]
+                    chunk = GenerationChunk(text=text)
+                    yield chunk
+                    if run_manager:
+                        run_manager.on_llm_new_token(chunk.text, chunk=chunk)
+
     def _call(
         self,
         prompt: str,
@@ -83,7 +144,73 @@ class NeMoLLM(LLM):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs,
     ) -> str:
-        raise Exception("Sync mode not supported.")
+        if self.streaming:
+            completion = ""
+            for chunk in self._stream(
+                prompt=prompt, stop=stop, run_manager=run_manager, **kwargs
+            ):
+                completion += chunk.text
+            return completion
+
+        with httpx.Client(timeout=self._get_timeout()) as client:
+            response = client.post(
+                url=self._get_request_url(),
+                headers=self._get_request_headers(),
+                json=self._get_request_json(prompt, stop),
+            )
+        response.raise_for_status()
+
+        return response.json()["text"]
+
+    def _generate(
+        self,
+        prompts: List[str],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> LLMResult:
+        generations = []
+        for prompt in prompts:
+            text = self._call(prompt, stop=stop, run_manager=run_manager, **kwargs)
+            generations.append(
+                [Generation(text=text, generation_info={"prompt": prompt})]
+            )
+        return LLMResult(
+            generations=generations,
+            llm_output={
+                "url": self._get_request_url(),
+                "headers": self._get_request_headers(),
+                "model_name": self.model,
+            },
+        )
+
+    async def _astream(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[GenerationChunk]:
+        async with httpx.AsyncClient(timeout=self._get_timeout()) as client:
+            async with client.stream(
+                "POST",
+                url=self._get_request_url(),
+                headers=self._get_request_headers(),
+                json=self._get_request_json(prompt, stop),
+            ) as r:
+                async for json_line in r.aiter_lines():
+                    if not json_line:
+                        break
+                    text = json.loads(json_line)["text"]
+                    chunk = GenerationChunk(text=text)
+
+                    # We make sure we don't sent chunks of length 0 as this will end the streaming
+                    if len(chunk.text) == 0:
+                        continue
+
+                    yield chunk
+                    if run_manager:
+                        await run_manager.on_llm_new_token(chunk.text, chunk=chunk)
 
     async def _acall(
         self,
@@ -101,54 +228,45 @@ class NeMoLLM(LLM):
         Returns:
             The string generated by the model.
         """
-        if self.stop is not None and stop is not None:
-            raise ValueError("`stop` found in both the input and default params.")
-        elif self.stop is not None:
-            stop = self.stop
-        elif stop is None:
-            stop = []
+        if self.streaming:
+            completion = ""
+            async for chunk in self._astream(
+                prompt=prompt, stop=stop, run_manager=run_manager, **kwargs
+            ):
+                completion += chunk.text
+            return completion
 
-        # If the API_HOST ends with /v1, we remove that (it was the previous convention).
-        base_url = self.api_host
-        if base_url.endswith("/v1"):
-            base_url = base_url[0:-3]
+        async with httpx.AsyncClient(timeout=self._get_timeout()) as client:
+            response = await client.post(
+                url=self._get_request_url(),
+                headers=self._get_request_headers(),
+                json=self._get_request_json(prompt, stop),
+            )
 
-        # Compute the default header values.
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
-        }
+        response.raise_for_status()
 
-        if self.organization_id:
-            headers["Organization-ID"] = self.organization_id
+        return response.json()["text"]
 
-        data = {"prompt": prompt, "stop": stop, **self._default_params}
-
-        url = f"{base_url}/v1/models/{self.model}"
-        if self.customization_id is not None:
-            url += f"/customizations/{self.customization_id}/completions"
-        else:
-            url += "/completions"
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                url=url,
-                headers=headers,
-                json=data,
-            ) as response:
-                if response.status != 200:
-                    raise ValueError(
-                        f"NeMo LLM completion call failed with status code {response.status}.\n"
-                        f"Details: {await response.text()}"
-                    )
-                response_json = await response.json()
-
-                # The NeMo LLM API also returns the stop tokens at the end of the response.
-                # Remove them if they appear as the last token.
-                for stop_token in stop or []:
-                    if response_json["text"].endswith(stop_token):
-                        response_json["text"] = response_json["text"][
-                            : -len(stop_token)
-                        ]
-                        break
-                return response_json["text"]
+    async def _agenerate(
+        self,
+        prompts: List[str],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> LLMResult:
+        generations = []
+        for prompt in prompts:
+            text = await self._acall(
+                prompt, stop=stop, run_manager=run_manager, **kwargs
+            )
+            generations.append(
+                [Generation(text=text, generation_info={"prompt": prompt})]
+            )
+        return LLMResult(
+            generations=generations,
+            llm_output={
+                "url": self._get_request_url(),
+                "headers": self._get_request_headers(),
+                "model_name": self.model,
+            },
+        )

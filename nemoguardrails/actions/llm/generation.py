@@ -583,6 +583,10 @@ class LLMGenerationActions:
                             await _streaming_handler.disable_buffering()
 
                             # And wait for it to finish.
+                            # We stop after the closing double quotes for the bot message.
+                            _streaming_handler.stop = [
+                                '"\n',
+                            ]
                             text = await _streaming_handler.wait()
                             return ActionResult(
                                 events=[new_event_dict("BotMessage", text=text)]
@@ -890,7 +894,10 @@ class LLMGenerationActions:
                 with llm_params(llm, temperature=self.config.lowest_temperature):
                     asyncio.create_task(
                         llm_call(
-                            llm, prompt, custom_callback_handlers=[_streaming_handler]
+                            llm,
+                            prompt,
+                            custom_callback_handlers=[_streaming_handler],
+                            stop=["\nuser ", "\nUser "],
                         )
                     )
                     result = await _streaming_handler.wait_top_k_nonempty_lines(k=2)
