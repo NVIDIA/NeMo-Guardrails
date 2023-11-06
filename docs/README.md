@@ -36,6 +36,7 @@ The user guide covers the core details of the Guardrails toolkit and how to conf
 * [Colang Language Guide](./user_guide/colang-language-syntax-guide.md): Learn about Colang, the language at the heart of NeMo Guardrails.
 * [Colang Syntax Reference Guide](./user_guide/colang-syntax-reference.md): General keyword ledger.
 * [Guardrails Configuration Guide](./user_guide/configuration-guide.md): Learn how to do general configurations such as adding a system prompt.
+* [LLM Support for Guardrails](./user_guide/llm-support.md): An easy to grasp summary of the current LLM support.
 * [Python API](./user_guide/python-api.md): Explore the Python API for Guardrails!
 * [Integration with LangChain](./user_guide/integration-with-langchain.md): Integrate Guardrails in your existing LangChain-powered app or bring your preferred Chains to Guardrails.
 * [Server Guide](./user_guide/server-guide.md): General explanation for the Guardrails Servers.
