@@ -14,6 +14,8 @@
 # limitations under the License.
 
 """A Langchain LLM component for connecting to Triton + TensorRT LLM backend."""
+from __future__ import annotations
+
 import queue
 from functools import partial
 from typing import Any, Dict, List, Optional
