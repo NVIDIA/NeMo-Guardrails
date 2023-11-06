@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import logging
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 from uuid import UUID
 
@@ -23,6 +24,8 @@ from langchain.schema.messages import AIMessageChunk
 from langchain.schema.output import ChatGenerationChunk, GenerationChunk, LLMResult
 
 from nemoguardrails.language.utils import new_uuid
+
+log = logging.getLogger(__name__)
 
 
 class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
@@ -69,6 +72,9 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
         self.pipe_to = None
 
         self.first_token = True
+
+        # The stop chunks
+        self.stop = []
 
     def set_pattern(self, prefix: Optional[str] = None, suffix: Optional[str] = None):
         """Sets the patter that is expected.
@@ -141,8 +147,27 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
             if len(lines) > self.k > 0:
                 self.top_k_nonempty_lines_event.set()
         else:
+            # Temporarily save the content of the completion before this new chunk.
+            prev_completion = self.completion
             if chunk is not None:
                 self.completion += chunk
+
+                # Check if the completion contains one of the stop chunks
+                for stop_chunk in self.stop:
+                    if stop_chunk in self.completion:
+                        # Make sure the stop chunk is not included
+                        self.completion = self.completion.split(stop_chunk)[0]
+
+                        # If the current chunk does add something new to the final completion
+                        # We push that as well.
+                        if len(self.completion) > len(prev_completion):
+                            self.current_chunk = self.completion[len(prev_completion) :]
+                            await self.push_chunk(None)
+
+                        # And we stop the streaming
+                        self.streaming_finished_event.set()
+                        self.top_k_nonempty_lines_event.set()
+                        return
 
             if self.pipe_to:
                 asyncio.create_task(self.pipe_to.push_chunk(chunk))
@@ -158,7 +183,9 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
                     self.streaming_finished_event.set()
                     self.top_k_nonempty_lines_event.set()
 
-    async def push_chunk(self, chunk: Union[str, GenerationChunk, AIMessageChunk]):
+    async def push_chunk(
+        self, chunk: Union[str, GenerationChunk, AIMessageChunk, None]
+    ):
         """Push a new chunk to the stream."""
         if isinstance(chunk, GenerationChunk):
             chunk = chunk.text
@@ -169,9 +196,14 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
         else:
             raise Exception(f"Unsupported chunk type: {chunk.__class__.__name__}")
 
+        if self.streaming_finished_event.is_set():
+            log.info(f"{self.uid[0:3]} - CHUNK after finish: {chunk}")
+            return
+
         # Only after we get the expected prefix we remove it and start streaming
         if self.prefix:
-            self.current_chunk += chunk
+            if chunk is not None:
+                self.current_chunk += chunk
 
             if self.current_chunk.startswith(self.prefix):
                 self.current_chunk = self.current_chunk[len(self.prefix) :]
@@ -181,18 +213,46 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
                 if self.current_chunk:
                     await self._process(self.current_chunk)
                     self.current_chunk = ""
-        elif self.suffix:
+        elif self.suffix or self.stop:
             # If we have a suffix, we always check that the total current chunk does not end
             # with the suffix.
 
-            self.current_chunk += chunk
+            if chunk is not None:
+                self.current_chunk += chunk
+
+            _chunks = []
+            if self.suffix:
+                _chunks.append(self.suffix)
+            if self.stop:
+                _chunks.extend(self.stop)
+
+            skip_processing = False
+            for _chunk in _chunks:
+                if skip_processing:
+                    break
+
+                for _len in range(len(_chunk)):
+                    if self.current_chunk.endswith(_chunk[0 : _len + 1]):
+                        skip_processing = True
+                        break
 
             # TODO: improve this logic to work for multi-token suffixes.
-            if self.current_chunk.endswith(self.suffix):
-                # We do nothing in this case. The suffix will be removed when the generation
-                # ends and if there's something left, will be processed then.
+            # if self.current_chunk.endswith(self.suffix):
+            if skip_processing and chunk != "" and chunk is not None:
+                # We do nothing in this case. The suffix/stop chunks will be removed when
+                # the generation ends and if there's something left, will be processed then.
                 return
             else:
+                if chunk == "" or chunk is None:
+                    if (
+                        self.current_chunk
+                        and self.suffix
+                        and self.current_chunk.endswith(self.suffix)
+                    ):
+                        self.current_chunk = self.current_chunk[
+                            0 : -1 * len(self.suffix)
+                        ]
+
                 await self._process(self.current_chunk)
                 self.current_chunk = ""
         else:

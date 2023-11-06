@@ -28,6 +28,7 @@ from nemoguardrails.logging.callbacks import logging_callbacks
 async def llm_call(
     llm: BaseLanguageModel,
     prompt: Union[str, List[dict]],
+    stop: Optional[List[str]] = None,
     custom_callback_handlers: Optional[List[AsyncCallbackHandler]] = None,
 ) -> str:
     """Calls the LLM with a prompt and returns the generated text."""
@@ -42,7 +43,7 @@ async def llm_call(
 
     if isinstance(prompt, str):
         result = await llm.agenerate_prompt(
-            [StringPromptValue(text=prompt)], callbacks=all_callbacks
+            [StringPromptValue(text=prompt)], callbacks=all_callbacks, stop=stop
         )
 
         # TODO: error handling
@@ -60,7 +61,7 @@ async def llm_call(
             else:
                 raise ValueError(f"Unknown message type {_msg['type']}")
         result = await llm.agenerate_prompt(
-            [ChatPromptValue(messages=messages)], callbacks=all_callbacks
+            [ChatPromptValue(messages=messages)], callbacks=all_callbacks, stop=stop
         )
 
         return result.generations[0][0].text

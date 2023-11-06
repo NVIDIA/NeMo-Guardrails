@@ -19,7 +19,7 @@ from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
-from langchain.llms.base import LLM
+from langchain.llms.base import LLM, BaseLLM
 from pydantic import BaseModel
 
 from nemoguardrails import LLMRails, RailsConfig
@@ -121,12 +121,21 @@ class TestChat:
         self.config = config
         self.app = LLMRails(config, llm=self.llm)
         self.history = []
+        self.streaming = streaming
 
     def user(self, msg: str):
         self.history.append({"role": "user", "content": msg})
 
     def bot(self, msg: str):
         result = self.app.generate(messages=self.history)
+        assert result, "Did not receive any result"
+        assert (
+            result["content"] == msg
+        ), f"Expected `{msg}` and received `{result['content']}`"
+        self.history.append(result)
+
+    async def bot_async(self, msg: str):
+        result = await self.app.generate_async(messages=self.history)
         assert result, "Did not receive any result"
         assert (
             result["content"] == msg
