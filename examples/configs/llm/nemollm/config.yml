@@ -16,3 +16,11 @@ models:
     parameters:
       tokens_to_generate: 10
 #      customization_id: 0fc1a2ee-a37a-4f25-8b7f-bd3963b36c0c
+
+rails:
+  input:
+    flows:
+      - check jailbreak
+  output:
+    flows:
+      - output moderation v2
