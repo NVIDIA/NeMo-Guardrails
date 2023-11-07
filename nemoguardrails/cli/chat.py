@@ -45,7 +45,7 @@ async def run_chat_async(
     if not server_url:
         rails_config = RailsConfig.from_path(config_path)
         rails_app = LLMRails(rails_config, verbose=verbose)
-        if not rails_config.streaming_supported:
+        if streaming and not rails_config.streaming_supported:
             print(
                 f"WARNING: The config `{config_path}` does not support streaming. "
                 "Falling back to normal mode."
