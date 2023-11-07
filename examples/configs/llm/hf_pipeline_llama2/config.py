@@ -16,12 +16,14 @@ import os
 import os.path
 
 import torch
-from langchain import HuggingFacePipeline
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
-from nemoguardrails.llm.providers import register_llm_provider
+from nemoguardrails.llm.providers import (
+    HuggingFacePipelineCompatible,
+    register_llm_provider,
+)
 
 
 def _get_model_config(config: RailsConfig, type: str):
@@ -115,7 +117,7 @@ def init_main_llm(config: RailsConfig):
         do_sample=True,
     )
 
-    hf_llm = HuggingFacePipeline(pipeline=pipe)
+    hf_llm = HuggingFacePipelineCompatible(pipeline=pipe)
     provider = get_llm_instance_wrapper(
         llm_instance=hf_llm, llm_type="hf_pipeline_llama2_13b"
     )

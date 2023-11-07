@@ -13,16 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Type
+from typing import List, Optional, Type, Union
 
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
-from langchain.llms.base import LLM
+from langchain.llms.base import LLM, BaseLLM
 
 
-def get_llm_instance_wrapper(llm_instance: LLM, llm_type: str) -> Type[LLM]:
+def get_llm_instance_wrapper(
+    llm_instance: Union[LLM, BaseLLM], llm_type: str
+) -> Type[LLM]:
     """Wraps an LLM instance in a class that can be registered with LLMRails.
 
     This is useful to create specific types of LLMs using a generic LLM provider

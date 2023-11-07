@@ -14,11 +14,13 @@
 # limitations under the License.
 from functools import lru_cache
 
-from langchain import HuggingFacePipeline
 from torch import bfloat16
 
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
-from nemoguardrails.llm.providers import register_llm_provider
+from nemoguardrails.llm.providers import (
+    HuggingFacePipelineCompatible,
+    register_llm_provider,
+)
 
 
 @lru_cache
@@ -35,7 +37,7 @@ def get_falcon_7b_llm():
     # Using the first GPU
     device = 0
 
-    llm = HuggingFacePipeline.from_model_id(
+    llm = HuggingFacePipelineCompatible.from_model_id(
         model_id=repo_id,
         device=device,
         task="text-generation",
