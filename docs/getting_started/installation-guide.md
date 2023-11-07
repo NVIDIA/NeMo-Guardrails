@@ -52,8 +52,9 @@ To install NeMo Guardrails using pip:
 
 To install NeMo Guardrails using Conda:
 
+**TODO: enable conda installation***
 ```bash
-conda install langchain -c conda-forge
+# conda install nemoguardrails -c conda-forge
 ```
 
 ## Installing from source code
