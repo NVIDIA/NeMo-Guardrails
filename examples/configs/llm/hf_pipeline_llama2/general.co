@@ -8,7 +8,7 @@ define user ask about capabilities
   "help"
 
 define bot inform capabilities
-  "I am an example bot that illustrates the fact checking detection capabilities. Ask me about the documents in my knowledge base to test my fact checking abilities, or about other topics to test my hallucination detection."
+  "I am an example bot that illustrates the fact checking detection capabilities. Ask me about the documents in my knowledge base to test my fact checking abilities."
 
 define flow capabilities
     user ask about capabilities
