@@ -14,14 +14,18 @@
 # limitations under the License.
 from __future__ import annotations
 
+import json
+import sys
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 from langchain.llms.base import LLM
 from pydantic import BaseModel
 
 from nemoguardrails import LLMRails, RailsConfig
-from nemoguardrails.colang.v1_1.runtime.flows import FlowConfig
-from nemoguardrails.utils import new_event_dict
+from nemoguardrails.colang import parse_colang_file
+from nemoguardrails.colang.v1_1.runtime.flows import FlowConfig, State
+from nemoguardrails.colang.v1_1.runtime.statemachine import initialize_state
+from nemoguardrails.utils import EnhancedJSONEncoder, new_event_dict
 
 
 class FakeLLM(LLM, BaseModel):
@@ -258,3 +262,22 @@ def convert_parsed_colang_to_flow_config(
             for flow in parsed_colang["flows"]
         ]
     )
+
+
+def _init_state(colang_content) -> State:
+    config = convert_parsed_colang_to_flow_config(
+        parse_colang_file(
+            filename="",
+            content=colang_content,
+            include_source_mapping=True,
+            version="1.1",
+        )
+    )
+
+    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+    state = State(context={}, flow_states=[], flow_configs=config)
+    initialize_state(state)
+    print("---------------------------------")
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+
+    return state
