@@ -1,3 +1,4 @@
+import copy
 import logging
 import random
 import re
@@ -193,7 +194,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
     log.info(f"[bold violet]-> External Event[/]: {external_event}")
 
     if isinstance(external_event, dict):
-        converted_external_event = ActionEvent.from_umim_event(external_event)
+        if "Action" in external_event["type"]:
+            converted_external_event = ActionEvent.from_umim_event(external_event)
+        else:
+            converted_external_event = Event.from_umim_event(external_event)
     elif isinstance(external_event, Event):
         converted_external_event = external_event
 
@@ -867,7 +871,7 @@ def _start_flow(
         # TODO: Check if we really need all arguments int the context
         flow_state.context.update(arguments)
         # Resolve positional flow parameters to their actual name in the flow
-        for idx in range(10):
+        for idx in range(len(flow_state.arguments)):
             pos_arg = f"${idx}"
             if pos_arg in arguments:
                 flow_state.context[flow_state.arguments[idx]] = arguments[pos_arg]
@@ -1162,6 +1166,19 @@ def _get_flow_state_hierarchy(state: State, flow_state_uid: int) -> List[str]:
 def _compute_event_matching_score(
     state: State, flow_state: FlowState, element: SpecOp, event: Event
 ) -> float:
+    """Checks if the element matches with given event."""
+    assert is_match_op_element(element), f"Element '{element}' is not a match element!"
+
+    ref_event = get_event_from_element(state, flow_state, element)
+    if not isinstance(ref_event, type(event)):
+        return 0.0
+
+    return _compute_event_comparison_score(state, event, ref_event, flow_state.priority)
+
+
+def _compute_event_comparison_score(
+    state: State, event: Event, ref_event: Event, priority: Optional[float] = None
+) -> float:
     """Checks if the given element matches the given event.
 
     Factors that determine the final score:
@@ -1176,12 +1193,6 @@ def _compute_event_matching_score(
         0.0: No match
         -1.0: Event will fail the current match
     """
-
-    assert is_match_op_element(element), f"Element '{element}' is not a match element!"
-
-    ref_event = get_event_from_element(state, flow_state, element)
-    if not isinstance(ref_event, type(event)):
-        return 0.0
 
     # Compute matching score based on event argument matching
     match_score: float = 1.0
@@ -1248,24 +1259,31 @@ def _compute_event_matching_score(
 
     else:
         # Its an UMIM event
-        if (ref_event.name != event.name) or (
-            ref_event.action_uid is not None
-            and ref_event.action_uid != event.action_uid
-        ):
+        if ref_event.name != event.name:
             return 0.0
 
-        # TODO: Action event matches can also fail for certain events, e.g. match Started(), received Finished()
+        event_copy = copy.deepcopy(event)
 
-        if event.action_uid is not None and event.action_uid in state.actions:
-            action_arguments = state.actions[event.action_uid].start_event_arguments
-            event.arguments["action_arguments"] = action_arguments
+        if hasattr(event, "action_uid") and hasattr(ref_event, "action_uid"):
+            if (
+                ref_event.action_uid is not None
+                and ref_event.action_uid != event.action_uid
+            ):
+                return 0.0
+
+            # TODO: Action event matches can also fail for certain events, e.g. match Started(), received Finished()
+
+            if event.action_uid is not None and event.action_uid in state.actions:
+                action_arguments = state.actions[event.action_uid].start_event_arguments
+                event_copy.arguments["action_arguments"] = action_arguments
 
         match_score = _compute_arguments_dict_matching_score(
-            event.arguments, ref_event.arguments
+            event_copy.arguments, ref_event.arguments
         )
 
     # Take into account the priority of the flow
-    match_score *= flow_state.priority
+    if priority:
+        match_score *= priority
 
     return match_score
 
@@ -1285,10 +1303,12 @@ def find_all_active_event_matchers(
                 element = flow_config.elements[head.position]
                 if is_match_op_element(element):
                     if event:
-                        score = _compute_event_matching_score(
+                        element_event = get_event_from_element(
+                            state, flow_state, element
+                        )
+                        score = _compute_event_comparison_score(
                             state,
-                            flow_state,
-                            element,
+                            element_event,
                             event,
                         )
                         if score > 0.0:
@@ -1299,32 +1319,59 @@ def find_all_active_event_matchers(
     return event_matchers
 
 
-def _compute_arguments_dict_matching_score(args: dict, ref_args: dict) -> float:
+def _compute_arguments_dict_matching_score(args: Any, ref_args: Any) -> float:
     # TODO: Find a better way of passing arguments to distinguish the ones that count for matching
-    argument_filter = ["return_value", "source_flow_instance_uid"]
     score = 1.0
-    for key in args.keys():
-        if key in argument_filter:
-            continue
-        elif key in ref_args:
-            if isinstance(args[key], dict) and isinstance(ref_args[key], dict):
-                # If both values are dictionaries, recursively compare them
-                score *= _compute_arguments_dict_matching_score(
-                    args[key], ref_args[key]
-                )
-            elif isinstance(ref_args[key], re.Pattern) and isinstance(args[key], str):
-                match = ref_args[key].search(args[key])
-                if match:
-                    continue
-                else:
-                    return 0.0
-            elif args[key] == ref_args[key]:
+    if isinstance(ref_args, re.Pattern) and (
+        isinstance(args, str) or isinstance(args, int) or isinstance(args, float)
+    ):
+        args = str(args)
+        if not ref_args.search(args):
+            return 0.0
+    elif not isinstance(ref_args, type(args)):
+        return 0.0
+    elif isinstance(ref_args, dict):
+        argument_filter = ["return_value", "activated", "source_flow_instance_uid"]
+        if len(ref_args) > len(args):
+            return 0.0
+        for val in ref_args.keys():
+            if val in argument_filter:
                 continue
+            elif val in args:
+                score *= _compute_arguments_dict_matching_score(
+                    args[val], ref_args[val]
+                )
+                if score == 0.0:
+                    return 0.0
             else:
                 return 0.0
-        else:
-            # This is a fuzzy match since the argument is missing
-            score *= 0.9
+
+        # Fuzzy match since number of arguments are not the same
+        score *= 0.9 ** (len(args) - len(ref_args))
+    elif isinstance(ref_args, list):
+        if len(ref_args) > len(args):
+            return 0.0
+        for idx, ref_val in enumerate(ref_args):
+            score *= _compute_arguments_dict_matching_score(args[idx], ref_val)
+            if score == 0.0:
+                return 0.0
+        # Fuzzy match since number of arguments are not the same
+        score *= 0.9 ** (len(args) - len(ref_args))
+    elif isinstance(ref_args, set):
+        for ref_val in ref_args:
+            temp_score = 0.0
+            for val in args:
+                temp_score = _compute_arguments_dict_matching_score(val, ref_val)
+                if temp_score > 0.0:
+                    break
+            score *= temp_score
+            if temp_score == 0.0:
+                return 0.0
+        # Fuzzy match since number of arguments are not the same
+        score *= 0.9 ** (len(args) - len(ref_args))
+    elif args != ref_args:
+        return 0.0
+
     return score
 
 

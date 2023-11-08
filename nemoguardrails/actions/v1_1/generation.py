@@ -28,7 +28,7 @@ from nemoguardrails.actions.llm.utils import (
     llm_call,
 )
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
-from nemoguardrails.colang.v1_1.runtime.flows import InternalEvent
+from nemoguardrails.colang.v1_1.runtime.flows import ActionEvent, InternalEvent
 from nemoguardrails.colang.v1_1.runtime.statemachine import (
     Event,
     InternalEvents,
@@ -235,6 +235,8 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         event: Event
         if name in InternalEvents.ALL:
             event = InternalEvent(name=name, arguments=arguments)
+        elif "Action" in name:
+            event = ActionEvent(name=name, arguments=arguments)
         else:
             event = Event(name=name, arguments=arguments)
         heads = find_all_active_event_matchers(state, event)

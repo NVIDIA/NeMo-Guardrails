@@ -63,7 +63,7 @@ def _init_state(colang_content) -> State:
     return state
 
 
-def test_send_umim_event():
+def test_send_umim_action_event():
     """Test to start an UMIM event"""
 
     content = """
@@ -83,7 +83,7 @@ def test_send_umim_event():
     )
 
 
-def test_match_umim_event():
+def test_match_umim_action_event():
     """Test to match an UMIM event"""
 
     content = """
@@ -602,6 +602,270 @@ def test_start_child_flow_two_times():
                 "type": "StartUtteranceBotAction",
                 "script": "Hi",
             },
+        ],
+    )
+
+
+def test_event_simple_parameter_match():
+    """Test start a child flow two times"""
+
+    content = """
+    flow main
+      match Event1(a=1)
+      start UtteranceBotAction(script="OK1")
+      match Event1(a=1)
+      await UtteranceBotAction(script="OK2")
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "a": 1,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "OK1",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "a": 2,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "b": 2,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "a": 1,
+            "b": 1,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "OK2",
+            }
+        ],
+    )
+
+
+def test_event_dict_parameter_match():
+    """Test start a child flow two times"""
+
+    content = """
+    flow main
+      match Event1(param={"a":1})
+      start UtteranceBotAction(script="OK1")
+      match Event1(param={"a":1})
+      await UtteranceBotAction(script="OK2")
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {"a": 1},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "OK1",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {"a": 2},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {"b": 1},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {"a": 1, "b": 1},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "OK2",
+            }
+        ],
+    )
+
+
+def test_event_list_parameter_match():
+    """Test start a child flow two times"""
+
+    content = """
+    flow main
+      match Event1(param=[1,2])
+      start UtteranceBotAction(script="OK1")
+      match Event1(param=[1,2])
+      start UtteranceBotAction(script="OK2")
+      match Event1(param=[r".*",2])
+      await UtteranceBotAction(script="OK3")
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": [1, 2],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "OK1",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": [2, 3],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": [],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": [2, 1],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": [1, 2, 3],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "OK2",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": [5, 2],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "OK3",
+            }
         ],
     )
 
@@ -2813,7 +3077,7 @@ def test_FlowStart_event_fallback():
     flow a
       match StartFlow() as $ref
       start UtteranceBotAction(script="Success")
-      send FlowStarted(flow_id=$ref.arguments.flow_id,param="test")
+      send FlowStarted(flow_id=$ref.arguments.flow_id, flow_start_uid=$ref.arguments.flow_start_uid ,param="test")
 
     flow main
       start a
@@ -3860,5 +4124,78 @@ def test_flow_event_competition():
     )
 
 
+# def test_flow_bot_question_repetition():
+#     """"""
+
+#     content = """
+#     flow _bot_say $text
+#       await UtteranceBotAction(script=$text) as $action
+
+#     flow bot ask $text
+#       await _bot_say $text
+
+#     flow user said something
+#       match UtteranceUserAction.Finished() as $event
+
+#     flow bot said something
+#       match UtteranceBotAction().Finished() as $event
+
+#     flow bot asked something
+#       match FlowFinished(flow_id="bot ask") as $event
+
+#     flow question repetition
+#       bot asked something as $ref
+#       when UserSilenceEvent()
+#         $question = $ref.context.event.arguments.text
+#         bot ask $question
+#       orwhen user said something or bot said something
+#         return
+
+#     flow main
+#       activate question repetition 5.0
+#       bot ask "This is a question!"
+#       match WaitEvent()
+#     """
+
+#     config = _init_state(content)
+#     state = run_to_completion(config, start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "This is a question!",
+#             }
+#         ],
+#     )
+#     state = run_to_completion(
+#         state,
+#         {
+#             "type": "UtteranceBotActionFinished",
+#             "final_script": state.outgoing_events[0]["script"],
+#             "action_uid": state.outgoing_events[0]["action_uid"],
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [],
+#     )
+#     state = run_to_completion(
+#         state,
+#         {
+#             "type": "UserSilenceEvent",
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [
+#             {
+#                 "type": "StartUtteranceBotAction",
+#                 "script": "This is a question!",
+#             }
+#         ],
+#     )
+
+
 if __name__ == "__main__":
-    test_flow_event_competition()
+    test_event_dict_parameter_match()

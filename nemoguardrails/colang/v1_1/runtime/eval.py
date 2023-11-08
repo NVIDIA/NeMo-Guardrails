@@ -57,29 +57,38 @@ def eval_expression(expr, context) -> Any:
             expr,
         )
 
+    def replace_with_index(name: str):
+        nonlocal index_counter
+        replacement = f"{name}_{index_counter}"
+        index_counter += 1
+        return replacement
+
     # If the expression contains the pattern r"(.*?)" it is considered a regular expression
+    expr_locals = {}
+    index_counter = 0
     regex_pattern = r"(r\"(.*?)\")|(r'(.*?)')"
-    matches = re.findall(regex_pattern, expr)
-    if len(matches) > 0:
-        if len(matches) == 1:
-            try:
-                regex = matches[0][1] if matches[0][1] != "" else matches[0][3]
-                compiled_regex = re.compile(regex)
-                return compiled_regex
-            except Exception as ex:
-                raise Exception(
-                    f"Error in compiling regular expression '{expr}': {str(ex)}"
-                )
-        else:
+    regular_expressions = re.findall(regex_pattern, expr)
+    updated_expr = re.sub(regex_pattern, replace_with_index("regex"), expr)
+
+    for idx, regular_expression in enumerate(regular_expressions):
+        try:
+            regex = (
+                regular_expression[1]
+                if regular_expression[1] != ""
+                else regular_expression[3]
+            )
+            compiled_regex = re.compile(regex)
+            expr_locals[f"regex_{idx}"] = compiled_regex
+        except Exception as ex:
             raise Exception(
-                f"Error in compiling regular expression '{expr}': Multiple expression not supported!"
+                f"Error in compiling regular expression '{expr}': {str(ex)}"
             )
 
     # We search for all variable names starting with $, remove the $ and add
     # the value in the globals dict for eval
-    var_names = re.findall(r"\$([a-zA-Z_][a-zA-Z0-9_]*)", expr)
-    updated_expr = re.sub(r"\$([a-zA-Z_][a-zA-Z0-9_]*)", r"var_\1", expr)
-    expr_locals = {}
+    regex_pattern = r"\$([a-zA-Z_][a-zA-Z0-9_]*)"
+    var_names = re.findall(regex_pattern, updated_expr)
+    updated_expr = re.sub(regex_pattern, r"var_\1", updated_expr)
 
     for var_name in var_names:
         # if we've already computed the value, we skip

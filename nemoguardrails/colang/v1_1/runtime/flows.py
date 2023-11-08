@@ -252,7 +252,8 @@ class Action:
     def started_event(self, args: dict) -> ActionEvent:
         """Returns the Started action event."""
         arguments = args.copy()
-        arguments["action_arguments"] = self.start_event_arguments
+        if self.start_event_arguments:
+            arguments["action_arguments"] = self.start_event_arguments
         return ActionEvent(
             name=f"{self.name}Started", arguments=arguments, action_uid=self.uid
         )
@@ -260,7 +261,8 @@ class Action:
     def updated_event(self, args: dict) -> ActionEvent:
         """Returns the Updated parameter action event."""
         arguments = args.copy()
-        arguments["action_arguments"] = self.start_event_arguments
+        if self.start_event_arguments:
+            arguments["action_arguments"] = self.start_event_arguments
         return ActionEvent(
             name=f"{self.name}{args['event_parameter_name']}Updated",
             arguments=arguments,
@@ -270,7 +272,8 @@ class Action:
     def finished_event(self, args: dict) -> ActionEvent:
         """Returns the Finished action event."""
         arguments = args.copy()
-        arguments["action_arguments"] = self.start_event_arguments
+        if self.start_event_arguments:
+            arguments["action_arguments"] = self.start_event_arguments
         return ActionEvent(
             name=f"{self.name}Finished", arguments=arguments, action_uid=self.uid
         )
