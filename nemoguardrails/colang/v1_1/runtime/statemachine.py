@@ -841,19 +841,21 @@ def slide(
 
 
 def _start_flow(
-    state: State, flow_state: FlowState, head: FlowHead, arguments: dict
+    state: State, flow_state: FlowState, head: FlowHead, event_arguments: dict
 ) -> None:
     flow_config = state.flow_configs[flow_state.flow_id]
 
-    if flow_state.uid != state.main_flow_state.uid:
+    if state.main_flow_state is None or flow_state.uid != state.main_flow_state.uid:
         # Link to parent flow
-        parent_flow_uid = arguments["source_flow_instance_uid"]
+        parent_flow_uid = event_arguments["source_flow_instance_uid"]
         parent_flow = state.flow_states[parent_flow_uid]
         flow_state.parent_uid = parent_flow_uid
         parent_flow.child_flow_uids.append(flow_state.uid)
         # Add to parent scopes
-        if "source_head_uid" in arguments:
-            for scope_uid in parent_flow.heads[arguments["source_head_uid"]].scope_uids:
+        if "source_head_uid" in event_arguments:
+            for scope_uid in parent_flow.heads[
+                event_arguments["source_head_uid"]
+            ].scope_uids:
                 if scope_uid in parent_flow.scopes:
                     parent_flow.scopes[scope_uid][0].append(flow_state.uid)
 
@@ -865,18 +867,25 @@ def _start_flow(
                 flow_state.loop_id = loop_id
         else:
             flow_state.loop_id = parent_flow.loop_id
-        flow_state.activated = arguments.get("activated", False)
+        flow_state.activated = event_arguments.get("activated", False)
 
         # Update context with event/flow parameters
         # TODO: Check if we really need all arguments int the context
-        flow_state.context.update(arguments)
+        flow_state.context.update(event_arguments)
         # Resolve positional flow parameters to their actual name in the flow
-        for idx in range(len(flow_state.arguments)):
+        last_idx = -1
+        for idx, arg in enumerate(flow_state.arguments):
             pos_arg = f"${idx}"
-            if pos_arg in arguments:
-                flow_state.context[flow_state.arguments[idx]] = arguments[pos_arg]
+            last_idx = idx
+            if pos_arg in event_arguments:
+                flow_state.context[arg] = event_arguments[pos_arg]
             else:
                 break
+        # Check if more parameters were provided than the flow takes
+        if f"${last_idx+1}" in event_arguments:
+            raise ColangRuntimeError(
+                f"To many parameters provided in start of flow '{flow_state.flow_id}'"
+            )
 
     # Initialize new flow instance of flow
     add_new_flow_instance(state, create_flow_instance(flow_config))
