@@ -466,7 +466,7 @@ flow user selected choice $choice_id
 
 flow show case selector
   while True
-    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can just say 'A' or click on an option"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}  ]) as $action
+    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can just say 'A' or click on an option"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}, {"id": "proactive", "text": "E: Proactive turn taking"}]) as $action
     start bot inform "Please pick one of the show cases."
     when user said r"\b[aA]\b" or user said r"\bgame\b" or user selected choice "game"
       send $action.Stop()
@@ -484,6 +484,8 @@ flow show case selector
       send $action.Stop()
       bot inform "Great! You picked the posture show case!"
       showcase posture capabilities
+    orwhen user said r"\b[eE]\b" or user selected choice "proactive"
+      showcase proactive turn taking
     orwhen user said something
       send $action.Stop()
       bot say "Sorry, did not get that!"
@@ -695,3 +697,20 @@ flow showcase posture capabilities
       break
     orwhen user said something
       bot ask "Now I would ask a question. To end this show case just say 'I am done'"
+
+
+# (E) Proactive turn taking showcase
+flow showcase proactive turn taking
+  activate reaction bot question repetition for user silence 5
+
+  bot inform "I am going to ask you questions and if you don't response within 5 seconds I will repeat them."
+
+  while True
+    $question = """Ask a random question that can be answered with just yes or no"""
+    bot ask $question
+    when user said something
+      bot say "Great, you have answered! After the next question wait a bit for me to repeat it."
+    orwhen bot asked something
+      wait 1
+      bot inform "You see, that's how I can be proactive and repeat the question. That's it!"
+      break
