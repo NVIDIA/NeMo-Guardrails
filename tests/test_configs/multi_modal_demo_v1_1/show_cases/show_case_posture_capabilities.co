@@ -1,0 +1,33 @@
+flow showcase posture capabilities
+  bot inform "Now I am going to show you how my posture can be controlled based on me or you talking."
+  wait 1.0
+  bot inform "I will switch between listening, talking, and an attentive posture."
+  wait 1.0
+
+  activate update bot posture
+
+  bot inform "So now observe how my posture changes when I am talking."
+  bot ask "And now it is your turn, you can say something now."
+  while True
+    when user expressed done
+      bot inform "That was fun."
+      break
+    orwhen user said something
+      bot ask "Now I would ask a question. To end this show case just say 'I am done'"
+
+flow update bot posture
+  # meta: loop_id=posture_loop
+  start bot posture "idle" as $current_posture
+  while True
+    when user started talking
+      send $current_posture.Stop()
+      start bot posture "listening" as $current_posture
+    orwhen bot started saying something
+      send $current_posture.Stop()
+      start bot posture "talking" as $current_posture
+    orwhen bot asked something
+      send $current_posture.Stop()
+      start bot posture "attentive" as $current_posture
+    orwhen bot said something or user said something
+      send $current_posture.Stop()
+      start bot posture "idle" as $current_posture

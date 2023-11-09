@@ -1,0 +1,176 @@
+# ----------------------------------
+# Skill interaction flows
+# ----------------------------------
+
+flow wait indefinitely
+  """Little helper flow to wait indefinitely."""
+  # meta: exclude from llm
+  match NeverComingEvent()
+
+flow wait $time_s
+  """Wait the specified number of seconds before continuing."""
+  await TimerBotAction(timer_name="wait_timer", duration=$time_s)
+
+flow reaction to user silence $time_s $text
+  """Let the bot say something if the user was quite for the specified time."""
+  # meta: exclude from llm
+  user was silent $time_s
+  bot inform $text
+
+flow reaction bot question repetition for user silence $time_s
+  """Repeat previous bot question when use was silent for specified time."""
+  # meta: exclude from llm
+  bot asked something as $ref
+  #start_new_flow_instance:
+  when user was silent $time_s
+    $question = $ref.context.event.arguments.text
+    $prompt = """Make a variation of this question: {{$question}}"""
+    bot ask $prompt
+  orwhen user said something or bot said something
+    continue
+
+# ----------------------------------
+# Bot intents
+# Note: To enable the LLM prompt generation extraction use only one single statement
+# -----------------------------------
+
+flow bot express greeting
+  # meta: bot intent
+  (bot express "Hi there!"
+    or bot express "Welcome!"
+    or bot express "Hello!")
+    and bot gesture "Wave with one hand"
+
+flow bot express feeling well
+  # meta: bot intent
+  (bot express "I am good!"
+    or bot express "I am great!")
+    and (bot gesture "Thumbs up" or bot gesture "Smile")
+
+flow bot express feeling bad
+  # meta: bot intent
+  (bot express "I am not good!"
+    or bot express "I am a bit under the weather!")
+    and (bot gesture "Thumbs down" or bot gesture "Sad face")
+
+flow bot inform about service
+  # meta: bot intent
+  bot inform "You can ask or instruct me whatever you want and I will do it!"
+    and bot gesture "Open up both hands making a presenting gesture"
+
+flow bot ask how are you
+  # meta: bot intent
+  (bot say "How are you doing?"
+    or bot say "How is it going?")
+    and bot gesture "Pay attention to user"
+
+flow bot make short pause
+  # meta: bot intent
+  wait 2.0
+
+flow bot make long pause
+  # meta: bot intent
+  wait 5.0
+
+# ----------------------------------
+# User intents
+# Note: To enable the LLM prompt generation extraction use only one single statement
+# -----------------------------------
+
+flow user expressed greeting
+  # meta: user intent
+  user said "hi"
+    or user said "Welcome!"
+    or user said "Hello!"
+
+flow user expressed done
+  # meta: user intent
+  user said "that is all"
+    or user said "I am done"
+    or user said "nothing more to add"
+    or user said r"\bdone\b"
+    or user said "I am done. "
+
+flow user asked how are you
+  # meta: user intent
+  user said "how are you"
+
+flow user requested a task
+  # meta: user intent
+  user said "do something"
+    or user said "can you do something"
+    or user said "please do"
+
+# ----------------------------------
+# FAQs
+# -----------------------------------
+
+flow greeting faq
+  user expressed greeting
+  bot express greeting
+
+flow how are you faq
+  user asked how are you
+  bot express feeling well
+    or bot express feeling bad
+
+flow faq
+  activate greeting faq
+    and how are you faq
+  wait indefinitely
+
+# ----------------------------------
+# Main story
+# -----------------------------------
+
+flow user selected choice $choice_id
+  # meta: exclude from llm
+  # meta: user action
+  match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
+
+flow show case selector
+  while True
+    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can just say 'A' or click on an option"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}, {"id": "proactive", "text": "E: Proactive turn taking"}]) as $action
+    start bot inform "Please pick one of the show cases."
+    when user said r"\b[aA]\b" or user said r"\bgame\b" or user selected choice "game"
+      send $action.Stop()
+      bot inform "Great! You picked the number guessing game!"
+      bot play number guessing game with user
+    orwhen user said r"\b[bB]\b" or user said r"\bmultimodality\b" or user selected choice "multimodality"
+      send $action.Stop()
+      bot inform "Great! You picked the multimodality show case!"
+      action alignment showcase
+    orwhen user said r"\b[cC]\b" or user selected choice "backchanneling"
+      send $action.Stop()
+      bot inform "Great! You picked the backchanneling example!"
+      backchannelling interaction
+    orwhen user said r"\b[dD]\b" or user selected choice "posture"
+      send $action.Stop()
+      bot inform "Great! You picked the posture show case!"
+      showcase posture capabilities
+    orwhen user said r"\b[eE]\b" or user selected choice "proactive"
+      showcase proactive turn taking
+    orwhen user said something
+      send $action.Stop()
+      bot say "Sorry, did not get that!"
+
+flow main
+  # meta: exclude from llm
+  activate llm response pooling 1.0
+  activate catch undefined flows
+  #activate catch unexpected user utterance
+  #activate faq
+  #activate llm response pooling 1.0
+  #activate fallback
+  #activate flows fallback
+  #activate custom instructions
+  #bot express greeting
+  #bot asks email address
+  bot say "Welcome to the demo of my upcoming features!"
+  show case selector
+
+  #bot play number guessing game with user
+  #backchannelling interaction
+  #bot inform about service
+  #showcase posture capabilities
+  wait indefinitely
