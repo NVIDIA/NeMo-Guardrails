@@ -803,13 +803,7 @@ def _expand_when_stmt_element(
             new_elements.append(Goto(label=else_statement_label_name))
 
             new_elements.append(Label(name=else_statement_label_name))
-            new_elements.extend(
-                expand_elements(
-                    element.else_elements,
-                    flow_configs,
-                    [end_label_name, end_label_name],
-                )
-            )
+            new_elements.extend(expand_elements(element.else_elements, flow_configs))
 
         # End label
         new_elements.append(Label(name=end_label_name))
