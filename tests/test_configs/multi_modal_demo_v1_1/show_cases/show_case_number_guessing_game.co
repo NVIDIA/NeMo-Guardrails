@@ -21,12 +21,12 @@ flow bot play number guessing game with user
       bot ask "Just guess a number between 0 and 100!"
     elif $user_number < $random_number
       #bot inform that the guessed number is too low
-      bot inform "Sorry, {{$user_number}} is too low!"
-        and bot gesture "sad face, index finger pointing down"
+      bot inform "{{$user_number}} is too low!"
+        and bot gesture "shaking head"
     elif $user_number > $random_number
       #bot inform that the guessed number is too high
-      bot inform "Sorry, {{$user_number}} is too high!"
-        and bot gesture "sad face, index finger pointing up"
+      bot inform "{{$user_number}} is too high!"
+        and bot gesture "shaking head"
     else
       #stop $scene
       send $scene.Stop()
@@ -34,7 +34,10 @@ flow bot play number guessing game with user
       bot express "Congratulation! {{$user_number}} is the correct number!"
         and bot gesture "smiling, dancing cheerful"
       break
-    bot ask "Try again!"
+    if $attempts == 3
+      bot ask "You can do this! What could be the number?" and bot gesture "point towards the user"
+    else
+      bot ask "Try again!" or bot ask "Guess again!" or bot ask "Another guess?" or bot ask "Next try!"
     $attempts = $attempts + 1
 
   #bot inform about the number of attempts it took the user to find the number

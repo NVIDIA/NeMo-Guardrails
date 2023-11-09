@@ -8,17 +8,17 @@ flow user said $text
   # meta: user action
   match UtteranceUserAction.Finished(final_transcript=$text) as $event
 
-flow user started talking
-  # meta: exclude from llm
-  # meta: user action
-  match UtteranceUserAction.Started() as $event
-
-flow user mentioned $text
+flow user saying $text
   # meta: exclude from llm
   # meta: user action
   match UtteranceUserAction.TranscriptUpdated(interim_transcript=r".*{{$text}}((\s*\w+\s*){0,2})\W*$") as $event
 
-flow user typed $text
+flow user started saying
+  # meta: exclude from llm
+  # meta: user action
+  match UtteranceUserAction.Started() as $event
+
+flow user typing $text
   # meta: exclude from llm
   # meta: user action
   match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*{{$text}}((\s*\w+\s*){0,2})\W*$"}]) as $event
@@ -28,6 +28,12 @@ flow user said something
   # meta: user intent
   match UtteranceUserAction.Finished() as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
+
+flow user saying something
+  # meta: exclude from llm
+  # meta: user intent
+  match UtteranceUserAction.TranscriptUpdated() as $event
+  send UserActionLog(flow_id="user saying", parameter=$event.arguments.final_transcript, intent_flow_id="user saying something")
 
 flow user was silent $time_s
   # meta: exclude from llm

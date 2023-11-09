@@ -1,5 +1,5 @@
 flow backchannelling interaction
-  bot inform "First I am going to ask you about your day and will react to keywords such as nice, great or terrible."
+  bot inform "First, I am going to ask you about your day and will react to keywords such as nice, great or terrible."
   bot inform "Try to answer with a long sentence that contains one of these keywords to see the effect."
   wait 1.0
   bot asks user how the day was
@@ -12,34 +12,38 @@ flow user asked bot to initiate back channelling interaction
   user said "I want to see the back channeling example"
     or user said "can you do the back channeling"
 
-flow user mentioned something sad
-  user mentioned "terrible"
-    or user mentioned "horrible"
-    or user mentioned "bad"
+flow user saying something bad
+  user saying "terrible"
+    or user saying "horrible"
+    or user saying "bad"
 
-flow user mentioned something nice
-  user mentioned "nice"
-    or user mentioned "great"
-    or user mentioned "perfect"
-    or user mentioned "awesome"
+flow user saying something nice
+  user saying "nice"
+    or user saying "great"
+    or user saying "perfect"
+    or user saying "awesome"
 
-flow bot reacts to sad things
-  when user mentioned something sad
-    bot say "Ohh"
-      and bot gesture "shake head"
+flow user said something bad
+  user said r".*terribl|horribl|bad.*"
+
+flow bot reacts to bad things
+  user saying something bad
+  bot say "Ohh"
+    and bot gesture "shake head"
 
 flow bot reacts to nice things
-  when user mentioned something nice
-    bot say "Nice"
-      and bot gesture "celebrate something going well"
+  user saying something nice
+  bot say "Nice"
+    and bot gesture "celebrate something going well"
 
 flow bot asks user how the day was
+  activate bot reacts to nice things
+  activate bot reacts to bad things
+
   bot say "How was your day?"
   start bot posture "attentive"
-  activate bot reacts to nice things
-  activate bot reacts to sad things
 
-  when user said r".*terribl|horribl|bad.*"
+  when user said something bad
     bot say "I hope you are alright now?"
       and bot gesture "looking concerned to the user"
   orwhen user said something
