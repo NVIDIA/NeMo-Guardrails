@@ -19,10 +19,8 @@ import logging
 from rich.logging import RichHandler
 
 from nemoguardrails.colang.v1_1.runtime.flows import ActionStatus
-from nemoguardrails.colang.v1_1.runtime.statemachine import (
-    InternalEvent,
-    run_to_completion,
-)
+from nemoguardrails.colang.v1_1.runtime.statemachine import (InternalEvent,
+                                                             run_to_completion)
 from tests.utils import _init_state, is_data_in_events
 
 FORMAT = "%(message)s"
@@ -843,5 +841,64 @@ def test_event_list_parameter_match():
     )
 
 
+def test_event_custom_regex_parameter_match():
+    """Test more complex regex parameters."""
+
+    content = """
+    flow main
+      while True
+        when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": r"\\bemail\\b", "value": r".*"}]) as $e
+          start UtteranceBotAction(script="Success")
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "VisualFormSceneActionInputUpdated",
+            "interim_inputs": [{"id": "email", "value": "test"}],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "VisualFormSceneActionInputUpdated",
+            "interim_inputs": [{"id": "sdfsdf", "value": "test"}],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "VisualFormSceneActionInputUpdated",
+            "interim_inputs": [{"id": "sdfsdf email sdf", "value": ""}],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_implicit_action_state_update()
+    test_event_custom_regex_parameter_match()

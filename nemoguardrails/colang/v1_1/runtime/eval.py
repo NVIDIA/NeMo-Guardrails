@@ -57,18 +57,19 @@ def eval_expression(expr, context) -> Any:
             expr,
         )
 
-    def replace_with_index(name: str):
+    index_counter = 0
+
+    def replace_with_index(match):
         nonlocal index_counter
-        replacement = f"{name}_{index_counter}"
+        replacement = f"regex_{index_counter}"
         index_counter += 1
         return replacement
 
     # If the expression contains the pattern r"(.*?)" it is considered a regular expression
     expr_locals = {}
-    index_counter = 0
     regex_pattern = r"(r\"(.*?)\")|(r'(.*?)')"
     regular_expressions = re.findall(regex_pattern, expr)
-    updated_expr = re.sub(regex_pattern, replace_with_index("regex"), expr)
+    updated_expr = re.sub(regex_pattern, replace_with_index, expr)
 
     for idx, regular_expression in enumerate(regular_expressions):
         try:

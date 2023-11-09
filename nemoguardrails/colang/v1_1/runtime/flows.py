@@ -260,11 +260,13 @@ class Action:
 
     def updated_event(self, args: dict) -> ActionEvent:
         """Returns the Updated parameter action event."""
+        name = f"{self.name}{args['event_parameter_name']}Updated"
         arguments = args.copy()
+        del arguments["event_parameter_name"]
         if self.start_event_arguments:
             arguments["action_arguments"] = self.start_event_arguments
         return ActionEvent(
-            name=f"{self.name}{args['event_parameter_name']}Updated",
+            name=name,
             arguments=arguments,
             action_uid=self.uid,
         )
