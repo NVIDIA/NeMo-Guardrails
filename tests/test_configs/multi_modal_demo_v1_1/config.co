@@ -72,6 +72,11 @@ flow user mentioned $text
   # meta: user action
   match UtteranceUserAction.TranscriptUpdated(interim_transcript=r".*{{$text}}((\s*\w+\s*){0,2})\W*$") as $event
 
+flow user typed $text
+  # meta: exclude from llm
+  # meta: user action
+  match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*{{$text}}((\s*\w+\s*){0,2})\W*$"}]) as $event
+
 flow user said something
   # meta: exclude from llm
   # meta: user intent
@@ -348,6 +353,18 @@ flow reaction to user silence $time_s $text
   user was silent $time_s
   bot inform $text
 
+flow reaction bot question repetition for user silence $time_s
+  """Repeat previous bot question when use was silent for specified time."""
+  # meta: exclude from llm
+  bot asked something as $ref
+  #start_new_flow_instance:
+  when user was silent $time_s
+    $question = $ref.context.event.arguments.text
+    $prompt = """Make a variation of this question: {{$question}}"""
+    bot ask $prompt
+  orwhen user said something or bot said something
+    continue
+
 # ----------------------------------
 # Bot intents
 # Note: To enable the LLM prompt generation extraction use only one single statement
@@ -407,7 +424,8 @@ flow user expressed done
   user said "that is all"
     or user said "I am done"
     or user said "nothing more to add"
-    or user said "done"
+    or user said r"\bdone\b"
+    or user said "I am done. "
 
 flow user asked how are you
   # meta: user intent
@@ -449,7 +467,7 @@ flow user selected choice $choice_id
 flow show case selector
   while True
     start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can just say 'A' or click on an option"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}  ]) as $action
-    bot inform "Please pick one of the show cases."
+    start bot inform "Please pick one of the show cases."
     when user said r"\b[aA]\b" or user said r"\bgame\b" or user selected choice "game"
       send $action.Stop()
       bot inform "Great! You picked the number guessing game!"
@@ -480,12 +498,13 @@ flow main
   #activate flows fallback
   #activate custom instructions
   #bot express greeting
+  #bot asks email address
   bot say "Welcome to the demo of my upcoming features!"
   show case selector
 
+  #bot play number guessing game with user
   #backchannelling interaction
   #bot inform about service
-  #play number guessing game
   #showcase posture capabilities
   wait indefinitely
 
@@ -493,14 +512,15 @@ flow main
 flow bot play number guessing game with user
   """Ask the user to guess a random number between 1 and 100; after each guess let the user know if the number was to low or high. If the user guesses the correct number, congratulate!"""
   activate llm response pooling 1.0
+  activate reaction bot question repetition for user silence 10
 
-  start scene show textual information $title="Little Game" $text="Guess the random number between 0 and 100" as $scene
+  start scene show textual information $title="Little Game" $text="Guess the random number between 0 and 100" $header_image="question mark horizontal orientation" as $scene
 
   $random_number = """Give me a random number between 1 and 100, e.g. 66 but not 66"""
-  bot say "Hi, please guess the random number between 0 and 100 (hint: {{$random_number}})"
+  bot ask "Hi, please guess the random number between 0 and 100 (hint: {{$random_number}})"
     and bot gesture "Waving hands"
 
-  activate reaction to user silence 20.0 "Just say a number between 0 and 100!" as $repeat_question
+  #activate reaction to user silence 20.0 "Just say a number between 0 and 100!" as $repeat_question
 
   $attempts = 1
   while True
@@ -526,6 +546,7 @@ flow bot play number guessing game with user
       bot express "Congratulation! {{$user_number}} is the correct number!"
         and bot gesture "smiling, dancing cheerful"
       break
+    bot ask "Try again!"
     $attempts = $attempts + 1
 
   #bot inform about the number of attempts it took the user to find the number
@@ -535,45 +556,46 @@ flow bot play number guessing game with user
 flow action alignment showcase
   bot inform "I am going to demonstrate to you the different ways of how actions can be aligned!"
   wait 1.0
-  bot inform "I will be using two different actions, a bot talking action, and a dancing gesture action."
+  bot inform "I will be using two different actions, a talking action, and a gesture action."
   wait 1.0
 
-  bot inform "Now, I show you how to trigger the two actions sequentially!"
-  wait 1.0
+  bot inform "First, I show you how to trigger the two actions sequentially!"
+  wait 4.0
   show sequential actions showcase
   wait 1.0
-  bot inform "Ok, you just saw how the dancing only started after I was done talking."
+  bot inform "Ok, you just saw how the gesture only started after I was done talking."
   wait 1.0
 
   bot inform "Now I will trigger the two actions in parallel."
-  wait 1.0
+  wait 4.0
   show parallel actions waiting for both to end showcase
   wait 1.0
-  bot inform "Ok, you just saw how I was dancing and talking at the same time."
+  bot inform "Ok, you just saw how I was making a gesture and talking at the same time."
   wait 1.0
 
-  bot inform "Now, I am gonna show you how I can trigger the two actions in parallel but will limit the gesture action with the end of the utterance action."
-  wait 1.0
+  bot inform "Now, I am gonna show you how I can trigger the two actions in parallel but will limit the gesture action with the end of the talking action."
+  wait 4.0
   show parallel actions limiting second action by end of first one
   wait 1.0
-  bot inform "Note, how I stopped dancing as soon as I was done speaking. Depending on the action duration, I also could have switched the two actions."
+  bot inform "Note, how I stopped the gesture as soon as I was done talking. Depending on the action duration, I also could have switched the two actions."
 
   wait 1.0
   bot inform "That's it!"
   wait 1.0
 
 flow show sequential actions showcase
-  bot say "This is action A."
-  bot gesture "Dancing"
+  bot say "Talking, talking, talking, talking."
+  bot gesture "Implying not having understood something, asking to repeat or rephrase"
 
 flow show parallel actions waiting for both to end showcase
-  bot say "This is action A."
-    and bot gesture "Dancing"
+  bot say "Talking, talking, talking, talking"
+    and bot gesture "Implying not having understood something, asking to repeat or rephrase"
 
 flow show parallel actions limiting second action by end of first one
-  start bot say "This is action A." as $action_1
-  start bot gesture "Dancing"
+  start bot say "Talking." as $action_1
+  start bot gesture "Implying not having understood something, asking to repeat or rephrase"
   match $action_1.Finished()
+
 
 # (C) Back channelling
 flow user asked bot to initiate back channelling interaction
@@ -604,9 +626,8 @@ flow bot reacts to nice things
 flow bot asks user how the day was
   bot say "How was your day?"
   start bot posture "attentive"
-
-  activate bot reacts to sad things
   activate bot reacts to nice things
+  activate bot reacts to sad things
 
   when user said r".*terribl|horribl|bad.*"
     bot say "I hope you are alright now?"
@@ -617,8 +638,28 @@ flow bot asks user how the day was
   user said something
   bot say "Thanks for sharing"
 
+
+flow bot asks email address
+  bot ask "Please enter your email address to continue"
+  start VisualFormSceneAction(prompt="Enter your email",inputs=[{"id": "email", "description": "email address", "value" : ""}]) as $action
+
+  while True
+    when VisualFormSceneAction.InputUpdated() as $e
+      if '{{search(".*@$", $e.arguments.interim_inputs[0].value)}}' == "True"
+        bot say "And now only the domain missing!" and bot gesture "success"
+    orwhen VisualFormSceneAction.ConfirmationUpdated()
+        bot say "Thank you" and bot gesture "bowing"
+        break
+
+
 flow backchannelling interaction
-  bot asks user how the day was
+  #bot inform "First I am going to ask you about your day and will react to keywords such as nice, great or terrible."
+  #bot inform "Try to answer with a long sentence that contains one of these keywords to see the effect."
+  #wait 1.0
+  #bot asks user how the day was
+
+  bot inform "Now I am going to demonstrate how I can dynamically react to other types of inputs. As an example we use a form."
+  bot asks email address
 
 # (D) Posture capabilities
 flow update bot posture
@@ -653,4 +694,4 @@ flow showcase posture capabilities
       bot inform "That was fun."
       break
     orwhen user said something
-      bot say "Now I would say something or maybe ask a question. To end this show case just say 'I am done'"
+      bot ask "Now I would ask a question. To end this show case just say 'I am done'"

@@ -45,7 +45,6 @@ async def _run_chat_v1_1(rails_app: LLMRails):
     """Simple chat loop for v1.1 using the stateful events API."""
     state = None
     waiting_user_input = False
-    pending_timers = {}
     running_timer_tasks = {}
     output_events = []
     output_state = None
@@ -156,15 +155,19 @@ async def _run_chat_v1_1(rails_app: LLMRails):
 
             elif event["type"] == "StartTimerBotAction":
                 # print(f"\033[92mstart timer: {event['timer_name']} {event['duration']}\033[0m")
-                timer = _start_timer(
-                    event["timer_name"], event["duration"], event["action_uid"]
-                )
-                pending_timers.update({event["action_uid"]: timer})
+                action_uid = event["action_uid"]
+                timer = _start_timer(event["timer_name"], event["duration"], action_uid)
+                # Manage timer tasks
+                if action_uid not in running_timer_tasks:
+                    task = asyncio.create_task(timer)
+                    running_timer_tasks.update({action_uid: task})
 
             elif event["type"] == "StopTimerBotAction":
                 # print(f"\033[92mstart timer: {event['timer_name']} {event['duration']}\033[0m")
-                if event["action_uid"] in running_timer_tasks:
-                    running_timer_tasks[event["action_uid"]].cancel()
+                action_uid = event["action_uid"]
+                if action_uid in running_timer_tasks:
+                    running_timer_tasks[action_uid].cancel()
+                    running_timer_tasks.pop(action_uid)
 
         # TODO: deserialize the output state
         # state = State.from_dict(output_state)
@@ -215,16 +218,6 @@ async def _run_chat_v1_1(rails_app: LLMRails):
             # If we don't have a check task, we start it
             if check_task is None:
                 check_task = asyncio.create_task(_check_local_async_actions())
-
-            # Manage timer tasks
-            for action_uid, timer in pending_timers.items():
-                if timer in running_timer_tasks:
-                    if running_timer_tasks[action_uid].done():
-                        running_timer_tasks.pop(action_uid)
-                else:
-                    task = asyncio.create_task(timer)
-                    running_timer_tasks.update({action_uid: task})
-            pending_timers.clear()
 
             first_time = False
 

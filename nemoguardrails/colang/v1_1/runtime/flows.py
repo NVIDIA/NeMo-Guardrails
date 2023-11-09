@@ -131,14 +131,14 @@ class ActionEvent(Event):
 
 @dataclass
 class InternalEvent(Event):
-    """The flow event class."""
+    """The internal event class."""
 
     # An event can belong to a flow
     flow: Optional[FlowState] = None
 
 
 class ActionStatus(Enum):
-    """The type of a context variable."""
+    """The status of an action."""
 
     INITIALIZED = "initialized"
     STARTING = "starting"
@@ -331,6 +331,14 @@ class FlowConfig:
     source_code: Optional[str] = None
 
 
+class FlowHeadStatus(Enum):
+    """The status of a flow head."""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    MERGING = "merging"
+
+
 @dataclass
 class FlowHead:
     """The flow head that points to a certain element in the flow"""
@@ -348,7 +356,7 @@ class FlowHead:
     matching_scores: List[float]
 
     # Whether a head is active or not (a head fork will deactivate the parent head)
-    active: bool = True
+    status: FlowHeadStatus = FlowHeadStatus.ACTIVE
 
     # List of all scopes that are relevant for the head
     scope_uids: List[str] = field(default_factory=list)
@@ -455,7 +463,11 @@ class FlowState:
     @property
     def active_heads(self):
         """Returns all active heads of this flow."""
-        return {id: h for (id, h) in self.heads.items() if h.active}
+        return {
+            id: h
+            for (id, h) in self.heads.items()
+            if h.status != FlowHeadStatus.INACTIVE
+        }
 
     def __post_init__(self) -> None:
         self._event_name_map = {

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Test the core flow mechanics"""
+import copy
 import logging
 
 from rich.logging import RichHandler
@@ -234,90 +235,112 @@ def test_flow_event_competition():
     )
 
 
-# def test_flow_bot_question_repetition():
-#     """"""
+def test_flow_bot_question_repetition():
+    """"""
 
-#     content = """
-#     flow _bot_say $text
-#       await UtteranceBotAction(script=$text) as $action
+    content = """
+    flow _bot_say $text
+      await UtteranceBotAction(script=$text) as $action
 
-#     flow bot ask $text
-#       await _bot_say $text
+    flow bot gesture $gesture
+      await GestureBotAction(gesture=$gesture) as $action
 
-#     flow user said something
-#       match UtteranceUserAction.Finished() as $event
+    flow bot ask $text
+      await _bot_say $text
 
-#     flow bot said something
-#       match UtteranceBotAction().Finished() as $event
+    flow user said something
+      match UtteranceUserAction.Finished() as $event
 
-#     flow bot asked something
-#       match FlowFinished(flow_id="bot ask") as $event
+    flow bot said something
+      match UtteranceBotAction().Finished() as $event
 
-#     flow user was silent $time_s
-#       while True
-#         start TimerBotAction(timer_name="user_silence", duration=$time_s) as $timer_ref
-#         when TimerBotAction.Finished()
-#           break
-#         orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
-#           send $timer_ref.Stop()
-#           match UtteranceUserAction.Finished()
-#         orwhen UtteranceUserAction.Finished()
-#           send $timer_ref.Stop()
+    flow bot asked something
+      match FlowFinished(flow_id="bot ask") as $event
 
-#     flow question repetition
-#       bot asked something as $ref
-#       when user was silent 5.0
-#         $question = $ref.context.event.arguments.text
-#         bot ask $question
-#       orwhen user said something or bot said something
-#         return
+    flow user was silent $time_s
+      while True
+        start TimerBotAction(timer_name="user_silence", duration=$time_s) as $timer_ref
+        when $timer_ref.Finished()
+          break
+        orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
+          send $timer_ref.Stop()
+          match UtteranceUserAction.Finished()
+        orwhen UtteranceUserAction.Finished()
+          send $timer_ref.Stop()
 
-#     flow main
-#       activate question repetition 5.0
-#       bot ask "This is a question!"
-#       match WaitEvent()
-#     """
+    flow question repetition $time
+      bot asked something as $ref
+      when user was silent 5.0
+        $question = $ref.context.event.arguments.text
+        bot ask $question
+      orwhen user said something or bot said something
+        return
 
-#     config = _init_state(content)
-#     state = run_to_completion(config, start_main_flow_event)
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "This is a question!",
-#             },
-#             {"type": "StartTimerBotAction"},
-#         ],
-#     )
-#     state = run_to_completion(
-#         state,
-#         {
-#             "type": "UtteranceBotActionFinished",
-#             "final_script": state.outgoing_events[0]["script"],
-#             "action_uid": state.outgoing_events[0]["action_uid"],
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [],
-#     )
-#     state = run_to_completion(
-#         state,
-#         {
-#             "type": "UserSilenceEvent",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "This is a question!",
-#             }
-#         ],
-#     )
+    flow main
+      activate question repetition
+      bot ask "This is a question!"
+        and bot gesture "Waving hands"
+      match WaitEvent()
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "This is a question!",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "Waving hands",
+            },
+        ],
+    )
+    state_copy = copy.deepcopy(state)
+    state = run_to_completion(
+        state,
+        {
+            "type": "GestureBotActionFinished",
+            "action_uid": state.outgoing_events[1]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "final_script": state_copy.outgoing_events[0]["script"],
+            "action_uid": state_copy.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {"type": "StartTimerBotAction"},
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "TimerBotActionFinished",
+            "action_uid": state.outgoing_events[0]["action_uid"],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "This is a question!",
+            }
+        ],
+    )
 
 
 if __name__ == "__main__":
-    test_flow_event_competition()
+    test_when_else_deep_hierarchy_case_match()

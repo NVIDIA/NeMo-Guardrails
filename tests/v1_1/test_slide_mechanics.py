@@ -19,10 +19,8 @@ import logging
 
 from rich.logging import RichHandler
 
-from nemoguardrails.colang.v1_1.runtime.statemachine import (
-    InternalEvent,
-    run_to_completion,
-)
+from nemoguardrails.colang.v1_1.runtime.statemachine import (InternalEvent,
+                                                             run_to_completion)
 from tests.utils import _init_state, is_data_in_events
 
 FORMAT = "%(message)s"
@@ -1321,4 +1319,4 @@ def test_abort_flow():
 
 
 if __name__ == "__main__":
-    test_abort_flow()
+    test_await_and_or_grouping()

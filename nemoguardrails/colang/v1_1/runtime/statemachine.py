@@ -37,6 +37,7 @@ from nemoguardrails.colang.v1_1.runtime.flows import (
     Event,
     FlowConfig,
     FlowHead,
+    FlowHeadStatus,
     FlowState,
     FlowStatus,
     InteractionLoopType,
@@ -383,11 +384,17 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
         # All internal events are processed and flow heads are on either action or match statements
         log.debug("All internal event processed -> advance actionable heads:")
 
+        # Separate merging heads from actionable heads
+        merging_heads = [
+            head for head in actionable_heads if head.status == FlowHeadStatus.MERGING
+        ]
+
         # Remove actionable heads for stopped or finished flows
         actionable_heads = [
             head
             for head in actionable_heads
             if _is_active_flow(get_flow_state_from_head(state, head))
+            and head.status == FlowHeadStatus.ACTIVE
         ]
 
         # Check for potential conflicts between actionable heads
@@ -494,6 +501,8 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         )
                         _abort_flow(state, flow_state, head.matching_scores)
 
+        # Add back the merging heads to process them further
+        advancing_heads.extend(merging_heads)
         heads_are_advancing = len(advancing_heads) > 0
         actionable_heads = _advance_head_front(state, advancing_heads)
 
@@ -511,10 +520,14 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         flow_state = get_flow_state_from_head(state, head)
         flow_config = get_flow_config_from_head(state, head)
 
+        if head.status == FlowHeadStatus.ACTIVE:
+            head.position += 1
+        elif head.status == FlowHeadStatus.INACTIVE:
+            continue
+        # Merging heads will not be advanced
+
         if flow_state.status == FlowStatus.WAITING:
             flow_state.status = FlowStatus.STARTING
-
-        head.position += 1
 
         new_heads = slide(state, flow_state, flow_config, head)
 
@@ -523,6 +536,10 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
             for new_head in _advance_head_front(state, new_heads):
                 if new_head not in actionable_heads:
                     actionable_heads.append(new_head)
+
+        # Add merging heads to the actionable heads since they need to be advanced in the next iteration
+        if head.status == FlowHeadStatus.MERGING:
+            actionable_heads.append(head)
 
         flow_finished = False
         flow_aborted = False
@@ -588,7 +605,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
 
 def slide(
     state: State, flow_state: FlowState, flow_config: FlowConfig, head: FlowHead
-) -> Tuple[Deque[dict], List[FlowHead]]:
+) -> List[FlowHead]:
     """Tries to slide a flow with the provided head."""
     new_heads: List[FlowHead] = []
 
@@ -598,10 +615,12 @@ def slide(
 
     while True:
         # if we reached the end, we stop
-        if head.position == len(flow_config.elements) or head.position < 0:
+        if (
+            head.position >= len(flow_config.elements)
+            or head.status == FlowHeadStatus.INACTIVE
+        ):
             break
 
-        # prev_head = head.position
         element = flow_config.elements[head.position]
         log.debug(f"--Sliding element: '{element}'")
 
@@ -673,7 +692,7 @@ def slide(
 
         elif isinstance(element, ForkHead):
             # We deactivate current head (parent of new heads)
-            head.active = False
+            head.status = FlowHeadStatus.INACTIVE
             # We create the new child heads
             for idx, label in enumerate(element.labels):
                 head_uid = (
@@ -699,32 +718,83 @@ def slide(
             break
 
         elif isinstance(element, MergeHeads):
-            # Compose a list of all head uids and there children that should be merged
-            # except for the current head that will continue
-            head_uids: List[str] = []
-            scope_uids: List[str] = []
-            for uid in element.head_uids:
-                head_uids.append(uid)
-                # TODO: Make sure that child head uids are kept up-to-date
-                if uid in flow_state.heads:
-                    head_uids.extend(flow_state.heads[uid].get_child_head_uids(state))
-                    # Merge scope uids from heads
-                    scope_uids.extend(
-                        [
-                            scope_uid
-                            for scope_uid in flow_state.heads[uid].scope_uids
-                            if scope_uid not in scope_uids
-                        ]
+            if head.status == FlowHeadStatus.ACTIVE:
+                # Change status of head to allow for other forked heads to process before merging
+                head.status = FlowHeadStatus.MERGING
+                break
+            elif head.status == FlowHeadStatus.MERGING:
+                # Now we are sure that all other related heads had the chance to process
+                # Let's resolve competing heads and merge them with the winner
+
+                # Compose a list of all head uids and there children that should be merged
+                head_uids: List[str] = []
+                scope_uids: List[str] = []
+                for uid in element.head_uids:
+                    head_uids.append(uid)
+                    # TODO: Make sure that child head uids are kept up-to-date
+                    if uid in flow_state.heads:
+                        head_uids.extend(
+                            flow_state.heads[uid].get_child_head_uids(state)
+                        )
+                        # Merge scope uids from heads
+                        scope_uids.extend(
+                            [
+                                scope_uid
+                                for scope_uid in flow_state.heads[uid].scope_uids
+                                if scope_uid not in scope_uids
+                            ]
+                        )
+
+                # Remove all head_uids that no longer exist in heads
+                # TODO: Make sure this is not needed
+                head_uids = [
+                    head_uid for head_uid in head_uids if head_uid in flow_state.heads
+                ]
+
+                # Extract all heads that arrived at a merge statement
+                merging_heads = [
+                    flow_state.heads[head_uid]
+                    for head_uid in head_uids
+                    if flow_state.heads[head_uid].status == FlowHeadStatus.MERGING
+                ]
+
+                picked_head = head
+                if len(merging_heads) > 1:
+                    # Order the heads in terms of matching scores
+                    max_length = max(
+                        len(head.matching_scores) for head in merging_heads
                     )
+                    ordered_heads = sorted(
+                        merging_heads,
+                        key=lambda head: head.matching_scores
+                        + [1.0] * (max_length - len(head.matching_scores)),
+                        reverse=True,
+                    )
+                    # Check if we have heads with the exact same matching scores and pick one at random
+                    equal_heads_index = next(
+                        (
+                            i
+                            for i, h in enumerate(ordered_heads)
+                            if h.matching_scores != ordered_heads[0].matching_scores
+                        ),
+                        len(ordered_heads),
+                    )
+                    picked_head = random.choice(ordered_heads[:equal_heads_index])
 
-            head.scope_uids = scope_uids
+                # If the current had is not the winning head it will be merged
+                if picked_head != head:
+                    head.status = FlowHeadStatus.INACTIVE
+                else:
+                    head.status = FlowHeadStatus.ACTIVE
+                    head.scope_uids = scope_uids
 
-            # Remove them from the flow
-            for uid in head_uids:
-                if uid != head.uid:
-                    flow_state.heads.pop(uid, None)
+                    # Remove them from the flow
+                    for uid in head_uids:
+                        if uid != head.uid:
+                            flow_state.heads[uid].status = FlowHeadStatus.INACTIVE
+                            flow_state.heads.pop(uid, None)
 
-            head.position += 1
+                    head.position += 1
 
         elif isinstance(element, WaitForHeads):
             # Check if enough heads are on this element to continue
@@ -1091,10 +1161,6 @@ def _is_inactive_flow(flow_state: FlowState) -> bool:
 
 
 def _generate_action_event(state: State, event: Event) -> None:
-    if event.name == "HeadSyncEvent":
-        # We don't publish the HeadSyncEvent since it is used only to enforce flow/head competition resolution
-        # before merging heads
-        return
     umim_event = create_umim_event(event, event.arguments)
     state.outgoing_events.append(umim_event)
     # Also push them on the internal event queue
@@ -1308,7 +1374,7 @@ def find_all_active_event_matchers(
         flow_config = state.flow_configs[flow_state.flow_id]
 
         for head in flow_state.active_heads.values():
-            if head.active:
+            if head.status != FlowHeadStatus.INACTIVE:
                 element = flow_config.elements[head.position]
                 if is_match_op_element(element):
                     if event:
