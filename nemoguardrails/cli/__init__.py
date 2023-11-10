@@ -67,7 +67,7 @@ def chat(
         typer.echo("Please provide a single folder.")
         raise typer.Exit(1)
 
-    typer.echo("Starting the chat...")
+    typer.echo("Starting the chat (Press Ctrl + C to quit) ...")
     run_chat(
         config_path=config[0],
         verbose=verbose,
