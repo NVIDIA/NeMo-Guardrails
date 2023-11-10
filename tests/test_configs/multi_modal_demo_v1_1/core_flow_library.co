@@ -13,7 +13,7 @@ flow user saying $text
   # meta: user action
   match UtteranceUserAction.TranscriptUpdated(interim_transcript=r".*{{$text}}((\s*\w+\s*){0,2})\W*$") as $event
 
-flow user started saying
+flow user started saying something
   # meta: exclude from llm
   # meta: user action
   match UtteranceUserAction.Started() as $event
@@ -138,6 +138,11 @@ flow bot say $text
   # meta: exclude from llm
   # meta: bot action
   await _bot_say $text
+
+flow bot say something like $text
+  # meta: exclude from llm
+  $variation = """A strong variation of different than before: '{{$text}}'"""
+  await bot say $variation
 
 flow bot inform $text
   # meta: exclude from llm

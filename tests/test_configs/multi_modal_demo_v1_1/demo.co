@@ -85,11 +85,7 @@ flow user expressed greeting
 
 flow user expressed done
   # meta: user intent
-  user said "that is all"
-    or user said "I am done"
-    or user said "nothing more to add"
-    or user said r"\bdone\b"
-    or user said "I am done. "
+  user said r"\bdone\b"
 
 flow user asked how are you
   # meta: user intent

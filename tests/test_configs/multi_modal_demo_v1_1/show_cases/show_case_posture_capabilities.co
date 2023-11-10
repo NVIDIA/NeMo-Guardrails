@@ -16,7 +16,7 @@ flow showcase posture capabilities
       bot ask "Now I would ask a question. To end this show case just say 'I am done'"
 
 flow listening posture
-  user started saying
+  user started saying something
   start bot posture "listening"
   user said something
 
