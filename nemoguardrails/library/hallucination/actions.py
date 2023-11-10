@@ -27,10 +27,12 @@ from nemoguardrails.actions.llm.utils import (
     llm_call,
     strip_quotes,
 )
+from nemoguardrails.context import llm_call_info_var
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
 from nemoguardrails.logging.callbacks import logging_callback_manager_for_chain
+from nemoguardrails.logging.explain import LLMCallInfo
 
 log = logging.getLogger(__name__)
 
@@ -109,6 +111,9 @@ async def check_hallucination(
                     "paragraph": ". ".join(extra_responses),
                 },
             )
+
+            # Initialize the LLMCallInfo object
+            llm_call_info_var.set(LLMCallInfo(task=Task.CHECK_HALLUCINATION.value))
 
             with llm_params(llm, temperature=0.0):
                 agreement = await llm_call(llm, prompt)

@@ -22,7 +22,9 @@ from langchain.prompts.base import StringPromptValue
 from langchain.prompts.chat import ChatPromptValue
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
 
+from nemoguardrails.context import llm_call_info_var
 from nemoguardrails.logging.callbacks import logging_callbacks
+from nemoguardrails.logging.explain import LLMCallInfo
 
 
 async def llm_call(
@@ -32,6 +34,12 @@ async def llm_call(
     custom_callback_handlers: Optional[List[AsyncCallbackHandler]] = None,
 ) -> str:
     """Calls the LLM with a prompt and returns the generated text."""
+
+    # We initialize a new LLM call if we don't have one already
+    llm_call_info = llm_call_info_var.get()
+    if llm_call_info is None:
+        llm_call_info = LLMCallInfo()
+        llm_call_info_var.set(llm_call_info)
 
     if custom_callback_handlers and custom_callback_handlers != [None]:
         all_callbacks = BaseCallbackManager(

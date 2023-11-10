@@ -42,7 +42,7 @@ from nemoguardrails.actions.llm.utils import (
     llm_call,
     strip_quotes,
 )
-from nemoguardrails.context import streaming_handler_var
+from nemoguardrails.context import llm_call_info_var, streaming_handler_var
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
@@ -50,6 +50,7 @@ from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import get_prompt
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
+from nemoguardrails.logging.explain import LLMCallInfo
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.streaming import StreamingHandler
@@ -297,6 +298,9 @@ class LLMGenerationActions:
                 },
             )
 
+            # Initialize the LLMCallInfo object
+            llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_USER_INTENT.value))
+
             # We make this call with temperature 0 to have it as deterministic as possible.
             with llm_params(llm, temperature=self.config.lowest_temperature):
                 result = await llm_call(llm, prompt)
@@ -330,6 +334,9 @@ class LLMGenerationActions:
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERAL, events=events
             )
+
+            # Initialize the LLMCallInfo object
+            llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
 
             # We make this call with temperature 0 to have it as deterministic as possible.
             result = await llm_call(
@@ -405,6 +412,9 @@ class LLMGenerationActions:
                 events=events,
                 context={"examples": examples},
             )
+
+            # Initialize the LLMCallInfo object
+            llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_NEXT_STEPS.value))
 
             # We use temperature 0 for next step prediction as well
             with llm_params(llm, temperature=self.config.lowest_temperature):
@@ -630,6 +640,9 @@ class LLMGenerationActions:
                 else:
                     streaming_handler.set_pattern(prefix='  "', suffix='"')
 
+            # Initialize the LLMCallInfo object
+            llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_BOT_MESSAGE.value))
+
             result = await llm_call(
                 llm, prompt, custom_callback_handlers=[streaming_handler]
             )
@@ -722,6 +735,9 @@ class LLMGenerationActions:
                 "var_name": var_name,
             },
         )
+
+        # Initialize the LLMCallInfo object
+        llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_VALUE.value))
 
         with llm_params(llm, temperature=self.config.lowest_temperature):
             result = await llm_call(llm, prompt)
@@ -918,6 +934,11 @@ class LLMGenerationActions:
                     else:
                         _streaming_handler.set_pattern(prefix='  "', suffix='"')
             else:
+                # Initialize the LLMCallInfo object
+                llm_call_info_var.set(
+                    LLMCallInfo(task=Task.GENERATE_INTENT_STEPS_MESSAGE.value)
+                )
+
                 with llm_params(llm, temperature=self.config.lowest_temperature):
                     result = await llm_call(llm, prompt)
 
@@ -989,6 +1010,9 @@ class LLMGenerationActions:
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERAL, events=events
             )
+
+            # Initialize the LLMCallInfo object
+            llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
 
             # We make this call with temperature 0 to have it as deterministic as possible.
             result = await llm_call(llm, prompt)

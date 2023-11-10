@@ -18,12 +18,14 @@ from typing import Optional
 from langchain.llms import BaseLLM
 
 from nemoguardrails.actions.llm.utils import llm_call
+from nemoguardrails.context import llm_call_info_var
 from nemoguardrails.library.factchecking.utils import (
     get_evidence_and_claim_from_context,
 )
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
+from nemoguardrails.logging.explain import LLMCallInfo
 
 
 async def check_facts(
@@ -44,6 +46,9 @@ async def check_facts(
             "response": response,
         },
     )
+
+    # Initialize the LLMCallInfo object
+    llm_call_info_var.set(LLMCallInfo(task=Task.FACT_CHECKING.value))
 
     with llm_params(llm, temperature=0.0):
         entails = await llm_call(llm, prompt)

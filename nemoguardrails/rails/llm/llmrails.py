@@ -26,12 +26,13 @@ from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
-from nemoguardrails.context import streaming_handler_var
+from nemoguardrails.context import explain_info_var, streaming_handler_var
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
+from nemoguardrails.logging.explain import ExplainInfo
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
@@ -168,6 +169,9 @@ class LLMRails:
 
         # We also register the kb as a parameter that can be passed to actions.
         self.runtime.register_action_param("kb", self.kb)
+
+        # Reference to the general ExplainInfo object.
+        self.explain_info = None
 
     async def _init_kb(self):
         """Initializes the knowledge base."""
@@ -359,6 +363,17 @@ class LLMRails:
         if streaming_handler:
             streaming_handler_var.set(streaming_handler)
 
+        # Initialize the object with additional explanation information.
+        # We allow this to also be set externally. This is useful when multiple parallel
+        # requests are made.
+        explain_info = explain_info_var.get()
+        if explain_info is None:
+            explain_info = ExplainInfo()
+            explain_info_var.set(explain_info)
+
+            # We also keep a general reference to this object
+            self.explain_info = explain_info
+
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
             new_message = await self.generate_async(
@@ -399,9 +414,9 @@ class LLMRails:
 
         # If logging is enabled, we log the conversation
         # TODO: add support for logging flag
+        explain_info.colang_history = get_colang_history(events)
         if self.verbose:
-            history = get_colang_history(events)
-            log.info(f"Conversation history so far: \n{history}")
+            log.info(f"Conversation history so far: \n{explain_info.colang_history}")
 
         log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
         log.info("--- :: Stats: %s" % llm_stats)
@@ -527,3 +542,7 @@ class LLMRails:
         """
 
         self.embedding_search_providers[name] = cls
+
+    def explain(self) -> ExplainInfo:
+        """Helper function to return the latest ExplainInfo object."""
+        return self.explain_info

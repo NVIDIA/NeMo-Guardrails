@@ -16,3 +16,9 @@
 import contextvars
 
 streaming_handler_var = contextvars.ContextVar("streaming_handler", default=None)
+
+# The object that holds additional explanation information.
+explain_info_var = contextvars.ContextVar("explain_info", default=None)
+
+# The current LLM call.
+llm_call_info_var = contextvars.ContextVar("llm_call_info", default=None)

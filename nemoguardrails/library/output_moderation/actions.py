@@ -20,9 +20,11 @@ from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions import action
 from nemoguardrails.actions.llm.utils import llm_call
+from nemoguardrails.context import llm_call_info_var
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
+from nemoguardrails.logging.explain import LLMCallInfo
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +45,9 @@ async def output_moderation(
                 "bot_response": bot_response,
             },
         )
+
+        # Initialize the LLMCallInfo object
+        llm_call_info_var.set(LLMCallInfo(task=Task.OUTPUT_MODERATION.value))
 
         with llm_params(llm, temperature=0.0):
             check = await llm_call(llm, prompt)
@@ -74,6 +79,9 @@ async def output_moderation_v2(
                 "bot_response": bot_response,
             },
         )
+
+        # Initialize the LLMCallInfo object
+        llm_call_info_var.set(LLMCallInfo(task=Task.OUTPUT_MODERATION_V2.value))
 
         with llm_params(llm, temperature=0.0):
             check = await llm_call(llm, prompt)
