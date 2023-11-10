@@ -1,0 +1,46 @@
+@startuml
+participant "Application\nCode" as A
+
+skinparam Participant {
+  RoundCorner 10
+
+  BackgroundColor<<LLMRails >> 76b900
+  FontColor<<LLMRails>> white
+  BorderColor<<LLMRails>> green
+}
+
+
+skinparam BoxPadding 50
+
+box "Guardrails" #f8fbf2
+participant LLMRails <<LLMRails>>
+
+
+activate LLMRails
+A->LLMRails: "Hello there!"
+
+
+'group NLU
+LLMRails->Actions: generate_user_intent
+activate Actions
+Actions->LLM
+activate LLM
+return "express greeting"
+return
+'end
+
+LLMRails->LLMRails: bot express greeting
+
+'group Integration
+LLMRails->Actions: call active fence api
+return {max_risk_score: 0.9}
+'end
+
+LLMRails-[#green]>A: "Hey! How are you doing? Hey! How \nare you doing? Hey! How are you \ndoing? Hey! How are you doing?"
+
+endbox
+
+participant LLM
+hide footbox
+hide stereotype
+@enduml

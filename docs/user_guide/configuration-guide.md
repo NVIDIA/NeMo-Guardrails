@@ -14,8 +14,8 @@ These files are typically included in a folder (let's call it `config`) which ca
 ```
 .
 ├── config
-│   ├── file_1.co
-│   ├── file_2.co
+│   ├── rails_1.co
+│   ├── rails_2.co
 │   ├── ...
 │   ├── actions.py
 │   ├── config.py
@@ -27,8 +27,8 @@ The custom actions can be placed either in an `actions.py` module in the root of
 ```
 .
 ├── config
-│   ├── file_1.co
-│   ├── file_2.co
+│   ├── rails_1.co
+│   ├── rails_2.co
 │   ├── ...
 │   ├── actions
 │   │   ├── file_1.py
@@ -209,9 +209,9 @@ The default embedding search uses SentenceTransformers for computing the embeddi
 For advanced use cases or for integrations with existing knowledge bases, you can [provide a custom embedding search provider](./advanced/embedding-search-providers.md).
 
 
-### General Instruction
+### General Instructions
 
-The general instruction (similar to a system prompt) gets appended at the beginning of every prompt, and you can configure it as shown below:
+The general instructions (similar to a system prompt) get appended at the beginning of every prompt, and you can configure them as shown below:
 
 ```yaml
 instructions:

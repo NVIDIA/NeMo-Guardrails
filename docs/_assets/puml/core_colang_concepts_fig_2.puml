@@ -1,0 +1,38 @@
+@startuml
+participant "Application\nCode" as A
+
+skinparam Participant {
+  RoundCorner 10
+
+  BackgroundColor<<LLMRails >> 76b900
+  FontColor<<LLMRails>> white
+  BorderColor<<LLMRails>> green
+}
+
+
+participant LLMRails <<LLMRails>>
+
+activate LLMRails
+A->LLMRails: "What is the capital of France?"
+
+LLMRails->LLM: generate_user_intent
+activate LLM
+return "ask general question"
+
+LLMRails->LLM: generate_next_steps
+activate LLM
+return "bot general response"
+
+LLMRails->LLM: generate_bot_message
+activate LLM
+return "The capital of France is Paris..."
+
+
+
+LLMRails-[#green]>A: "The capital of France is Paris..."
+
+participant LLM
+hide footbox
+hide stereotype
+
+@enduml

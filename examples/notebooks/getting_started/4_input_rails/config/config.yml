@@ -1,0 +1,9 @@
+models:
+ - type: main
+   engine: openai
+   model: text-davinci-003
+
+rails:
+  input:
+    flows:
+      - check jailbreak

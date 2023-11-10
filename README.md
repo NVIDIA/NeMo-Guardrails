@@ -131,11 +131,10 @@ The standard structure for a guardrails configuration folder looks like this:
 ```
 .
 ├── config
-│   ├── config.yml
-│   ├── config.py
 │   ├── actions.py
-│   ├── file_1.co
-│   ├── file_2.co
+│   ├── config.py
+│   ├── config.yml
+│   ├── rails.co
 │   ├── ...
 ```
 
@@ -220,7 +219,7 @@ Currently, the guardrails library includes guardrails for: [jailbreak detection]
 NeMo Guardrails also comes with a built-in CLI.
 
 ```bash
-> nemoguardrails --help
+$ nemoguardrails --help
 
 Usage: nemoguardrails [OPTIONS] COMMAND [ARGS]...
 
@@ -236,7 +235,7 @@ server            Start a NeMo Guardrails server.
 You can use the NeMo Guardrails CLI to start a guardrails server. The server can load one or more configurations from the specified folder and expose and HTTP API for using them.
 
 ```
-> nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT]
+$ nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT]
 ```
 
 For example, to get a chat completion for a `sample` config, you can use the `/v1/chat/completions` endpoint:
@@ -273,7 +272,7 @@ Evaluating the safety of a LLM-based conversational application is a complex tas
 
 There are many ways guardrails can be added to an LLM-based conversational application. For example: explicit moderation endpoints (e.g., OpenAI, ActiveFence), critique chains (e.g. constitutional chain), parsing the output (e.g. guardrails.ai), individual guardrails (e.g., LLM-Guard).
 
-NeMo Guardrails aims to provide a flexible toolkit that can integrate all these complementary approaches into a cohesive LLM guardrails layer. For example, the toolkit provides out-of-the-box integration with ActiveFence, AlignScore, LangChain chains.
+NeMo Guardrails aims to provide a flexible toolkit that can integrate all these complementary approaches into a cohesive LLM guardrails layer. For example, the toolkit provides out-of-the-box integration with ActiveFence, AlignScore and LangChain chains.
 
 To the best of our knowledge, NeMo Guardrails is the only guardrails toolkit that also offers a solution for modeling the dialog between the user and the LLM. This enables on one hand the ability to guide the dialog in a precise way. On the other hand it enables fine-grained control for when certain guardrails should be used, e.g., use fact-checking only for certain types of questions.
 
