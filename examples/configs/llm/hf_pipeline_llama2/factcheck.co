@@ -4,11 +4,5 @@ define user ask about report
 
 define flow answer report question
   user ask about report
+  $check_facts = True
   bot provide report answer
-  $accurate = execute check_facts
-  if not $accurate
-    bot remove last message
-    bot inform answer unknown
-
-define bot remove last message
-  "(remove last message)"
