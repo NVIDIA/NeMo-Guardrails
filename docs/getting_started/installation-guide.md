@@ -92,7 +92,7 @@ For each feature or LLM example, check the readme files associated with it.
 ## Extra dependencies
 
 The following extra dependencies are defined:
-- `dev`: packages requires by some extra Guardrails features for developers (e.g. autoreload feature).
+- `dev`: packages required by some extra Guardrails features for developers (e.g. autoreload feature).
 - `eval`: packages used for the Guardrails [evaluation tools](../../nemoguardrails/eval/README.md).
 - `all`: install all extra packages.
 
