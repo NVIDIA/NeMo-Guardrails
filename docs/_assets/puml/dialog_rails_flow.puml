@@ -1,0 +1,66 @@
+@startuml
+participant "Application\nCode" as A
+
+skinparam Participant {
+  RoundCorner 10
+
+  BackgroundColor<<LLMRails >> 76b900
+  FontColor<<LLMRails>> white
+  BorderColor<<LLMRails>> green
+}
+
+
+participant LLMRails <<LLMRails>>
+participant "Vector DB" as V
+
+
+A->LLMRails: <<USER MESSAGE>>
+activate LLMRails
+
+group Generate user intent
+
+LLMRails->V: search canonical form examples
+activate V
+return Top K examples
+
+LLMRails->LLM: generate_user_intent
+activate LLM
+return <<CANONICAL FORM>>
+end
+
+alt If a flow matches the user intent
+
+LLMRails->LLMRails: <<NEXT STEP>>
+
+else Otherwise generate next step using the LLM
+
+LLMRails->V: search flow examples
+activate V
+return Top K examples
+
+LLMRails->LLM: generate_next_steps
+activate LLM
+return <<NEXT STEP>>
+end
+
+
+
+group Generate bot message
+
+LLMRails->V: search bot message examples
+activate V
+return Top K examples
+
+LLMRails->LLM: generate_bot_message
+activate LLM
+return <<BOT MESSAGE>>
+
+end
+
+return #green <<BOT MESSAGE>>
+
+participant LLM
+hide footbox
+hide stereotype
+scale 2
+@enduml
