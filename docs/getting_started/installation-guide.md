@@ -1,7 +1,5 @@
 # Installation Guide
 
-**⚠️THIS SECTION IS WORK IN PROGRESS. ⚠️**
-
 This guide will walk you through installing NeMo Guardrails, and it will cover:
 
 1. Setting up a fresh virtual environment.
@@ -86,14 +84,14 @@ If you want to use OpenAI, also install the `openai` package. And make sure that
  > export OPENAI_API_KEY=...
  ```
 
-Some Guardrails LLMs and features have specific installation requirements, including a more complex set of steps (e.g. [AlignScore](../user_guide/advanced/align_score_deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md)).
+Some NeMo Guardrails LLMs and features have specific installation requirements, including a more complex set of steps (e.g. [AlignScore](../user_guide/advanced/align_score_deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md)).
 For each feature or LLM example, check the readme files associated with it.
 
 ## Extra dependencies
 
 The following extra dependencies are defined:
-- `dev`: packages required by some extra Guardrails features for developers (e.g. autoreload feature).
-- `eval`: packages used for the Guardrails [evaluation tools](../../nemoguardrails/eval/README.md).
+- `dev`: packages required by some extra NeMo Guardrails features for developers (e.g. autoreload feature).
+- `eval`: packages used for the NeMo Guardrails [evaluation tools](../../nemoguardrails/eval/README.md).
 - `all`: install all extra packages.
 
 ## What's next?
