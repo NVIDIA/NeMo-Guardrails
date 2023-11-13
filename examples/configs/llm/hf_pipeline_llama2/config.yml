@@ -10,6 +10,11 @@ models:
       # This can be: "cpu" or "cuda". "mps" is not supported.
       device: "cuda"
 
+rails:
+  output:
+    flows:
+      - check facts
+
 instructions:
   - type: general
     content: |
