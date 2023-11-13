@@ -1,6 +1,6 @@
 # Hello World
 
-This guide will show you how to create a "Hello World" guardrails configuration, i.e. one where we only control the greeting behavior. Before we begin, make sure you have installed NeMo Guardrails correctly (for detailed instructions, check out the [Installation Guide](../../../../docs/getting_started/installation-guide.md)).
+This guide will show you how to create a "Hello World" guardrails configuration, i.e. one where we only control the greeting behavior. Before we begin, make sure you have installed NeMo Guardrails correctly (for detailed instructions, check out the [Installation Guide](../installation-guide.md)).
 
 ## Prerequisites
 
@@ -27,7 +27,7 @@ Every guardrails configuration must be stored in a folder. The standard folder s
 │   ├── rails.co
 │   ├── ...
 ```
-For now, you don't need to worry about what goes into every file (you can check out the [Configuration Guide](../../../../docs/user_guide/configuration-guide.md) for more details later). Start by creating a folder for your configuration, e.g. `config`:
+For now, you don't need to worry about what goes into every file (you can check out the [Configuration Guide](../../user_guide/configuration-guide.md) for more details later). Start by creating a folder for your configuration, e.g. `config`:
 
 ```bash
 mkdir config
@@ -42,7 +42,7 @@ models:
    model: text-davinci-003
 ```
 
-The `models` key in the `config.yml` file configures the LLM model. For a complete list of supported LLM models, check out [Supported LLM Models](../../../../docs/user_guide/configuration-guide.md#supported-llm-models) section in the configuration guide.
+The `models` key in the `config.yml` file configures the LLM model. For a complete list of supported LLM models, check out [Supported LLM Models](../../user_guide/configuration-guide.md#supported-llm-models) section in the configuration guide.
 
 ## Step 2: load the guardrails configuration
 
@@ -51,7 +51,7 @@ In your Python code base, to load a guardrails configuration from a path, you mu
 ```python
 from nemoguardrails import RailsConfig
 
-config = RailsConfig.from_path("./config")
+config = RailsConfig.from_path("config")
 ```
 
 ## Step 3: use the guardrails configuration
