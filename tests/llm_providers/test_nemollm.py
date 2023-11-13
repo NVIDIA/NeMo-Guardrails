@@ -25,16 +25,14 @@ from tests.utils import TestChat
 EXAMPLES_FOLDER = os.path.join(os.path.dirname(__file__), "../../", "examples")
 
 
-@pytest.mark.asyncio
-async def test_greeting(httpx_mock):
+def test_greeting(httpx_mock):
     """
     Basic test for the NeMo LLM configuration for a simple greeting from the user.
+    (sync version)
 
     Mocks the calls to the service.
     """
     config = RailsConfig.from_path(os.path.join(EXAMPLES_FOLDER, "configs/llm/nemollm"))
-    # TODO: Check why this test is not working with synchronous bot message generation
-    # It used to work before the move to httpx for NeMo streaming support.
     chat = TestChat(config)
 
     # Jailbreak detection
@@ -74,14 +72,14 @@ async def test_greeting(httpx_mock):
     )
 
     chat >> "hi"
-    await chat.bot_async("Hello! How can I assist you today?")
+    chat << "Hello! How can I assist you today?"
 
 
 @pytest.mark.asyncio
 async def test_greeting_async(httpx_mock):
     """
     Basic test for the NeMo LLM configuration for a simple greeting from the user.
-    Uses the async httpx client.
+    (async version)
 
     Mocks the calls to the service.
     """
@@ -125,6 +123,8 @@ async def test_greeting_async(httpx_mock):
     )
 
     chat >> "hi"
+    # Note that chat << "msg" or chat.bot("msg") is the synchronous version
+    # which shouldn't be called from this async test case
     await chat.bot_async("Hello! How can I assist you today?")
 
 
