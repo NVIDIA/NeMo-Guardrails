@@ -2,6 +2,9 @@ define user express greeting
   "Hello"
   "Hi"
 
+define bot express greeting
+  "Hello world!"
+
 define bot ask how are you
   "How are you doing?"
   "How's it going?"

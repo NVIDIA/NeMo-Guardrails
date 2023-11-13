@@ -2,6 +2,14 @@
 
 **NOTE: THIS SECTION IS WORK IN PROGRESS.**
 
+## Guardrails CLI
+For testing purposes, the Guardrails toolkit provides a command line chat that can be used to interact with the LLM.
+```
+> nemoguardrails chat --config examples/ [--verbose]
+```
+#### Options
+- `--config`: The configuration that should be used. Can be a folder or a .co/.yml file.
+- `--verbose`: In verbose mode, debugging information is also shown. This includes the entire prompt that is sent to the bot, the flow that is executed, the generated canonical form and the response that is received.
 
 
 7. You should now be able to invoke the `nemoguardrails` CLI.

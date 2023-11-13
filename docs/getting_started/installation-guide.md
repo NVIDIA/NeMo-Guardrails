@@ -85,6 +85,6 @@ If you want to use OpenAI, also install the `openai` package. And make sure that
 
 ## What's next?
 
-* Check out the `hello-world` [example](./hello-world.md).
+* Check out the `hello-world` [example](../getting_started/hello-world.md).
 * Explore more examples in `nemoguardrails/examples` folder.
 * Review the [user guide](../README.md#user-guide)!

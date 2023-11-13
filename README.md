@@ -33,7 +33,7 @@ NeMo Guardrails is an open-source toolkit for easily adding *programmable guardr
 
 Python 3.8+.
 
-NeMo Guardrails uses [annoy](https://github.com/spotify/annoy) which is a C++ library with Python bindings. To install NeMo Guardrails you will need to have the C++ compiler and dev tools installed. Check out the [Installation Guide](./docs/getting_started/installation-guide.md#prerequisites) for platform-specific instructions.
+NeMo Guardrails uses [annoy](https://github.com/spotify/annoy) which is a C++ library with Python bindings. To install NeMo Guardrails you will need to have the C++ compiler and dev tools installed. Check out the [Installation Guide](docs/getting_started/installation-guide.md#prerequisites) for platform-specific instructions.
 
 ## Installation
 
@@ -43,7 +43,7 @@ To install using pip:
 > pip install nemoguardrails
 ```
 
-For more detailed instructions, see the [Installation Guide](./docs/getting_started/installation-guide.md).
+For more detailed instructions, see the [Installation Guide](docs/getting_started/installation-guide.md).
 
 ### Optional Dependencies
 
