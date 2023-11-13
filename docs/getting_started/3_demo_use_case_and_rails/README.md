@@ -19,7 +19,7 @@ With this in mind, we will start expanding the guardrails configuration to cover
 
 1. **Input rails**: applied to the input from the user; an input rail can reject the input, stopping any additional processing, or alter the input (e.g., to mask potentially sensitive data, to rephrase).
 
-2. **Dialog rails**: influence how the LLM is prompted; dialog rails operate on canonical form messages (more details [here](../../user_guide/colang-language-syntax-guide.md)) and determine if an action should be executed, if the LLM should be invoked to generate the next step or a response, if a predefined response should be used instead, etc.
+2. **Dialog rails**: influence how the LLM is prompted; dialog rails operate on canonical form messages (more details [here](../../user_guides/colang-language-syntax-guide.md)) and determine if an action should be executed, if the LLM should be invoked to generate the next step or a response, if a predefined response should be used instead, etc.
 
 3. **Retrieval rails**: applied to the retrieved chunks in the case of a RAG (Retrieval Augmented Generation) scenario; a retrieval rail can reject a chunk, preventing it from being used to prompt the LLM, or alter the relevant chunks (e.g., to mask potentially sensitive data).
 

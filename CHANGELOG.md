@@ -9,23 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support for [custom tasks and their prompts](./docs/user_guide/advanced/prompt-customization.md#custom-tasks-and-prompts).
+- Support for [custom tasks and their prompts](docs/user_guides/advanced/prompt-customization.md#custom-tasks-and-prompts).
 
 
 ## [0.5.0] - 2023-09-04
 
 ### Added
 
-- Support for [custom configuration data](./docs/user_guide/configuration-guide.md#custom-data).
+- Support for [custom configuration data](docs/user_guides/configuration-guide.md#custom-data).
 - Example for using [custom LLM and multiple KBs](examples/configs/rag/multi_kb/README.md)
-- Support for [`PROMPTS_DIR`](./docs/user_guide/advanced/prompt-customization.md#prompt-configuration).
-- [#101](https://github.com/NVIDIA/NeMo-Guardrails/pull/101) Support for [using OpenAI embeddings](./docs/user_guide/configuration-guide.md#the-embeddings-model) models in addition to SentenceTransformers.
+- Support for [`PROMPTS_DIR`](docs/user_guides/advanced/prompt-customization.md#prompt-configuration).
+- [#101](https://github.com/NVIDIA/NeMo-Guardrails/pull/101) Support for [using OpenAI embeddings](docs/user_guides/configuration-guide.md#the-embeddings-model) models in addition to SentenceTransformers.
 - First set of end-to-end QA tests for the example configurations.
-- Support for configurable [embedding search providers](./docs/user_guide/advanced/embedding-search-providers.md)
+- Support for configurable [embedding search providers](docs/user_guides/advanced/embedding-search-providers.md)
 
 ### Changed
 
-- Moved to using `nest_asyncio` for [implementing the blocking API](./docs/user_guide/advanced/nested-async-loop.md). Fixes [#3](https://github.com/NVIDIA/NeMo-Guardrails/issues/3) and [#32](https://github.com/NVIDIA/NeMo-Guardrails/issues/32).
+- Moved to using `nest_asyncio` for [implementing the blocking API](docs/user_guides/advanced/nested-async-loop.md). Fixes [#3](https://github.com/NVIDIA/NeMo-Guardrails/issues/3) and [#32](https://github.com/NVIDIA/NeMo-Guardrails/issues/32).
 - Improved event property validation in `new_event_dict`.
 - Refactored imports to allow installing from source without Annoy/SentenceTransformers (would need a custom embedding search provider to work).
 
@@ -39,17 +39,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- [Event-based API](./docs/user_guide/advanced/event-based-api.md) for guardrails.
+- [Event-based API](docs/user_guides/advanced/event-based-api.md) for guardrails.
 - Support for message with type "event" in [`LLMRails.generate_async`](./docs/api/nemoguardrails.rails.llm.llmrails.md#method-llmrailsgenerate_async).
-- Support for [bot message instructions](docs/user_guide/advanced/bot-message-instructions.md).
-- Support for [using variables inside bot message definitions](./docs/user_guide/colang-language-syntax-guide.md#bot-messages-with-variables).
+- Support for [bot message instructions](docs/user_guides/advanced/bot-message-instructions.md).
+- Support for [using variables inside bot message definitions](docs/user_guides/colang-language-syntax-guide.md#bot-messages-with-variables).
 - Support for `vicuna-7b-v1.3` and `mpt-7b-instruct`.
 - Topical evaluation results for `vicuna-7b-v1.3` and `mpt-7b-instruct`.
 - Support to use different models for different LLM tasks.
-- Support for [red-teaming](docs/user_guide/advanced/red-teaming.md) using challenges.
+- Support for [red-teaming](docs/user_guides/advanced/red-teaming.md) using challenges.
 - Support to disable the Chat UI when running the server using `--disable-chat-ui`.
 - Support for accessing the API request headers in server mode.
-- Support to [enable CORS settings](docs/user_guide/server-guide.md#cors) for the guardrails server.
+- Support to [enable CORS settings](docs/user_guides/server-guide.md#cors) for the guardrails server.
 
 ### Changed
 
@@ -73,14 +73,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support for defining [subflows](docs/user_guide/colang-language-syntax-guide.md#subflows).
-- Improved support for [customizing LLM prompts](docs/user_guide/advanced/prompt-customization.md)
+- Support for defining [subflows](docs/user_guides/colang-language-syntax-guide.md#subflows).
+- Improved support for [customizing LLM prompts](docs/user_guides/advanced/prompt-customization.md)
   - Support for using filters to change how variables are included in a prompt template.
   - Output parsers for prompt templates.
   - The `verbose_v1` formatter and output parser to be used for smaller models that don't understand Colang very well in a few-shot manner.
   - Support for including context variables in prompt templates.
   - Support for chat models i.e. prompting with a sequence of messages.
-- Experimental support for allowing the LLM to generate [multi-step flows](docs/user_guide/configuration-guide.md#multi-step-generation).
+- Experimental support for allowing the LLM to generate [multi-step flows](docs/user_guides/configuration-guide.md#multi-step-generation).
 - Example of using Llama Index from a guardrails configuration (#40).
 - [Example](examples/configs/llm/hf_endpoint) for using HuggingFace Endpoint LLMs with a guardrails configuration.
 - [Example](examples/configs/llm/hf_pipeline_dolly) for using HuggingFace Pipeline LLMs with a guardrails configuration.
@@ -105,10 +105,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support to [connect any LLM](./docs/user_guide/configuration-guide.md#supported-llm-models) that implements the BaseLanguageModel interface from  LangChain.
-- Support for [customizing the prompts](./docs/user_guide/configuration-guide.md#llm-prompts) for specific LLM models.
-- Support for [custom initialization](./docs/user_guide/configuration-guide.md#configuration-guide) when loading a configuration through `config.py`.
-- Support to extract [user-provided values](./docs/user_guide/advanced/extract-user-provided-values.md) from utterances.
+- Support to [connect any LLM](docs/user_guides/configuration-guide.md#supported-llm-models) that implements the BaseLanguageModel interface from  LangChain.
+- Support for [customizing the prompts](docs/user_guides/configuration-guide.md#llm-prompts) for specific LLM models.
+- Support for [custom initialization](docs/user_guides/configuration-guide.md#configuration-guide) when loading a configuration through `config.py`.
+- Support to extract [user-provided values](docs/user_guides/advanced/extract-user-provided-values.md) from utterances.
 
 ### Changed
 

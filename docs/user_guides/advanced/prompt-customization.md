@@ -163,8 +163,8 @@ There are three types of variables available to be included in the prompt:
 
 The following is the list of system variables:
 
-- `general_instruction`: the content corresponds to the [general instructions](../../user_guide/configuration-guide.md#general-instruction) specified in the configuration;
-- `sample_conversation`: the content corresponds to the [sample conversation](../../user_guide/configuration-guide.md#sample-conversation) specified in the configuration;
+- `general_instruction`: the content corresponds to the [general instructions](../configuration-guide.md#general-instruction) specified in the configuration;
+- `sample_conversation`: the content corresponds to the [sample conversation](../configuration-guide.md#sample-conversation) specified in the configuration;
 - `examples`: depending on the task, this variable will contain the few-shot examples that the LLM should take into account;
 - `history`: contains the history of events (see the [complete example](../../architecture/README.md#complete-example))
 - `relevant_chunks`: (only available for the `generate_bot_message` task) if a knowledge base is used, this variable will contain the most relevant chunks of text based on the user query.
@@ -175,7 +175,7 @@ Prompt variables can be registered using the `LLMRails.register_prompt_context(n
 
 ##### Context Variables
 
-Flows included in a guardrails configuration can define (and update) various [context variables](../../../docs/user_guide/colang-language-syntax-guide.md#variables). These can also be included in a prompt if needed.
+Flows included in a guardrails configuration can define (and update) various [context variables](../colang-language-syntax-guide.md#variables). These can also be included in a prompt if needed.
 
 #### Filters
 

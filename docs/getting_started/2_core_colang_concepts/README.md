@@ -204,9 +204,9 @@ print(info.llm_calls[0].prompt)
 
 The prompt has four logical sections:
 
-1. A set of general instructions. These can [be configured](../../../../docs/user_guide/configuration-guide.md#general-instructions) using the `instructions` key in `config.yml`.
+1. A set of general instructions. These can [be configured](../../../../docs/user_guides/configuration-guide.md#general-instructions) using the `instructions` key in `config.yml`.
 
-2. A sample conversation, which can also [be configured](../../../../docs/user_guide/configuration-guide.md#sample-conversation) using the `sample_conversation` key in `config.yml`.
+2. A sample conversation, which can also [be configured](../../../../docs/user_guides/configuration-guide.md#sample-conversation) using the `sample_conversation` key in `config.yml`.
 
 3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the examples. For more details check out [TODO](#).
 

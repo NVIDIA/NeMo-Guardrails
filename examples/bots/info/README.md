@@ -267,7 +267,7 @@ new_message = app.generate(messages=[{
 }])
 print(new_message)
 ```
-Refer to [Python API Documentation](../../../docs/user_guide/interface-guide.md#python-api) for more information.
+Refer to [Python API Documentation](../../../docs/user_guides/interface-guide.md#python-api) for more information.
 
 #### UI
 Colang allows users to interact with the server with a stock UI. To launch the
@@ -278,7 +278,7 @@ recommended:
 the UI
 * Click "New Chat" on the top left corner of the screen and then proceed to
 pick `topical_rail` from the drop-down menu.
-Refer to [Guardrails Server Documentation](../../../docs/user_guide/interface-guide.md#guardrails-server) for more information.
+Refer to [Guardrails Server Documentation](../../../docs/user_guides/interface-guide.md#guardrails-server) for more information.
 
 #### Command Line Chat
 
@@ -287,7 +287,7 @@ command while you are in this folder.
 ```
 nemoguardrails chat --config=.
 ```
-Refer to [Guardrails CLI Documentation](../../../docs/user_guide/interface-guide.md#guardrails-cli) for more information.
+Refer to [Guardrails CLI Documentation](../../../docs/user_guides/interface-guide.md#guardrails-cli) for more information.
 Wondering what to talk to your bot about?
 * See how the bot reacts to your conversations about the topics covered in the
  rails
@@ -938,7 +938,7 @@ Again taking a look at the detailed output log, we see that the LLM produced sev
 
 With a basic understanding of building the rails, the next step is to try out the bot and customize it! You can continue to interact with the bot via the API, or use the `nemoguardrails` CLI to launch an interactive command line or web chat interface. Customize your bot by adding in new flows or documents to the knowledge base, and test out the effects of adding and removing the rails explored in this notebook and others.
 
-Refer [Python API Documentation](../../../docs/user_guide/interface-guide.md#python-api) for more information.
+Refer [Python API Documentation](../../../docs/user_guides/interface-guide.md#python-api) for more information.
 
 ## Execution Rails
 

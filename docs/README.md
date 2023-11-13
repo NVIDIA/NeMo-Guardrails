@@ -40,25 +40,25 @@ The [`examples` folder](../examples) contains multiple examples that showcase a 
 
 The user guides cover the core details of the NeMo Guardrails toolkit and how to configure and use different features to make your own rails.
 
-* [Guardrails Configuration Guide](./user_guide/configuration-guide.md): The complete guide to all the configuration options available in the `config.yml` file.
-* [Guardrails Library](../docs/user_guide/guardrails-library.md): An overview of the starter built-in rails that NeMo Guardrails provide.
-* [Colang Language Guide](./user_guide/colang-language-syntax-guide.md): Learn the syntax and core concepts of Colang.
-* [LLM Support for Guardrails](./user_guide/llm-support.md): An easy to grasp summary of the current LLM support.
-* [Python API](./user_guide/python-api.md): Learn about the Python API, e.g., the `RailsConfig` and `LLMRails` classes.
-* [CLI](user_guide/cli.md): Learn about the NeMo Guardrails CLI that can help you use the Chat CLI or start a server.
-* [Server Guide](./user_guide/server-guide.md): Learn how to use the NeMo Guardrails server.
-* [Integration with LangChain](./user_guide/integration-with-langchain.md): Integrate Guardrails in your existing LangChain-powered app or bring your preferred Chains to Guardrails.
+* [Guardrails Configuration Guide](user_guides/configuration-guide.md): The complete guide to all the configuration options available in the `config.yml` file.
+* [Guardrails Library](user_guides/guardrails-library.md): An overview of the starter built-in rails that NeMo Guardrails provide.
+* [Colang Language Guide](user_guides/colang-language-syntax-guide.md): Learn the syntax and core concepts of Colang.
+* [LLM Support for Guardrails](user_guides/llm-support.md): An easy to grasp summary of the current LLM support.
+* [Python API](user_guides/python-api.md): Learn about the Python API, e.g., the `RailsConfig` and `LLMRails` classes.
+* [CLI](user_guides/cli.md): Learn about the NeMo Guardrails CLI that can help you use the Chat CLI or start a server.
+* [Server Guide](user_guides/server-guide.md): Learn how to use the NeMo Guardrails server.
+* [Integration with LangChain](user_guides/integration-with-langchain.md): Integrate Guardrails in your existing LangChain-powered app or bring your preferred Chains to Guardrails.
 
 The following guides explain in more details various specific topics:
 
-* [Extract User-provided Values](./user_guide/advanced/extract-user-provided-values.md): Learn how to extract user-provided values like a name, a date or a query.
-* [Prompt Customization](./user_guide/advanced/prompt-customization.md): Learn how to customize the prompts for a new (or existing) type of LLM.
-* [Bot Message Instructions](./user_guide/advanced/bot-message-instructions.md): Learn how to further tweak the bot messages with specific instructions at runtime.
-* [Streaming](./user_guide/advanced/streaming.md): Learn about the streaming support in NeMo Guardrails.
-* [Embedding Search Providers](./user_guide/advanced/embedding-search-providers.md): Learn about the core embedding search interface that NeMo guardrails uses for some of the core features.
-* [Event-based API](./user_guide/advanced/event-based-api.md): Learn about the generic event-based interface that you can use to process additional information in your guardrails configuration.
-* [Nested AsyncIO Loop](./user_guide/advanced/nested-async-loop.md): Understand some of the low level issues regarding `asyncio` and how they are handled in NeMo Guardrails.
-* [AlignScore deployment](./user_guide/advanced/align_score_deployment.md): Learn how to deploy an AlignScore server either directly or using Docker.
+* [Extract User-provided Values](user_guides/advanced/extract-user-provided-values.md): Learn how to extract user-provided values like a name, a date or a query.
+* [Prompt Customization](user_guides/advanced/prompt-customization.md): Learn how to customize the prompts for a new (or existing) type of LLM.
+* [Bot Message Instructions](user_guides/advanced/bot-message-instructions.md): Learn how to further tweak the bot messages with specific instructions at runtime.
+* [Streaming](user_guides/advanced/streaming.md): Learn about the streaming support in NeMo Guardrails.
+* [Embedding Search Providers](user_guides/advanced/embedding-search-providers.md): Learn about the core embedding search interface that NeMo guardrails uses for some of the core features.
+* [Event-based API](user_guides/advanced/event-based-api.md): Learn about the generic event-based interface that you can use to process additional information in your guardrails configuration.
+* [Nested AsyncIO Loop](user_guides/advanced/nested-async-loop.md): Understand some of the low level issues regarding `asyncio` and how they are handled in NeMo Guardrails.
+* [AlignScore deployment](user_guides/advanced/align_score_deployment.md): Learn how to deploy an AlignScore server either directly or using Docker.
 
 ## Evaluation Tools
 

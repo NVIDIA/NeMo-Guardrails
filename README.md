@@ -77,7 +77,7 @@ You can use programmable guardrails in different types of use cases:
 
 ### Usage
 
-To add programmable guardrails to your application you can use the Python API or a guardrails server (see the [Server Guide](./docs/user_guide/server-guide.md) for more details). Using the Python API is similar to using the LLM directly. Calling the guardrails layer instead of the LLM requires only minimal changes to the code base, and it involves two simple steps:
+To add programmable guardrails to your application you can use the Python API or a guardrails server (see the [Server Guide](docs/user_guides/server-guide.md) for more details). Using the Python API is similar to using the LLM directly. Calling the guardrails layer instead of the LLM requires only minimal changes to the code base, and it involves two simple steps:
 
 1. Loading a guardrails configuration and creating an `LLMRails` instance.
 2. Making the calls to the LLM using the `generate`/`generate_async` methods.
@@ -106,7 +106,7 @@ NeMo Guardrails is an async-first toolkit, i.e., the core mechanics are implemen
 
 ### Supported LLMs
 
-You can use NeMo Guardrails with multiple LLMs like OpenAI GPT-3.5, GPT-4, LLaMa-2, Falcon, Vicuna, or Mosaic. For more details, check out the [Supported LLM Models](./docs/user_guide/configuration-guide.md#supported-llm-models) section in the Configuration Guide.
+You can use NeMo Guardrails with multiple LLMs like OpenAI GPT-3.5, GPT-4, LLaMa-2, Falcon, Vicuna, or Mosaic. For more details, check out the [Supported LLM Models](docs/user_guides/configuration-guide.md#supported-llm-models) section in the Configuration Guide.
 
 ### Types of Guardrails
 
@@ -116,7 +116,7 @@ NeMo Guardrails supports five main types of guardrails:
 
 1. **Input rails**: applied to the input from the user; an input rail can reject the input, stopping any additional processing, or alter the input (e.g., to mask potentially sensitive data, to rephrase).
 
-2. **Dialog rails**: influence how the LLM is prompted; dialog rails operate on canonical form messages (more details [here](./docs/user_guide/colang-language-syntax-guide.md)) and determine if an action should be executed, if the LLM should be invoked to generate the next step or a response, if a predefined response should be used instead, etc.
+2. **Dialog rails**: influence how the LLM is prompted; dialog rails operate on canonical form messages (more details [here](docs/user_guides/colang-language-syntax-guide.md)) and determine if an action should be executed, if the LLM should be invoked to generate the next step or a response, if a predefined response should be used instead, etc.
 
 3. **Retrieval rails**: applied to the retrieved chunks in the case of a RAG (Retrieval Augmented Generation) scenario; a retrieval rail can reject a chunk, preventing it from being used to prompt the LLM, or alter the relevant chunks (e.g., to mask potentially sensitive data).
 
@@ -140,7 +140,7 @@ The standard structure for a guardrails configuration folder looks like this:
 │   ├── ...
 ```
 
-The `config.yml` contains all the general configuration options (e.g., LLM models, active rails, custom configuration data), the `config.py` contains any custom initialization code and the `actions.py` contains any custom python actions. For a complete overview, check out the [Configuration Guide](./docs/user_guide/configuration-guide.md)
+The `config.yml` contains all the general configuration options (e.g., LLM models, active rails, custom configuration data), the `config.py` contains any custom initialization code and the `actions.py` contains any custom python actions. For a complete overview, check out the [Configuration Guide](docs/user_guides/configuration-guide.md)
 
 Below is an example `config.yml`:
 
@@ -205,16 +205,16 @@ define flow
 
 ### Colang
 
-To configure and implement various types of guardrails, this toolkit introduces **Colang**, a modeling language specifically created for designing flexible, yet controllable, dialogue flows. Colang has a python-like syntax and is designed to be simple and intuitive, especially for developers. For a brief introduction to the Colang syntax, check out the [Colang Language Syntax Guide](./docs/user_guide/colang-language-syntax-guide.md).
+To configure and implement various types of guardrails, this toolkit introduces **Colang**, a modeling language specifically created for designing flexible, yet controllable, dialogue flows. Colang has a python-like syntax and is designed to be simple and intuitive, especially for developers. For a brief introduction to the Colang syntax, check out the [Colang Language Syntax Guide](docs/user_guides/colang-language-syntax-guide.md).
 
 
 ### Guardrails Library
 
-NeMo Guardrails comes with a set of [built-in guardrails](./docs/user_guide/guardrails-library.md).
+NeMo Guardrails comes with a set of [built-in guardrails](docs/user_guides/guardrails-library.md).
 
 > **NOTE**: The built-in guardrails are only intended to enable you to get started quickly with NeMo Guardrails. For production use cases, further development and testing of the rails are needed.
 
-Currently, the guardrails library includes guardrails for: [jailbreak detection](./docs/user_guide/guardrails-library.md#jailbreak-detection), [output moderation](./docs/user_guide/guardrails-library.md#output-moderation), [fact-checking](./docs/user_guide/guardrails-library.md#fact-checking), [sensitive data detection](./docs/user_guide/guardrails-library.md#sensitive-data-detection), [hallucination detection](./docs/user_guide/guardrails-library.md#hallucination-detection) and [input moderation using ActiveFence](./docs/user_guide/guardrails-library.md#active-fence).
+Currently, the guardrails library includes guardrails for: [jailbreak detection](docs/user_guides/guardrails-library.md#jailbreak-detection), [output moderation](docs/user_guides/guardrails-library.md#output-moderation), [fact-checking](docs/user_guides/guardrails-library.md#fact-checking), [sensitive data detection](docs/user_guides/guardrails-library.md#sensitive-data-detection), [hallucination detection](docs/user_guides/guardrails-library.md#hallucination-detection) and [input moderation using ActiveFence](docs/user_guides/guardrails-library.md#active-fence).
 
 ## CLI
 
@@ -260,14 +260,14 @@ Sample output:
 
 #### Docker
 
-To start a guardrails server, you can also use a Docker container. NeMo Guardrails provides a [Dockerfile](./Dockerfile) that you can use to build a `nemoguardrails` image. For more details, check out the guide for [using Docker](./docs/user_guide/advanced/using-docker.md).
+To start a guardrails server, you can also use a Docker container. NeMo Guardrails provides a [Dockerfile](./Dockerfile) that you can use to build a `nemoguardrails` image. For more details, check out the guide for [using Docker](docs/user_guides/advanced/using-docker.md).
 
 ## Evaluation
 
 Evaluating the safety of a LLM-based conversational application is a complex task and still an open research question. To support proper evaluation, NeMo Guardrails provides the following:
 
 1. An [evaluation tool](./nemoguardrails/eval/README.md), i.e. `nemoguardrails evaluate`, with support for topical rails, fact-checking, moderation (jailbreak and output moderation) and hallucination.
-2. An experimental [red-teaming interface](./docs/user_guide/advanced/red-teaming.md).
+2. An experimental [red-teaming interface](docs/user_guides/advanced/red-teaming.md).
 
 
 ## How is this different?

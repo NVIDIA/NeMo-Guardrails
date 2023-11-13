@@ -95,7 +95,7 @@ models:
     parameters:
       temperature: 0.0
 ```
-- If you have defined any actions in `actions.py` or, in `config.py`, remember to [register](https://github.com/NVIDIA/NeMo-Guardrails/blob/main/docs/user_guide/configuration-guide.md#custom-initialization) those actions within the `init` method. While running, lookout for standard output like the following which inform the developer that the action has been successfully added. This will be visible when running with the `-verbose` argument.
+- If you have defined any actions in `actions.py` or, in `config.py`, remember to [register](https://github.com/NVIDIA/NeMo-Guardrails/blob/main/docs/user_guides/configuration-guide.md#custom-initialization) those actions within the `init` method. While running, lookout for standard output like the following which inform the developer that the action has been successfully added. This will be visible when running with the `-verbose` argument.
 ```
 Event StartInternalSystemAction {'uid': '', 'event_created_at': '', 'source_uid': 'NeMoGuardrails', 'action_name': '<name_of_action>', 'action_params': {}, 'action_result_key': None, 'action_uid': '', 'is_system_action': False}
 Executing action <name_of_action>

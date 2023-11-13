@@ -27,7 +27,7 @@ Every guardrails configuration must be stored in a folder. The standard folder s
 │   ├── rails.co
 │   ├── ...
 ```
-For now, you don't need to worry about what goes into every file (you can check out the [Configuration Guide](../../user_guide/configuration-guide.md) for more details later). Start by creating a folder for your configuration, e.g. `config`:
+For now, you don't need to worry about what goes into every file (you can check out the [Configuration Guide](../../user_guides/configuration-guide.md) for more details later). Start by creating a folder for your configuration, e.g. `config`:
 
 ```bash
 mkdir config
@@ -42,7 +42,7 @@ models:
    model: text-davinci-003
 ```
 
-The `models` key in the `config.yml` file configures the LLM model. For a complete list of supported LLM models, check out [Supported LLM Models](../../user_guide/configuration-guide.md#supported-llm-models) section in the configuration guide.
+The `models` key in the `config.yml` file configures the LLM model. For a complete list of supported LLM models, check out [Supported LLM Models](../../user_guides/configuration-guide.md#supported-llm-models) section in the configuration guide.
 
 ## Step 2: load the guardrails configuration
 
