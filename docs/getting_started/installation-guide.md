@@ -13,11 +13,16 @@ This guide will walk you through installing NeMo Guardrails, and it will cover:
 
 Python 3.8+.
 
-NeMo Guardrails uses [annoy](https://github.com/spotify/annoy), which is a C++ library with Python bindings. To be able to install it, you need ...
+## Additional dependencies
 
-**⚠️TODO: figure out the exact dependencies for Unix-based, Mac and Windows.**
-- `apt-get install gcc g++` ?
-- Windows: Visual Studio Build Tools with "Desktop development with C++"?
+NeMo Guardrails uses [annoy](https://github.com/spotify/annoy), which is a C++ library with Python bindings. To install it, you need to have a valid C++ runtime on your computer.
+Most systems already have installed a C++ runtime. If `annoy` installation fails, check the following steps:
+
+- For a Linux or Mac / Unix-based OS:
+  - First install `gcc` and `g++` using `apt-get install gcc g++`.
+  - Then update the following environment variables: `export CC=<path_to_clang>` and `export CXX=<path_to_clang++>` (usually, `<path_to_clang>` is `/usr/bin/clang`).
+- For Windows:
+  - Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/). This should install Microsoft Visual C++ (version 14.0 or greater is required by latest version of `annoy`).
 
 ## Setting up a virtual environment
 
@@ -52,7 +57,7 @@ To install NeMo Guardrails using pip:
 
 To install NeMo Guardrails using Conda:
 
-**TODO: enable conda installation***
+**TODO: enable conda installation**
 ```bash
 # conda install nemoguardrails -c conda-forge
 ```
@@ -81,7 +86,15 @@ If you want to use OpenAI, also install the `openai` package. And make sure that
  > export OPENAI_API_KEY=...
  ```
 
-**⚠️TODO: add information about the extras.**
+Some Guardrails LLMs and features have specific installation requirements, including a more complex set of steps (e.g. [AlignScore](../user_guide/advanced/align_score_deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md)).
+For each feature or LLM example, check the readme files associated with it.
+
+## Extra dependencies
+
+The following extra dependencies are defined:
+- `dev`: packages required by some extra Guardrails features for developers (e.g. autoreload feature).
+- `eval`: packages used for the Guardrails [evaluation tools](../../nemoguardrails/eval/README.md).
+- `all`: install all extra packages.
 
 ## What's next?
 
