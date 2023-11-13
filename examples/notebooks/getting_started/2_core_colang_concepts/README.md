@@ -253,7 +253,9 @@ In our "Hello World" example, the predefined messages "Hello world!" and "How ar
 
 In the above example, we've seen a case where the LLM was prompted only once. The figure below provides a summary of the outlined sequence of steps:
 
-![](../../../../docs/_assets/puml/core_colang_concepts_fig_1.png)
+<p style="text-align: center;">
+<img src="../../../../docs/_assets/puml/core_colang_concepts_fig_1.png" style="max-width: 486px;">
+</p>
 
 Now, let's look at the same process described above, on the followup question "What is the capital of France?".
 
@@ -301,7 +303,9 @@ info.print_llm_calls_summary()
 
 Based on the above we can see that the `ask general question` canonical form is predicted for the user utterance "What is the capital of France?". Because there is no flow that matches it, the LLM is asked to predict the next step, which in this case is `bot general response`. And because there is no predefined response, the LLM is asked a third time to predict the final message.
 
-![](../../../../docs/_assets/puml/core_colang_concepts_fig_2.png)
+<p style="text-align: center;">
+<img src="../../../../docs/_assets/puml/core_colang_concepts_fig_2.png" style="max-width: 686px;">
+</p>
 
 ## Wrapping up
 

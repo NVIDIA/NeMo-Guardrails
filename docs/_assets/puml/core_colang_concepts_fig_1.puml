@@ -9,13 +9,13 @@ skinparam Participant {
   BorderColor<<LLMRails>> green
 }
 
-
 participant LLMRails <<LLMRails>>
 
-activate LLMRails
+activate A
 A->LLMRails: "Hello there!"
+activate LLMRails
 
-LLMRails->LLM: generate_user_intent
+LLMRails->LLM: TaskPrompt [generate_user_intent]
 activate LLM
 return "express greeting"
 
@@ -23,9 +23,10 @@ LLMRails->LLMRails: bot express greeting\nbot ask how are you
 
 LLMRails->LLMRails: "Hello World!\nHow are you doing?"
 
-LLMRails-[#green]>A: "Hello World!\nHow are you doing?"
+return #green "Hello World!\nHow are you doing?"
 
 participant LLM
 hide footbox
 hide stereotype
+scale 2
 @enduml

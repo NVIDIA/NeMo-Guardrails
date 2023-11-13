@@ -9,30 +9,28 @@ skinparam Participant {
   BorderColor<<LLMRails>> green
 }
 
-
 participant LLMRails <<LLMRails>>
 
-activate LLMRails
+activate A
 A->LLMRails: "What is the capital of France?"
+activate LLMRails
 
-LLMRails->LLM: generate_user_intent
+LLMRails->LLM: TaskPrompt [generate_user_intent]
 activate LLM
 return "ask general question"
 
-LLMRails->LLM: generate_next_steps
+LLMRails->LLM: TaskPrompt [generate_next_steps]
 activate LLM
 return "bot general response"
 
-LLMRails->LLM: generate_bot_message
+LLMRails->LLM: TaskPrompt [generate_bot_message]
 activate LLM
 return "The capital of France is Paris..."
 
-
-
-LLMRails-[#green]>A: "The capital of France is Paris..."
+return #76b900 "The capital of France is Paris..."
 
 participant LLM
 hide footbox
 hide stereotype
-
+scale 2
 @enduml
