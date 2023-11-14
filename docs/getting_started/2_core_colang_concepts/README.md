@@ -240,7 +240,7 @@ bot ask how are you
 Once the canonical form for what the bot should say has been decided, the actual message needs to be generated. And here we have two cases as well:
 
 1. If a predefined message is found, the exact utterance is used. If more than one example utterances are associated with the same canonical form, a random one will be used.
-2. If a predefined message does not exist, the LLM will be prompted to generate the message, i.e. `generate_bot_message`.
+2. If a predefined message does not exist, the LLM will be prompted to generate the message, i.e. the `generate_bot_message` task.
 
 In our "Hello World" example, the predefined messages "Hello world!" and "How are you doing?" have been used.
 
