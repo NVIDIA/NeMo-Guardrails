@@ -16,7 +16,7 @@ Now let's test:
 ```python
 from nemoguardrails import RailsConfig, LLMRails
 
-config = RailsConfig.from_path("config")
+config = RailsConfig.from_path("./config")
 rails = LLMRails(config)
 
 response = await rails.generate_async(messages=[{

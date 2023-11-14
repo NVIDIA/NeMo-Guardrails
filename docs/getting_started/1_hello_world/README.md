@@ -1,6 +1,6 @@
 # Hello World
 
-This guide will show you how to create a "Hello World" guardrails configuration, i.e. one where we only control the greeting behavior. Before we begin, make sure you have installed NeMo Guardrails correctly (for detailed instructions, check out the [Installation Guide](../installation-guide.md)).
+This guide will show you how to create a "Hello World" guardrails configuration, i.e. one where we only control the greeting behavior. Before we begin, make sure you have installed NeMo Guardrails correctly (for detailed instructions, check out the [Installation Guide](../../getting_started/installation-guide.md)).
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ Next, create a `config.yml` file with the following content:
 models:
  - type: main
    engine: openai
-   model: text-davinci-003
+   model: gpt-3.5-turbo-instruct
 ```
 
 The `models` key in the `config.yml` file configures the LLM model. For a complete list of supported LLM models, check out [Supported LLM Models](../../user_guides/configuration-guide.md#supported-llm-models) section in the configuration guide.
@@ -51,7 +51,7 @@ In your Python code base, to load a guardrails configuration from a path, you mu
 ```python
 from nemoguardrails import RailsConfig
 
-config = RailsConfig.from_path("config")
+config = RailsConfig.from_path("./config")
 ```
 
 ## Step 3: use the guardrails configuration
@@ -71,7 +71,7 @@ print(response)
 ```
 
 ```
-    {'role': 'assistant', 'content': 'Hi there! How can I help you?'}
+    {'role': 'assistant', 'content': 'Hello! I am Assistant, an AI trained to help with tasks and provide information. How can I assist you today?'}
 ```
 
 The format for the input `messages` array as well as the response follow the same format as the [OpenAI API](https://platform.openai.com/docs/guides/text-generation/chat-completions-api).
@@ -189,7 +189,7 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 
 The Chat UI interface is now available at `http://localhost:8000`:
 
-![hello-world-server-ui.png](../../../../docs/_assets/images/hello-world-server-ui.png)
+![hello-world-server-ui.png](../../_assets/images/hello-world-server-ui.png)
 
 ## Next
 

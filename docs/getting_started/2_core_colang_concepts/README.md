@@ -73,7 +73,7 @@ Let's run again the greeting example.
 ```python
 from nemoguardrails import RailsConfig, LLMRails
 
-config = RailsConfig.from_path("config")
+config = RailsConfig.from_path("./config")
 rails = LLMRails(config)
 
 response = await rails.generate_async(messages=[{
@@ -84,7 +84,7 @@ print(response["content"])
 ```
 
 ```
-    Hey there!
+    Hello World!
     How are you doing?
 ```
 
@@ -109,10 +109,9 @@ print(info.colang_history)
     user "Hello!"
       express greeting
     bot express greeting
-      "Hey there!"
+      "Hello World!"
     bot ask how are you
       "How are you doing?"
-
 ```
 
 #### LLM Calls
@@ -124,10 +123,9 @@ info.print_llm_calls_summary()
 ```
 
 ```
-    Summary: 1 LLM call(s) took 1.42 seconds and used 564 tokens.
+    Summary: 1 LLM call(s) took 0.50 seconds and used 524 tokens.
 
-    1. Task `generate_user_intent` took 1.42 seconds and used 564 tokens.
-
+    1. Task `generate_user_intent` took 0.50 seconds and used 524 tokens.
 ```
 
 The `info` object also contains an `info.llm_calls` attribute with detailed information about each LLm call. We will look at this shortly.
@@ -140,7 +138,7 @@ Once an input message is received from the user, a multi-step process begins.
 
 After an utterance is received from the user (e.g., "Hello!" in the example above), the guardrails instance will compute the corresponding canonical form. By default, the LLM itself is used to perform this task.
 
-> **NOTE**: NeMo Guardrails uses a task-oriented interaction model with the LLM. Every time the LLM is called, a specific task prompt template is used, e.g. `generate_user_intent`, `generate_next_step`, `generate_bot_message`. The default template prompts can be found [here](../../../../nemoguardrails/llm/prompts/general.yml).
+> **NOTE**: NeMo Guardrails uses a task-oriented interaction model with the LLM. Every time the LLM is called, a specific task prompt template is used, e.g. `generate_user_intent`, `generate_next_step`, `generate_bot_message`. The default template prompts can be found [here](../../../nemoguardrails/llm/prompts/general.yml).
 
 In the case of the "Hello!" message, a single LLM call was made using the `generate_user_intent` task prompt template. Let's see how the prompt looks like:
 
@@ -199,14 +197,13 @@ print(info.llm_calls[0].prompt)
     bot respond about capabilities
       "As an AI assistant, I can help you with a wide range of tasks. This includes question answering on various topics, generating text for various purposes and providing suggestions based on your preferences."
     user "Hello!"
-
 ```
 
 The prompt has four logical sections:
 
-1. A set of general instructions. These can [be configured](../../../../docs/user_guides/configuration-guide.md#general-instructions) using the `instructions` key in `config.yml`.
+1. A set of general instructions. These can [be configured](../../user_guides/configuration-guide.md#general-instructions) using the `instructions` key in `config.yml`.
 
-2. A sample conversation, which can also [be configured](../../../../docs/user_guides/configuration-guide.md#sample-conversation) using the `sample_conversation` key in `config.yml`.
+2. A sample conversation, which can also [be configured](../../user_guides/configuration-guide.md#sample-conversation) using the `sample_conversation` key in `config.yml`.
 
 3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the examples. For more details check out [TODO](#).
 
@@ -220,8 +217,6 @@ print(info.llm_calls[0].completion)
 
 ```
       express greeting
-    bot express greeting
-      "Hello! How can I assist you today?"
 ```
 
 As we can see, the LLM correctly predicted the `express greeting` canonical form. It even went further to predict what the bot should do, i.e. `bot express greeting`, and the utterance that should be used. However, for the `generate_user_intent` task, only the first predicted line is used. If you want the LLM to predict everything in a single call, you can enable the [`rails.dialog.single_call` option](#) in `config.yml`.
@@ -268,7 +263,7 @@ print(response["content"])
 ```
 
 ```
-    The capital of France is Paris. It is located in the northern region of the country and is the most populous city in the country.
+    The capital of France is Paris.
 ```
 
 Let's check the colang history:
@@ -281,9 +276,8 @@ print(info.colang_history)
 ```
     user "What is the capital of France?"
       ask general question
-    bot general response
-      "The capital of France is Paris. It is located in the northern region of the country and is the most populous city in the country."
-
+    bot response for general question
+      "The capital of France is Paris."
 ```
 
 And the LLM calls:
@@ -293,12 +287,11 @@ info.print_llm_calls_summary()
 ```
 
 ```
-    Summary: 3 LLM call(s) took 4.81 seconds and used 1451 tokens.
+    Summary: 3 LLM call(s) took 1.90 seconds and used 1374 tokens.
 
-    1. Task `generate_user_intent` took 1.58 seconds and used 570 tokens.
-    2. Task `generate_next_steps` took 1.66 seconds and used 228 tokens.
-    3. Task `generate_bot_message` took 1.56 seconds and used 653 tokens.
-
+    1. Task `generate_user_intent` took 0.65 seconds and used 546 tokens.
+    2. Task `generate_next_steps` took 0.74 seconds and used 216 tokens.
+    3. Task `generate_bot_message` took 0.50 seconds and used 612 tokens.
 ```
 
 Based on the above we can see that the `ask general question` canonical form is predicted for the user utterance "What is the capital of France?". Because there is no flow that matches it, the LLM is asked to predict the next step, which in this case is `bot general response`. And because there is no predefined response, the LLM is asked a third time to predict the final message.
@@ -313,4 +306,4 @@ This guide has provided a detailed overview of two core Colang concepts: *messag
 
 ## Next
 
-In the next guides, we will look at how these core process is used to implement different types of rails (input, output, dialog, etc.).
+In the [next guide](../3_demo_use_case) we pick a demo use case that we will use to implement different types of rails (input, output, dialog, etc.).

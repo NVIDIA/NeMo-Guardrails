@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from typing import Any, List, Optional
+from typing import Optional
 
 from nemoguardrails.actions import action
 
 
-@action()
+@action(is_system_action=True)
 async def contains_blocked_terms(context: Optional[dict] = None):
     bot_response = context.get("bot_message")
 

@@ -10,7 +10,7 @@ define flow greeting
   bot ask how are you
 
 define bot express greeting
-  "Hey there!"
+  "Hello World!"
 
 define bot ask how are you
   "How are you doing?"
