@@ -146,6 +146,7 @@ def test_when_conflict_issue():
       bot say "Start"
       when user said something
         bot say "Ok"
+      match WaitEvent()
     """
 
     config = _init_state(content)
@@ -187,12 +188,12 @@ def test_when_conflict_issue():
         state.outgoing_events,
         [
             {
-                "type": "StartGestureBotAction",
-                "gesture": "test",
-            },
-            {
                 "type": "StartUtteranceBotAction",
                 "script": "Ok",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "test",
             },
         ],
     )
@@ -342,5 +343,90 @@ def test_flow_bot_question_repetition():
     )
 
 
+def test_multi_level_head_merging():
+    """"""
+
+    content = """
+    flow bot say $text
+      await UtteranceBotAction(script=$text) as $action
+
+    flow user said $text
+      match UtteranceUserAction.Finished(final_transcript=$text) as $event
+
+    flow bot gesture $gesture
+      await GestureBotAction(gesture=$gesture) as $action
+
+    flow user said something
+      match UtteranceUserAction.Finished() as $event
+
+    flow user started saying something
+      match UtteranceUserAction.Started() as $event
+
+    flow bot said something
+      match UtteranceBotAction().Finished() as $event
+
+    flow bot started saying something
+      match UtteranceBotAction().Started() as $event
+
+    flow bot asked something
+      match FlowFinished(flow_id="bot ask") as $event
+
+    flow user expressed done
+      user said "that is all"
+        or user said "I am done"
+
+    flow listening posture
+      user started saying something
+      start bot gesture"listening"
+      user said something
+
+    flow talking posture
+      bot started saying something
+      start bot gesture "talking"
+      bot said something
+
+    flow posture management
+      activate listening posture
+      activate talking posture
+      start bot gesture "attentive"
+      match WaitEvent()
+
+    flow main
+      activate posture management
+      when user expressed done
+        bot say "Case 1"
+      orwhen user said something
+        bot say "Case 2"
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "attentive",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "I am done",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Case 1",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_when_else_deep_hierarchy_case_match()
+    test_when_conflict_issue()

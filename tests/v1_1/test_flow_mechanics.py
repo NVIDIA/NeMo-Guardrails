@@ -330,7 +330,7 @@ def test_conflicting_actions_reference_sharing():
         state,
         {
             "type": "UtteranceBotActionFinished",
-            "final_script": "blabla",
+            "final_script": "Hello",
             "action_uid": state.outgoing_events[0]["action_uid"],
         },
     )
@@ -908,4 +908,4 @@ def test_abort_flow_propagation_v_b():
 
 
 if __name__ == "__main__":
-    test_abort_flow_propagation_v_b()
+    test_conflicting_actions_reference_sharing()

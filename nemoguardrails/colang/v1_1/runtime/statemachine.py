@@ -212,62 +212,62 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
             head.matching_scores.clear()
 
     actionable_heads: List[FlowHead] = []
+    merging_heads: List[FlowHead] = []
 
     heads_are_advancing = True
+    heads_are_merging = True
     while heads_are_advancing:
-        while state.internal_events:
-            event = state.internal_events.popleft()
-            log.info(f"Process internal event: {event}")
+        while heads_are_merging:
+            while state.internal_events:
+                event = state.internal_events.popleft()
+                log.info(f"Process internal event: {event}")
 
-            # Keep record of event history
+                # Keep record of event history
 
-            # We also record the flow finished events in the history
-            if (
-                event.name == InternalEvents.BOT_INTENT_LOG
-                or event.name == InternalEvents.USER_INTENT_LOG
-                or event.name == InternalEvents.BOT_ACTION_LOG
-                or event.name == InternalEvents.USER_ACTION_LOG
-            ):
-                state.last_events.append(event)
+                # We also record the flow finished events in the history
+                if (
+                    event.name == InternalEvents.BOT_INTENT_LOG
+                    or event.name == InternalEvents.USER_INTENT_LOG
+                    or event.name == InternalEvents.BOT_ACTION_LOG
+                    or event.name == InternalEvents.USER_ACTION_LOG
+                ):
+                    state.last_events.append(event)
 
-            # Handle internal events that have no default matchers in flows yet
-            # TODO: Let's see if we need this
-            # if event.name == InternalEvents.START_SIBLING_FLOW:
-            #     # Convert it into a normal START_FLOW event and only switch source flow instance to parent flow uid
-            #     event.name = InternalEvents.START_FLOW
-            #     parent_state_uid = state.flow_states[
-            #         event.arguments["source_flow_instance_uid"]
-            #     ].parent_uid
-            #     event.arguments["source_flow_instance_uid"] = parent_state_uid
-            if event.name == InternalEvents.FINISH_FLOW:
-                if "flow_instance_uid" in event.arguments:
-                    flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
-                    if not _is_inactive_flow(flow_state):
-                        _finish_flow(
-                            state,
-                            flow_state,
-                            event.matching_scores,
-                        )
-                elif "flow_id" in event.arguments:
-                    for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
+                # Handle internal events that have no default matchers in flows yet
+                # TODO: Let's see if we need this
+                # if event.name == InternalEvents.START_SIBLING_FLOW:
+                #     # Convert it into a normal START_FLOW event and only switch source flow instance to parent flow uid
+                #     event.name = InternalEvents.START_FLOW
+                #     parent_state_uid = state.flow_states[
+                #         event.arguments["source_flow_instance_uid"]
+                #     ].parent_uid
+                #     event.arguments["source_flow_instance_uid"] = parent_state_uid
+                if event.name == InternalEvents.FINISH_FLOW:
+                    if "flow_instance_uid" in event.arguments:
+                        flow_state = state.flow_states[
+                            event.arguments["flow_instance_uid"]
+                        ]
                         if not _is_inactive_flow(flow_state):
                             _finish_flow(
                                 state,
                                 flow_state,
                                 event.matching_scores,
                             )
-            elif event.name == InternalEvents.STOP_FLOW:
-                if "flow_instance_uid" in event.arguments:
-                    flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
-                    if not _is_inactive_flow(flow_state):
-                        _abort_flow(
-                            state=state,
-                            flow_state=flow_state,
-                            matching_scores=event.matching_scores,
-                            deactivate_flow=flow_state.activated,
-                        )
-                elif "flow_id" in event.arguments:
-                    for flow_state in state.flow_id_states[event.arguments["flow_id"]]:
+                    elif "flow_id" in event.arguments:
+                        for flow_state in state.flow_id_states[
+                            event.arguments["flow_id"]
+                        ]:
+                            if not _is_inactive_flow(flow_state):
+                                _finish_flow(
+                                    state,
+                                    flow_state,
+                                    event.matching_scores,
+                                )
+                elif event.name == InternalEvents.STOP_FLOW:
+                    if "flow_instance_uid" in event.arguments:
+                        flow_state = state.flow_states[
+                            event.arguments["flow_instance_uid"]
+                        ]
                         if not _is_inactive_flow(flow_state):
                             _abort_flow(
                                 state=state,
@@ -275,126 +275,148 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                                 matching_scores=event.matching_scores,
                                 deactivate_flow=flow_state.activated,
                             )
-                # TODO: Add support for all flow instances of same flow with "flow_id"
-            # elif event.name == "ResumeFlow":
-            #     pass
-            # elif event.name == "PauseFlow":
-            #     pass
-
-            # Find all heads of flows where event is relevant
-            heads_matching: List[FlowHead] = []
-            heads_not_matching: List[FlowHead] = []
-            heads_failing: List[FlowHead] = []
-
-            # TODO: Create a head dict for all active flows to speed this up
-            # Iterate over all flow states to check for the heads to match the event
-            for flow_state in state.flow_states.values():
-                if not _is_listening_flow(flow_state):
-                    continue
-
-                for head in flow_state.active_heads.values():
-                    element = get_element_from_head(state, head)
-                    if is_match_op_element(element):
-                        # TODO: Assign matching score
-                        matching_score = _compute_event_matching_score(
-                            state, flow_state, element, event
-                        )
-
-                        if matching_score > 0.0:
-                            head.matching_scores = event.matching_scores.copy()
-                            head.matching_scores.append(matching_score)
-
-                            heads_matching.append(head)
-                            log.info(
-                                f"Matching head: {head} context={_context_log(flow_state)}"
-                            )
-                        elif matching_score < 0.0:
-                            heads_failing.append(head)
-                            log.info(
-                                f"Matching head failed: {head} context={_context_log(flow_state)}"
-                            )
-                        else:
-                            heads_not_matching.append(head)
-
-            # Create internal events for unhandled events
-            if (
-                len(heads_matching) == 0
-                and event.name != InternalEvents.UNHANDLED_EVENT
-            ):
-                arguments = event.arguments.copy()
-                arguments.update({"event": event.name})
-                internal_event = create_internal_event(
-                    InternalEvents.UNHANDLED_EVENT, arguments, event.matching_scores
-                )
-                _push_internal_event(state, internal_event)
-
-            # Sort matching heads to prioritize more specific matches over the others
-            heads_matching = sorted(
-                heads_matching, key=lambda x: x.matching_scores, reverse=True
-            )
-
-            # Handle internal event matching
-            for head in heads_matching:
-                element = get_element_from_head(state, head)
-                flow_state = get_flow_state_from_head(state, head)
-
-                # Create a potential reference form the match
-                if element.spec.ref is not None:
-                    flow_state.context.update(
-                        _create_event_reference(state, flow_state, element, event)
-                    )
-
-                if (
-                    event.name == InternalEvents.START_FLOW
-                    and event.arguments["flow_id"]
-                    == get_flow_state_from_head(state, head).flow_id
-                    and head.position == 0
-                ):
-                    _start_flow(state, flow_state, head, event.arguments)
-                # elif event.name == InternalEvents.FINISH_FLOW:
-                #     _finish_flow(new_state, flow_state)
-                # TODO: Introduce default matching statements with heads for all flows
-                # elif event.name == InternalEvents.ABORT_FLOW:
-                #     _abort_flow(new_state, flow_state)
+                    elif "flow_id" in event.arguments:
+                        for flow_state in state.flow_id_states[
+                            event.arguments["flow_id"]
+                        ]:
+                            if not _is_inactive_flow(flow_state):
+                                _abort_flow(
+                                    state=state,
+                                    flow_state=flow_state,
+                                    matching_scores=event.matching_scores,
+                                    deactivate_flow=flow_state.activated,
+                                )
+                    # TODO: Add support for all flow instances of same flow with "flow_id"
                 # elif event.name == "ResumeFlow":
                 #     pass
                 # elif event.name == "PauseFlow":
                 #     pass
 
-            # Update actions status in all active flows by action event
-            if isinstance(event, ActionEvent):
-                _update_action_status_by_event(state, event)
+                # Find all heads of flows where event is relevant
+                heads_matching: List[FlowHead] = []
+                heads_not_matching: List[FlowHead] = []
+                heads_failing: List[FlowHead] = []
 
-            # Abort all flows with a mismatch
-            for head in heads_failing:
-                if head.catch_pattern_failure_label:
-                    head.position = get_flow_config_from_head(
-                        state, head
-                    ).element_labels[head.catch_pattern_failure_label]
-                    heads_matching.append(head)
-                else:
+                # TODO: Create a head dict for all active flows to speed this up
+                # Iterate over all flow states to check for the heads to match the event
+                for flow_state in state.flow_states.values():
+                    if not _is_listening_flow(flow_state):
+                        continue
+
+                    for head in flow_state.active_heads.values():
+                        element = get_element_from_head(state, head)
+                        if is_match_op_element(element):
+                            # TODO: Assign matching score
+                            matching_score = _compute_event_matching_score(
+                                state, flow_state, element, event
+                            )
+
+                            if matching_score > 0.0:
+                                head.matching_scores = event.matching_scores.copy()
+                                head.matching_scores.append(matching_score)
+
+                                heads_matching.append(head)
+                                log.info(
+                                    f"Matching head: {head} context={_context_log(flow_state)}"
+                                )
+                            elif matching_score < 0.0:
+                                heads_failing.append(head)
+                                log.info(
+                                    f"Matching head failed: {head} context={_context_log(flow_state)}"
+                                )
+                            else:
+                                heads_not_matching.append(head)
+
+                # Create internal events for unhandled events
+                if (
+                    len(heads_matching) == 0
+                    and event.name != InternalEvents.UNHANDLED_EVENT
+                ):
+                    arguments = event.arguments.copy()
+                    arguments.update({"event": event.name})
+                    internal_event = create_internal_event(
+                        InternalEvents.UNHANDLED_EVENT, arguments, event.matching_scores
+                    )
+                    _push_internal_event(state, internal_event)
+
+                # Sort matching heads to prioritize more specific matches over the others
+                heads_matching = sorted(
+                    heads_matching, key=lambda x: x.matching_scores, reverse=True
+                )
+
+                # Handle internal event matching
+                for head in heads_matching:
+                    element = get_element_from_head(state, head)
                     flow_state = get_flow_state_from_head(state, head)
-                    _abort_flow(state, flow_state, [])
 
-            # Advance front of all matching heads to actionable or match statements
-            for new_head in _advance_head_front(state, heads_matching):
-                if new_head not in actionable_heads:
-                    actionable_heads.append(new_head)
+                    # Create a potential reference form the match
+                    if element.spec.ref is not None:
+                        flow_state.context.update(
+                            _create_event_reference(state, flow_state, element, event)
+                        )
+
+                    if (
+                        event.name == InternalEvents.START_FLOW
+                        and event.arguments["flow_id"]
+                        == get_flow_state_from_head(state, head).flow_id
+                        and head.position == 0
+                    ):
+                        _start_flow(state, flow_state, head, event.arguments)
+                    # elif event.name == InternalEvents.FINISH_FLOW:
+                    #     _finish_flow(new_state, flow_state)
+                    # TODO: Introduce default matching statements with heads for all flows
+                    # elif event.name == InternalEvents.ABORT_FLOW:
+                    #     _abort_flow(new_state, flow_state)
+                    # elif event.name == "ResumeFlow":
+                    #     pass
+                    # elif event.name == "PauseFlow":
+                    #     pass
+
+                # Update actions status in all active flows by action event
+                if isinstance(event, ActionEvent):
+                    _update_action_status_by_event(state, event)
+
+                # Abort all flows with a mismatch
+                for head in heads_failing:
+                    if head.catch_pattern_failure_label:
+                        head.position = get_flow_config_from_head(
+                            state, head
+                        ).element_labels[head.catch_pattern_failure_label]
+                        heads_matching.append(head)
+                    else:
+                        flow_state = get_flow_state_from_head(state, head)
+                        _abort_flow(state, flow_state, [])
+
+                # Advance front of all matching heads to actionable or match statements
+                for new_head in _advance_head_front(state, heads_matching):
+                    if new_head not in actionable_heads:
+                        actionable_heads.append(new_head)
+
+            # Separate merging from actionable heads and remove inactive heads
+            merging_heads = [
+                head
+                for head in actionable_heads
+                if head.status == FlowHeadStatus.MERGING
+            ]
+            actionable_heads = [
+                head
+                for head in actionable_heads
+                if head.status == FlowHeadStatus.ACTIVE
+            ]
+
+            # Advance all merging heads and create potential new internal events
+            actionable_heads.extend(_advance_head_front(state, merging_heads))
+
+            heads_are_merging = len(merging_heads) > 0
 
         # All internal events are processed and flow heads are on either action or match statements
         log.debug("All internal event processed -> advance actionable heads:")
 
-        # Separate merging heads from actionable heads
-        merging_heads = [
-            head for head in actionable_heads if head.status == FlowHeadStatus.MERGING
-        ]
-
-        # Remove actionable heads for stopped or finished flows
+        # Remove heads from stopped or finished flows
         actionable_heads = [
             head
             for head in actionable_heads
             if _is_active_flow(get_flow_state_from_head(state, head))
-            and head.status == FlowHeadStatus.ACTIVE
         ]
 
         # Check for potential conflicts between actionable heads
@@ -502,9 +524,9 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         _abort_flow(state, flow_state, head.matching_scores)
 
         # Add back the merging heads to process them further
-        advancing_heads.extend(merging_heads)
         heads_are_advancing = len(advancing_heads) > 0
         actionable_heads = _advance_head_front(state, advancing_heads)
+        heads_are_merging = True
 
     return state
 
@@ -520,11 +542,14 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         flow_state = get_flow_state_from_head(state, head)
         flow_config = get_flow_config_from_head(state, head)
 
-        if head.status == FlowHeadStatus.ACTIVE:
-            head.position += 1
-        elif head.status == FlowHeadStatus.INACTIVE:
+        if head.status == FlowHeadStatus.INACTIVE:
             continue
-        # Merging heads will not be advanced
+        elif head.status == FlowHeadStatus.MERGING and len(state.internal_events) > 0:
+            # We only advance merging heads if all internal events were processed
+            actionable_heads.append(head)
+            continue
+        elif head.status == FlowHeadStatus.ACTIVE:
+            head.position += 1
 
         if flow_state.status == FlowStatus.WAITING:
             flow_state.status = FlowStatus.STARTING
@@ -723,15 +748,12 @@ def slide(
                 head.status = FlowHeadStatus.MERGING
                 break
             elif head.status == FlowHeadStatus.MERGING:
-                # Now we are sure that all other related heads had the chance to process
-                # Let's resolve competing heads and merge them with the winner
-
                 # Compose a list of all head uids and there children that should be merged
                 head_uids: List[str] = []
                 scope_uids: List[str] = []
                 for uid in element.head_uids:
                     head_uids.append(uid)
-                    # TODO: Make sure that child head uids are kept up-to-date
+                    # TODO: Make sure that child head uids are kept up-to-date to remove this check
                     if uid in flow_state.heads:
                         head_uids.extend(
                             flow_state.heads[uid].get_child_head_uids(state)
@@ -750,6 +772,21 @@ def slide(
                 head_uids = [
                     head_uid for head_uid in head_uids if head_uid in flow_state.heads
                 ]
+
+                # Check that all of the other heads that are on a merging statements do also target the current head
+                for head_uid in head_uids:
+                    if head_uid != head.uid:
+                        other_head = flow_state.heads[head_uid]
+                        if other_head.status == FlowHeadStatus.MERGING:
+                            merge_element = cast(
+                                MergeHeads, flow_config.elements[other_head.position]
+                            )
+                            if head_uid not in merge_element.head_uids:
+                                # If we still have heads that can be merged independently let's wait with this one
+                                break
+
+                # Now we are sure that all other related heads had the chance to process
+                # Let's resolve competing heads and merge them with the winner
 
                 # Extract all heads that arrived at a merge statement
                 merging_heads = [
