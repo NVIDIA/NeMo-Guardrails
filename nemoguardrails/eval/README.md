@@ -115,7 +115,7 @@ Results on _banking_ dataset, metric used is accuracy.
 | `falcon-7b-instruct, k=all`            | 0.70                   | 0.75                   | 0.76                  | 0.78                  | N/A                    | N/A                    |
 
 
-## Execution Rails
+## Input and Output Rails
 
 ### Fact-checking Rails
 
