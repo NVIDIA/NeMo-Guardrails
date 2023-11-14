@@ -53,7 +53,7 @@ For more detailed instructions, see the [Installation Guide](docs/getting_starte
 
 NeMo Guardrails enables developers building LLM-based applications to easily add **programmable guardrails** between the application code and the LLM.
 
-<p style="text-align: center">
+<p align="center">
   <img src="docs/_assets/images/programmable_guardrails.png" style="max-width: 988px; width: 75%;" alt="Programmable Guardrails">
 </p>
 
