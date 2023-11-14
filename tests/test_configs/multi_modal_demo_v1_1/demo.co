@@ -89,7 +89,7 @@ flow user expressed greeting
 
 flow user expressed done
   # meta: user intent
-  user said r"\bdone\b"
+  user said r".*[Dd]one.*|.*[Dd]umb.*"
 
 flow user asked how are you
   # meta: user intent
@@ -130,30 +130,30 @@ flow user selected choice $choice_id
 
 flow show case selector
   while True
-    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can just say 'A' or click on an option"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}, {"id": "proactive", "text": "E: Proactive turn taking"}]) as $action
+    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}, {"id": "proactive", "text": "E: Proactive turn-taking"}]) as $show_case_selection_ui
     start bot inform "Please pick one of the show cases."
     when user said r"\b[aA]\b" or user said r"\bgame\b" or user selected choice "game"
-      send $action.Stop()
+      send $show_case_selection_ui.Stop()
       bot inform "Great! You picked the number guessing game!"
       bot play number guessing game with user
     orwhen user said r"\b[bB]\b" or user said r"\bmultimodality\b" or user selected choice "multimodality"
-      send $action.Stop()
+      send $show_case_selection_ui.Stop()
       bot inform "Great! You picked the multimodality show case!"
       action alignment showcase
     orwhen user said r"\b[cC]\b" or user said r".*channel.*" or user selected choice "backchanneling"
-      send $action.Stop()
+      send $show_case_selection_ui.Stop()
       bot inform "Great! You picked the backchanneling example!"
       backchannelling interaction
     orwhen user said r"\b[dD]\b" or user said r"\bposture\b" or user selected choice "posture"
-      send $action.Stop()
+      send $show_case_selection_ui.Stop()
       bot inform "Great! You picked the posture show case!"
       showcase posture capabilities
     orwhen user said r"\b[eE]\b" or user said r"\bproactive\b" or user selected choice "proactive"
-      send $action.Stop()
-      bot inform "Great! You picked the proactive turn taking example!"
+      send $show_case_selection_ui.Stop()
+      bot inform "Great! You picked the proactive turn-taking example!"
       showcase proactive turn taking
     orwhen user said something
-      send $action.Stop()
+      send $show_case_selection_ui.Stop()
       bot say "Sorry, did not get that!"
 
 flow main

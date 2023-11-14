@@ -1,7 +1,7 @@
 flow showcase proactive turn taking
   activate reaction bot question repetition for user silence 5
 
-  bot inform "I am going to ask you questions and if you don't response within 5 seconds I will repeat them."
+  bot inform "I am going to ask you questions and if you don't respond within 5 seconds I will repeat them."
 
   while True
     $question = """Ask a random question that can be answered with just yes or no"""

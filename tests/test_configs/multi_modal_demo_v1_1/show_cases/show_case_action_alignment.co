@@ -4,7 +4,16 @@ flow action alignment showcase
   bot inform "I will be using two different actions, a talking action, and a gesture action."
   wait 1.0
 
-  bot inform "First, I show you how to trigger the two actions sequentially!"
+  bot inform "The talking action goes like this:"
+  wait 1.0
+  bot say "Talking, talking."
+  wait 1.0
+
+  bot inform "The gesture action looks like this:"
+  wait 1.5
+  bot gesture "Implying not having understood something, asking to repeat or rephrase"
+
+  bot inform "First, lets run the two actions sequentially!"
   wait 4.0
   show sequential actions showcase
   wait 1.0
@@ -18,25 +27,24 @@ flow action alignment showcase
   bot inform "Ok, you just saw how I was making a gesture and talking at the same time."
   wait 1.0
 
-  bot inform "Now, I am gonna show you how I can trigger the two actions in parallel but will limit the gesture action with the end of the talking action."
+  bot inform "Now, I will trigger the two actions in parallel but I will limit the gesture action with the end of the talking action."
   wait 4.0
   show parallel actions limiting second action by end of first one
   wait 1.0
   bot inform "Note, how I stopped the gesture as soon as I was done talking. Depending on the action duration, I also could have switched the two actions."
-
   wait 1.0
   bot inform "That's it!"
   wait 1.0
 
 flow show sequential actions showcase
-  bot say "Talking, talking, talking, talking."
+  bot say "Talking, talking."
   bot gesture "Implying not having understood something, asking to repeat or rephrase"
 
 flow show parallel actions waiting for both to end showcase
-  bot say "Talking, talking, talking, talking"
+  bot say "Talking, talking."
     and bot gesture "Implying not having understood something, asking to repeat or rephrase"
 
 flow show parallel actions limiting second action by end of first one
-  start bot say "Talking." as $action_1
+  start bot say "Talking, talking." as $action_1
   start bot gesture "Implying not having understood something, asking to repeat or rephrase"
   match $action_1.Finished()

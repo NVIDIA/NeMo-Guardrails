@@ -4,7 +4,7 @@ flow showcase posture capabilities
   bot inform "I will switch between listening, talking, and an attentive posture."
   wait 1.0
 
-  activate posture managment
+  activate posture management
 
   bot inform "So now observe how my posture changes when I am talking."
   bot ask "And now it is your turn, you can say something now."
@@ -25,9 +25,14 @@ flow talking posture
   start bot posture "talking"
   bot said something
 
-flow posture managment
+flow attentive posture
+  bot asked something
+  start bot posture "attentive"
+  bot said something or user said something
+
+flow posture management
   activate listening posture
   activate talking posture
-  #activate attentive posture
-  start bot posture "attentive"
+  activate attentive posture
+  start bot posture "idle"
   wait indefinitely
