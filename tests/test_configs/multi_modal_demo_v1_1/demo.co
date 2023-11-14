@@ -160,6 +160,7 @@ flow main
   # meta: exclude from llm
   activate llm response pooling 1.0
   activate catch undefined flows
+  activate catch colang errors
   #activate catch unexpected user utterance
   #activate faq
   #activate llm response pooling 1.0

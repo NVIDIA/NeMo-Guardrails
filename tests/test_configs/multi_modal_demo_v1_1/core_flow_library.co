@@ -187,6 +187,12 @@ flow llm response pooling $interval
   match $event_ref.action.Finished()
   send $pooling_timer.Stop()
 
+flow catch colang errors
+  """A flow to catch any runtime Colang errors"""
+  # meta: exclude from llm
+  match ColangError() as $event
+  bot say "Warning: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
+
 flow catch undefined flows
   """A flow to catch the start of undefined flows."""
   # meta: exclude from llm

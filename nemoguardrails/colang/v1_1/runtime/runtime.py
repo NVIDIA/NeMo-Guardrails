@@ -25,6 +25,7 @@ from langchain.chains.base import Chain
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
+from nemoguardrails.colang.v1_1.runtime.flows import ColangRuntimeError, Event
 from nemoguardrails.colang.v1_1.runtime.statemachine import (
     FlowConfig,
     InternalEvent,
@@ -70,10 +71,9 @@ class RuntimeV1_1(Runtime):
                 include_source_mapping=True,
             )
         except Exception as e:
-            log.warning(f"Could not parse the colang content! {e}")
+            log.warning(f"Could not parse the generated Colang code! {e}")
             error_message_event = new_event_dict("LLMFlowGenerationError", error=e)
-            state.outgoing_events.append(error_message_event)
-            raise Exception(f"Could not parse the colang content! {e}")
+            state.internal_events.append(Event.from_umim_event(error_message_event))
 
         added_flows: List[str] = []
         for flow in parsed_flow["flows"]:
@@ -303,7 +303,11 @@ class RuntimeV1_1(Runtime):
                         return result, status
 
         except Exception as e:
-            log.info(f"Failed to get response from {action_name} due to exception {e}")
+            error_message = (
+                f"Failed to get response from {action_name} due to exception {e}"
+            )
+            log.info(error_message)
+            raise ColangRuntimeError(error_message)
         return result, status
 
     @staticmethod
@@ -415,7 +419,20 @@ class RuntimeV1_1(Runtime):
                 state.last_events.append(event)
 
                 # Advance the state machine
-                run_to_completion(state, event)
+                new_event: Optional[Union[dict, Event]] = event
+                while new_event is not None:
+                    try:
+                        run_to_completion(state, new_event)
+                        new_event = None
+                    except Exception as ex:
+                        log.warning(f"Colang error: {ex}")
+                        new_event = Event(
+                            name="ColangError",
+                            arguments={
+                                "error_type": str(type(ex).__name__),
+                                "error": str(ex),
+                            },
+                        )
 
                 # If we have context updates after this event, we first add that.
                 if state.context_updates:

@@ -19,6 +19,7 @@ from typing import Any, List
 
 from simpleeval import EvalWithCompoundTypes
 
+from nemoguardrails.colang.v1_1.runtime.flows import ColangValueError
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
@@ -47,7 +48,9 @@ def eval_expression(expr, context) -> Any:
             try:
                 value = eval_expression(inner_expression, context)
             except Exception as ex:
-                log.warning(f"Error evaluating inner expression: '{expr}': {str(ex)}")
+                raise ColangValueError(
+                    f"Error evaluating inner expression: '{expr}': {str(ex)}"
+                )
             if isinstance(value, str):
                 value = value.replace('"', '\\"')
             inner_expression_values.append(value)
@@ -116,12 +119,13 @@ def eval_expression(expr, context) -> Any:
                 "search": regex_search,
                 "findall": regex_findall,
                 "uid": new_uid,
+                "escape": escape_string,
             },
             names=expr_locals,
         )
         return s.eval(updated_expr)
     except Exception as ex:
-        raise Exception(f"Error evaluating '{expr}': {str(ex)}")
+        raise ColangValueError(f"Error evaluating '{expr}': {str(ex)}")
 
 
 def regex_search(pattern: str, string: str) -> bool:
@@ -130,3 +134,8 @@ def regex_search(pattern: str, string: str) -> bool:
 
 def regex_findall(pattern: str, string: str) -> List[str]:
     return re.findall(pattern, string)
+
+
+def escape_string(string: str) -> str:
+    """Escape a string and inner expressions."""
+    return string.replace("\\", "\\\\").replace("{{", "\\{").replace("}}", "\\}")

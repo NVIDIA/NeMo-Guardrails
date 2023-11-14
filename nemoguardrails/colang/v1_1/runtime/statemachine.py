@@ -306,7 +306,13 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     for head in flow_state.active_heads.values():
                         element = get_element_from_head(state, head)
                         if is_match_op_element(element):
-                            # TODO: Assign matching score
+                            if (
+                                head.position == 0
+                                and event.name != InternalEvents.START_FLOW
+                            ):
+                                # Optimization: Skip matching score computation
+                                continue
+
                             matching_score = _compute_event_matching_score(
                                 state, flow_state, element, event
                             )

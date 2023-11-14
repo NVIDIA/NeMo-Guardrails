@@ -19,7 +19,7 @@ import logging
 
 from rich.logging import RichHandler
 
-from nemoguardrails.colang.v1_1.runtime.flows import ActionStatus
+from nemoguardrails.colang.v1_1.runtime.flows import ActionStatus, Event
 from nemoguardrails.colang.v1_1.runtime.statemachine import (
     InternalEvent,
     run_to_completion,
@@ -428,5 +428,42 @@ def test_multi_level_head_merging():
     )
 
 
+def test_match_colang_error_event():
+    """"""
+
+    content = """
+    flow catch colang errors
+      match ColangError() as $event
+      await UtteranceBotAction(script="Warning: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}")
+
+    flow main
+      activate catch colang errors
+      await UtteranceBotAction(script="{{$test[0]}}")
+    """
+
+    config = _init_state(content)
+
+    try:
+        state = run_to_completion(config, start_main_flow_event)
+    except Exception as ex:
+        new_event = Event(
+            name="ColangError",
+            arguments={
+                "error_type": str(type(ex).__name__),
+                "error": str(ex),
+            },
+        )
+        state = run_to_completion(config, new_event)
+
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_when_conflict_issue()
+    test_match_colang_error_event()
