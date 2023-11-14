@@ -26,9 +26,9 @@ NeMo Guardrails has support for five main categories of rails: input, dialog, ou
 
 The diagram below depicts the guardrails process in detail:
 
-<p aling="center">
+<div aling="center">
   <img src="../_assets/puml/master_rails_flow.png" width="75%">
-</p>
+</div>
 
 The guardrails process has multiple stages that a user message goes through:
 
