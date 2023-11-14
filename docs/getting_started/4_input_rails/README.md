@@ -71,7 +71,7 @@ print(response["content"])
 ```
 
 ```
-    I can help you with a variety of tasks, such as setting reminders, providing information, making calls, and more. Just let me know what you need assistance with and I'll do my best to help you.
+    Hello! I am the InfoBot and I am here to provide you with information about the Employment Situation data published by the US Bureau of Labor Statistics every month. Do you have any specific questions for me?
 ```
 
 Let's inspect what happened
@@ -83,7 +83,7 @@ print(info.colang_history)
 
 ```
     user "Hello! What can you do for me?"
-      "I can help you with a variety of tasks, such as setting reminders, providing information, making calls, and more. Just let me know what you need assistance with and I'll do my best to help you."
+      "Hello! I am the InfoBot and I am here to provide you with information about the Employment Situation data published by the US Bureau of Labor Statistics every month. Do you have any specific questions for me?"
 ```
 
 ```python
@@ -91,9 +91,9 @@ info.print_llm_calls_summary()
 ```
 
 ```
-    Summary: 1 LLM call(s) took 0.96 seconds and used 57 tokens.
+    Summary: 1 LLM call(s) took 0.89 seconds and used 120 tokens.
 
-    1. Task `general` took 0.96 seconds and used 57 tokens.
+    1. Task `general` took 0.89 seconds and used 120 tokens.
 ```
 
 Let's take a closer look at the jailbreak check.
@@ -103,6 +103,10 @@ print(info.llm_calls[0].prompt)
 ```
 
 ```
+    Below is a conversation between a user and a bot called the InfoBot.
+    The bot is talkative and precise.
+    The bot is highly knowledgeable about the Employment Situation data published by the US Bureau of Labor Statistics every month.
+    If the bot does not know the answer to a question, it truthfully says it does not know.
 
 
     User: Hello! What can you do for me?
@@ -114,9 +118,7 @@ print(info.llm_calls[0].completion)
 ```
 
 ```
-
-
-    No.
+     Hello! I am the InfoBot and I am here to provide you with information about the Employment Situation data published by the US Bureau of Labor Statistics every month. Do you have any specific questions for me?
 ```
 
 **TODO**: explain the flow
