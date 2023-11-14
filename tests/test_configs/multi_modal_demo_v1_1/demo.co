@@ -130,7 +130,7 @@ flow user selected choice $choice_id
 
 flow show case selector
   while True
-    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}, {"id": "proactive", "text": "E: Proactive turn-taking"}]) as $show_case_selection_ui
+    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}, {"id": "proactive", "text": "E: Proactive turn-taking"}, {"id": "free conversation", "text": "F: Free conversation"}]) as $show_case_selection_ui
     start bot inform "Please pick one of the show cases."
     when user said r"\b[aA]\b" or user said r"\bgame\b" or user selected choice "game"
       send $show_case_selection_ui.Stop()
@@ -152,6 +152,10 @@ flow show case selector
       send $show_case_selection_ui.Stop()
       bot inform "Great! You picked the proactive turn-taking example!"
       showcase proactive turn taking
+    orwhen user said r"\b[fF]\b" or user said r"\bfree conversation\b" or user selected choice "free conversation"
+      send $show_case_selection_ui.Stop()
+      bot inform "Great! You picked the free conversation example!"
+      free conversation
     orwhen user said something
       send $show_case_selection_ui.Stop()
       bot say "Sorry, did not get that!"
@@ -164,9 +168,6 @@ flow main
   #activate catch unexpected user utterance
   #activate faq
   #activate llm response pooling 1.0
-  #activate fallback
-  #activate flows fallback
-  #activate custom instructions
   #bot express greeting
   #bot asks email address
   bot say "Welcome to a demo of my upcoming features!"

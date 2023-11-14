@@ -1,0 +1,15 @@
+flow free conversation
+  activate fallback
+  activate flows fallback
+  activate custom instructions
+  bot inform "Hi there! What do you want to talk about? Ask me anything!"
+  user wanted to end conversation
+  bot say "Sure! It was great talking to you!"
+
+flow user wanted to end conversation
+  """User wants to end the free conversation"""
+  user said "I am done"
+    or user said "I want to end this"
+    or user said "Shut up"
+    or user said "Let's finish this conversation"
+    or user said "I want to go back"
