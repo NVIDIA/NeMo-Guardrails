@@ -54,7 +54,7 @@ For more detailed instructions, see the [Installation Guide](docs/getting_starte
 NeMo Guardrails enables developers building LLM-based applications to easily add **programmable guardrails** between the application code and the LLM.
 
 <p align="center">
-  <img src="docs/_assets/images/programmable_guardrails.png" style="max-width: 988px; width: 75%;" alt="Programmable Guardrails">
+  <img src="docs/_assets/images/programmable_guardrails.png"  width="75%" alt="Programmable Guardrails">
 </p>
 
 Key benefits of adding *programmable guardrails* include:
@@ -112,7 +112,8 @@ You can use NeMo Guardrails with multiple LLMs like OpenAI GPT-3.5, GPT-4, LLaMa
 
 NeMo Guardrails supports five main types of guardrails:
 
-![Programmable Guardrails Flow](docs/_assets/images/programmable_guardrails_flow.png)
+<p align="center">
+  <img src="docs/_assets/images/programmable_guardrails_flow.png"  width="75%" alt="Programmable Guardrails Flow">
 
 1. **Input rails**: applied to the input from the user; an input rail can reject the input, stopping any additional processing, or alter the input (e.g., to mask potentially sensitive data, to rephrase).
 
