@@ -22,12 +22,16 @@ flow reaction bot question repetition for user silence $time_s
   # meta: exclude from llm
   bot asked something as $ref
   #start_new_flow_instance:
-  when user was silent $time_s
-    $question = $ref.context.event.arguments.text
-    $prompt = """Make a variation of this question: {{$question}}"""
-    bot ask $prompt
-  orwhen user said something or bot said something
-    pass
+  while True
+    when user was silent $time_s
+      $question = $ref.context.event.arguments.text
+      $prompt = """Make a new variation of this question: {{$question}}"""
+      bot ask $prompt
+      break
+    orwhen user said something or bot said something
+      break
+    orwhen bot asked something
+      continue
 
 # ----------------------------------
 # Bot intents

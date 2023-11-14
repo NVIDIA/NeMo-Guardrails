@@ -167,6 +167,7 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 action_uid = event["action_uid"]
                 if action_uid in running_timer_tasks:
                     running_timer_tasks[action_uid].cancel()
+                    print(f"Timer {action_uid} was stopped!")
                     running_timer_tasks.pop(action_uid)
 
         # TODO: deserialize the output state
