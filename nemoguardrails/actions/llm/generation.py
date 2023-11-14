@@ -192,7 +192,7 @@ class LLMGenerationActions:
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
         await self.flows_index.build()
 
-    def _get_general_instruction(self):
+    def _get_general_instructions(self):
         """Helper to extract the general instruction."""
         text = ""
         for instruction in self.config.instructions:

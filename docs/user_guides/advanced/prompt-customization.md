@@ -137,7 +137,7 @@ As an example, the default template for the `generate_user_intent` task is the f
 
 ```
 """
-{{ general_instruction }}
+{{ general_instructions }}
 """
 
 # This is how a conversation between a user and the bot can go:
@@ -163,7 +163,7 @@ There are three types of variables available to be included in the prompt:
 
 The following is the list of system variables:
 
-- `general_instruction`: the content corresponds to the [general instructions](../configuration-guide.md#general-instruction) specified in the configuration;
+- `general_instructions`: the content corresponds to the [general instructions](../configuration-guide.md#general-instructions) specified in the configuration;
 - `sample_conversation`: the content corresponds to the [sample conversation](../configuration-guide.md#sample-conversation) specified in the configuration;
 - `examples`: depending on the task, this variable will contain the few-shot examples that the LLM should take into account;
 - `history`: contains the history of events (see the [complete example](../../architecture/README.md#complete-example))

@@ -35,7 +35,7 @@ prompts:
     models:
       - hf_pipeline_mosaic
     content: |-
-      {{ general_instruction }}
+      {{ general_instructions }}
 
       Your task is to generate the user intent for the last message in a conversation, given a list of examples.
 
@@ -56,7 +56,7 @@ prompts:
     models:
       - hf_pipeline_mosaic
     content: |-
-      {{ general_instruction }}
+      {{ general_instructions }}
 
       Your task is to generate the bot intent given a conversation and a list of examples.
 
@@ -77,7 +77,7 @@ prompts:
     models:
       - hf_pipeline_mosaic
     content: |
-      {{ general_instruction }}
+      {{ general_instructions }}
 
       Your task is to generate the bot message given a conversation and a list of examples.
 
@@ -105,7 +105,7 @@ prompts:
     models:
       - hf_pipeline_mosaic
     content: |-
-      {{ general_instruction }}
+      {{ general_instructions }}
 
       This is how a conversation between a user and the bot can go:
       {{ sample_conversation | verbose_v1 }}

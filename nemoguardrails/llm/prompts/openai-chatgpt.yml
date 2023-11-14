@@ -6,7 +6,7 @@ prompts:
       - openai/gpt-4
     messages:
       - type: system
-        content: "{{ general_instruction }}"
+        content: "{{ general_instructions }}"
 
       - type: system
         content: "This is how a conversation between a user and the bot can go:"
@@ -32,7 +32,7 @@ prompts:
       - openai/gpt-4
     messages:
       - type: system
-        content: "{{ general_instruction }}"
+        content: "{{ general_instructions }}"
 
       - type: system
         content: "This is the current conversation between the user and the bot:"
@@ -49,7 +49,7 @@ prompts:
       - openai/gpt-4
     messages:
       - type: system
-        content: "{{ general_instruction }}"
+        content: "{{ general_instructions }}"
 
       - type: system
         content: "This is how a conversation between a user and the bot can go:"
@@ -75,7 +75,7 @@ prompts:
       - openai/gpt-4
     messages:
       - type: system
-        content: "{{ general_instruction }}"
+        content: "{{ general_instructions }}"
 
       - type: system
         content: "This is how a conversation between a user and the bot can go:"
@@ -110,7 +110,7 @@ prompts:
       - openai/gpt-4
     messages:
       - type: system
-        content: "{{ general_instruction }}"
+        content: "{{ general_instructions }}"
 
       - type: system
         content: "This is how a conversation between a user and the bot can go:"
