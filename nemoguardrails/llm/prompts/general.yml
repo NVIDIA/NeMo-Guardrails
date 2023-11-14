@@ -13,7 +13,7 @@ prompts:
   - task: generate_user_intent
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -32,7 +32,7 @@ prompts:
   - task: generate_next_steps
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -50,7 +50,7 @@ prompts:
   - task: generate_bot_message
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -74,7 +74,7 @@ prompts:
   - task: generate_intent_steps_message
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -94,7 +94,7 @@ prompts:
   - task: generate_value
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:

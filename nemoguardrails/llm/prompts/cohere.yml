@@ -8,7 +8,7 @@ prompts:
       - cohere/command-light-nightly
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       Your task is to generate a short summary called user intent for the last user message in a conversation.
       """
 
@@ -33,7 +33,7 @@ prompts:
       - cohere/command-light-nightly
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -55,7 +55,7 @@ prompts:
       - cohere/command-light-nightly
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:

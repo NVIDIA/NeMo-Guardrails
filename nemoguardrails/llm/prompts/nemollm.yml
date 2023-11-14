@@ -15,7 +15,7 @@ prompts:
       - nemollm
     content: |-
       <extra_id_0>System
-      {{ general_instruction }}
+      {{ general_instructions }}
       Your task is to generate a short summary called user intent for an user message in a conversation.
 
       <extra_id_0>System
@@ -36,7 +36,7 @@ prompts:
       - nemollm
     content: |-
       <extra_id_0>System
-      {{ general_instruction }}
+      {{ general_instructions }}
 
       <extra_id_0>System
       # This is how a conversation between a user and the bot can go:
@@ -59,7 +59,7 @@ prompts:
       - nemollm
     content: |-
       <extra_id_0>System
-      {{ general_instruction }}
+      {{ general_instructions }}
 
       <extra_id_0>System
       # This is how a conversation between a user and the bot can go:
@@ -90,7 +90,7 @@ prompts:
       - nemollm
     content: |-
       <extra_id_0>System
-      {{ general_instruction }}
+      {{ general_instructions }}
 
       <extra_id_0>System
       # This is how a conversation between a user and the bot can go:

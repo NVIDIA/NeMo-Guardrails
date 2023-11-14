@@ -36,7 +36,7 @@ prompts:
       - hf_pipeline_dolly
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -57,7 +57,7 @@ prompts:
       - hf_pipeline_dolly
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -78,7 +78,7 @@ prompts:
       - hf_pipeline_dolly
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -106,7 +106,7 @@ prompts:
       - hf_pipeline_dolly
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
