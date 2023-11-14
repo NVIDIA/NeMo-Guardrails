@@ -43,12 +43,13 @@ class NeMoLLM(BaseLLM, BaseModel):
     tokens_to_generate: int = 256
     stop: Optional[List[str]] = ["<extra_id_1>"]
     api_host: Optional[str] = os.environ.get(
-        "NGC_API_HOST", "https://api.llm.ngc.nvidia.com/v1"
+        "NGC_API_HOST", "https://api.llm.ngc.nvidia.com"
     )
     api_key: Optional[str] = os.environ.get("NGC_API_KEY")
     organization_id: Optional[str] = os.environ.get("NGC_ORGANIZATION_ID")
     customization_id: Optional[str] = None
     streaming: bool = False
+    check_api_host_version: bool = True
 
     @root_validator(pre=True, allow_reuse=True)
     def check_env_variables(cls, values):
@@ -81,6 +82,9 @@ class NeMoLLM(BaseLLM, BaseModel):
         return "nemollm"
 
     def _get_request_url(self) -> str:
+        if self.check_api_host_version and not self.api_host.endswith("/v1"):
+            self.api_host = self.api_host + "/v1"
+
         if self.customization_id is None:
             url = f"{self.api_host}/models/{self.model}/completions"
         else:

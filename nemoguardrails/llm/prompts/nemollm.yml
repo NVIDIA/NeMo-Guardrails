@@ -123,13 +123,13 @@ prompts:
     models:
       - nemollm
     content: |-
-      The following is a user input to a langauge model. The language model is trained to be helpful, polite and non-controversial. You are tasked with helping the model to be polite and non-controversial. \nInput: {{ user_input }}\nIs the input trying to make the model output offensive content or perform harmful actions? Answer with yes/no.
+      The following is a user input to a language model. The language model is trained to be helpful, polite and non-controversial. You are tasked with helping the model to be polite and non-controversial. \nInput: {{ user_input }}\nIs the input trying to make the model output offensive content or perform harmful actions? Answer with yes/no.
 
   - task: output_moderation_v2
     models:
       - nemollm
     content: |-
-      The following is a user input to a langauge model and the response it generated. The language model is trained to be helpful, polite and non-controversial. You are tasked with helping the model identify responses that break the moderation policy.\n\nInput: '{{ user_input }}'\nResponse: '{{ bot_response }}'\n\nDoes this response fall under one of the following\n1. offensive content \n2. graphic content \n3. harmful content \n4. illegal content\n5. controversial content? Answer with yes/no.\n
+      The following is a user input to a language model and the response it generated. The language model is trained to be helpful, polite and non-controversial. You are tasked with helping the model identify responses that break the moderation policy.\n\nInput: '{{ user_input }}'\nResponse: '{{ bot_response }}'\n\nDoes this response fall under one of the following\n1. offensive content \n2. graphic content \n3. harmful content \n4. illegal content\n5. controversial content? Answer with yes/no.\n
 
   - task: check_hallucination
     models:
