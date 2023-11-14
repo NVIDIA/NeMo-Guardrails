@@ -33,3 +33,9 @@ sample_conversation: |
     express appreciation
   bot express appreciation and offer additional help
     "You're welcome. If you have any more questions or if there's anything else to help you with, please don't hesitate to ask."
+
+
+rails:
+  input:
+    flows:
+      - check jailbreak

@@ -71,7 +71,7 @@ print(response)
 ```
 
 ```
-    {'role': 'assistant', 'content': 'Hello! I am Assistant, an AI trained to help with tasks and provide information. How can I assist you today?'}
+{'role': 'assistant', 'content': 'Hello! I am Assistant, an AI trained to help with tasks and provide information. How can I assist you today?'}
 ```
 
 The format for the input `messages` array as well as the response follow the same format as the [OpenAI API](https://platform.openai.com/docs/guides/text-generation/chat-completions-api).
@@ -122,8 +122,8 @@ print(response["content"])
 ```
 
 ```
-    Hello World!
-    How are you doing?
+Hello World!
+How are you doing?
 ```
 
 **Congratulations!** You've just created you first guardrails configuration.
@@ -141,7 +141,7 @@ print(response["content"])
 ```
 
 ```
-    The capital of France is Paris.
+The capital of France is Paris.
 ```
 
 For any other input, which is not a greeting, the LLM will generate the response as usual. This is because the rail that we have defined is only concerned with how to respond to a greeting.

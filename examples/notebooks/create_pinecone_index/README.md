@@ -59,7 +59,7 @@ our_dataset.save_to_disk("kb")
 ```
 
 ```
-    Saving the dataset (0/1 shards):   0%|          | 0/1 [00:00<?, ? examples/s]
+Saving the dataset (0/1 shards):   0%|          | 0/1 [00:00<?, ? examples/s]
 ```
 
 Every record contains *a lot* of text. Our first task is therefore to identify a good preprocessing methodology for chunking these articles into more "concise" chunks to later be embedding and stored in our Pinecone vector database.
@@ -97,9 +97,9 @@ chunks
 ```
 
 ```
-    ['10/3/23, 11:26 AM\nNvidia - Wikipedia\nhttps://en.wikipedia.org/wiki/Nvidia\n1/25\nNvidia Corporation\nHeadquarters at Santa Clara in 2023\nTrade name\nNVIDIA\nType\nPublic\nTraded as\nNasdaq: NVDA (https://w\nww.nasdaq.com/market-a\nctivity/stocks/nvda)\nNasdaq-100 component\nS&P 100 component\nS&P 500 component\nIndustry\nComputer hardware\nComputer software\nCloud computing\nSemiconductors\nArtificial intelligence\nGPUs\nGraphics cards\nConsumer electronics\nVideo games\nFounded\nApril 5, 1993 in\nSunnyvale, California,\nU.S.\nFounders\nJensen Huang\nCurtis Priem\nChris Malachowsky\nNvidia\nNvidia Corporation[note 1][note 2] (/ɛnˈvɪdiə/ en-VID-ee-ə)\nis \nan \nAmerican \nmultinational \ntechnology \ncompany\nincorporated in Delaware and based in Santa Clara,\nCalifornia.[2] It is a software and fabless company which\ndesigns graphics processing units (GPUs), application\nprogramming interface (APIs) for data science and high-\nperformance computing as well as system on a chip units\n(SoCs) for the mobile computing and automotive market.\nNvidia is a dominant supplier of artificial intelligence\nhardware and software.[3][4] Its professional line of GPUs\nare used in workstations for applications in such fields as\narchitecture, engineering and construction, media and\nentertainment, \nautomotive, \nscientific \nresearch, \nand\nmanufacturing design.[5]\nIn addition to GPU manufacturing, Nvidia provides an API\ncalled CUDA that allows the creation of massively parallel',
-     "called CUDA that allows the creation of massively parallel\nprograms which utilize GPUs.[6][7] They are deployed in\nsupercomputing sites around the world.[8][9] More recently,\nit has moved into the mobile computing market, where it\nproduces Tegra mobile processors for smartphones and\ntablets as well as vehicle navigation and entertainment\nsystems.[10][11][12] Its competitors include AMD, Intel,[13]\nQualcomm[14] and AI-accelerator companies such as\nGraphcore. It also makes AI-powered software for audio and\nvideo processing, e.g. Nvidia Maxine.[15]\nNvidia's GPUs are used for edge-to-cloud computing and\nsupercomputers. Nvidia expanded its presence in the\ngaming industry with its handheld game consoles Shield\nPortable, Shield Tablet, and Shield TV and its cloud gaming\nservice GeForce Now.\nNvidia's offer to acquire Arm from SoftBank in September\n2020 failed to materialize following extended regulatory\nscrutiny, leading to the termination of the deal in February\n2022 in what would have been the largest semiconductor\nacquisition.[16][17]\nHistory\n10/3/23, 11:26 AM\nNvidia - Wikipedia\nhttps://en.wikipedia.org/wiki/Nvidia\n2/25\nHeadquarters\nSanta Clara, California,\nU.S.\nArea served\nWorldwide\nKey people\nJensen Huang\n(President and CEO)\nProducts\nGraphics processing units\n(including with ray-tracing\ncapability in Nvidia RTX\nline)\nCentral processing units\nChipsets\nDrivers\nCollaborative software\nTablet computers\nTV accessories\nGPU-chips for laptops\nData processing units\nRevenue\n US$26.97 billion (2023)\nOperating\nincome\n US$4.224 billion (2023)\nNet income\n US$4.368 billion (2023)\nTotal assets",
-     "Net income\n US$4.368 billion (2023)\nTotal assets\n US$41.18 billion (2023)\nTotal equity\n US$22.10 billion (2023)\nNumber of\nemployees\n26,196 (2023)\nSubsidiaries\nNvidia Advanced\nRendering Center\nMellanox Technologies\nCumulus Networks\nWebsite\nnvidia.com (https://www.n\nvidia.com/)\nFootnotes / references\nFinancials as of January 29, 2023[1]\nNvidia was founded on April 5, 1993,[18][19][20] by Jensen\nHuang (CEO as of 2023), a Taiwanese-American electrical\nengineer who was previously the director of CoreWare at LSI\nLogic and a microprocessor designer at AMD; Chris\nMalachowsky, \nan \nengineer \nwho \nworked \nat \nSun\nMicrosystems; and Curtis Priem, who was previously a\nsenior staff engineer and graphics chip designer at IBM and\nSun Microsystems.[21][22] The three men founded the\ncompany in a meeting at a Denny's roadside diner in East\nSan Jose (just off Interstate 680 at the Berryessa Road\ninterchange).[23]\nIn 1993, the three co-founders believed that the proper\ndirection for the next wave of computing was accelerated\ncomputing such as graphics-based computing because it\ncould solve problems that general-purpose computing could\nnot.[24] They also observed that video games were\nsimultaneously one of the most computationally challenging\nproblems and would have incredibly high sales volume; the\ntwo conditions do not happen very often.[24] Video games\nbecame the company's flywheel to reach large markets and\nfund \nhuge \nR&D \nto \nsolve \nmassive \ncomputational"]
+['10/3/23, 11:26 AM\nNvidia - Wikipedia\nhttps://en.wikipedia.org/wiki/Nvidia\n1/25\nNvidia Corporation\nHeadquarters at Santa Clara in 2023\nTrade name\nNVIDIA\nType\nPublic\nTraded as\nNasdaq: NVDA (https://w\nww.nasdaq.com/market-a\nctivity/stocks/nvda)\nNasdaq-100 component\nS&P 100 component\nS&P 500 component\nIndustry\nComputer hardware\nComputer software\nCloud computing\nSemiconductors\nArtificial intelligence\nGPUs\nGraphics cards\nConsumer electronics\nVideo games\nFounded\nApril 5, 1993 in\nSunnyvale, California,\nU.S.\nFounders\nJensen Huang\nCurtis Priem\nChris Malachowsky\nNvidia\nNvidia Corporation[note 1][note 2] (/ɛnˈvɪdiə/ en-VID-ee-ə)\nis \nan \nAmerican \nmultinational \ntechnology \ncompany\nincorporated in Delaware and based in Santa Clara,\nCalifornia.[2] It is a software and fabless company which\ndesigns graphics processing units (GPUs), application\nprogramming interface (APIs) for data science and high-\nperformance computing as well as system on a chip units\n(SoCs) for the mobile computing and automotive market.\nNvidia is a dominant supplier of artificial intelligence\nhardware and software.[3][4] Its professional line of GPUs\nare used in workstations for applications in such fields as\narchitecture, engineering and construction, media and\nentertainment, \nautomotive, \nscientific \nresearch, \nand\nmanufacturing design.[5]\nIn addition to GPU manufacturing, Nvidia provides an API\ncalled CUDA that allows the creation of massively parallel',
+ "called CUDA that allows the creation of massively parallel\nprograms which utilize GPUs.[6][7] They are deployed in\nsupercomputing sites around the world.[8][9] More recently,\nit has moved into the mobile computing market, where it\nproduces Tegra mobile processors for smartphones and\ntablets as well as vehicle navigation and entertainment\nsystems.[10][11][12] Its competitors include AMD, Intel,[13]\nQualcomm[14] and AI-accelerator companies such as\nGraphcore. It also makes AI-powered software for audio and\nvideo processing, e.g. Nvidia Maxine.[15]\nNvidia's GPUs are used for edge-to-cloud computing and\nsupercomputers. Nvidia expanded its presence in the\ngaming industry with its handheld game consoles Shield\nPortable, Shield Tablet, and Shield TV and its cloud gaming\nservice GeForce Now.\nNvidia's offer to acquire Arm from SoftBank in September\n2020 failed to materialize following extended regulatory\nscrutiny, leading to the termination of the deal in February\n2022 in what would have been the largest semiconductor\nacquisition.[16][17]\nHistory\n10/3/23, 11:26 AM\nNvidia - Wikipedia\nhttps://en.wikipedia.org/wiki/Nvidia\n2/25\nHeadquarters\nSanta Clara, California,\nU.S.\nArea served\nWorldwide\nKey people\nJensen Huang\n(President and CEO)\nProducts\nGraphics processing units\n(including with ray-tracing\ncapability in Nvidia RTX\nline)\nCentral processing units\nChipsets\nDrivers\nCollaborative software\nTablet computers\nTV accessories\nGPU-chips for laptops\nData processing units\nRevenue\n US$26.97 billion (2023)\nOperating\nincome\n US$4.224 billion (2023)\nNet income\n US$4.368 billion (2023)\nTotal assets",
+ "Net income\n US$4.368 billion (2023)\nTotal assets\n US$41.18 billion (2023)\nTotal equity\n US$22.10 billion (2023)\nNumber of\nemployees\n26,196 (2023)\nSubsidiaries\nNvidia Advanced\nRendering Center\nMellanox Technologies\nCumulus Networks\nWebsite\nnvidia.com (https://www.n\nvidia.com/)\nFootnotes / references\nFinancials as of January 29, 2023[1]\nNvidia was founded on April 5, 1993,[18][19][20] by Jensen\nHuang (CEO as of 2023), a Taiwanese-American electrical\nengineer who was previously the director of CoreWare at LSI\nLogic and a microprocessor designer at AMD; Chris\nMalachowsky, \nan \nengineer \nwho \nworked \nat \nSun\nMicrosystems; and Curtis Priem, who was previously a\nsenior staff engineer and graphics chip designer at IBM and\nSun Microsystems.[21][22] The three men founded the\ncompany in a meeting at a Denny's roadside diner in East\nSan Jose (just off Interstate 680 at the Berryessa Road\ninterchange).[23]\nIn 1993, the three co-founders believed that the proper\ndirection for the next wave of computing was accelerated\ncomputing such as graphics-based computing because it\ncould solve problems that general-purpose computing could\nnot.[24] They also observed that video games were\nsimultaneously one of the most computationally challenging\nproblems and would have incredibly high sales volume; the\ntwo conditions do not happen very often.[24] Video games\nbecame the company's flywheel to reach large markets and\nfund \nhuge \nR&D \nto \nsolve \nmassive \ncomputational"]
 ```
 
 Lets see the lengths
@@ -109,7 +109,7 @@ tiktoken_len(chunks[0]), tiktoken_len(chunks[1]), tiktoken_len(chunks[2])
 ```
 
 ```
-    (383, 387, 377)
+(383, 387, 377)
 ```
 
 Using the `text_splitter` we get much better sized chunks of text. We'll use this functionality during the indexing process later. Now let's take a look at embedding.
@@ -145,7 +145,7 @@ len(res), len(res[0])
 ```
 
 ```
-    (500, 1536)
+(500, 1536)
 ```
 
 From this we get 1536-dimensional embeddings. Now we move on to initializing our Pinecone vector database.
@@ -186,7 +186,7 @@ for index_name in pinecone.list_indexes():
 ```
 
 ```
-    nemoguardrailsindex
+nemoguardrailsindex
 ```
 
 Then we connect to the selected index:
@@ -200,10 +200,10 @@ index.describe_index_stats()
 ```
 
 ```
-    {'dimension': 1536,
-     'index_fullness': 0.0,
-     'namespaces': {'': {'vector_count': 0}},
-     'total_vector_count': 0}
+{'dimension': 1536,
+ 'index_fullness': 0.0,
+ 'namespaces': {'': {'vector_count': 0}},
+ 'total_vector_count': 0}
 ```
 
 If this is a new Pinecone index, then we expect to see a `total_vector_count` of `0`, as we haven't added any vectors yet. If its a previously existing index then it should have a non-zero value.
@@ -248,7 +248,7 @@ if len(texts) > 0:
 ```
 
 ```
-      0%|          | 0/1 [00:00<?, ?it/s]
+  0%|          | 0/1 [00:00<?, ?it/s]
 ```
 
 We've now indexed everything. It might take a minute for the indexing to actually happen. We can check the number of vectors in our index like so:
@@ -258,10 +258,10 @@ index.describe_index_stats()
 ```
 
 ```
-    {'dimension': 1536,
-     'index_fullness': 0.00061,
-     'namespaces': {'': {'vector_count': 61}},
-     'total_vector_count': 61}
+{'dimension': 1536,
+ 'index_fullness': 0.00061,
+ 'namespaces': {'': {'vector_count': 61}},
+ 'total_vector_count': 61}
 ```
 
 That is it for now. You have created a Pinecone Vector database, initialized it and uploaded data of your choice to it. Now, you can head over to NeMo Guardrails and interact with the database.

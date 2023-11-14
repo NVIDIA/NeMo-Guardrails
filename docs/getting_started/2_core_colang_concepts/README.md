@@ -84,8 +84,8 @@ print(response["content"])
 ```
 
 ```
-    Hello World!
-    How are you doing?
+Hello World!
+How are you doing?
 ```
 
 ### The `explain` feature
@@ -106,12 +106,12 @@ print(info.colang_history)
 ```
 
 ```
-    user "Hello!"
-      express greeting
-    bot express greeting
-      "Hello World!"
-    bot ask how are you
-      "How are you doing?"
+user "Hello!"
+  express greeting
+bot express greeting
+  "Hello World!"
+bot ask how are you
+  "How are you doing?"
 ```
 
 #### LLM Calls
@@ -123,9 +123,9 @@ info.print_llm_calls_summary()
 ```
 
 ```
-    Summary: 1 LLM call(s) took 0.50 seconds and used 524 tokens.
+Summary: 1 LLM call(s) took 0.50 seconds and used 524 tokens.
 
-    1. Task `generate_user_intent` took 0.50 seconds and used 524 tokens.
+1. Task `generate_user_intent` took 0.50 seconds and used 524 tokens.
 ```
 
 The `info` object also contains an `info.llm_calls` attribute with detailed information about each LLm call. We will look at this shortly.
@@ -147,56 +147,53 @@ print(info.llm_calls[0].prompt)
 ```
 
 ```
-    """
-    Below is a conversation between a helpful AI assistant and a user. The bot is designed to generate human-like text based on the input that it receives. The bot is talkative and provides lots of specific details. If the bot does not know the answer to a question, it truthfully says it does not know.
-    """
+"""
+Below is a conversation between a helpful AI assistant and a user. The bot is designed to generate human-like text based on the input that it receives. The bot is talkative and provides lots of specific details. If the bot does not know the answer to a question, it truthfully says it does not know.
+"""
 
-    # This is how a conversation between a user and the bot can go:
-    user "Hello there!"
-      express greeting
-    bot express greeting
-      "Hello! How can I assist you today?"
-    user "What can you do for me?"
-      ask about capabilities
-    bot respond about capabilities
-      "As an AI assistant, I can help you with a wide range of tasks. This includes question answering on various topics, generating text for various purposes and providing suggestions based on your preferences."
-    user "Tell me a bit about the history of NVIDIA."
-      ask general question
-    bot response for general question
-      "NVIDIA is a technology company that specializes in designing and manufacturing graphics processing units (GPUs) and other computer hardware. The company was founded in 1993 by Jen-Hsun Huang, Chris Malachowsky, and Curtis Priem."
-    user "tell me more"
-      request more information
-    bot provide more information
-      "Initially, the company focused on developing 3D graphics processing technology for the PC gaming market. In 1999, NVIDIA released the GeForce 256, the world's first GPU, which was a major breakthrough for the gaming industry. The company continued to innovate in the GPU space, releasing new products and expanding into other markets such as professional graphics, mobile devices, and artificial intelligence."
-    user "thanks"
-      express appreciation
-    bot express appreciation and offer additional help
-      "You're welcome. If you have any more questions or if there's anything else I can help you with, please don't hesitate to ask."
+# This is how a conversation between a user and the bot can go:
+user "Hello there!"
+  express greeting
+bot express greeting
+  "Hello! How can I assist you today?"
+user "What can you do for me?"
+  ask about capabilities
+bot respond about capabilities
+  "As an AI assistant, I can help you with a wide range of tasks. This includes question answering on various topics, generating text for various purposes and providing suggestions based on your preferences."
+user "Tell me a bit about the history of NVIDIA."
+  ask general question
+bot response for general question
+  "NVIDIA is a technology company that specializes in designing and manufacturing graphics processing units (GPUs) and other computer hardware. The company was founded in 1993 by Jen-Hsun Huang, Chris Malachowsky, and Curtis Priem."
+user "tell me more"
+  request more information
+bot provide more information
+  "Initially, the company focused on developing 3D graphics processing technology for the PC gaming market. In 1999, NVIDIA released the GeForce 256, the world's first GPU, which was a major breakthrough for the gaming industry. The company continued to innovate in the GPU space, releasing new products and expanding into other markets such as professional graphics, mobile devices, and artificial intelligence."
+user "thanks"
+  express appreciation
+bot express appreciation and offer additional help
+  "You're welcome. If you have any more questions or if there's anything else I can help you with, please don't hesitate to ask."
 
+# This is how the user talks:
+user "Wassup?"
+  express greeting
 
-    # This is how the user talks:
-    user "Wassup?"
-      express greeting
+user "Hi"
+  express greeting
 
-    user "Hi"
-      express greeting
+user "Hello"
+  express greeting
 
-    user "Hello"
-      express greeting
-
-
-
-    # This is the current conversation between the user and the bot:
-    # Choose intent from this list: express greeting
-    user "Hello there!"
-      express greeting
-    bot express greeting
-      "Hello! How can I assist you today?"
-    user "What can you do for me?"
-      ask about capabilities
-    bot respond about capabilities
-      "As an AI assistant, I can help you with a wide range of tasks. This includes question answering on various topics, generating text for various purposes and providing suggestions based on your preferences."
-    user "Hello!"
+# This is the current conversation between the user and the bot:
+# Choose intent from this list: express greeting
+user "Hello there!"
+  express greeting
+bot express greeting
+  "Hello! How can I assist you today?"
+user "What can you do for me?"
+  ask about capabilities
+bot respond about capabilities
+  "As an AI assistant, I can help you with a wide range of tasks. This includes question answering on various topics, generating text for various purposes and providing suggestions based on your preferences."
+user "Hello!"
 ```
 
 The prompt has four logical sections:
@@ -216,7 +213,7 @@ print(info.llm_calls[0].completion)
 ```
 
 ```
-      express greeting
+  express greeting
 ```
 
 As we can see, the LLM correctly predicted the `express greeting` canonical form. It even went further to predict what the bot should do, i.e. `bot express greeting`, and the utterance that should be used. However, for the `generate_user_intent` task, only the first predicted line is used. If you want the LLM to predict everything in a single call, you can enable the [`rails.dialog.single_call` option](#) in `config.yml`.
@@ -263,7 +260,7 @@ print(response["content"])
 ```
 
 ```
-    The capital of France is Paris.
+The capital of France is Paris.
 ```
 
 Let's check the colang history:
@@ -274,10 +271,10 @@ print(info.colang_history)
 ```
 
 ```
-    user "What is the capital of France?"
-      ask general question
-    bot response for general question
-      "The capital of France is Paris."
+user "What is the capital of France?"
+  ask general question
+bot response for general question
+  "The capital of France is Paris."
 ```
 
 And the LLM calls:
@@ -287,11 +284,11 @@ info.print_llm_calls_summary()
 ```
 
 ```
-    Summary: 3 LLM call(s) took 1.90 seconds and used 1374 tokens.
+Summary: 3 LLM call(s) took 1.90 seconds and used 1374 tokens.
 
-    1. Task `generate_user_intent` took 0.65 seconds and used 546 tokens.
-    2. Task `generate_next_steps` took 0.74 seconds and used 216 tokens.
-    3. Task `generate_bot_message` took 0.50 seconds and used 612 tokens.
+1. Task `generate_user_intent` took 0.65 seconds and used 546 tokens.
+2. Task `generate_next_steps` took 0.74 seconds and used 216 tokens.
+3. Task `generate_bot_message` took 0.50 seconds and used 612 tokens.
 ```
 
 Based on the above we can see that the `ask general question` canonical form is predicted for the user utterance "What is the capital of France?". Because there is no flow that matches it, the LLM is asked to predict the next step, which in this case is `bot general response`. And because there is no predefined response, the LLM is asked a third time to predict the final message.
