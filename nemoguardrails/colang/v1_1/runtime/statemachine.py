@@ -523,7 +523,6 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         )
                         _abort_flow(state, flow_state, head.matching_scores)
 
-        # Add back the merging heads to process them further
         heads_are_advancing = len(advancing_heads) > 0
         actionable_heads = _advance_head_front(state, advancing_heads)
         heads_are_merging = True

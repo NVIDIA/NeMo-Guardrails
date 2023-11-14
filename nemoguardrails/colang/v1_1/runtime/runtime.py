@@ -395,7 +395,7 @@ class RuntimeV1_1(Runtime):
             local_action_finished_events,
             pending_local_async_action_counter,
         ) = await self._get_async_actions_finished_events(main_flow_uid)
-        input_events = local_action_finished_events + input_events
+        input_events = input_events + local_action_finished_events
         local_action_finished_events = []
         return_local_async_action_count = False
 
