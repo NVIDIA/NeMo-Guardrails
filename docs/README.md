@@ -15,7 +15,6 @@ The documentation is divided into the following sections:
 This section will help you get started quickly with NeMo Guardrails.
 
 * [Installation guide](getting_started/installation-guide.md): This guide walks you through the process of setting up your environment and installing NeMo Guardrails
-
 * [Getting Started guides](./getting_started): A series of guides that will help you understand the core concepts and build your first guardrails configurations. These guides include Jupyter notebooks that you can experiment with.
 
 ## Examples
@@ -23,14 +22,10 @@ This section will help you get started quickly with NeMo Guardrails.
 The [`examples` folder](../examples) contains multiple examples that showcase a particular aspect of using NeMo Guardrails.
 
 * [Bots](../examples/bots): This section includes two example configurations.
-
-  * [Hello World Bot](../examples/bots/hello-world): This basic configuration instructs the bot to greet the user using "Hello World!" and to not talk about politics or the stock market.
-  * [Info Bot](../examples/bots/info): This more complex configuration includes topical rails, input and output moderation, retrieval augmented generation, fact-checking and hallucination detection.
-
+  * [HelloWorldBot](../examples/bots/hello-world): This basic configuration instructs the bot to greet the user using "Hello World!" and to not talk about politics or the stock market.
+  * [InfoBot](../examples/bots/info): This more complex configuration includes topical rails, input and output moderation, retrieval augmented generation, fact-checking and hallucination detection.
 * [Configs](../examples/configs): These example configurations showcase specific NeMo Guardrails features, e.g., how to use various LLM providers, Retrieval Augmented Generation, streaming, red-teaming, authentication, etc.
-
 * [Notebooks](../examples/notebooks): These notebooks provide additional examples using Jupyter notebooks, e.g., creating a Pincone index that you can use with NeMo Guardrails.
-
 * [Scripts](../examples/scripts): These short scripts showcase various aspects of the main Python API.
 
 
@@ -42,12 +37,13 @@ The user guides cover the core details of the NeMo Guardrails toolkit and how to
 
 * [Guardrails Configuration Guide](user_guides/configuration-guide.md): The complete guide to all the configuration options available in the `config.yml` file.
 * [Guardrails Library](user_guides/guardrails-library.md): An overview of the starter built-in rails that NeMo Guardrails provide.
+* [Guardrails Process](user_guides/guardrails-process.md): A detailed description of the guardrails process, i.e., the categories of rails and how they are called.
 * [Colang Language Guide](user_guides/colang-language-syntax-guide.md): Learn the syntax and core concepts of Colang.
 * [LLM Support for Guardrails](user_guides/llm-support.md): An easy to grasp summary of the current LLM support.
 * [Python API](user_guides/python-api.md): Learn about the Python API, e.g., the `RailsConfig` and `LLMRails` classes.
 * [CLI](user_guides/cli.md): Learn about the NeMo Guardrails CLI that can help you use the Chat CLI or start a server.
 * [Server Guide](user_guides/server-guide.md): Learn how to use the NeMo Guardrails server.
-* [Integration with LangChain](user_guides/integration-with-langchain.md): Integrate Guardrails in your existing LangChain-powered app or bring your preferred Chains to Guardrails.
+* [Integration with LangChain](user_guides/integration-with-langchain.md): Integrate guardrails in your existing LangChain-powered app.
 
 The following guides explain in more details various specific topics:
 
@@ -75,7 +71,6 @@ There are also detailed guides on how to reproduce results and create datasets f
 This guide sheds more light on the infrastructure details and the execution flow for a query when the runtime is used:
 
 * [The Guardrails Process](./architecture/README.md#the-guardrails-process): Learn how the Guardrails runtime works under the hood.
-
 * [Server Architecture](./architecture/README.md#server-architecture): Understand the architecture of the Guardrails server.
 
 # Security
