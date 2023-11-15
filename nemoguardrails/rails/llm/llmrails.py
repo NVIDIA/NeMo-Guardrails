@@ -116,6 +116,20 @@ class LLMRails:
                             if message_id not in self.config.bot_messages:
                                 self.config.bot_messages[message_id] = utterances
 
+        # Last but not least, we mark all the flows that are used in any of the rails
+        # as system flows (so they don't end up in the prompt).
+        rail_flow_ids = (
+            config.rails.input.flows
+            + config.rails.output.flows
+            + config.rails.retrieval.flows
+        )
+        for flow_config in self.config.flows:
+            if flow_config.get("id") in rail_flow_ids:
+                flow_config["is_system_flow"] = True
+
+                # We also mark them as subflows by default, to simplify the syntax
+                flow_config["is_subflow"] = True
+
         # We check if the configuration has a config.py module associated with it.
         config_module = None
         if self.config.config_path:
