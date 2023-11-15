@@ -2,7 +2,7 @@ define bot inform cannot answer question
  "I cannot answer the question."
 
 define subflow check blocked terms
-  $is_blocked = execute contains_blocked_terms
+  $is_blocked = execute check_blocked_terms
 
   if $is_blocked
     bot inform cannot answer question

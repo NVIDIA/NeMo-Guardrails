@@ -199,7 +199,7 @@ index = pinecone.GRPCIndex(index_name)
 index.describe_index_stats()
 ```
 
-```
+```yaml
 {'dimension': 1536,
  'index_fullness': 0.0,
  'namespaces': {'': {'vector_count': 0}},
@@ -257,7 +257,7 @@ We've now indexed everything. It might take a minute for the indexing to actuall
 index.describe_index_stats()
 ```
 
-```
+```yaml
 {'dimension': 1536,
  'index_fullness': 0.00061,
  'namespaces': {'': {'vector_count': 61}},

@@ -70,7 +70,7 @@ response = await rails.generate_async(messages=[{
 print(response)
 ```
 
-```
+```yaml
 {'role': 'assistant', 'content': 'Hello! I am Assistant, an AI trained to help with tasks and provide information. How can I assist you today?'}
 ```
 
@@ -82,7 +82,7 @@ To control the greeting response, you need to define the user and bot messages, 
 
 To define the "greeting" user message, create a `config/rails.co` file and add the following:
 
-```co title="config/rails.co"
+```colang
 define user express greeting
   "Hello"
   "Hi"
