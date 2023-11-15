@@ -19,6 +19,7 @@ import os
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
 
 import httpx
+from httpx import HTTPStatusError
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
@@ -163,6 +164,15 @@ class NeMoLLM(BaseLLM, BaseModel):
                 headers=self._get_request_headers(),
                 json=self._get_request_json(prompt, stop),
             )
+
+        if response.status_code == 401:
+            # Gives a more helpful error message for the forbidden status code 401
+            # All other status codes except 200 and 401 are handled by response.raise_for_status()
+            message = "Unauthorized request to the LLM API. Please set a valid API key using the NGC_API_KEY environment variable."
+            raise HTTPStatusError(
+                message=message, request=response._request, response=response
+            )
+
         response.raise_for_status()
 
         return response.json()["text"]
@@ -249,6 +259,14 @@ class NeMoLLM(BaseLLM, BaseModel):
                 url=self._get_request_url(),
                 headers=self._get_request_headers(),
                 json=self._get_request_json(prompt, stop),
+            )
+
+        if response.status_code == 401:
+            # Gives a more helpful error message for the forbidden status code 401
+            # All other status codes except 200 and 401 are handled by response.raise_for_status()
+            message = "Unauthorized request to the LLM API. Please set a valid API key using the NGC_API_KEY environment variable."
+            raise HTTPStatusError(
+                message=message, request=response._request, response=response
             )
 
         response.raise_for_status()
