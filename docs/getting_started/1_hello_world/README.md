@@ -35,7 +35,7 @@ mkdir config
 
 Next, create a `config.yml` file with the following content:
 
-```yml title="config/config.yml"
+```yaml
 models:
  - type: main
    engine: openai

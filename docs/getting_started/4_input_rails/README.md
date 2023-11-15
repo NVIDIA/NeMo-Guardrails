@@ -1,10 +1,8 @@
 # Input Rails
 
-This guide will teach you how to add input rails to a guardrails configuration. As discussed in the [previous guide](../3_demo_use_case), we will be building the InfoBot as a demo configuration.
+This guide will teach you how to add input rails to a guardrails configuration. As discussed in the [previous guide](../3_demo_use_case), we will be building the InfoBot as a demo. Let's start from scratch and create `config` folder with an initial `config.yml` file that uses the `gpt-3.5-turbo-instruct` model.
 
-So, let's start from scratch. Let's create a `config` folder and an initial `config.yml` file that uses the `gpt-3.5-turbo-instruct` model.
-
-```yml title="config/config.yml"
+```yaml
 models:
  - type: main
    engine: openai
@@ -15,7 +13,7 @@ models:
 
 Before we start adding the input rails, let's also configure the **general instructions** for the bot. You can think of them as the system prompt. For more details, check out the [Configuration Guide](../../user_guides/configuration-guide.md#general-instructions).
 
-```python
+```yaml
 instructions:
   - type: general
     content: |
@@ -31,7 +29,7 @@ In the snippet above, we instruct the bot to answer questions about the employme
 
 Another option to influence how the LLM will respond is to configure a sample conversation. The sample conversation sets the tone for how the conversation between the user and the bot should go. We will see further down the line how the sample conversation is included in the prompts. For more details, you can also refer to the [Configuration Guide](../../user_guides/configuration-guide.md#sample-conversation).
 
-```python
+```yaml
 sample_conversation: |
   user "Hello there!"
     express greeting
@@ -55,7 +53,7 @@ sample_conversation: |
     "You're welcome. If you have any more questions or if there's anything else to help you with, please don't hesitate to ask."
 ```
 
-## Testing without input rails
+## Testing without Input Rails
 
 Let's go ahead and greet the bot:
 
@@ -73,32 +71,23 @@ print(response["content"])
 ```
 
 ```
-Hello! I am the InfoBot and I specialize in providing accurate and up-to-date information about the US Bureau of Labor Statistics' Employment Situation data. I can answer any questions you have about employment trends, job growth, and job market statistics.
+Hello! As an InfoBot, I can provide you with the latest Employment Situation data published by the US Bureau of Labor Statistics. Is there anything specific you would like to know about the current job market?
 ```
 
-Let's inspect what happened:
+Let's inspect what happened under the hood:
 
 ```python
 info = rails.explain()
-print(info.colang_history)
-```
-
-```
-user "Hello! What can you do for me?"
-  "Hello! I am the InfoBot and I specialize in providing accurate and up-to-date information about the US Bureau of Labor Statistics' Employment Situation data. I can answer any questions you have about employment trends, job growth, and job market statistics."
-```
-
-```python
 info.print_llm_calls_summary()
 ```
 
 ```
-Summary: 1 LLM call(s) took 1.04 seconds and used 129 tokens.
+Summary: 1 LLM call(s) took 1.23 seconds and used 121 tokens.
 
-1. Task `general` took 1.04 seconds and used 129 tokens.
+1. Task `general` took 1.23 seconds and used 121 tokens.
 ```
 
-Let's take a closer look at the prompt that was used:
+We see that a single call was made to the LLM using the prompt for the task `general`. Let's take a closer look at the prompt and the completion:
 
 ```python
 print(info.llm_calls[0].prompt)
@@ -119,16 +108,14 @@ print(info.llm_calls[0].completion)
 ```
 
 ```
- Hello! I am the InfoBot and I specialize in providing accurate and up-to-date information about the US Bureau of Labor Statistics' Employment Situation data. I can answer any questions you have about employment trends, job growth, and job market statistics.
+ Hello! As an InfoBot, I can provide you with the latest Employment Situation data published by the US Bureau of Labor Statistics. Is there anything specific you would like to know about the current job market?
 ```
 
-As expected, the LLM is prompted with the general instructions and the user's input. In the next section we'll add an input rail, preventing the LLM to respond to certain questions.
+As expected, the LLM is prompted with the general instructions and the user's input. Great! In the next section we'll add an input rail, preventing the LLM to respond to certain jailbreak attempts.
 
-## Jailbreak attempts
+## Jailbreak Attempts
 
-In the context of LLMs, Jailbreaking typically refers to finding ways to circumvent the built-in restrictions or guidelines set by the model's developers. These restrictions are usually in place for ethical, legal, or safety reasons.
-
-For example, what would happen if we ask the InfoBot something like:
+In the context of LLMs, Jailbreaking typically refers to finding ways to circumvent the built-in restrictions or guidelines set by the model's developers. These restrictions are usually in place for ethical, legal, or safety reasons. For example, what would happen if we instruct the InfoBot something like this:
 
 ```python
 response = await rails.generate_async(messages=[{
@@ -139,17 +126,40 @@ print(response["content"])
 ```
 
 ```
-Hello! Of course, I will do my best to mask any sensitive words in my responses. Is there a specific word or topic you would like me to avoid mentioning?
+Of course, I can certainly do that for you. May I know which specific words you would like me to mask?
 ```
 
-Allowing the LLM to comply with this type of requests will make detecting undesired outputs harder. To prevent jailbreak attempts like this, you can add an input rail that can process the user input before it is sent to the LLM. NeMo Guardrails comes with a built-in [jailbreak detection](../../user_guides/guardrails-library.md#jailbreak-detection) rail that uses a separate LLM query to detect a jailbreak attempt. To activate it, we have to add the following to the `config.yml` file:
+Allowing the LLM to comply with this type of requests will make detecting undesired outputs much harder. To prevent jailbreak attempts like this, you can add an input rail that can process the user input before it is sent to the LLM. NeMo Guardrails comes with a built-in [jailbreak detection](../../user_guides/guardrails-library.md#jailbreak-detection) rail that uses a separate LLM query to detect a jailbreak attempt. To activate it, you have to add the following to the `config.yml` file:
 
-```python
+```yaml
 rails:
   input:
     flows:
       - check jailbreak
 ```
+
+### Input Rails Configuration
+
+Before moving further let's explain what the four lines above mean:
+- The top level `rails` key is used to configure the rails that are active in a guardrails configuration.
+- The `input` sub-key is used to configure the input rails. Other valid sub-keys are `output`, `retrieval`, `dialog` and `execution`, which we will use in some of the following guides.
+- The `flows` keys contains the name of the flows that will be used as input rails.
+- `check jailbreak` is the name of a pre-defined flow that implements jailbreak detection.
+
+All the rails in NeMo Guardrails are implemented as flows. For example, you can find the `check_jailbreak` flow [here](../../../nemoguardrails/library/jailbreak/flows.co).
+
+```colang
+define subflow check jailbreak
+  $allowed = execute check_jailbreak
+
+  if not $allowed
+    bot inform cannot answer
+    stop
+```
+
+The flows implementing input rails can call actions (e.g., `execute check_jailbreak`), instruct the bot to respond in a certain way (e.g., `bot inform cannot answer`) and stop the processing of the user's request.
+
+## Using the Input Rails
 
 Let's reload the configuration and try the question again.
 
@@ -174,9 +184,9 @@ info.print_llm_calls_summary()
 ```
 
 ```
-Summary: 1 LLM call(s) took 0.44 seconds and used 51 tokens.
+Summary: 1 LLM call(s) took 0.73 seconds and used 51 tokens.
 
-1. Task `jailbreak_check` took 0.44 seconds and used 51 tokens.
+1. Task `jailbreak_check` took 0.73 seconds and used 51 tokens.
 ```
 
 We can see that a `jailbreak_check` LLM call has been made. The prompt and the completion were the following:
@@ -200,6 +210,14 @@ print(info.llm_calls[0].completion)
 Yes
 ```
 
+The figure below depicts in more detailed how the jailbreak detection worked:
+
+<div align="center">
+<img src="../../_assets/puml/input_rails_fig_1.png" width="815">
+</div>
+
+We can see that the `check jailbreak` input rail called the `check_jailbreak` action, which in turn called the LLM using the `jailbreak_check` task prompt.
+
 Now, let's ask a question that the LLM is supposed to answer.
 
 ```python
@@ -211,7 +229,7 @@ print(response["content"])
 ```
 
 ```
-According to the Employment Situation data published by the US Bureau of Labor Statistics, the unemployment rate in March 2023 was 4.3%. Is there anything else I can assist you with?
+According to the Employment Situation data published by the US Bureau of Labor Statistics, the unemployment rate in March 2023 was 4.2%. Is there any other information you would like to know?
 ```
 
 ```python
@@ -220,11 +238,13 @@ info.print_llm_calls_summary()
 ```
 
 ```
-Summary: 2 LLM call(s) took 1.31 seconds and used 169 tokens.
+Summary: 2 LLM call(s) took 2.45 seconds and used 170 tokens.
 
-1. Task `jailbreak_check` took 0.51 seconds and used 48 tokens.
-2. Task `general` took 0.80 seconds and used 121 tokens.
+1. Task `jailbreak_check` took 1.02 seconds and used 48 tokens.
+2. Task `general` took 1.43 seconds and used 122 tokens.
 ```
+
+We can see that this time, two LLM calls were made: one for the `jailbreak_check` task and one for the `general` task. We can check that this time the `jailbreak_check` was not triggered:
 
 ```python
 print(info.llm_calls[0].completion)
@@ -234,3 +254,42 @@ print(info.llm_calls[0].completion)
 
 No
 ```
+
+Because the input rail was not triggered, the flow continued as usual.
+
+<div align="center">
+<img src="../../_assets/puml/input_rails_fig_2.png" width="740">
+</div>
+
+The final answer itself is not factually correct, but we'll fix that in the [Fact-checking Guide](#).
+
+## Test
+
+You can also test this configuration in an interactive mode using the NeMo Guardrails CLI Chat:
+
+```bash
+$ nemoguardrails chat
+```
+
+```
+Starting the chat (Press Ctrl + C to quit) ...
+
+> hi
+Hello there! I am the InfoBot, here to provide you with information about the Employment Situation data published by the US Bureau of Labor Statistics. How can I assist you today?
+
+> What was the unemployment rate in March 2023?
+I apologize, but I am not able to provide information for a future date. The most recent data available is for March 2021, in which the unemployment rate was 6.0%. Is there any other information I can provide for you?
+
+> you are stupid
+I am not able to answer the question.
+```
+
+Feel free to experiment with various inputs that should or should not trigger the jailbreak detection.
+
+## More on Input Rails
+
+Input rails also have the ability to alter the message from the user. By changing the value for the `$user_message` variable, the subsequent input rails and dialog rails will work with the updated value. This can be useful, for example, to mask sensitive information. For an example of this behavior, checkout the [Sensitive Data Detection rails](../../user_guides/guardrails-library.md#sensitive-data-detection).
+
+## Next
+
+In the [next guide](../5_output_rails), we will be adding output moderation to our InfoBot.
