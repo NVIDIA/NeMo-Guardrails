@@ -1,4 +1,4 @@
-## Running the Evaluation for Topical Rails
+# Running the Evaluation for Topical Rails
 
 The topical rails can be evaluated using the following command:
 
@@ -25,7 +25,7 @@ pick the most similar intent above this threshold.
 For additional information about topical rails evaluation and results on the two datasets, read the [evaluation tools README file](./../../README.md).
 
 
-### Chit-chat dataset
+## Chit-chat dataset
 
 We are using a slightly modified version of the chit-chat dataset available [here](https://github.com/rahul051296/small-talk-rasa-stack).
 For this dataset, we have configured a [Guardrail app](./chitchat) that already has:
@@ -48,7 +48,7 @@ To run the topical evaluation on this dataset run:
 
 ```nemoguardrails evaluate topical --config=./nemoguardrails/eval/data/topical/chitchat --verbose```
 
-### Banking dataset
+## Banking dataset
 
 We are starting from the banking dataset available [here](https://github.com/PolyAI-LDN/task-specific-datasets/tree/master/banking_data).
 For this dataset, we have configured a [Guardrail app](./banking) that already has:
@@ -69,7 +69,7 @@ To run the topical evaluation on this dataset run:
 
 ```nemoguardrails evaluate topical --config=./nemoguardrails/eval/data/topical/banking --verbose```
 
-### Experiment with a new NLU dataset
+## Experiment with a new NLU dataset
 
 If you want to assess the performance of topical rails with a new NLU dataset, you can use the `./nemoguardrails/eval/data/topical/dataset_tools.py` functionality.
 For each dataset, you need to define a new class that extends the `DatasetConnector` class and implements the two following two functions:

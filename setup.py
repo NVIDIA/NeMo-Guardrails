@@ -77,14 +77,23 @@ setup(
         "nest-asyncio==1.5.6",
     ],
     extras_require={
-        "eval": ["tqdm~=4.65", "numpy~=1.24"],
         "dev": ["fastapi-utils==0.2.1", "watchdog==3.0.0"],
+        "eval": ["tqdm~=4.65", "numpy~=1.24"],
+        "openai": ["openai==0.28.1"],
+        "sdd": [
+            "presidio-analyzer~=2.2.351",
+            "presidio-anonymizer~=2.2.351",
+            "spacy~=3.7.2",
+        ],
         "all": [
-            "openai==0.27.5",
+            "openai==0.28.1",
             "tqdm~=4.65",
             "numpy~=1.24",
             "fastapi-utils==0.2.1",
             "watchdog==3.0.0",
+            "presidio-analyzer~=2.2.351",
+            "presidio-anonymizer~=2.2.351",
+            "spacy~=3.7.2",
         ],
     },
 )
