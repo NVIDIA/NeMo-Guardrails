@@ -1,6 +1,6 @@
-## Fact Checking Rail
+# Running the Evaluation for Fact-Checking Rails
 
-To run the fact checking rail, you can use the following command:
+To run the fact-checking rail, you can use the following command:
 
 ```nemoguardrails evaluate fact-checking```
 

@@ -340,7 +340,10 @@ class LLMGenerationActions:
 
             # We make this call with temperature 0 to have it as deterministic as possible.
             result = await llm_call(
-                llm, prompt, custom_callback_handlers=[streaming_handler_var.get()]
+                llm,
+                prompt,
+                custom_callback_handlers=[streaming_handler_var.get()],
+                stop=["User:"],
             )
 
             text = result.strip()

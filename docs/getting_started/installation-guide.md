@@ -77,10 +77,11 @@ pip install -e .
 
 ## Optional dependencies
 
-If you want to use OpenAI, also install the `openai` package. And make sure that you have the `OPENAI_API_KEY` environment variable set.
+If you want to use OpenAI, also install the `openai` package with the latest version supported by Nemo Guardrails as shown below.
+And make sure that you have the `OPENAI_API_KEY` environment variable set.
 
  ```bash
- > pip install openai
+ > pip install openai==0.28.1
  > export OPENAI_API_KEY=...
  ```
 
@@ -90,9 +91,11 @@ For each feature or LLM example, check the readme files associated with it.
 ## Extra dependencies
 
 The following extra dependencies are defined:
-- `dev`: packages required by some extra NeMo Guardrails features for developers (e.g. autoreload feature).
-- `eval`: packages used for the NeMo Guardrails [evaluation tools](../../nemoguardrails/eval/README.md).
-- `all`: install all extra packages.
+- `dev`: packages required by some extra Guardrails features for developers (e.g. autoreload feature).
+- `eval`: packages used for the Guardrails [evaluation tools](../../nemoguardrails/eval/README.md).
+- `openai`: installs the latest `openai` package supported by NeMo Guardrails.
+- `sdd`: packages used by the [sensitive data detector](../user_guide/guardrails-library.md#sensitive-data-detection) integrated in NeMo Guardrails.
+- `all`: installs all extra packages.
 
 ## What's next?
 
