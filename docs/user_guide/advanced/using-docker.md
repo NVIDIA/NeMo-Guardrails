@@ -61,16 +61,16 @@ To specify your own config folder for the server, you can have to mount your loc
 docker run \
   -p 8000:8000 \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  -v path/to/local/config:/config \
+  -v </path/to/local/config/>:/config \
   nemoguardrails
 ```
 
-To use the Chat CLI interface:
+To use the Chat CLI interface, run the Docker container in interactive mode:
 
 ```bash
-docker run \
+docker run -i \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  -v path/to/local/config:/config \
+  -v </path/to/local/config/>:/config \
   nemoguardrails chat --config=/config --verbose
 ```
 
