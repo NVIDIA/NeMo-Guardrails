@@ -23,6 +23,7 @@ test:
   before_script:
     - pip install --cache-dir .cache/pip -r requirements.txt
     - pip install --cache-dir .cache/pip -r requirements-dev.txt
+    - pip install -e .[sdd]
   script:
     - python -m pytest --cov=./nemoguardrails --cov=./examples --no-cov-on-fail --cov-fail-under=55
   coverage: /(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
