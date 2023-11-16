@@ -3,7 +3,7 @@
 This guide will walk you through installing NeMo Guardrails, and it will cover:
 
 1. Setting up a fresh virtual environment.
-2. Installing using `pip` or `conda`.
+2. Installing using `pip`.
 3. Installing from Source Code.
 4. Optional dependencies.
 
@@ -52,13 +52,6 @@ To install NeMo Guardrails using pip:
  ```bash
  > pip install nemoguardrails
  ```
-
-To install NeMo Guardrails using Conda:
-
-**TODO: enable conda installation**
-```bash
-# conda install nemoguardrails -c conda-forge
-```
 
 ## Installing from source code
 
