@@ -291,7 +291,7 @@ Summary: 3 LLM call(s) took 1.90 seconds and used 1374 tokens.
 3. Task `generate_bot_message` took 0.50 seconds and used 612 tokens.
 ```
 
-Based on the above we can see that the `ask general question` canonical form is predicted for the user utterance "What is the capital of France?". Because there is no flow that matches it, the LLM is asked to predict the next step, which in this case is `bot general response`. And because there is no predefined response, the LLM is asked a third time to predict the final message.
+Based on the above we can see that the `ask general question` canonical form is predicted for the user utterance "What is the capital of France?". Because there is no flow that matches it, the LLM is asked to predict the next step, which in this case is `bot response for general question`. And because there is no predefined response, the LLM is asked a third time to predict the final message.
 
 <div align="center">
 <img src="../../_assets/puml/core_colang_concepts_fig_2.png" width="686">
