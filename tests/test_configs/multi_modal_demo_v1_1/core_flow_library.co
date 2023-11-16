@@ -35,7 +35,7 @@ flow user said something
 
 flow user said something unexpected
   # meta: exclude from llm
-  match UnhandledEvent(event="UtteranceUserActionFinished") as $event
+  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids=[$loop_id]) as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=None)
   return $event.arguments.final_transcript
 
@@ -241,12 +241,12 @@ flow fallback user said
   # meta: exclude from llm
   await user said something unexpected as $event
 
-  $intent = await derive user intent $event.context.event.arguments.final_transcript 10
+  $intent = await llm derive user intent from user action $event.context.event.arguments.final_transcript 10
 
   # Generate the 'user intent' by sending out the FinishFLow event
   send FinishFlow(flow_id=$intent)
 
-flow derive user intent $utterance $max_example_flows
+flow llm derive user intent from user action $utterance $max_example_flows
   # meta: exclude from llm
   $intent = await GenerateUserIntentAction(user_utterance=$utterance, max_example_flows=$max_example_flows)
 
@@ -263,10 +263,9 @@ flow fallback user intent
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   # meta: exclude from llm
   await unhandled user intent
-  await llm generate interaction
+  await llm generate interaction continuation
 
-flow llm generate interaction
-  activate flows fallback
+flow llm generate interaction continuation
   # Generate continuation based current interaction history
   $flow_info = await GenerateFlowContinuationAction()
 
