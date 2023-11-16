@@ -15,6 +15,7 @@
 
 import logging
 import re
+from functools import partial
 from typing import Any, List
 
 from simpleeval import EvalWithCompoundTypes
@@ -28,8 +29,8 @@ from nemoguardrails.colang.v1_1.runtime import system_functions
 from nemoguardrails.colang.v1_1.runtime.utils import AttributeDict
 
 
-def eval_expression(expr, context) -> Any:
-    """Evaluates the provided expression in the given context."""
+def eval_expression(expr: str, context: dict) -> Any:
+    """Evaluates the provided expression in the given."""
     # If it's not a string, we should return it as such
     if expr is None:
         return None
@@ -62,9 +63,9 @@ def eval_expression(expr, context) -> Any:
 
     index_counter = 0
 
-    def replace_with_index(match):
+    def replace_with_index(name, match):
         nonlocal index_counter
-        replacement = f"regex_{index_counter}"
+        replacement = f"{name}_{index_counter}"
         index_counter += 1
         return replacement
 
@@ -72,7 +73,7 @@ def eval_expression(expr, context) -> Any:
     expr_locals = {}
     regex_pattern = r"(r\"(.*?)\")|(r'(.*?)')"
     regular_expressions = re.findall(regex_pattern, expr)
-    updated_expr = re.sub(regex_pattern, replace_with_index, expr)
+    updated_expr = re.sub(regex_pattern, partial(replace_with_index, "regex"), expr)
 
     for idx, regular_expression in enumerate(regular_expressions):
         try:
