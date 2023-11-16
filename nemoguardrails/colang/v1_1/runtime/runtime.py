@@ -16,6 +16,7 @@ import asyncio
 import inspect
 import logging
 import re
+import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urljoin
 
@@ -425,7 +426,7 @@ class RuntimeV1_1(Runtime):
                         run_to_completion(state, new_event)
                         new_event = None
                     except Exception as ex:
-                        log.warning(f"Colang error: {ex}")
+                        log.warning(f"Colang error: {ex}\n{traceback.format_exc()}")
                         new_event = Event(
                             name="ColangError",
                             arguments={
