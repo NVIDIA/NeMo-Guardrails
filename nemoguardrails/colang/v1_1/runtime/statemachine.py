@@ -18,6 +18,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     ForkHead,
     Goto,
     Label,
+    Log,
     MergeHeads,
     Priority,
     Return,
@@ -222,18 +223,8 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 event = state.internal_events.popleft()
                 log.info(f"Process internal event: {event}")
 
-                # Keep record of event history
-
-                # We also record the flow finished events in the history
-                if (
-                    event.name == InternalEvents.BOT_INTENT_LOG
-                    or event.name == InternalEvents.USER_INTENT_LOG
-                    or event.name == InternalEvents.BOT_ACTION_LOG
-                    or event.name == InternalEvents.USER_ACTION_LOG
-                ):
-                    state.last_events.append(event)
-
                 # Handle internal events that have no default matchers in flows yet
+                handled_event_loops = set()
                 # TODO: Let's see if we need this
                 # if event.name == InternalEvents.START_SIBLING_FLOW:
                 #     # Convert it into a normal START_FLOW event and only switch source flow instance to parent flow uid
@@ -244,41 +235,34 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 #     event.arguments["source_flow_instance_uid"] = parent_state_uid
                 if event.name == InternalEvents.FINISH_FLOW:
                     if "flow_instance_uid" in event.arguments:
-                        flow_state = state.flow_states[
-                            event.arguments["flow_instance_uid"]
-                        ]
-                        if not _is_inactive_flow(flow_state):
-                            _finish_flow(
-                                state,
-                                flow_state,
-                                event.matching_scores,
-                            )
-                    elif "flow_id" in event.arguments:
-                        for flow_state in state.flow_id_states[
-                            event.arguments["flow_id"]
-                        ]:
+                        flow_instance_uid = event.arguments["flow_instance_uid"]
+                        if flow_instance_uid in state.flow_states:
+                            flow_state = state.flow_states[
+                                event.arguments["flow_instance_uid"]
+                            ]
                             if not _is_inactive_flow(flow_state):
                                 _finish_flow(
                                     state,
                                     flow_state,
                                     event.matching_scores,
                                 )
+                                handled_event_loops.add(flow_state.loop_id)
+                    elif "flow_id" in event.arguments:
+                        flow_id = event.arguments["flow_id"]
+                        if flow_id in state.flow_id_states:
+                            for flow_state in state.flow_id_states[flow_id]:
+                                if not _is_inactive_flow(flow_state):
+                                    _finish_flow(
+                                        state,
+                                        flow_state,
+                                        event.matching_scores,
+                                    )
+                                    handled_event_loops.add(flow_state.loop_id)
                 elif event.name == InternalEvents.STOP_FLOW:
                     if "flow_instance_uid" in event.arguments:
-                        flow_state = state.flow_states[
-                            event.arguments["flow_instance_uid"]
-                        ]
-                        if not _is_inactive_flow(flow_state):
-                            _abort_flow(
-                                state=state,
-                                flow_state=flow_state,
-                                matching_scores=event.matching_scores,
-                                deactivate_flow=flow_state.activated,
-                            )
-                    elif "flow_id" in event.arguments:
-                        for flow_state in state.flow_id_states[
-                            event.arguments["flow_id"]
-                        ]:
+                        flow_instance_uid = event.arguments["flow_instance_uid"]
+                        if flow_instance_uid in state.flow_states:
+                            flow_state = state.flow_states[flow_instance_uid]
                             if not _is_inactive_flow(flow_state):
                                 _abort_flow(
                                     state=state,
@@ -286,16 +270,39 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                                     matching_scores=event.matching_scores,
                                     deactivate_flow=flow_state.activated,
                                 )
+                                handled_event_loops.add(flow_state.loop_id)
+                    elif "flow_id" in event.arguments:
+                        flow_id = event.arguments["flow_id"]
+                        if flow_id in state.flow_id_states:
+                            for flow_state in state.flow_id_states[flow_id]:
+                                if not _is_inactive_flow(flow_state):
+                                    _abort_flow(
+                                        state=state,
+                                        flow_state=flow_state,
+                                        matching_scores=event.matching_scores,
+                                        deactivate_flow=flow_state.activated,
+                                    )
+                                    handled_event_loops.add(flow_state.loop_id)
                     # TODO: Add support for all flow instances of same flow with "flow_id"
                 # elif event.name == "ResumeFlow":
                 #     pass
                 # elif event.name == "PauseFlow":
                 #     pass
+                elif (
+                    event.name == InternalEvents.BOT_INTENT_LOG
+                    or event.name == InternalEvents.USER_INTENT_LOG
+                    or event.name == InternalEvents.BOT_ACTION_LOG
+                    or event.name == InternalEvents.USER_ACTION_LOG
+                ):
+                    # We also record the flow finished events in the history
+                    state.last_events.append(event)
+                    handled_event_loops.add("all_loops")
 
                 # Find all heads of flows where event is relevant
                 heads_matching: List[FlowHead] = []
                 heads_not_matching: List[FlowHead] = []
                 heads_failing: List[FlowHead] = []
+                active_interaction_loops = set()
 
                 # TODO: Create a head dict for all active flows to speed this up
                 # Iterate over all flow states to check for the heads to match the event
@@ -312,6 +319,9 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                             ):
                                 # Optimization: Skip matching score computation
                                 continue
+                            else:
+                                if flow_state.loop_id is not None:
+                                    active_interaction_loops.add(flow_state.loop_id)
 
                             matching_score = _compute_event_matching_score(
                                 state, flow_state, element, event
@@ -322,6 +332,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                                 head.matching_scores.append(matching_score)
 
                                 heads_matching.append(head)
+                                if event.name == InternalEvents.START_FLOW:
+                                    handled_event_loops.add("all_loops")
+                                else:
+                                    handled_event_loops.add(flow_state.loop_id)
                                 log.info(
                                     f"Matching head: {head} context={_context_log(flow_state)}"
                                 )
@@ -333,13 +347,17 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                             else:
                                 heads_not_matching.append(head)
 
-                # Create internal events for unhandled events
+                # Create internal events for unhandled events for every independent interaction loop
+                unhandled_event_loops = active_interaction_loops - handled_event_loops
                 if (
-                    len(heads_matching) == 0
+                    "all_loops" not in handled_event_loops
+                    and len(unhandled_event_loops) > 0
                     and event.name != InternalEvents.UNHANDLED_EVENT
                 ):
                     arguments = event.arguments.copy()
-                    arguments.update({"event": event.name})
+                    arguments.update(
+                        {"event": event.name, "loop_ids": list(unhandled_event_loops)}
+                    )
                     internal_event = create_internal_event(
                         InternalEvents.UNHANDLED_EVENT, arguments, event.matching_scores
                     )
@@ -983,6 +1001,7 @@ def _start_flow(
                 flow_state.loop_id = loop_id
         else:
             flow_state.loop_id = parent_flow.loop_id
+        flow_state.context.update({"loop_id": flow_state.loop_id})
         flow_state.activated = event_arguments.get("activated", False)
 
         # Update context with event/flow parameters
