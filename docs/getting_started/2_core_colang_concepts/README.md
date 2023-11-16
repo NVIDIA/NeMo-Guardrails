@@ -128,7 +128,7 @@ Summary: 1 LLM call(s) took 0.50 seconds and used 524 tokens.
 1. Task `generate_user_intent` took 0.50 seconds and used 524 tokens.
 ```
 
-The `info` object also contains an `info.llm_calls` attribute with detailed information about each LLm call. We will look at this shortly.
+The `info` object also contains an `info.llm_calls` attribute with detailed information about each LLM call. We will look at this shortly.
 
 ### The process
 
@@ -202,9 +202,9 @@ The prompt has four logical sections:
 
 2. A sample conversation, which can also [be configured](../../user_guides/configuration-guide.md#sample-conversation) using the `sample_conversation` key in `config.yml`.
 
-3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the examples. For more details check out [TODO](#).
+3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details check out [TODO](#).
 
-4. The current conversation, pre-seeded with the first two turns from the sample conversation.
+4. The current conversation preceded by the first two turns from the sample conversation.
 
 For the `generate_user_intent` task, the LLM must predict the canonical form for the last user utterance.
 
@@ -216,7 +216,7 @@ print(info.llm_calls[0].completion)
   express greeting
 ```
 
-As we can see, the LLM correctly predicted the `express greeting` canonical form. It even went further to predict what the bot should do, i.e. `bot express greeting`, and the utterance that should be used. However, for the `generate_user_intent` task, only the first predicted line is used. If you want the LLM to predict everything in a single call, you can enable the [`rails.dialog.single_call` option](#) in `config.yml`.
+As we can see, the LLM correctly predicted the `express greeting` canonical form. It even went further to predict what the bot should do, i.e. `bot express greeting`, and the utterance that should be used. However, for the `generate_user_intent` task, only the first predicted line is used. If you want the LLM to predict everything in a single call, you can enable the [single LLM call option](#) in `config.yml` (by setting the `rails.dialog.single_call` key to `True`).
 
 ### Step 2: decide next step
 
