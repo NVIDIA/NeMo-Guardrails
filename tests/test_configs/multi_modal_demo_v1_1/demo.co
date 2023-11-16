@@ -89,7 +89,7 @@ flow user expressed greeting
 
 flow user expressed done
   # meta: user intent
-  user said r".*[Dd]one.*|.*[Dd]umb.*"
+  user said r"(?i).*[Dd]one.*|.*[Dd]umb.*"
 
 flow user asked how are you
   # meta: user intent
@@ -130,32 +130,32 @@ flow user selected choice $choice_id
 
 flow show case selector
   while True
-    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}, {"id": "proactive", "text": "E: Proactive turn-taking"}, {"id": "free conversation", "text": "F: Free conversation"}]) as $show_case_selection_ui
+    start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}, {"id": "proactive", "text": "E: Proactive turn-taking"}, {"id": "open conversation", "text": "F: open conversation"}]) as $show_case_selection_ui
     start bot inform "Please pick one of the show cases."
-    when user said r"\b[aA]\b" or user said r"\bgame\b" or user selected choice "game"
+    when user said r"(?i)\bA\b" or user said r"(?i)\bgame\b" or user selected choice "game"
       send $show_case_selection_ui.Stop()
       bot inform "Great! You picked the number guessing game!"
       bot play number guessing game with user
-    orwhen user said r"\b[bB]\b" or user said r"\bmultimodality\b" or user selected choice "multimodality"
+    orwhen user said r"(?i)\bB\b" or user said r"(?i).*multimodality.*" or user selected choice "multimodality"
       send $show_case_selection_ui.Stop()
       bot inform "Great! You picked the multimodality show case!"
       action alignment showcase
-    orwhen user said r"\b[cC]\b" or user said r".*channel.*" or user selected choice "backchanneling"
+    orwhen user said r"(?i)\bC\b" or user said r"(?i).*channel.*" or user selected choice "backchanneling"
       send $show_case_selection_ui.Stop()
       bot inform "Great! You picked the backchanneling example!"
       backchannelling interaction
-    orwhen user said r"\b[dD]\b" or user said r"\bposture\b" or user selected choice "posture"
+    orwhen user said r"(?i)D\b" or user said r"(?i).*posture.*" or user selected choice "posture"
       send $show_case_selection_ui.Stop()
       bot inform "Great! You picked the posture show case!"
       showcase posture capabilities
-    orwhen user said r"\b[eE]\b" or user said r"\bproactive\b" or user selected choice "proactive"
+    orwhen user said r"(?i)\bE\b" or user said r"(?i).*proactive.*" or user selected choice "proactive"
       send $show_case_selection_ui.Stop()
       bot inform "Great! You picked the proactive turn-taking example!"
       showcase proactive turn taking
-    orwhen user said r"\b[fF]\b" or user said r"\bfree conversation\b" or user selected choice "free conversation"
+    orwhen user said r"\b[fF]\b" or user said r"\bopen conversation\b" or user selected choice "open conversation"
       send $show_case_selection_ui.Stop()
-      bot inform "Great! You picked the free conversation example!"
-      free conversation
+      bot inform "Great! You picked the open conversation example!"
+      open conversation
     orwhen user said something
       send $show_case_selection_ui.Stop()
       bot say "Sorry, did not get that!"
@@ -170,11 +170,12 @@ flow main
   #activate llm response pooling 1.0
   #bot express greeting
   #bot asks email address
-  bot say "Welcome to a demo of my upcoming features!"
+  bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
   show case selector
 
   #bot play number guessing game with user
   #backchannelling interaction
   #bot inform about service
   #showcase posture capabilities
+  #open conversation
   wait indefinitely

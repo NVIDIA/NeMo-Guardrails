@@ -1,13 +1,17 @@
-flow free conversation
-  activate fallback
-  activate flows fallback
-  activate custom instructions
+flow open conversation
+  activate fallback user said
   bot inform "Hi there! What do you want to talk about? Ask me anything!"
-  user wanted to end conversation
-  bot say "Sure! It was great talking to you!"
+  while True
+    when user was silent 10
+      start llm generate interaction
+    orwhen unhandled user intent
+      start llm generate interaction
+    orwhen user wanted to end conversation
+      bot say "Ok! It was great talking to you!"
+      break
 
 flow user wanted to end conversation
-  """User wants to end the free conversation"""
+  """User wants to end the open conversation"""
   user said "I am done"
     or user said "I want to end this"
     or user said "Shut up"
