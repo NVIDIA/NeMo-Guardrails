@@ -78,7 +78,7 @@ And make sure that you have the `OPENAI_API_KEY` environment variable set.
  > export OPENAI_API_KEY=...
  ```
 
-Some NeMo Guardrails LLMs and features have specific installation requirements, including a more complex set of steps (e.g. [AlignScore](../user_guide/advanced/align_score_deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md)).
+Some NeMo Guardrails LLMs and features have specific installation requirements, including a more complex set of steps (e.g. [AlignScore](../user_guides/advanced/align_score_deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md)).
 For each feature or LLM example, check the readme files associated with it.
 
 ## Extra dependencies
@@ -87,11 +87,11 @@ The following extra dependencies are defined:
 - `dev`: packages required by some extra Guardrails features for developers (e.g. autoreload feature).
 - `eval`: packages used for the Guardrails [evaluation tools](../../nemoguardrails/eval/README.md).
 - `openai`: installs the latest `openai` package supported by NeMo Guardrails.
-- `sdd`: packages used by the [sensitive data detector](../user_guide/guardrails-library.md#sensitive-data-detection) integrated in NeMo Guardrails.
+- `sdd`: packages used by the [sensitive data detector](../user_guides/guardrails-library.md#sensitive-data-detection) integrated in NeMo Guardrails.
 - `all`: installs all extra packages.
 
 ## What's next?
 
-* Check out the `hello-world` [example](../getting_started/hello-world.md).
-* Explore more examples in `nemoguardrails/examples` folder.
-* Review the [user guide](../README.md#user-guide)!
+* Check out the [Getting Started Guide](../getting_started) and start with the ["Hello World" example](../getting_started/1_hello_world).
+* Explore more examples in the [examples](../../examples) folder.
+* Review the [User Guides](../user_guides).

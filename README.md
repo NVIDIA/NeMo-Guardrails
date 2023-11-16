@@ -18,17 +18,6 @@ NeMo Guardrails is an open-source toolkit for easily adding *programmable guardr
 
 [This paper](https://arxiv.org/abs/2310.10501) introduces NeMo Guardrails and contains a technical overview of the system and the current evaluation.
 
-## Learn More
-
-**TODO**: update the links below.
-
-* [Documentation](./docs/README.md)
-* [Examples](./examples/README.md)
-* [Understanding the architecture](./docs/architecture/README.md)
-* [FAQs](./docs/faqs.md)
-* [Security Guidelines](./docs/security/guidelines.md)
-* [Python API Reference](./docs/api/README.md)
-
 ## Requirements
 
 Python 3.8+.
@@ -45,10 +34,6 @@ To install using pip:
 
 For more detailed instructions, see the [Installation Guide](docs/getting_started/installation-guide.md).
 
-### Optional Dependencies
-
-**TODO**: include info related to installing the extras, e.g. `pip install nemoguardrails[openai]` / `pip install nemoguardrails[alignscore]` / `pip install nemoguardrails[all]`
-
 ## Overview
 
 NeMo Guardrails enables developers building LLM-based applications to easily add **programmable guardrails** between the application code and the LLM.
@@ -63,7 +48,8 @@ Key benefits of adding *programmable guardrails* include:
 
 - **Connecting models, chains, and other services securely:** you can connect an LLM to other services (a.k.a. tools) seamlessly and securely.
 
-** TODO: add a bullet related to controllable dialog / steering.
+- **Controllable dialog**: you can steer the LLM to follow pre-defined conversational paths, allowing you to design the interaction following conversation design best practices and enforce standard operating procedures (e.g., authentication, support).
+
 
 ### Use Cases
 
@@ -142,7 +128,7 @@ The standard structure for a guardrails configuration folder looks like this:
 │   ├── ...
 ```
 
-The `config.yml` contains all the general configuration options (e.g., LLM models, active rails, custom configuration data), the `config.py` contains any custom initialization code and the `actions.py` contains any custom python actions. For a complete overview, check out the [Configuration Guide](docs/user_guides/configuration-guide.md)
+The `config.yml` contains all the general configuration options (e.g., LLM models, active rails, custom configuration data), the `config.py` contains any custom initialization code and the `actions.py` contains any custom python actions. For a complete overview, check out the [Configuration Guide](docs/user_guides/configuration-guide.md).
 
 Below is an example `config.yml`:
 
@@ -176,7 +162,7 @@ rails:
           - EMAIL_ADDRESS
 ```
 
-The `.co` files included in a guardrails configuration contain the Colang definitions that define various types of rails. Below is an example `greeting.co` file which defines the dialog rails for greeting the user.
+The `.co` files included in a guardrails configuration contain the Colang definitions (see the next section for a quick overview of what Colang is) that define various types of rails. Below is an example `greeting.co` file which defines the dialog rails for greeting the user.
 
 ```colang
 define user express greeting
@@ -269,7 +255,7 @@ To start a guardrails server, you can also use a Docker container. NeMo Guardrai
 Evaluating the safety of a LLM-based conversational application is a complex task and still an open research question. To support proper evaluation, NeMo Guardrails provides the following:
 
 1. An [evaluation tool](./nemoguardrails/eval/README.md), i.e. `nemoguardrails evaluate`, with support for topical rails, fact-checking, moderation (jailbreak and output moderation) and hallucination.
-2. An experimental [red-teaming interface](docs/user_guides/advanced/red-teaming.md).
+2. An experimental [red-teaming interface](docs/security/red-teaming.md).
 
 
 ## How is this different?
@@ -280,7 +266,14 @@ NeMo Guardrails aims to provide a flexible toolkit that can integrate all these 
 
 To the best of our knowledge, NeMo Guardrails is the only guardrails toolkit that also offers a solution for modeling the dialog between the user and the LLM. This enables on one hand the ability to guide the dialog in a precise way. On the other hand it enables fine-grained control for when certain guardrails should be used, e.g., use fact-checking only for certain types of questions.
 
+## Learn More
 
+* [Documentation](./docs/README.md)
+* [Getting Started Guide](./docs/getting_started/README.md)
+* [Examples](./examples)
+* [FAQs](./docs/faqs.md)
+* [Security Guidelines](./docs/security/guidelines.md)
+* [Python API Reference](./docs/api/README.md)
 
 
 ## Inviting the community to contribute!
@@ -292,6 +285,7 @@ The example rails residing in the repository are excellent starting points. We e
 This toolkit is licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
 ## Hot to cite
+
 If you use this work, please cite [the paper](https://arxiv.org/abs/2310.10501) that introduces it.
 ```bibtex
 @article{2023nemoguardrails,
