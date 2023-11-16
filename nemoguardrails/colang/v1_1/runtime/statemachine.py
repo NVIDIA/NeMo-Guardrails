@@ -386,6 +386,13 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         and head.position == 0
                     ):
                         _start_flow(state, flow_state, head, event.arguments)
+                    elif event.name == InternalEvents.FLOW_STARTED:
+                        # Add started flow to active scopes
+                        for scope_uid in head.scope_uids:
+                            if scope_uid in flow_state.scopes:
+                                flow_state.scopes[scope_uid][0].append(
+                                    event.arguments["source_flow_instance_uid"]
+                                )
                     # elif event.name == InternalEvents.FINISH_FLOW:
                     #     _finish_flow(new_state, flow_state)
                     # TODO: Introduce default matching statements with heads for all flows
@@ -441,6 +448,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
             head
             for head in actionable_heads
             if _is_active_flow(get_flow_state_from_head(state, head))
+            and head.status == FlowHeadStatus.ACTIVE
         ]
 
         # Check for potential conflicts between actionable heads
@@ -905,7 +913,9 @@ def slide(
                 head.position = flow_config.element_labels[element.label] + 1
 
         elif isinstance(element, Log):
-            log.info(f"Colang debug info: {eval_expression(element.info,flow_state.context)}")
+            log.info(
+                f"Colang debug info: {eval_expression(element.info,flow_state.context)}"
+            )
             head.position += 1
 
         elif isinstance(element, Priority):
@@ -985,13 +995,6 @@ def _start_flow(
         parent_flow = state.flow_states[parent_flow_uid]
         flow_state.parent_uid = parent_flow_uid
         parent_flow.child_flow_uids.append(flow_state.uid)
-        # Add to parent scopes
-        if "source_head_uid" in event_arguments:
-            for scope_uid in parent_flow.heads[
-                event_arguments["source_head_uid"]
-            ].scope_uids:
-                if scope_uid in parent_flow.scopes:
-                    parent_flow.scopes[scope_uid][0].append(flow_state.uid)
 
         loop_id = state.flow_configs[flow_state.flow_id].loop_id
         if loop_id is not None:
@@ -1356,11 +1359,17 @@ def _compute_event_comparison_score(
         if (
             "flow_id" in ref_event.arguments
             and "flow_id" in event.arguments
-            and ref_event.arguments["flow_id"] != event.arguments["flow_id"]
+            and _compute_arguments_dict_matching_score(
+                event.arguments["flow_id"], ref_event.arguments["flow_id"]
+            )
+            != 1.0
         ) or (
             ref_event.flow is not None
             and "source_flow_instance_uid" in event.arguments
-            and ref_event.flow.uid != event.arguments["source_flow_instance_uid"]
+            and _compute_arguments_dict_matching_score(
+                event.arguments["source_flow_instance_uid"], ref_event.flow.uid
+            )
+            != 1.0
         ):
             return 0.0
 
