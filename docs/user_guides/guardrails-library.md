@@ -141,7 +141,6 @@ For example, the file [general.yml](../../nemoguardrails/llm/prompts/general.yml
 
 ```yml
 prompts:
-  - task: output_moderation
   - task: fact_checking
     content: |-
       You are given a task to identify if the hypothesis is grounded and entailed to the evidence.
