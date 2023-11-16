@@ -350,6 +350,15 @@ class Priority(Element):
 
 @dataclass_json
 @dataclass
+class Log(Element):
+    """Log a message."""
+
+    info: str = ""
+    _type: str = "_log"
+
+
+@dataclass_json
+@dataclass
 class CatchPatternFailure(Element):
     """Set the pattern failure catcher to catch a failing pattern and forward it to the specified label.
     If the label is not set the failure will be propagated to the parent flow.

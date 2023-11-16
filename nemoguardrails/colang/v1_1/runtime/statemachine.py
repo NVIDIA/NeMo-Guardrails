@@ -886,6 +886,10 @@ def slide(
             else:
                 head.position = flow_config.element_labels[element.label] + 1
 
+        elif isinstance(element, Log):
+            log.info(f"Colang debug info: {eval_expression(element.info,flow_state.context)}")
+            head.position += 1
+
         elif isinstance(element, Priority):
             priority = eval_expression(element.priority_expr, flow_state.context)
             if not isinstance(priority, float) or priority < 0.0 or priority > 1.0:
