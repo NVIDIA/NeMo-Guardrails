@@ -716,7 +716,6 @@ def _expand_when_stmt_element(
             group_match_elements[case_idx].append([])
             for group_element in and_group["elements"]:
                 match_element = copy.deepcopy(group_element)
-
                 ref_uid = None
                 if (
                     group_element.spec_type == SpecType.FLOW
@@ -727,7 +726,9 @@ def _expand_when_stmt_element(
                     if group_element.ref is None:
                         group_element.ref = create_ref_ast_dict_helper(ref_uid)
                     else:
-                        ref_uid = group_element.ref["elements"][0]["elements"][0]
+                        ref_uid = group_element.ref["elements"][0]["elements"][
+                            0
+                        ].lstrip("$")
                     group_start_elements[case_idx][group_idx].append(group_element)
 
                 # Add match element
@@ -737,6 +738,7 @@ def _expand_when_stmt_element(
                     match_element.members = _create_member_ast_dict_helper(
                         "Finished", {}
                     )
+                    match_element.ref = None
                     match_element.spec_type = SpecType.REFERENCE
                 group_match_elements[case_idx][group_idx].append(match_element)
 

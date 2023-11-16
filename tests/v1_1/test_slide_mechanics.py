@@ -19,8 +19,10 @@ import logging
 
 from rich.logging import RichHandler
 
-from nemoguardrails.colang.v1_1.runtime.statemachine import (InternalEvent,
-                                                             run_to_completion)
+from nemoguardrails.colang.v1_1.runtime.statemachine import (
+    InternalEvent,
+    run_to_completion,
+)
 from tests.utils import _init_state, is_data_in_events
 
 FORMAT = "%(message)s"
@@ -1276,6 +1278,43 @@ def test_when_or_competing_events_mechanics():
     )
 
 
+def test_when_or_with_references():
+    """"""
+
+    content = """
+    flow user said something
+      match UtteranceUserAction.Finished() as $event
+
+    flow main
+      when user said something as $ref_1
+        start UtteranceBotAction(script=$ref_1.context.event.arguments.final_transcript)
+      match WaitEvent()
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "hello",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "hello",
+            },
+        ],
+    )
+
+
 def test_abort_flow():
     """"""
 
@@ -1319,4 +1358,4 @@ def test_abort_flow():
 
 
 if __name__ == "__main__":
-    test_await_and_or_grouping()
+    test_when_or_with_references()
