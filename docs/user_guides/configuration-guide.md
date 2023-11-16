@@ -1,22 +1,22 @@
 # Configuration Guide
 
-To set up a bot, we need the configuration to include the following:
+ A guardrails configuration includes the following:
 
-- **General Options** - which LM to use, general instructions (similar to system prompts), and sample conversation
-- **Guardrails Definitions** - files in Colang that define the dialog flows and guardrails
-- **Knowledge Base Documents**[Optional] - documents that can be used to provide context for bot responses
-- **Custom Configuration Data** - additional configuration data required by various rails (e.g., fact-checking)
-- **Actions** - custom actions implemented in python
-- **Initialization Code** - custom python code performing additional initialization e.g. registering a new type of LLM
+- **General Options**: which LLM(s) to use, general instructions (similar to system prompts), sample conversation, which rails are active, specific rails configuration options, etc.; these options are typically placed in a `config.yml` file.
+- **Rails**: Colang flows implementing the rails; these are typically placed in a `rails` folder.
+- **Actions**: custom actions implemented in Python; these are typically placed in an `actions.py` module in the root of the config or in an `actions` sub-package.
+- **Knowledge Base Documents**: documents that can be used in a RAG (Retrieval-Augmented Generation) scenario using the built-in Knowledge Base support; these documents are typically placed in a `kb` folder.
+- **Initialization Code**: custom Python code performing additional initialization, e.g. registering a new type of LLM.
 
-These files are typically included in a folder (let's call it `config`) which can be referenced either when initializing a `RailsConfig` instance or when starting the CLI Chat or Server.
+These files are typically included in a `config` folder, which is referenced when initializing a `RailsConfig` instance or when starting the CLI Chat or Server.
 
 ```
 .
 ├── config
-│   ├── rails_1.co
-│   ├── rails_2.co
-│   ├── ...
+│   ├── rails
+│   │   ├── file_1.co
+│   │   ├── file_2.co
+│   │   └── ...
 │   ├── actions.py
 │   ├── config.py
 │   └── config.yml
@@ -27,9 +27,10 @@ The custom actions can be placed either in an `actions.py` module in the root of
 ```
 .
 ├── config
-│   ├── rails_1.co
-│   ├── rails_2.co
-│   ├── ...
+│   ├── rails
+│   │   ├── file_1.co
+│   │   ├── file_2.co
+│   │   └── ...
 │   ├── actions
 │   │   ├── file_1.py
 │   │   ├── file_2.py
@@ -55,37 +56,38 @@ def init(app: LLMRails):
     app.register_action_param("db", db)
 ```
 
+Custom action parameters are passed on to the custom actions when they are invoked.
+
 ## General Options
 
-These are the options you can configure in the `config.yml` file.
+The following subsections describe all the configuration options you can use in the `config.yml` file.
 
 ### The LLM Model
 
-To configure the backbone LLM model that will be used by the guardrails configuration, you set the `models` key as shown below:
+To configure the main LLM model that will is used by the guardrails configuration, you set the `models` key as shown below:
 
 ```yaml
 models:
   - type: main
     engine: openai
-    model: text-davinci-003
+    model: gpt-3.5-turbo-instruct
 ```
 
 The meaning of the attributes is as follows:
 
-- `type`: is set to "main" indicating the main LLM model. In the future, there is planned support for multiple LLMs that can be used for various tasks.
-- `engine`: the LLM provider; currently, only "openai" is supported.
-- `model`: the name of the model; currently, the recommended option is `text-davinci-003`
-- `parameters`: any additional parameters e.g. `temperature`, `top_k`, etc.
+- `type`: is set to "main" indicating the main LLM model.
+- `engine`: the LLM provider, e.g., `openai`, `huggingface_endpoint`, `self_hosted`, etc.
+- `model`: the name of the model, e.g., `gpt-3.5-turbo-instruct`.
+- `parameters`: any additional parameters, e.g., `temperature`, `top_k`, etc.
 
-Currently, only one model should be specified in the `models` key.
 
 #### Supported LLM Models
 
 You can use any LLM provider that is supported by LangChain, e.g., `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `cohere`, `huggingface_endpoint`, `huggingface_hub`, `openai`, `self_hosted`, `self_hosted_hugging_face`. Check out the LangChain official documentation for the full list.
 
-**NOTE**: to use any of the providers you will need to install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instruct you on what package should be installed.
+**NOTE**: to use any of the providers, you will need to install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instruct you on what package should be installed.
 
-**IMPORTANT**: while from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g. openai). For others, you can optimize the prompts yourself see [LLM Prompts](#llm-prompts) section.
+**IMPORTANT**: while from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g., `openai`, `nemollm`). For others, you can optimize the prompts yourself (see the [LLM Prompts](#llm-prompts) section).
 
 #### NeMo LLM Service
 
@@ -180,7 +182,7 @@ models:
 
 ### The Embeddings Model
 
-To configure the embeddings model that is used for the various steps in the [guardrails process](../architecture/README.md) (e.g., canonical form generation, next step generation) you can add a model configuration in the `models` key as shown below:
+To configure the embeddings model that is used for the various steps in the [guardrails process](../architecture/README.md) (e.g., canonical form generation, next step generation), you can add a model configuration in the `models` key as shown below:
 
 ```yaml
 models:
@@ -202,11 +204,9 @@ models:
 
 ### Embedding Search Provider
 
-NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../../architecture/README.md#the-guardrails-process) and for the [knowledge base](../configuration-guide.md#knowledge-base-documents) functionality.
+NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../../architecture/README.md#the-guardrails-process) and for the [knowledge base](../configuration-guide.md#knowledge-base-documents) functionality. The default embedding search uses SentenceTransformers for computing the embeddings (the `all-MiniLM-L6-v2` model) and [Annoy](https://github.com/spotify/annoy) for performing the search. As shown in the previous section, the embeddings model supports both SentenceTransformers and OpenAI.
 
-The default embedding search uses SentenceTransformers for computing the embeddings (the `all-MiniLM-L6-v2` model) and Annoy for performing the search. As show in the previous section, the embeddings model supports both SentenceTransformers and OpenAI.
-
-For advanced use cases or for integrations with existing knowledge bases, you can [provide a custom embedding search provider](./advanced/embedding-search-providers.md).
+For advanced use cases or integrations with existing knowledge bases, you can [provide a custom embedding search provider](./advanced/embedding-search-providers.md).
 
 
 ### General Instructions
@@ -254,7 +254,7 @@ sample_conversation: |
 
 ### Actions Server URL
 
-If an actions server is used, the URL must be configured in the `config.yml` as well.
+If an actions server is used, the URL must be configured in the `config.yml`:
 
 ```yaml
 actions_server_url: ACTIONS_SERVER_URL
@@ -273,7 +273,7 @@ prompts:
     content: |-
       <<This is a placeholder for a custom prompt for generating the user intent>>
 ```
-For each task, you can also specify the maximum length of the prompt to be used for the LLM call in terms of the number of characters. This is useful if you want to limit the number of tokens used by the LLM or when you want to make sure that the prompt length does not exceed the maximum context length. When the maximum length is exceeded, the prompt is truncated by removing older turns from the conversation history until length of the prompt is less than or equal to the maximum length. The default maximum length is 16000 characters.
+For each task, you can also specify the maximum length of the prompt to be used for the LLM call in terms of the number of characters. This is useful if you want to limit the number of tokens used by the LLM or when you want to make sure that the prompt length does not exceed the maximum context length. When the maximum length is exceeded, the prompt is truncated by removing older turns from the conversation history until the length of the prompt is less than or equal to the maximum length. The default maximum length is 16000 characters.
 
 The full list of tasks used by the NeMo Guardrails toolkit is the following:
 
@@ -328,14 +328,13 @@ def init(app: LLMRails):
 
 ## Guardrails Definitions
 
-**NOTE: THIS SECTION IS WORK IN PROGRESS.**
-
 Guardrails (or rails for short) are implemented through **flows**. Depending on their role, rails can be split into several main categories:
 
 1. Input rails: triggered when a new input from the user is received.
 2. Output rails: triggered when a new output should be sent to the user.
 3. Dialog rails: triggered after a user message is interpreted, i.e., a canonical form has been identified.
 4. Retrieval rails: triggered after the retrieval step has been performed (i.e., the `retrieve_relevant_chunks` action has finished).
+5. Execution rails: triggered before and after an action is invoked.
 
 The active rails are configured using the `rails` key in `config.yml`. Below is a quick example:
 
@@ -351,8 +350,6 @@ rails:
 
   # Output rails are triggered after a bot message has been generated.
   output:
-    # By default, output rails are not applied on predefined bot messages.
-    enable_on_predefined_messages: false
     flows:
       - check facts
       - check hallucination
@@ -363,16 +360,19 @@ rails:
   retrieval:
     flows:
       - check retrieval sensitive data
+```
 
-  # Execution rails are triggered before and after an action is invoked
-  # TODO
+All the flows that are not input, output, or retrieval flows are considered dialog rails and execution rails, i.e., flows that dictate how the dialog should go and when and how to invoke actions. Dialog/execution rail flows don't need to be enumerated explicitly in the config. However, there are a few other configuration options that can be used to control their behavior.
 
+```yaml
+rails:
   # Dialog rails are triggered after user message is interpreted, i.e., its canonical form
   # has been computed.
   dialog:
-    # Whether to try to use a single call
+    # Whether to try to use a single LLM call for generating the user intent, next step and bot message.
     single_call:
       enabled: False
+
       # If a single call fails, whether to fall back to multiple LLM calls.
       fallback_to_multiple_calls: True
 
@@ -383,12 +383,10 @@ rails:
 
 ### Input Rails
 
-**NOTE: THIS SECTION IS WORK IN PROGRESS.**
-
 Input rails process the message from the user. For example:
 
 ```colang
-define flow some input rail
+define flow check jailbreak
   $allowed = execute check_jailbreak
 
   if not $allowed
@@ -400,20 +398,13 @@ Input rails can alter the input by changing the `$user_message` context variable
 
 ### Output Rails
 
-**NOTE: THIS SECTION IS WORK IN PROGRESS.**
-
 Output rails process a bot message. The message to be processed is available in the context variable `$bot_message`. Output rails can alter the `$bot_message` variable, e.g., to mask sensitive information.
 
-You can deactivate output rails temporarily, for the next bot message, by setting the `$skip_output_rails` context variable to `True`.
-
-**TODO: add example and test**.
+You can deactivate output rails temporarily for the next bot message, by setting the `$skip_output_rails` context variable to `True`.
 
 ### Retrieval Rails
 
-**NOTE: THIS SECTION IS WORK IN PROGRESS.**
-
 Retrieval rails process the retrieved chunks, i.e., the `$relevant_chunks` variable.
-
 
 ## Knowledge base Documents
 
@@ -429,12 +420,3 @@ By default, an `LLMRails` instance supports using a set of documents as context 
 ```
 
 Currently, only the Markdown format is supported. Support for other formats will be added in the near future.
-
-## Custom Configuration Data
-
-To provide additional configuration data to various components, you can use the `custom_data` key in your `config.yml`.
-
-```
-custom_data:
-  some_data: some_value
-```

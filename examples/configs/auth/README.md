@@ -41,6 +41,7 @@ You have been authenticated Alice ecila!
 > ^C
 Aborted!
 ```
+
 ## Implementation Details
 
 - The `ground_truth.json` contains details of some example users. This will be used for a basic authentication rail. One can change the details of this file to control the authentication process. For production versions one can increase the complexity of authentication and add third party APIs and two factor authentication within this workflow via actions.

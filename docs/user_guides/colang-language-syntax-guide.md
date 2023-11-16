@@ -16,17 +16,21 @@ However, since learning a new language is not an easy task, Colang was designed 
 
 Below are the main concepts behind the language:
 
-- **Utterance**: the raw text coming from the user or the bot
-- **Message**: the canonical form (i.e. structured representation) of a user/bot utterance
+- **LLM-based Application**: a software application that uses an LLM to drive
+- **Bot**: synonym for *LLM-based application*.
+- **Utterance**: the raw text coming from the user or the bot.
+- **Intent**: the canonical form (i.e. structured representation) of a user/bot utterance.
 - **Event**: something that has happened and is relevant to the conversation e.g. user is silent, user clicked something, user made a gesture, etc.
-- **Action**: a custom code that the bot can invoke; usually for connecting to third-party API
-- **Context**: any data relevant to the conversation (i.e. a key-value dictionary)
+- **Action**: a custom code that the bot can invoke; usually for connecting to third-party API.
+- **Context**: any data relevant to the conversation (i.e. a key-value dictionary).
 - **Flow**: a sequence of messages and events, potentially with additional branching logic.
-- **Rails**: specific ways of controlling the behavior of a conversational system (a.k.a. bot) e.g. not talk about politics, respond in a specific way to certain user requests, follow a predefined dialog path, use a specific language style, extract data etc. A rail in Colang can be modeled through one or more flows.
+- **Rails**: specific ways of controlling the behavior of a conversational system (a.k.a. bot) e.g. not talk about politics, respond in a specific way to certain user requests, follow a predefined dialog path, use a specific language style, extract data etc.
 
 ## Syntax
 
 Colang has a "pythonic" syntax in the sense that most constructs resemble their python equivalent and indentation is used as a syntactic element.
+
+> NOTE: unlike python, the recommended indentation in Colang is **two spaces**, rather than four.
 
 ### Core Syntax Elements
 
@@ -135,7 +139,7 @@ define subflow check user authentication
     ...
 
 define flow greeting
-  """We first authenticate the user, before continuing"""
+  """We first authenticate the user, before continuing."""
   user express greeting
   do check user authentication
   bot express greeting
@@ -156,7 +160,7 @@ define flow
   $allowed = execute check_if_allowed
 ```
 
-Context variables are dynamically typed and they can be: Booleans, integers, floats and strings. Variables can also hold complex types such as lists and dictionaries, but they can't be initialized directly to this type of values i.e. the value would come from the return value of an action.
+Context variables are dynamically typed, and they can be: booleans, integers, floats and strings. Variables can also hold complex types such as lists and dictionaries, but they can't be initialized directly to this type of values i.e. the value would come from the return value of an action.
 
 #### Expressions
 
@@ -179,10 +183,10 @@ define flow ...
   $result = execute some_action(some_param_1=some_value_1, ...)
 ```
 
-All action parameters are passed like keyword arguments in python.
+All action parameters must be passed like keyword arguments in python.
 
-Actions are not defined in Colang. They are made available to the guardrails at runtime by the host application.
+Actions **are not defined** in Colang. They are made available to the guardrails configuration at runtime by the host application.
 
 ## Conclusion
 
-This was a brief introduction to Colang 1.0. For more details, check out the [Colang Reference](./colang-syntax-reference.md) document.
+This was a brief introduction to Colang 1.0. For more details, check out the [Examples folder](../../examples) document.
