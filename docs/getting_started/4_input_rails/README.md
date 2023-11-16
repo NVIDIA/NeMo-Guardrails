@@ -87,7 +87,9 @@ Summary: 1 LLM call(s) took 1.23 seconds and used 121 tokens.
 1. Task `general` took 1.23 seconds and used 121 tokens.
 ```
 
-We see that a single call was made to the LLM using the prompt for the task `general`. Let's take a closer look at the prompt and the completion:
+We see that a single call was made to the LLM using the prompt for the task `general`.
+In contrast to the [Core Colang Concepts guide](../2_core_colang_concepts), where the `generate_user_intent` task is used as a first phase for each user message, if no user canonical forms are defined for the Guardrails configuration the `general` task is used instead.
+Let's take a closer look at the prompt and the completion:
 
 ```python
 print(info.llm_calls[0].prompt)
@@ -115,7 +117,7 @@ As expected, the LLM is prompted with the general instructions and the user's in
 
 ## Jailbreak Attempts
 
-In the context of LLMs, Jailbreaking typically refers to finding ways to circumvent the built-in restrictions or guidelines set by the model's developers. These restrictions are usually in place for ethical, legal, or safety reasons. For example, what would happen if we instruct the InfoBot something like this:
+In the context of LLMs, jailbreaking typically refers to finding ways to circumvent the built-in restrictions or guidelines set by the model's developers. These restrictions are usually in place for ethical, legal, or safety reasons. For example, what would happen if we instruct the InfoBot something like this:
 
 ```python
 response = await rails.generate_async(messages=[{
@@ -157,7 +159,7 @@ define subflow check jailbreak
     stop
 ```
 
-The flows implementing input rails can call actions (e.g., `execute check_jailbreak`), instruct the bot to respond in a certain way (e.g., `bot inform cannot answer`) and stop the processing of the user's request.
+The flows implementing input rails can call actions (e.g., `execute check_jailbreak`), instruct the bot to respond in a certain way (e.g., `bot inform cannot answer`) and even stop any futher processing for the current user request.
 
 ## Using the Input Rails
 
@@ -210,7 +212,7 @@ print(info.llm_calls[0].completion)
 Yes
 ```
 
-The figure below depicts in more detailed how the jailbreak detection worked:
+The figure below depicts in more details how the jailbreak detection worked:
 
 <div align="center">
 <img src="../../_assets/puml/input_rails_fig_1.png" width="815">
@@ -263,7 +265,7 @@ Because the input rail was not triggered, the flow continued as usual.
 
 The final answer itself is not factually correct, but we'll fix that in the [Fact-checking Guide](#).
 
-## Test
+## Testing the Bot
 
 You can also test this configuration in an interactive mode using the NeMo Guardrails CLI Chat:
 

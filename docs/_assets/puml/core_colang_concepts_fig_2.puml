@@ -21,7 +21,7 @@ return "ask general question"
 
 LLMRails->LLM: TaskPrompt [generate_next_steps]
 activate LLM
-return "bot general response"
+return "bot response for general question"
 
 LLMRails->LLM: TaskPrompt [generate_bot_message]
 activate LLM
