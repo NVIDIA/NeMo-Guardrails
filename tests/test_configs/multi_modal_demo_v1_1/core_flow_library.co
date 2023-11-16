@@ -65,6 +65,20 @@ flow user was silent $time_s
     orwhen UtteranceUserAction.Finished()
       send $timer_ref.Stop()
 
+flow bot was silent $time_s
+  # meta: exclude from llm
+  # meta: loop_id=bot_was_silent
+  # meta: bot intent
+  while True
+    start TimerBotAction(timer_name="bot_silence", duration=$time_s) as $timer_ref
+    when $timer_ref.Finished()
+      break
+    orwhen UtteranceBotAction.Started()
+      send $timer_ref.Stop()
+      match UtteranceBotAction.Finished()
+    orwhen UtteranceBotAction.Finished()
+      send $timer_ref.Stop()
+
 # ----------------------------------
 # Bot UMIM event wrapper flows
 # DON'T CHANGE! Currently, hard-wired with LLM prompt generation
@@ -193,6 +207,17 @@ flow bot suggest $text
 # ----------------------------------
 # Core mechanic flows
 # ----------------------------------
+
+flow wait indefinitely
+  """Little helper flow to wait indefinitely."""
+  # meta: exclude from llm
+  match NeverComingEvent()
+
+flow wait $time_s
+  """Wait the specified number of seconds before continuing."""
+  # meta: exclude from llm
+  # meta: loop_id=wait
+  await TimerBotAction(timer_name="wait_timer_{{uid()}}", duration=$time_s)
 
 flow llm response pooling $interval
   match StartGenerateUserIntentAction() as $event_ref

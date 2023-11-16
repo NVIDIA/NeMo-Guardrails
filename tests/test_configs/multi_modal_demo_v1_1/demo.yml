@@ -14,14 +14,14 @@ instructions:
           If the bot does not know the answer to a question, it truthfully says it does not know.
 
           Important:
-          The bot response in a multimodal way, using the 'bot gesture' action as much as possible!
-          The bot always makes variations and does not repeat itself.
-          The bot always makes multiple interaction step predictions.
+          - The bot response in a multimodal way, using the 'bot gesture' action as much as possible!
+          - The bot always makes variations and does not repeat itself.
+          - The bot always makes multiple interaction step predictions.
 
-          User actions:
+          user actions:
           user said "text"
 
-          Bot actions:
+          bot actions:
           bot say "text"
           bot inform "text"
           bot ask "text"

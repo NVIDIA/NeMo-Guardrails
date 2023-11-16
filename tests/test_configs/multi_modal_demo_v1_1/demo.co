@@ -2,15 +2,6 @@
 # Skill interaction flows
 # ----------------------------------
 
-flow wait indefinitely
-  """Little helper flow to wait indefinitely."""
-  # meta: exclude from llm
-  match NeverComingEvent()
-
-flow wait $time_s
-  """Wait the specified number of seconds before continuing."""
-  await TimerBotAction(timer_name="wait_timer", duration=$time_s)
-
 flow reaction to user silence $time_s $text
   """Let the bot say something if the user was quite for the specified time."""
   # meta: exclude from llm

@@ -71,10 +71,8 @@ class RuntimeV1_1(Runtime):
                 version="1.1",
                 include_source_mapping=True,
             )
-        except Exception as e:
-            log.warning(f"Could not parse the generated Colang code! {e}")
-            error_message_event = new_event_dict("LLMFlowGenerationError", error=e)
-            state.internal_events.append(Event.from_umim_event(error_message_event))
+        except Exception as ex:
+            raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
 
         added_flows: List[str] = []
         for flow in parsed_flow["flows"]:
