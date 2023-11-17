@@ -202,6 +202,7 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 and output_events[0]["counter"] == 0
             ):
                 # If there are no pending actions, we stop
+                check_task.cancel()
                 check_task = None
                 return
 

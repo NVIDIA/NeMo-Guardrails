@@ -350,8 +350,14 @@ class RuntimeV1_1(Runtime):
 
         action_finished_events = []
         for finished_task in done:
+            try:
+                result = finished_task.result()
+            except Exception as e:
+                log.warning(
+                    f"Local action finished with an exception: {e}\n{traceback.format_exc()}"
+                )
+
             self.async_actions[main_flow_uid].remove(finished_task)
-            result = finished_task.result()
 
             # We need to create the corresponding action finished event
             action_finished_event = self._get_action_finished_event(result)

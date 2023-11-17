@@ -44,6 +44,8 @@ from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
 
+process_events_semaphore = asyncio.Semaphore(1)
+
 
 class LLMRails:
     """Rails based on a given configuration."""
@@ -504,7 +506,11 @@ class LLMRails:
         llm_stats.reset()
 
         # Compute the new events.
-        output_events, output_state = await self.runtime.process_events(events, state)
+        # We need to protect 'process_events' to be called only once at a time
+        async with process_events_semaphore:
+            output_events, output_state = await self.runtime.process_events(
+                events, state
+            )
 
         took = time.time() - t0
         # Small tweak, disable this when there were no events (or it was just too fast).
