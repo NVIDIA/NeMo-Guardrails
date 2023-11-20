@@ -25,7 +25,7 @@ from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_1.runtime.flows import FlowConfig, State
 from nemoguardrails.colang.v1_1.runtime.statemachine import initialize_state
-from nemoguardrails.utils import EnhancedJSONEncoder, new_event_dict
+from nemoguardrails.utils import EnhancedJsonEncoder, new_event_dict
 
 
 class FakeLLM(LLM, BaseModel):
@@ -274,10 +274,10 @@ def _init_state(colang_content) -> State:
         )
     )
 
-    json.dump(config, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+    json.dump(config, sys.stdout, indent=4, cls=EnhancedJsonEncoder)
     state = State(context={}, flow_states=[], flow_configs=config)
     initialize_state(state)
     print("---------------------------------")
-    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJSONEncoder)
+    json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJsonEncoder)
 
     return state

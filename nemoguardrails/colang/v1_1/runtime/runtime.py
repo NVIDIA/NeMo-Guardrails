@@ -14,8 +14,10 @@
 # limitations under the License.
 import asyncio
 import inspect
+import json
 import logging
 import re
+import sys
 import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urljoin
@@ -39,7 +41,7 @@ from nemoguardrails.colang.v1_1.runtime.statemachine import (
     run_to_completion,
 )
 from nemoguardrails.rails.llm.config import RailsConfig
-from nemoguardrails.utils import new_event_dict
+from nemoguardrails.utils import EnhancedJsonEncoder, new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +89,8 @@ class RuntimeV1_1(Runtime):
                 parameters=flow.parameters,
                 source_code=flow.source_code,
             )
+
+            # json.dump(flow_config, sys.stdout, indent=4, cls=EnhancedJsonEncoder)
 
             initialize_flow(self, flow_config)
 

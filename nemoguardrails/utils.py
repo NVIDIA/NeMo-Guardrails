@@ -182,7 +182,7 @@ class CustomDumper(yaml.SafeDumper):
         return super().represent_data(data)
 
 
-class EnhancedJSONEncoder(json.JSONEncoder):
+class EnhancedJsonEncoder(json.JSONEncoder):
     """Custom json encoder to handler dataclass and enum types"""
 
     def default(self, o):
