@@ -18,12 +18,13 @@ import logging
 
 from rich.logging import RichHandler
 
+from nemoguardrails import RailsConfig
 from nemoguardrails.colang.v1_1.runtime.flows import ActionStatus
 from nemoguardrails.colang.v1_1.runtime.statemachine import (
     InternalEvent,
     run_to_completion,
 )
-from tests.utils import _init_state, is_data_in_events
+from tests.utils import TestChat, _init_state, is_data_in_events
 
 FORMAT = "%(message)s"
 logging.basicConfig(
@@ -902,5 +903,28 @@ def test_event_custom_regex_parameter_match():
     )
 
 
+def test_action_event_requeuing():
+    config = RailsConfig.from_content(
+        colang_content="""
+        flow main
+          match UtteranceUserAction.Finished(final_transcript="start")
+          start UtteranceBotAction(script="started")
+          match UtteranceBotAction.Started()
+          start UtteranceBotAction(script="success")
+        """,
+        yaml_content="""
+        colang_version: "1.1"
+        """,
+    )
+
+    chat = TestChat(
+        config,
+        llm_completions=[],
+    )
+
+    chat >> "start"
+    chat << "started\nsuccess"
+
+
 if __name__ == "__main__":
-    test_event_custom_regex_parameter_match()
+    test_action_event_requeuing()

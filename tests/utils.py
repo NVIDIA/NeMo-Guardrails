@@ -146,6 +146,12 @@ class TestChat:
 
                         self.input_events.append(
                             new_event_dict(
+                                "UtteranceBotActionStarted",
+                                action_uid=event["action_uid"],
+                            )
+                        )
+                        self.input_events.append(
+                            new_event_dict(
                                 "UtteranceBotActionFinished",
                                 action_uid=event["action_uid"],
                                 is_success=True,

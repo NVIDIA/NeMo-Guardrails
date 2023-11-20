@@ -373,7 +373,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     element = get_element_from_head(state, head)
                     flow_state = get_flow_state_from_head(state, head)
 
-                    # Create a potential reference form the match
+                    # Create a potential reference from the match
                     if element.spec.ref is not None:
                         flow_state.context.update(
                             _create_event_reference(state, flow_state, element, event)
@@ -611,17 +611,19 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         elif flow_aborted:
             log.debug(f"Flow aborted: {head.flow_state_uid} by 'abort' statement")
 
-        all_heads_at_real_match_elements = False
+        all_heads_are_waiting = False
         if not flow_finished and not flow_aborted:
-            # Check if all all flow heads at a match element
-            all_heads_at_real_match_elements = True
+            # Check if all all flow heads are waiting at match or wait_for_heads statements
+            all_heads_are_waiting = True
             for temp_head in flow_state.active_heads.values():
                 element = flow_config.elements[temp_head.position]
-                if not is_match_op_element(element) or "internal" in element.info:
-                    all_heads_at_real_match_elements = False
+                if not isinstance(element, WaitForHeads) and (
+                    not is_match_op_element(element) or "internal" in element.info
+                ):
+                    all_heads_are_waiting = False
                     break
 
-        if flow_finished or all_heads_at_real_match_elements:
+        if flow_finished or all_heads_are_waiting:
             if flow_state.status == FlowStatus.STARTING:
                 flow_state.status = FlowStatus.STARTED
                 event = create_internal_flow_event(
