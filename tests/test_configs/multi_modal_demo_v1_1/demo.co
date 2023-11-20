@@ -161,12 +161,12 @@ flow main
   #activate llm response pooling 1.0
   #bot express greeting
   #bot asks email address
-  bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
-  show case selector
+  #bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
+  #show case selector
 
   #bot play number guessing game with user
   #backchannelling interaction
   #bot inform about service
   #showcase posture capabilities
-  #open conversation
+  open conversation
   wait indefinitely

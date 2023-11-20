@@ -141,7 +141,7 @@ def get_colang_history(
                 placeholder_text = "<<<This text is hidden because the assistant should not talk about this.>>>"
                 history = placeholder_text.join(split_history)
 
-    else:
+    elif colang_version == "1.1":
         new_history: List[str] = []
 
         # Structure the user/bot intent/action events
@@ -172,7 +172,9 @@ def get_colang_history(
                 if event.arguments["flow_id"] == current_intent_flow_id:
                     # Found parent of current group
                     if event.name == InternalEvents.BOT_INTENT_LOG:
-                        new_history.append(events_to_dialog_history([event]))
+                        if not current_intent_flow_id.startswith("_dynamic_"):
+                            # Don't include dynamically generated flow names as intents
+                            new_history.append(events_to_dialog_history([event]))
                         new_history.append(events_to_dialog_history(action_group))
                     else:
                         new_history.append(events_to_dialog_history(action_group))
@@ -405,3 +407,14 @@ def get_multiline_response(s: str):
                 break
 
     return result
+
+
+def remove_action_intent_identifiers(lines: List[str]) -> List[str]:
+    """Removes the action/intent identifiers."""
+    return [
+        s.replace("bot intent: ", "")
+        .replace("bot action: ", "")
+        .replace("user intent: ", "")
+        .replace("user action: ", "")
+        for s in lines
+    ]

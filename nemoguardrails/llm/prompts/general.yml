@@ -26,6 +26,8 @@ prompts:
           {{ sample_conversation | first_turns(2) }}
           {{ history | colang }}
 
+          user action: {{ user_action }}
+
     # Prompt for generating the next steps.
     - task: generate_next_steps
       content: |-
@@ -156,7 +158,12 @@ prompts:
           {{ general_instruction }}
           """
 
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
+
+          # This is how the user talks:
           {{ examples }}
 
-          flow conversation
-          {{ history | colang | indent(2) }}
+          # This is the current conversation between the user and the bot:
+          {{ sample_conversation | first_turns(2) }}
+          {{ history | colang }}

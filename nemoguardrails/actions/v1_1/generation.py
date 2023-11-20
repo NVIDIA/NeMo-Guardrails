@@ -26,6 +26,7 @@ from nemoguardrails.actions.llm.utils import (
     get_first_nonempty_line,
     get_last_user_utterance_event_v1_1,
     llm_call,
+    remove_action_intent_identifiers,
 )
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
 from nemoguardrails.colang.v1_1.runtime.flows import ActionEvent, InternalEvent
@@ -54,16 +55,6 @@ def _remove_leading_empty_lines(s: str):
     while lines and lines[0].strip() == "":
         lines = lines[1:]
     return "\n".join(lines)
-
-
-def _remove_identifiers(lines: List[str]) -> List[str]:
-    return [
-        s.replace("bot intent: ", "")
-        .replace("bot action: ", "")
-        .replace("user intent: ", "")
-        .replace("user action: ", "")
-        for s in lines
-    ]
 
 
 class LLMGenerationActionsV1dot1(LLMGenerationActions):
@@ -147,7 +138,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         self,
         state: State,
         events: List[dict],
-        user_utterance: str,
+        user_action: str,
         max_example_flows: int = 5,
         llm: Optional[BaseLLM] = None,
     ):
@@ -164,7 +155,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         if self.user_message_index:
             results = await self.user_message_index.search(
-                text=user_utterance, max_results=max_example_flows
+                text=user_action, max_results=max_example_flows
             )
 
             # We add these in reverse order so the most relevant is towards the end.
@@ -198,6 +189,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
             context={
                 "examples": examples,
                 "potential_user_intents": ", ".join(potential_user_intents),
+                "user_action": user_action,
             },
         )
 
@@ -403,17 +395,22 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         line_0 = lines[0].lstrip(" ")
         if line_0.startswith("bot intent:") or line_0.startswith("user intent:"):
-            flow_name = _remove_identifiers([line_0])[0].strip(" ")
+            flow_name = remove_action_intent_identifiers([line_0])[0].strip(" ")
+            # TODO: parse potential parameters from flow name with a regex
+            flow_parameters = []
             lines = lines[1:]
         else:
             flow_id = new_uuid()[0:4]
-            flow_name = f"dynamic_{flow_id}"
+            flow_name = f"_dynamic_{flow_id}"
+            flow_parameters = []
 
-        lines = _remove_identifiers(lines)
+        lines = remove_action_intent_identifiers(lines)
 
         return {
             "name": flow_name,
+            "parameters": flow_parameters,
             "body": f"flow {flow_name}\n"
+            + "  # meta: bot intent\n"
             + "\n".join(["  " + l.strip(" ") for l in lines]),
         }
 

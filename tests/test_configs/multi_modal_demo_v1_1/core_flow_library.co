@@ -264,20 +264,22 @@ flow bot respond to user said something
 flow fallback user said
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   # meta: exclude from llm
-  await user said something unexpected as $event
+  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids=[$loop_id]) as $event
+  $transcript = $event.arguments.final_transcript
+  $action = 'user said "{{$transcript}}"'
+  $intent = await llm derive user intent from user action $action 10
 
-  $intent = await llm derive user intent from user action $event.context.event.arguments.final_transcript 10
-
-  # Generate the 'user intent' by sending out the FinishFLow event
-  send FinishFlow(flow_id=$intent)
-
-flow llm derive user intent from user action $utterance $max_example_flows
-  # meta: exclude from llm
-  $intent = await GenerateUserIntentAction(user_utterance=$utterance, max_example_flows=$max_example_flows)
-
+  # We need to log the user action
+  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=$intent)
   # We need to add the generated user intent to the intent log
   send UserIntentLog(flow_id=$intent, parameter=None)
 
+  # Generate the 'user intent' by sending out the FinishFlow event
+  send FinishFlow(flow_id=$intent)
+
+flow llm derive user intent from user action $user_action $max_example_flows
+  # meta: exclude from llm
+  $intent = await GenerateUserIntentAction(user_action=$user_action, max_example_flows=$max_example_flows)
   return $intent
 
 flow bot response to unexpected user intent $intent

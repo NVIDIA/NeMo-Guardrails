@@ -17,12 +17,20 @@ import re
 import textwrap
 from typing import List
 
-from nemoguardrails.actions.llm.utils import get_colang_history
+from nemoguardrails.actions.llm.utils import (
+    get_colang_history,
+    remove_action_intent_identifiers,
+)
 
 
 def colang(events: List[dict]) -> str:
     """Filter that turns an array of events into a colang history."""
     return get_colang_history(events)
+
+
+def colang_without_identifiers(events: List[dict]) -> str:
+    """Filter that turns an array of events into a colang history."""
+    return remove_action_intent_identifiers([get_colang_history(events)])[0]
 
 
 def to_messages(colang_history: str) -> List[dict]:
