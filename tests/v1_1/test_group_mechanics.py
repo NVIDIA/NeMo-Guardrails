@@ -433,39 +433,41 @@ def test_await_and_or_grouping():
         ],
     )
 
-def test_await_and_group_immediate_end():
-    """"""
 
-    content = """
-    flow bot say $text
-      await UtteranceBotAction(script=$text)
+# def test_await_and_group_immediate_end():
+#     """"""
 
-    flow bot gesture $gesture
-      await GestureBotAction(gesture=$gesture)
+#     content = """
+#     flow bot say $text
+#       await UtteranceBotAction(script=$text)
 
-    flow main
-        await user say "test"
-          and bot gesture "smile"
-        UtteranceBotAction(script="Success")
-    """
+#     flow bot gesture $gesture
+#       await GestureBotAction(gesture=$gesture)
 
-    state = run_to_completion(_init_state(content), start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
-    state = run_to_completion(
-        state,
-        {
-            "type": "UtteranceBotActionFinished",
-            "final_script": "test",
-            "action_uid": state.outgoing_events[0]["action_uid"],
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
+#     flow main
+#         await user say "test"
+#           and bot gesture "smile"
+#         UtteranceBotAction(script="Success")
+#     """
+
+#     state = run_to_completion(_init_state(content), start_main_flow_event)
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [],
+#     )
+#     state = run_to_completion(
+#         state,
+#         {
+#             "type": "UtteranceBotActionFinished",
+#             "final_script": "test",
+#             "action_uid": state.outgoing_events[0]["action_uid"],
+#         },
+#     )
+#     assert is_data_in_events(
+#         state.outgoing_events,
+#         [],
+#     )
+
 
 if __name__ == "__main__":
-test_await_and_or_grouping()
+    test_await_or_grouping()

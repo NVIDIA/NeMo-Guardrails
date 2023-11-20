@@ -368,7 +368,7 @@ class FlowHead:
 
     # If set a flow failure will be diverted to the label, otherwise it will abort the flow
     # Mainly used to simplify inner flow logic
-    catch_pattern_failure_label: Optional[str] = None
+    catch_pattern_failure_label: List[str] = field(default_factory=list)
 
     def get_child_head_uids(self, state: State) -> List[str]:
         """ "Return uids of all child heads (recursively)."""

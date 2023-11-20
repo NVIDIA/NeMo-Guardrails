@@ -936,4 +936,4 @@ def test_generate_value_with_NLD():
 
 
 if __name__ == "__main__":
-    test_generate_value_with_NLD()
+    test_mixed_multimodal_group_actions()

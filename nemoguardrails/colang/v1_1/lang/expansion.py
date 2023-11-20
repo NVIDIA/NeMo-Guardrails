@@ -453,8 +453,9 @@ def _expand_await_element(
         fork_element = ForkHead()
         fork_head_uids: List(str) = []
         group_label_elements: List[Label] = []
-        begin_scope_elements: List[BeginScope] = []
-        end_scope_elements: List[EndScope] = []
+        scope_name = f"scope_{new_var_uid()}"
+        begin_scope_element = BeginScope(name=scope_name)
+        end_scope_element = EndScope(name=scope_name)
         start_elements: List[List[SpecOp]] = []
         match_elements: List[List[Spec]] = []
         failure_label_name = f"failure_label_{new_var_uid()}"
@@ -466,9 +467,7 @@ def _expand_await_element(
         for group_idx, and_group in enumerate(normalized_group["elements"]):
             group_label_name = f"group_{group_idx}_{new_var_uid()}"
             group_label_elements.append(Label(name=group_label_name))
-            scope_name = f"scope_{group_idx}_{new_var_uid()}"
-            begin_scope_elements.append(BeginScope(name=scope_name))
-            end_scope_elements.append(EndScope(name=scope_name))
+
             fork_head_uids.append(new_var_uid())
             fork_element.head_uids.append(fork_head_uids[-1])
             fork_element.labels.append(group_label_name)
@@ -505,11 +504,11 @@ def _expand_await_element(
             new_elements.append(SpecOp(op="match", spec=match_group))
         else:
             # Multiple and-groups
+            new_elements.append(begin_scope_element)
             new_elements.append(CatchPatternFailure(label=failure_label_name))
             new_elements.append(fork_element)
             for group_idx, and_group in enumerate(normalized_group["elements"]):
                 new_elements.append(group_label_elements[group_idx])
-                new_elements.append(begin_scope_elements[group_idx])
                 for idx, _ in enumerate(and_group["elements"]):
                     new_elements.append(start_elements[group_idx][idx])
                 match_group = {
@@ -521,12 +520,12 @@ def _expand_await_element(
             new_elements.append(failure_label_element)
             new_elements.append(WaitForHeads(number=len(normalized_group["elements"])))
             new_elements.append(CatchPatternFailure(label=None))
+            new_elements.append(end_scope_element)
             new_elements.append(Abort())
             new_elements.append(end_label_element)
             new_elements.append(MergeHeads(head_uids=fork_head_uids))
             new_elements.append(CatchPatternFailure(label=None))
-            for group_idx, _ in enumerate(normalized_group["elements"]):
-                new_elements.append(end_scope_elements[group_idx])
+            new_elements.append(end_scope_element)
 
     return new_elements
 
@@ -669,7 +668,7 @@ def _expand_when_stmt_element(
     cases_fork_head_uids: List[str] = []
     groups_fork_head_elements: List[ForkHead] = []
     failure_case_label_names: List[str] = []
-    scope_label_names: List[List[str]] = []
+    scope_label_name = f"scope_{stmt_uid}"
     group_label_names: List[List[str]] = []
     group_start_elements: List[List[List[Spec]]] = []
     group_match_elements: List[List[List[Spec]]] = []
@@ -698,15 +697,11 @@ def _expand_when_stmt_element(
         normalized_group = normalize_element_groups(case_element)
 
         group_label_names.append([])
-        scope_label_names.append([])
         group_start_elements.append([])
         group_match_elements.append([])
         for group_idx, and_group in enumerate(normalized_group["elements"]):
             group_label_names[case_idx].append(
                 f"group_{case_uid}_{group_idx}_label_{stmt_uid}"
-            )
-            scope_label_names[case_idx].append(
-                f"scope_{case_uid}_{group_idx}_label_{stmt_uid}"
             )
             groups_fork_head_elements[case_idx].labels.append(
                 group_label_names[case_idx][group_idx]
@@ -743,6 +738,7 @@ def _expand_when_stmt_element(
                 group_match_elements[case_idx][group_idx].append(match_element)
 
     new_elements: List[ElementType] = []
+    new_elements.append(BeginScope(name=scope_label_name))
     new_elements.append(cases_fork_head_element)
     for case_idx, case_element in enumerate(element.when_specs):
         # Case init groups
@@ -755,7 +751,6 @@ def _expand_when_stmt_element(
         # And-group element groups
         for group_idx, group_label_name in enumerate(group_label_names[case_idx]):
             new_elements.append(Label(name=group_label_name))
-            new_elements.append(BeginScope(name=scope_label_names[case_idx][group_idx]))
 
             if group_start_elements[case_idx][group_idx]:
                 new_elements.append(
@@ -782,9 +777,7 @@ def _expand_when_stmt_element(
             new_elements.append(Label(name=case_label_names[case_idx]))
             new_elements.append(MergeHeads(head_uids=cases_fork_head_uids))
             new_elements.append(CatchPatternFailure(label=None))
-            for scope_labels in scope_label_names:
-                for scope_label in scope_labels:
-                    new_elements.append(EndScope(name=scope_label))
+            new_elements.append(EndScope(name=scope_label_name))
             new_elements.extend(
                 expand_elements(element.then_elements[case_idx], flow_configs)
             )

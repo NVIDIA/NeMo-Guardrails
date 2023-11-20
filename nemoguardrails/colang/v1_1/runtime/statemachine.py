@@ -412,7 +412,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     if head.catch_pattern_failure_label:
                         head.position = get_flow_config_from_head(
                             state, head
-                        ).element_labels[head.catch_pattern_failure_label]
+                        ).element_labels[head.catch_pattern_failure_label[-1]]
                         heads_matching.append(head)
                     else:
                         flow_state = get_flow_state_from_head(state, head)
@@ -542,7 +542,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                         # it will forward the head to the label rather the aborting the flow
                         head.position = get_flow_config_from_head(
                             state, head
-                        ).element_labels[head.catch_pattern_failure_label]
+                        ).element_labels[head.catch_pattern_failure_label[-1]]
                         advancing_heads.append(head)
                         log.info(
                             f"Caught loosing action head: {head} scores={head.matching_scores}"
@@ -900,7 +900,7 @@ def slide(
         elif isinstance(element, Abort):
             if head.catch_pattern_failure_label:
                 head.position = (
-                    flow_config.element_labels[head.catch_pattern_failure_label] + 1
+                    flow_config.element_labels[head.catch_pattern_failure_label[-1]] + 1
                 )
             else:
                 flow_state.status = FlowStatus.STOPPING
@@ -928,7 +928,10 @@ def slide(
             head.position += 1
 
         elif isinstance(element, CatchPatternFailure):
-            head.catch_pattern_failure_label = element.label
+            if element.label is None:
+                head.catch_pattern_failure_label.pop(-1)
+            else:
+                head.catch_pattern_failure_label.append(element.label)
             head.position += 1
 
         elif isinstance(element, BeginScope):
