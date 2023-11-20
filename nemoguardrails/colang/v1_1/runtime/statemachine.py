@@ -1236,12 +1236,6 @@ def _is_inactive_flow(flow_state: FlowState) -> bool:
 def _generate_action_event(state: State, event: Event) -> None:
     umim_event = create_umim_event(event, event.arguments)
     state.outgoing_events.append(umim_event)
-    # Also push them on the internal event queue
-    if isinstance(event, ActionEvent):
-        state.internal_events.append(ActionEvent.from_umim_event(umim_event))
-    elif isinstance(event, Event):
-        state.internal_events.append(Event.from_umim_event(umim_event))
-
     log.info(f"[bold violet]<- Action[/]: {event}")
 
     # Update the status of relevant actions by event
