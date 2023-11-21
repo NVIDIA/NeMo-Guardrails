@@ -382,7 +382,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         )
 
         # We make this call with temperature 0 to have it as deterministic as possible.
-        with llm_params(llm, temperature=self.config.lowest_temperature):
+        with llm_params(llm, temperature=0.1):
             result = await llm_call(llm, prompt)
 
         lines = _remove_leading_empty_lines(result).split("\n")
