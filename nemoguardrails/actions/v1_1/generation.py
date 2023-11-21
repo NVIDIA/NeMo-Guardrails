@@ -348,6 +348,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
     async def generate_flow_continuation(
         self,
         events: List[dict],
+        temperature: float = 0.0,
         llm: Optional[BaseLLM] = None,
     ):
         """Generate a continuation for the flow representing the current conversation."""
@@ -382,7 +383,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         )
 
         # We make this call with temperature 0 to have it as deterministic as possible.
-        with llm_params(llm, temperature=0.1):
+        with llm_params(llm, temperature=temperature):
             result = await llm_call(llm, prompt)
 
         lines = _remove_leading_empty_lines(result).split("\n")

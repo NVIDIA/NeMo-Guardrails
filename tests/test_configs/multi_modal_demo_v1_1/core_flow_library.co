@@ -294,7 +294,7 @@ flow fallback user intent
 
 flow llm interaction continuation
   # Generate continuation based current interaction history
-  $flow_info = await GenerateFlowContinuationAction()
+  $flow_info = await GenerateFlowContinuationAction(temperature=0.1)
 
   $exists = await CheckValidFlowExistsAction(flow_id=$flow_info.name)
   if $exists == False
