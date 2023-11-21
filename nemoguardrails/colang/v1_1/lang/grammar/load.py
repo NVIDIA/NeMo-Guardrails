@@ -37,7 +37,7 @@ def load_lark_parser(grammar_path: str):
         grammar,
         start="start",
         parser="lalr",
-        lexer="basic",
+        lexer="contextual",
         postlex=PythonIndenter(),
         propagate_positions=True,
     )
