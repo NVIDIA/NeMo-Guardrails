@@ -65,6 +65,23 @@ flow user was silent $time_s
     orwhen UtteranceUserAction.Finished()
       send $timer_ref.Stop()
 
+flow user didnt respond $time_s
+  # meta: exclude from llm
+  # meta: loop_id=user_did_not_respond
+  # meta: user intent
+  while True
+    start TimerBotAction(timer_name="user_no_response", duration=$time_s) as $timer_ref
+    when $timer_ref.Finished()
+      break
+    orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
+      send $timer_ref.Stop()
+      match UtteranceUserAction.Finished()
+    orwhen UtteranceBotAction.Started()
+      send $timer_ref.Stop()
+      match UtteranceBotAction.Finished()
+    orwhen UtteranceUserAction.Finished() or UtteranceBotAction.Finished()
+      send $timer_ref.Stop()
+
 flow bot was silent $time_s
   # meta: exclude from llm
   # meta: loop_id=bot_was_silent
@@ -90,7 +107,7 @@ flow bot started saying $text
 
 flow bot started saying something
   # meta: exclude from llm
-  match FlowStarted(flow_id="bot say") as $even
+  match FlowStarted(flow_id="_bot_say") as $even
 
 flow bot said $text
   # meta: exclude from llm
@@ -98,7 +115,7 @@ flow bot said $text
 
 flow bot said something
   # meta: exclude from llm
-  match FlowFinished(flow_id="bot say") as $even
+  match FlowFinished(flow_id="_bot_say") as $even
 
 flow bot informed something
   # meta: exclude from llm
@@ -153,6 +170,11 @@ flow scene show textual information $title $text $header_image
   # meta: exclude from llm
   # meta: bot action
   await VisualInformationSceneAction(title=$title, support_prompts=[], content=[{"image":$header_image},{"text":$text}]) as $action
+
+flow scene show short information $info
+  # meta: exclude from llm
+  # meta: bot action
+  await VisualInformationSceneAction(title=$info, support_prompts=[], content=[]) as $action
 
 flow scene show form $prompt
   # meta: exclude from llm
@@ -233,7 +255,8 @@ flow catch colang errors
   """A flow to catch any runtime Colang errors"""
   # meta: exclude from llm
   match ColangError() as $event
-  bot say "Warning: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
+  bot say "Oh! Sorry, what did you say? I was fixing some internal processing."
+    and bot gesture "Warning: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
 
 flow catch undefined flows
   """A flow to catch the start of undefined flows."""

@@ -11,7 +11,7 @@ flow action alignment showcase
 
   bot inform "The gesture action looks like this:"
   wait 1.5
-  bot gesture "Implying not having understood something, asking to repeat or rephrase"
+  bot gesture "Being silly, suggesting having fun"
 
   bot inform "First, lets run the two actions sequentially!"
   wait 4.0
@@ -38,13 +38,13 @@ flow action alignment showcase
 
 flow show sequential actions showcase
   bot say "Talking, talking."
-  bot gesture "Implying not having understood something, asking to repeat or rephrase"
+  bot gesture "Being silly, suggesting having fun"
 
 flow show parallel actions waiting for both to end showcase
   bot say "Talking, talking."
-    and bot gesture "Implying not having understood something, asking to repeat or rephrase"
+    and bot gesture "Being silly, suggesting having fun"
 
 flow show parallel actions limiting second action by end of first one
   start bot say "Talking, talking." as $action_1
-  start bot gesture "Implying not having understood something, asking to repeat or rephrase"
+  start bot gesture "Being silly, suggesting having fun"
   match $action_1.Finished()

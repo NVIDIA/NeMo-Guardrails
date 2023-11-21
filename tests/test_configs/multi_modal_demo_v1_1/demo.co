@@ -92,38 +92,38 @@ flow user requested a task
     or user said "can you do something"
     or user said "please do"
 
-flow user picked number guessing game show case
+flow user picked number guessing game showcase
   """User picked the number guessing game showcase (A)."""
   user selected choice "game"
     or user said "I want to play the number guessing game"
     or user said "Show me the game"
     or user said "showcase A"
 
-flow user picked multimodality show case
+flow user picked multimodality showcase
    """User picked the multimodality showcase (B)."""
    user selected choice "multimodality"
-     or user said "Show me the multimodality show case"
+     or user said "Show me the multimodality showcase"
      or user said "multimodality"
      or user said "showcase B"
 
-flow user picked backchanneling show case
+flow user picked backchanneling showcase
   """User picked the backchanneling showcase (C)."""
   user selected choice "backchanneling"
-    or user said "Show me the backchanneling show case"
+    or user said "Show me the backchanneling showcase"
     or user said "backchanneling"
     or user said "showcase C"
 
-flow user picked posture show case
+flow user picked posture showcase
   """User picked the posture showcase (D)."""
   user selected choice "posture"
-    or user said "Show me the posture show case"
+    or user said "Show me the posture showcase"
     or user said "posture"
     or user said "showcase D"
 
-flow user picked proactive show case
+flow user picked proactive showcase
   """User picked the proactive showcase (E)."""
   user selected choice "proactive"
-    or user said "Show me the proactive show case"
+    or user said "Show me the proactive showcase"
     or user said "proactive"
     or user said "showcase E"
 
@@ -162,15 +162,15 @@ flow user selected choice $choice_id
   # meta: user action
   match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
 
-flow show case selector
+flow showcase selector
   activate fallback user said
 
-  $show_case_selection_ui = None
+  $showcase_selection_ui = None
 
   while True
-    if $show_case_selection_ui == None
-      start VisualChoiceSceneAction(prompt= "Pick a show case", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game"}, {"id": "multimodality", "text": "B: Multimodality"}, {"id": "backchanneling", "text": "C: Backchanneling"}, {"id": "posture", "text": "D: Posture modulation"}, {"id": "proactive", "text": "E: Proactive turn-taking"}, {"id": "open conversation", "text": "F: open conversation"}]) as $show_case_selection_ui
-      start bot inform "Please pick one of the show cases."
+    if $showcase_selection_ui == None
+      start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}, {"id": "open conversation", "text": "F: open conversation", "image":"green forest horizontal orientation"}]) as $showcase_selection_ui
+      start bot inform "Please pick one of the showcases."
 
     when user was silent 8.0
       llm interaction continuation
@@ -178,39 +178,39 @@ flow show case selector
     orwhen unhandled user intent
       llm interaction continuation
 
-    orwhen user picked number guessing game show case
-      send $show_case_selection_ui.Stop()
-      $show_case_selection_ui = None
+    orwhen user picked number guessing game showcase
+      send $showcase_selection_ui.Stop()
+      $showcase_selection_ui = None
       bot inform "Great! You picked the number guessing game!"
       bot play number guessing game with user
 
-    orwhen user picked multimodality show case
-      send $show_case_selection_ui.Stop()
-      $show_case_selection_ui = None
-      bot inform "Great! You picked the multimodality show case!"
+    orwhen user picked multimodality showcase
+      send $showcase_selection_ui.Stop()
+      $showcase_selection_ui = None
+      bot inform "Great! You picked the multimodality showcase!"
       action alignment showcase
 
-    orwhen user picked backchanneling show case
-      send $show_case_selection_ui.Stop()
-      $show_case_selection_ui = None
+    orwhen user picked backchanneling showcase
+      send $showcase_selection_ui.Stop()
+      $showcase_selection_ui = None
       bot inform "Great! You picked the backchanneling example!"
       backchannelling interaction
 
-    orwhen user picked posture show case
-      send $show_case_selection_ui.Stop()
-      $show_case_selection_ui = None
-      bot inform "Great! You picked the posture show case!"
+    orwhen user picked posture showcase
+      send $showcase_selection_ui.Stop()
+      $showcase_selection_ui = None
+      bot inform "Great! You picked the posture showcase!"
       showcase posture capabilities
 
-    orwhen user picked proactive show case
-      send $show_case_selection_ui.Stop()
-      $show_case_selection_ui = None
+    orwhen user picked proactive showcase
+      send $showcase_selection_ui.Stop()
+      $showcase_selection_ui = None
       bot inform "Great! You picked the proactive turn-taking example!"
       showcase proactive turn taking
 
     orwhen user wanted to end conversation
-      send $show_case_selection_ui.Stop()
-      $show_case_selection_ui = None
+      send $showcase_selection_ui.Stop()
+      $showcase_selection_ui = None
       bot say "Ok! It was great talking to you! Goodbye!"
         and bot gesture "Waving hands"
       wait 10.0
@@ -225,8 +225,8 @@ flow main
   #activate llm response pooling 1.0
   #bot express greeting
   #bot asks email address
-  #bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
-  show case selector
+  bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
+  showcase selector
 
   #bot play number guessing game with user
   #backchannelling interaction
