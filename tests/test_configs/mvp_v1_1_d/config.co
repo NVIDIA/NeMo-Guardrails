@@ -143,7 +143,7 @@ flow flows fallback
 
   match UnhandledEvent(event="StartFlow") as $event
 
-  $exists = await CheckIfFlowExistsAction(flow_id=$event.arguments.flow_id)
+  $exists = await CheckValidFlowExistsAction(flow_id=$event.arguments.flow_id)
 
   start_new_flow_instance:
 

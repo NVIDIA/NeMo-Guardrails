@@ -146,7 +146,7 @@ def get_colang_history(
 
         # Structure the user/bot intent/action events
         action_group: List[InternalEvent] = []
-        current_intent_flow_id: Optional[str] = None
+        current_intent: Optional[str] = None
         for event in events:
             if not isinstance(event, InternalEvent):
                 continue
@@ -156,25 +156,23 @@ def get_colang_history(
                 or event.name == InternalEvents.USER_ACTION_LOG
             ):
                 if len(action_group) > 0 and (
-                    current_intent_flow_id is None
-                    or current_intent_flow_id != event.arguments["intent_flow_id"]
+                    current_intent is None
+                    or current_intent != event.arguments["intent_flow_id"]
                 ):
                     new_history.append(events_to_dialog_history(action_group))
                     new_history.append("")
                     action_group.clear()
 
                 action_group.append(event)
-                current_intent_flow_id = event.arguments["intent_flow_id"]
+                current_intent = event.arguments["intent_flow_id"]
             elif (
                 event.name == InternalEvents.BOT_INTENT_LOG
                 or event.name == InternalEvents.USER_INTENT_LOG
             ):
-                if event.arguments["flow_id"] == current_intent_flow_id:
+                if event.arguments["flow_id"] == current_intent:
                     # Found parent of current group
                     if event.name == InternalEvents.BOT_INTENT_LOG:
-                        if not current_intent_flow_id.startswith("_dynamic_"):
-                            # Don't include dynamically generated flow names as intents
-                            new_history.append(events_to_dialog_history([event]))
+                        new_history.append(events_to_dialog_history([event]))
                         new_history.append(events_to_dialog_history(action_group))
                     else:
                         new_history.append(events_to_dialog_history(action_group))
@@ -188,7 +186,7 @@ def get_colang_history(
                     new_history.append("")
                 # Start a new group
                 action_group.clear()
-                current_intent_flow_id = None
+                current_intent = None
 
         if action_group:
             new_history.append(events_to_dialog_history(action_group))
@@ -224,6 +222,7 @@ def from_log_event_to_identifier(event_name: str) -> str:
         return "user intent"
     elif event_name == InternalEvents.USER_ACTION_LOG:
         return "user action"
+    return ""
 
 
 def flow_to_colang(flow: Union[dict, Flow]):

@@ -107,6 +107,7 @@ def create_flow_instance(
     if flow_config.loop_type == InteractionLoopType.NEW:
         loop_uid = new_uid()
     elif flow_config.loop_type == InteractionLoopType.NAMED:
+        assert flow_config.loop_id is not None
         loop_uid = flow_config.loop_id
     # For type InteractionLoopType.PARENT we keep it None to infer loop_id at run_time from parent
 
@@ -1136,14 +1137,16 @@ def _finish_flow(
 
     # Check if it was an user/bot intent/action flow a generate internal events
     event_type: Optional[str] = None
-    if "meta: user intent" in state.flow_configs[flow_state.flow_id].source_code:
-        event_type = InternalEvents.USER_INTENT_LOG
-    elif "meta: bot intent" in state.flow_configs[flow_state.flow_id].source_code:
-        event_type = InternalEvents.BOT_INTENT_LOG
-    elif "meta: user action" in state.flow_configs[flow_state.flow_id].source_code:
-        event_type = InternalEvents.USER_ACTION_LOG
-    elif "meta: bot action" in state.flow_configs[flow_state.flow_id].source_code:
-        event_type = InternalEvents.BOT_ACTION_LOG
+    source_code = state.flow_configs[flow_state.flow_id].source_code
+    if source_code is not None:
+        if "meta: user intent" in source_code:
+            event_type = InternalEvents.USER_INTENT_LOG
+        elif "meta: bot intent" in source_code:
+            event_type = InternalEvents.BOT_INTENT_LOG
+        elif "meta: user action" in source_code:
+            event_type = InternalEvents.USER_ACTION_LOG
+        elif "meta: bot action" in source_code:
+            event_type = InternalEvents.BOT_ACTION_LOG
 
     if (
         event_type == InternalEvents.USER_INTENT_LOG
@@ -1151,8 +1154,13 @@ def _finish_flow(
     ):
         event = create_internal_event(
             event_type,
+            # TODO: Refactor how we define intents and there relation to flow names
             {
-                "flow_id": flow_state.flow_id,
+                "flow_id": (
+                    flow_state.flow_id
+                    if not flow_state.flow_id.startswith("_dynamic_")
+                    else flow_state.flow_id[18:]
+                ),
                 "parameter": flow_state.context.get("$0", None),
             },
             matching_scores,
@@ -1166,21 +1174,26 @@ def _finish_flow(
         hierarchy = _get_flow_state_hierarchy(state, flow_state.uid)
         # Find next intent in hierarchy
         # TODO: Generalize to multi intents
-        intent_flow_id = None
+        intent = None
         for flow_state_uid in reversed(hierarchy):
             flow_config = state.flow_configs[state.flow_states[flow_state_uid].flow_id]
-            if (
-                "# meta: bot intent" in flow_config.source_code
-                or "# meta: user intent" in flow_config.source_code
-            ):
-                intent_flow_id = flow_config.id
+            if flow_config.source_code is not None:
+                match = re.search(
+                    r'#\W*meta:\W*(bot intent|user intent)(\W*=\W*"([a-zA-Z0-9_ ]*)")?',
+                    flow_config.source_code,
+                )
+                if match:
+                    if match.group(3) is not None:
+                        intent = match.group(3)
+                    else:
+                        intent = flow_config.id
 
         event = create_internal_event(
             event_type,
             {
                 "flow_id": flow_state.flow_id,
                 "parameter": flow_state.context.get("$0", None),
-                "intent_flow_id": intent_flow_id,
+                "intent_flow_id": intent,
             },
             matching_scores,
         )

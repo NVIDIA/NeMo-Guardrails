@@ -290,13 +290,13 @@ flow fallback user intent
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   # meta: exclude from llm
   await unhandled user intent
-  await llm generate interaction continuation
+  await llm interaction continuation
 
-flow llm generate interaction continuation
+flow llm interaction continuation
   # Generate continuation based current interaction history
   $flow_info = await GenerateFlowContinuationAction()
 
-  $exists = await CheckIfFlowExistsAction(flow_id=$flow_info.name)
+  $exists = await CheckValidFlowExistsAction(flow_id=$flow_info.name)
   if $exists == False
     await AddFlowsAction(config=$flow_info.body)
 

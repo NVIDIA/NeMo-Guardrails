@@ -216,7 +216,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         return f"{user_intent}" or "user unknown intent"
 
-    @action(name="CheckIfFlowExistsAction", is_system_action=True)
+    @action(name="CheckValidFlowExistsAction", is_system_action=True)
     async def check_if_flow_exists(self, state: "State", flow_id: str):
         return flow_id in state.flow_id_states
 
@@ -394,14 +394,16 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
             }
 
         line_0 = lines[0].lstrip(" ")
+        uuid = new_uuid()[0:8]
         if line_0.startswith("bot intent:") or line_0.startswith("user intent:"):
-            flow_name = remove_action_intent_identifiers([line_0])[0].strip(" ")
+            intent = remove_action_intent_identifiers([line_0])[0].strip(" ")
+            flow_name = f"_dynamic_{uuid}_{intent}"
             # TODO: parse potential parameters from flow name with a regex
-            flow_parameters = []
+            flow_parameters: List[Any] = []
             lines = lines[1:]
         else:
-            flow_id = new_uuid()[0:4]
-            flow_name = f"_dynamic_{flow_id}"
+            intent = "unknown"
+            flow_name = f"_dynamic_{uuid}"
             flow_parameters = []
 
         lines = remove_action_intent_identifiers(lines)
@@ -410,7 +412,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
             "name": flow_name,
             "parameters": flow_parameters,
             "body": f"flow {flow_name}\n"
-            + "  # meta: bot intent\n"
+            + f'  # meta: bot intent = "{intent}"\n'
             + "\n".join(["  " + l.strip(" ") for l in lines]),
         }
 
