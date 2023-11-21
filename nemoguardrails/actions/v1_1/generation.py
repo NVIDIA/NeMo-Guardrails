@@ -24,6 +24,7 @@ from nemoguardrails.actions.actions import action
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import (
     get_first_nonempty_line,
+    get_initial_actions,
     get_last_user_utterance_event_v1_1,
     llm_call,
     remove_action_intent_identifiers,
@@ -348,10 +349,13 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
     async def generate_flow_continuation(
         self,
         events: List[dict],
-        temperature: float = 0.0,
+        temperature: Optional[float] = None,
         llm: Optional[BaseLLM] = None,
     ):
         """Generate a continuation for the flow representing the current conversation."""
+
+        if temperature is None:
+            temperature = 0.0
 
         if self.instruction_flows_index is None:
             raise RuntimeError("No instruction flows index has been created.")
@@ -397,7 +401,11 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         line_0 = lines[0].lstrip(" ")
         uuid = new_uuid()[0:8]
         if line_0.startswith("bot intent:") or line_0.startswith("user intent:"):
-            intent = remove_action_intent_identifiers([line_0])[0].strip(" ")
+            intent = (
+                remove_action_intent_identifiers([line_0])[0]
+                .strip(" ")
+                .replace("'", "")
+            )
             flow_name = f"_dynamic_{uuid} {intent}"
             # TODO: parse potential parameters from flow name with a regex
             flow_parameters: List[Any] = []
@@ -408,6 +416,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
             flow_parameters = []
 
         lines = remove_action_intent_identifiers(lines)
+        lines = get_initial_actions(lines)
 
         return {
             "name": flow_name,

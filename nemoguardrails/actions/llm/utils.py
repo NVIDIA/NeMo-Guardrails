@@ -418,3 +418,12 @@ def remove_action_intent_identifiers(lines: List[str]) -> List[str]:
         .replace("user action: ", "")
         for s in lines
     ]
+
+
+def get_initial_actions(strings):
+    previous_strings = []
+    for string in strings:
+        if string == "":
+            break
+        previous_strings.append(string)
+    return previous_strings

@@ -298,7 +298,11 @@ flow llm interaction continuation
 
   $exists = await CheckValidFlowExistsAction(flow_id=$flow_info.name)
   if $exists == False
-    await AddFlowsAction(config=$flow_info.body)
+    $flows = await AddFlowsAction(config=$flow_info.body)
+    if "{{len($flows)}}" == "0"
+      log "LLM generated flow parsing failed!"
+      bot say "Sorry, what did you say?"
+      return
 
   $new_flow_start_uid = "{{uid()}}"
   send StartFlow(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid)

@@ -74,6 +74,8 @@ class RuntimeV1_1(Runtime):
                 include_source_mapping=True,
             )
         except Exception as ex:
+            return []
+            # Alternatively, we could through an exceptions
             raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
 
         added_flows: List[str] = []
