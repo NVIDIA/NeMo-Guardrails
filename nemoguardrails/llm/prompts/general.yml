@@ -165,5 +165,4 @@ prompts:
           {{ examples }}
 
           # This is the current conversation between the user and the bot:
-          {{ sample_conversation | first_turns(2) }}
           {{ history | colang }}
