@@ -397,7 +397,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         uuid = new_uuid()[0:8]
         if line_0.startswith("bot intent:") or line_0.startswith("user intent:"):
             intent = remove_action_intent_identifiers([line_0])[0].strip(" ")
-            flow_name = f"_dynamic_{uuid}_{intent}"
+            flow_name = f"_dynamic_{uuid} {intent}"
             # TODO: parse potential parameters from flow name with a regex
             flow_parameters: List[Any] = []
             lines = lines[1:]

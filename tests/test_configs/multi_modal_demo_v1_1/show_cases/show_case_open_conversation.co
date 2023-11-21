@@ -2,9 +2,10 @@ flow open conversation
   activate fallback user said
   bot inform "Hi there! What do you want to talk about? Ask me anything!"
   while True
-    when unhandled user intent
+    when user was silent 8.0
       llm interaction continuation
-      #bot say "Conversation continuation"
+    orwhen unhandled user intent
+      llm interaction continuation
     orwhen user wanted to end conversation
       bot say "Ok! It was great talking to you!"
       break

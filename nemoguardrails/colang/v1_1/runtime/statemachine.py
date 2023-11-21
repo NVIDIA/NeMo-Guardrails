@@ -1032,7 +1032,8 @@ def _start_flow(
             )
 
     # Initialize new flow instance of flow
-    add_new_flow_instance(state, create_flow_instance(flow_config))
+    if not flow_config.id == "main" and not flow_config.id.startswith("_dynamic_"):
+        add_new_flow_instance(state, create_flow_instance(flow_config))
 
 
 def _abort_flow(

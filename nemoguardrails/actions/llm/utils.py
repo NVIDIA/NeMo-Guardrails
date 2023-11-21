@@ -180,8 +180,9 @@ def get_colang_history(
                     new_history.append("")
                 else:
                     # New unrelated intent
-                    new_history.append(events_to_dialog_history(action_group))
-                    new_history.append("")
+                    if action_group:
+                        new_history.append(events_to_dialog_history(action_group))
+                        new_history.append("")
                     new_history.append(events_to_dialog_history([event]))
                     new_history.append("")
                 # Start a new group
