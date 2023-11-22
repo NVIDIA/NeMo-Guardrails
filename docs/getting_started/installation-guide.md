@@ -19,6 +19,7 @@ Most systems already have installed a C++ runtime. If `annoy` installation fails
 - For a Linux or Mac / Unix-based OS:
   - First install `gcc` and `g++` using `apt-get install gcc g++`.
   - Then update the following environment variables: `export CC=<path_to_clang>` and `export CXX=<path_to_clang++>` (usually, `<path_to_clang>` is `/usr/bin/clang`).
+  - In some cases, you might also need to install the `python-dev` package using `apt-get install python-dev` (or `apt-get install python3-dev`). Check out this [thread](https://stackoverflow.com/questions/21530577/fatal-error-python-h-no-such-file-or-directory) if the error persists.
 - For Windows:
   - Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/). This should install Microsoft Visual C++ (version 14.0 or greater is required by latest version of `annoy`).
 
