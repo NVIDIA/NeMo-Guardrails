@@ -263,7 +263,8 @@ flow catch undefined flows
   # meta: exclude from llm
   priority 0.1
   match UnhandledEvent(event="StartFlow") as $event
-  bot say "Warning: Undefined flow '{{$event.arguments.flow_id}}' {{$event.arguments.loop_ids}}"
+  bot say "Oh! Sorry, what did you say? I was fixing some internal processing."
+    and bot gesture "Warning: Undefined flow '{{$event.arguments.flow_id}}' {{$event.arguments.loop_ids}}"
 
 flow catch unexpected user utterance
   """A flow to catch unhandled user utterances."""
