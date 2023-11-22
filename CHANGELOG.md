@@ -1,15 +1,53 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
 ## Unreleased
 
 ### Added
 
+- Support for [explicit definition](./docs/user_guides/configuration-guide.md#guardrails-definitions) of input/output/retrieval rails.
 - Support for [custom tasks and their prompts](docs/user_guides/advanced/prompt-customization.md#custom-tasks-and-prompts).
+- Support for fact-checking [using AlignScore](./docs/user_guides/guardrails-library.md#alignscore).
+- Support for [NeMo LLM Service](./docs/user_guides/configuration-guide.md#nemo-llm-service) as an LLM provider.
+- Support for making a single LLM call for both the guardrails process and generating the response (by setting `rails.dialog.single_call.enabled` to `True`).
+- Support for [sensitive data detection](./docs/user_guides/guardrails-library.md#sensitive-data-detection) guardrails using Presidio.
+- [Example](./examples/configs/llm/hf_pipeline_llama2) using NeMo Guardrails with the LLaMa2-13B model.
+- [Dockerfile](./Dockerfile) for building a Docker image.
+- Support for [prompting modes](./docs/user_guides/advanced/prompt-customization.md) using `prompting_mode`.
+- Support for [TRT-LLM](./docs/user_guides/configuration-guide.md#trt-llm) as an LLM provider.
+- Support for [streaming](./docs/user_guides/advanced/streaming.md) the LLM responses when no output rails are used.
+- [Integration](./docs/user_guides/guardrails-library.md#active-fence) of ActiveFence ActiveScore API as an input rail.
+- Support for `--prefix` and `--auto-reload` in the [guardrails server](./docs/user_guides/server-guide.md).
+- Example [authentication dialog flow](./examples/configs/auth).
+- Example [RAG using Pinecone](./examples/configs/rag/pinecone).
+- Support for loading a configuration from dictionary, i.e. `RailsConfig.from_content(config=...)`.
+- Guidance on [LLM support](./docs/user_guides/llm-support.md).
+- Support for `LLMRails.explain()` (see the [Getting Started](./docs/getting_started) guide for sample usage).
+
+### Changed
+
+- Allow context data directly in the `/v1/chat/completion` using messages with the type `"role"`.
+- Allow calling a subflow whose name is in a variable, e.g. `do $some_name`.
+- Allow using actions which are not `async` functions.
+- Disabled pretty exceptions in CLI.
+- Upgraded dependencies.
+- Updated the [Getting Started Guide](./docs/getting_started).
+- Main [README](./README.md) now provides more details.
+- Merged original examples into a single [Info Bot](./examples/bots/info) and [deprecated](./examples/_deprecated) the original ones.
+- Documentation improvements.
+
+### Fixed
+
+- Fix going over the maximum prompt length using the `max_length` attribute in [Prompt Templates](./docs/user_guides/advanced/prompt-customization.md#prompt-templates).
+- Fixed problem with `nest_asyncio` initialization.
+- [#144](https://github.com/NVIDIA/NeMo-Guardrails/pull/144) Fixed TypeError in logging call.
+- [#121](https://github.com/NVIDIA/NeMo-Guardrails/pull/109) Detect chat model using openai engine.
+- [#109](https://github.com/NVIDIA/NeMo-Guardrails/pull/109) Fixed minor logging issue.
+- Parallel flow support.
+- Fix `HuggingFacePipeline` bug related to LangChain version upgrade.
 
 
 ## [0.5.0] - 2023-09-04
