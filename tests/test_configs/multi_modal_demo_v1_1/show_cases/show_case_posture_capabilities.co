@@ -24,7 +24,7 @@ flow listening posture
 flow talking posture
   bot started saying something
   start bot posture "talking"
-  start scene show short information $info="Talking" 
+  start scene show short information $info="Talking"
   bot said something
 
 flow posture management

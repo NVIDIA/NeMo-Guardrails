@@ -103,7 +103,7 @@ flow bot was silent $time_s
 
 flow bot started saying $text
   # meta: exclude from llm
-  match FlowStarted(flow_id="bot say", script=$text) as $even
+  match FlowStarted(flow_id="_bot_say", script=$text) as $even
 
 flow bot started saying something
   # meta: exclude from llm
@@ -111,7 +111,7 @@ flow bot started saying something
 
 flow bot said $text
   # meta: exclude from llm
-  match FlowFinished(flow_id="bot say", script=$text) as $even
+  match FlowFinished(flow_id="_bot_say", script=$text) as $even
 
 flow bot said something
   # meta: exclude from llm

@@ -183,7 +183,7 @@ flow showcase selector
 
   while True
     if $showcase_selection_ui == None
-      start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}, {"id": "open conversation", "text": "F: open conversation", "image":"green forest horizontal orientation"}]) as $showcase_selection_ui
+      start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}]) as $showcase_selection_ui
       start bot inform "Please pick one of the showcases."
 
     when user was silent 8.0
@@ -249,15 +249,15 @@ flow main
   #activate catch unexpected user utterance
   activate catch undefined flows
   activate catch colang errors
-  activate llm response pooling 0.5
+  activate llm response pooling 1.0
   #activate faq
 
   bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
   showcase selector
 
   #showcase number guessing game
+  #showcase multimodality
   #showcase backchannelling interaction
   #showcase posture capabilities
-  #showcase proactive turn taking
   #showcase proactive turn taking
   wait indefinitely
