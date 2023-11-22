@@ -1,4 +1,4 @@
-flow action alignment showcase
+flow showcase multimodality
   bot inform "I am going to demonstrate to you the different ways of how actions can be aligned!"
   wait 1.0
   bot inform "I will be using two different actions, a talking action, and a gesture action."
