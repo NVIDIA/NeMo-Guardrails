@@ -7,9 +7,7 @@
 [![Python 3.7+](https://img.shields.io/badge/python-3.7%2B-green)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-**LATEST RELEASE: You are currently on the main branch which tracks
-under-development progress towards the next release. The current release is
-an alpha version, [0.5.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.5.0)**.
+> **LATEST RELEASE / DEVELOPMENT VERSION**: The [main](https://github.com/NVIDIA/NeMo-Guardrails/tree/main) branch tracks the latest released alpha version: [0.5.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.5.0). For the latest development version, checkout the [develop](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop) branch.
 
 > **DISCLAIMER**: The alpha release is undergoing active development and may be subject to changes and improvements, which could potentially cause instability and unexpected behavior. We currently do not recommend deploying this alpha version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback is invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit.
 
