@@ -1,0 +1,27 @@
+instructions:
+  - type: general
+    content: |
+      Below is a conversation between a bot and a user where the user asks the bot questions and the bot answers the questions based on documents the bot has access to. The user can ask as many questions to the bot. Any question that does not pertain to the data the bot has access to should not be answered.
+
+sample_conversation: |
+  user "Hello"
+      express greeting
+  bot express greeting
+      "Hello"
+  user "What does Nvidia do?"
+      ask question
+  bot answer question with sources
+    "Nvidia is a technology company according to Wikipedia"
+  user "Who is the CEO of Nvidia?"
+      ask question
+  bot answer question with sources
+      "Jensen Huang is the CEO of Nvidia according to Wikipedia"
+
+
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003
+  - type: embeddings
+    engine: openai
+    model: text-embedding-ada-002

@@ -76,6 +76,8 @@ selecting OpenAI's davinci.
       engine: openai
       model: text-davinci-003
     ```
+#### Note in order to use other community models such as llama2, for llama2 models, one will need to first go to ![huggingface-llama2](https://huggingface.co/meta-llama)
+#### install additional python package via pip install accelerate
 
 * **Provide sample conversations:** To ensure that the large language model
 understands how to converse with the user, we provide a few sample conversations.
@@ -248,7 +250,7 @@ new_message = rails.generate(messages=[{
 }])
 print(new_message)
 ```
-Refer to [Python API Documentation](../../../docs/user_guide/interface-guide.md#python-api) for more information.
+Refer to [Python API Documentation](../../../docs/user_guides/interface-guide.md#python-api) for more information.
 
 ### UI
 Colang allows users to interact with the server with a stock UI. To launch the
@@ -259,7 +261,7 @@ recommended:
 the UI
 * Click "New Chat" on the top left corner of the screen and then proceed to
 pick `topical_rail` from the drop-down menu.
-Refer to [Guardrails Server Documentation](../../../docs/user_guide/interface-guide.md#guardrails-server) for more information.
+Refer to [Guardrails Server Documentation](../../../docs/user_guides/interface-guide.md#guardrails-server) for more information.
 ### Command Line Chat
 
 To chat with the bot with a command line interface simply use the following
@@ -267,7 +269,7 @@ command while you are in this folder.
 ```
 nemoguardrails chat --config=.
 ```
-Refer to [Guardrails CLI Documentation](../../../docs/user_guide/interface-guide.md#guardrails-cli) for more information.
+Refer to [Guardrails CLI Documentation](../../../docs/user_guides/interface-guide.md#guardrails-cli) for more information.
 Wondering what to talk to your bot about?
 * See how the bot reacts to your conversations about the topics covered in the
  rails

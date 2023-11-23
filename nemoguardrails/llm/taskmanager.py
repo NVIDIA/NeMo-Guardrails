@@ -79,8 +79,8 @@ class LLMTaskManager:
         # in the prompt.
         self.prompt_context = {}
 
-    def _get_general_instruction(self):
-        """Helper to extract the general instruction."""
+    def _get_general_instructions(self):
+        """Helper to extract the general instructions."""
         text = ""
         for instruction in self.config.instructions:
             if instruction.type == "general":
@@ -114,7 +114,7 @@ class LLMTaskManager:
         # This is the context that will be passed to the template when rendering.
         render_context = {
             "history": events,
-            "general_instruction": self._get_general_instruction(),
+            "general_instructions": self._get_general_instructions(),
             "sample_conversation": self.config.sample_conversation,
             "sample_conversation_two_turns": self.config.sample_conversation,
         }

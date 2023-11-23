@@ -11,7 +11,7 @@ prompts:
   - task: generate_bot_message
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       {{ current_date }}
       """
 

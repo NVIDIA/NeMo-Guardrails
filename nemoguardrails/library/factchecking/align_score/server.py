@@ -37,6 +37,8 @@ if models_path is None:
 
 app = FastAPI()
 
+device = os.environ.get("ALIGN_SCORE_DEVICE", "cpu")
+
 
 @lru_cache
 def get_model(model: str):
@@ -48,7 +50,7 @@ def get_model(model: str):
     return AlignScore(
         model="roberta-base",
         batch_size=32,
-        device="cuda:0",
+        device=device,
         ckpt_path=os.path.join(models_path, f"AlignScore-{model}.ckpt"),
         evaluation_mode="nli_sp",
     )
@@ -99,13 +101,19 @@ def start(
         default=["base"],
         help="The list of models to be loaded on startup",
     ),
+    initialize_only: bool = typer.Option(
+        default=False, help="Whether to run only the initialization for the models."
+    ),
 ):
     # Preload the models
     for model in models:
         typer.echo(f"Pre-loading model {model}.")
         get_model(model)
 
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    if initialize_only:
+        print("Initialization successful.")
+    else:
+        uvicorn.run(app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ from aioresponses import aioresponses
 
 from nemoguardrails import RailsConfig
 from nemoguardrails.actions.actions import ActionResult
+from tests.constants import NEMO_API_URL_GPT_43B_002
 from tests.utils import TestChat
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
@@ -44,185 +45,237 @@ async def retrieve_relevant_chunks():
     )
 
 
-def test_fact_checking_greeting():
+@pytest.mark.asyncio
+async def test_fact_checking_greeting(httpx_mock):
     # Test 1 - Greeting - No fact-checking invocation should happen
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
     chat = TestChat(config)
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
-    with aioresponses() as m:
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={"text": "  express greeting"},
-        )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={"text": "Hi! How can I assist today?"},
-        )
-        chat >> "hi"
-        chat << "Hi! How can I assist today?"
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={"text": "  express greeting"},
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={"text": "Hi! How can I assist today?"},
+    )
+
+    chat >> "hi"
+    await chat.bot_async("Hi! How can I assist today?")
 
 
-def test_fact_checking_correct():
+@pytest.mark.asyncio
+async def test_fact_checking_correct(httpx_mock):
     # Test 2 - Factual statement - high alignscore
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
     chat = TestChat(config)
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={"text": "  ask about guardrails"},
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
+        },
+    )
+
     with aioresponses() as m:
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={"text": "  ask about guardrails"},
-        )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={
-                "text": "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
-            },
-        )
-        ## Fact-checking using AlignScore
+        # Fact-checking using AlignScore
         m.post(
             "http://localhost:5000/alignscore_base",
-            payload={"alignscore": 0.82},
+            payload=0.82,
         )
+
+        # Succeeded, no more generations needed
         chat >> "What is NeMo Guardrails?"
-        (
-            chat
-            << "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
+
+        await chat.bot_async(
+            "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
         )
 
 
-def test_fact_checking_wrong():
+@pytest.mark.asyncio
+async def test_fact_checking_wrong(httpx_mock):
     # Test 3 - Very low alignscore - Not factual
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
     chat = TestChat(config)
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={"text": "  ask about guardrails"},
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia."
+        },
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": "The fact-checking rail failed. Sorry, I don't know the answer to this question"
+        },
+    )
+
     with aioresponses() as m:
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={"text": "  ask about guardrails"},
-        )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={
-                "text": "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia."
-            },
-        )
-        ## Fact-checking using AlignScore
+        # Fact-checking using AlignScore
         m.post(
             "http://localhost:5000/alignscore_base",
-            payload={"alignscore": 0.01},
+            payload=0.01,
         )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={
-                "text": "The fact-checking rail failed. Sorry, I don't know the answer to this question"
-            },
-        )
+
         chat >> "What is NeMo Guardrails?"
-        (
-            chat
-            << "The fact-checking rail failed. Sorry, I don't know the answer to this question"
+
+        await chat.bot_async(
+            "The fact-checking rail failed. Sorry, I don't know the answer to this question"
         )
 
 
-def test_fact_checking_uncertain():
+@pytest.mark.asyncio
+async def test_fact_checking_uncertain(httpx_mock):
     # Test 4 - Factual statement - AlignScore not very confident in its prediction
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
     chat = TestChat(config)
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={"text": "  ask about guardrails"},
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia."
+        },
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": (
+                "NeMo Guardrails is an open-source toolkit for adding safeguards to conversational systems.\n"
+                + "Attention: the answer above is potentially inaccurate."
+            )
+        },
+    )
+
     with aioresponses() as m:
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={"text": "  ask about guardrails"},
-        )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={
-                "text": "NeMo Guardrails is an open-source toolkit for adding safeguards to conversational systems."
-            },
-        )
         ## Fact-checking using AlignScore
         m.post(
             "http://localhost:5000/alignscore_base",
-            payload={"alignscore": 0.58},
+            payload=0.58,
         )
+
         chat >> "What is NeMo Guardrails?"
-        chat << (
+        await chat.bot_async(
             "NeMo Guardrails is an open-source toolkit for adding safeguards to conversational systems.\n"
             + "Attention: the answer above is potentially inaccurate."
         )
 
 
-def test_fact_checking_fallback_to_ask_llm_correct():
+@pytest.mark.asyncio
+async def test_fact_checking_fallback_to_ask_llm_correct(httpx_mock):
     # Test 4 - Factual statement - AlignScore endpoint not set up properly, use ask llm for fact-checking
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
     chat = TestChat(config)
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={"text": "  ask about guardrails"},
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
+        },
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={"text": "yes"},
+    )
+
     with aioresponses() as m:
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={"text": "  ask about guardrails"},
-        )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={
-                "text": "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
-            },
-        )
-        ## Fact-checking using AlignScore
+        # Fact-checking using AlignScore
         m.post(
             "http://localhost:5000/alignscore_base",
             payload="API error 404",
         )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={"text": "yes"},
-        )
         chat >> "What is NeMo Guardrails?"
-        (
-            chat
-            << "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
+
+        await chat.bot_async(
+            "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
         )
 
 
-def test_fact_checking_fallback_to_ask_llm_wrong():
-    # Test 4 - Factual statement - AlignScore endpoint not set up properly, use ask llm for fact-checking
+@pytest.mark.asyncio
+async def test_fact_checking_fallback_to_ask_llm_wrong(httpx_mock):
+    # Test 5 - Factual statement - AlignScore endpoint not set up properly, use ask llm for fact-checking
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
     chat = TestChat(config)
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={"text": "  ask about guardrails"},
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": "NeMo Guardrails is an closed-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
+        },
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={"text": "no"},
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": "The fact-checking rail failed. Sorry, I don't know the answer to this question"
+        },
+    )
+
     with aioresponses() as m:
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={"text": "  ask about guardrails"},
-        )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={
-                "text": "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
-            },
-        )
-        ## Fact-checking using AlignScore
+        # Fact-checking using AlignScore
         m.post(
             "http://localhost:5000/alignscore_base",
             payload="API error 404",
         )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={"text": "no"},
-        )
-        m.post(
-            "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-002/completions",
-            payload={
-                "text": "The fact-checking rail failed. Sorry, I don't know the answer to this question"
-            },
-        )
+
         chat >> "What is NeMo Guardrails?"
-        (
-            chat
-            << "The fact-checking rail failed. Sorry, I don't know the answer to this question"
+        await chat.bot_async(
+            "The fact-checking rail failed. Sorry, I don't know the answer to this question"
         )

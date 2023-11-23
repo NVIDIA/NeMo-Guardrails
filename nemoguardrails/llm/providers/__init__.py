@@ -13,4 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .providers import get_llm_provider, get_llm_provider_names, register_llm_provider
+from .providers import (
+    HuggingFacePipelineCompatible,
+    get_llm_provider,
+    get_llm_provider_names,
+    register_llm_provider,
+)

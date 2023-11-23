@@ -20,7 +20,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="nemoguardrails",
-    version="0.5.0",
+    version="0.6.0-rc2",
     packages=find_packages(),
     author="NVIDIA",
     author_email="nemoguardrails@nvidia.com",
@@ -61,7 +61,7 @@ setup(
     install_requires=[
         "pydantic==1.10.9",
         "aiohttp==3.8.5",
-        "langchain==0.0.312",
+        "langchain==0.0.322",
         "requests>=2.31.0",
         "typer==0.7.0",
         "PyYAML~=6.0",
@@ -79,7 +79,23 @@ setup(
         "nest-asyncio==1.5.6",
     ],
     extras_require={
-        "eval": ["tqdm~=4.65", "numpy~=1.24"],
         "dev": ["fastapi-utils==0.2.1", "watchdog==3.0.0"],
+        "eval": ["tqdm~=4.65", "numpy~=1.24"],
+        "openai": ["openai==0.28.1"],
+        "sdd": [
+            "presidio-analyzer~=2.2.351",
+            "presidio-anonymizer~=2.2.351",
+            "spacy~=3.7.2",
+        ],
+        "all": [
+            "openai==0.28.1",
+            "tqdm~=4.65",
+            "numpy~=1.24",
+            "fastapi-utils==0.2.1",
+            "watchdog==3.0.0",
+            "presidio-analyzer~=2.2.351",
+            "presidio-anonymizer~=2.2.351",
+            "spacy~=3.7.2",
+        ],
     },
 )

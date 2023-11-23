@@ -14,27 +14,98 @@
 # limitations under the License.
 import asyncio
 import os
-import pickle
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
+import aiohttp
 from prompt_toolkit import prompt
 from prompt_toolkit.patch_stdout import patch_stdout
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.streaming import StreamingHandler
 from nemoguardrails.utils import new_event_dict
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def _run_chat_v1_0(rails_app: LLMRails):
-    """Simple chat loop for v1.0 using the messages API."""
+async def input_async(prompt_message: str = "") -> str:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, prompt, prompt_message)
+
+
+async def _run_chat_v1_0(
+    config_path: Optional[str] = None,
+    verbose: bool = False,
+    streaming: bool = False,
+    server_url: Optional[str] = None,
+    config_id: Optional[str] = None,
+):
+    if config_path is None and server_url is None:
+        raise RuntimeError(
+            "At least one of `config_path` or `server-url` must be provided."
+        )
+
+    if not server_url:
+        rails_config = RailsConfig.from_path(config_path)
+        rails_app = LLMRails(rails_config, verbose=verbose)
+        if streaming and not rails_config.streaming_supported:
+            print(
+                f"WARNING: The config `{config_path}` does not support streaming. "
+                "Falling back to normal mode."
+            )
+            streaming = False
+    else:
+        rails_app = None
+
     history = []
     # And go into the default listening loop.
     while True:
+        print("")
         user_message = input("> ")
 
         history.append({"role": "user", "content": user_message})
-        bot_message = rails_app.generate(messages=history)
+
+        if not server_url:
+            # If we have streaming from a locally loaded config, we initialize the handler.
+            if streaming and not server_url and rails_app.main_llm_supports_streaming:
+                streaming_handler = StreamingHandler(enable_print=True)
+            else:
+                streaming_handler = None
+
+            bot_message = await rails_app.generate_async(
+                messages=history, streaming_handler=streaming_handler
+            )
+
+            if not streaming or not rails_app.main_llm_supports_streaming:
+                # We print bot messages in green.
+                print(f"\033[92m{bot_message['content']}\033[0m")
+        else:
+            data = {
+                "config_id": config_id,
+                "messages": history,
+                "stream": streaming,
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{server_url}/v1/chat/completions",
+                    json=data,
+                ) as response:
+                    # If the response is streaming, we show each chunk as it comes
+                    if response.headers.get("Transfer-Encoding") == "chunked":
+                        bot_message_text = ""
+                        async for chunk in response.content.iter_any():
+                            chunk = chunk.decode("utf-8")
+                            print(f"\033[92m{chunk}\033[0m", end="")
+                            bot_message_text += chunk
+                        print("")
+
+                        bot_message = {"role": "assistant", "content": bot_message_text}
+                    else:
+                        result = await response.json()
+                        bot_message = result["messages"][0]
+
+                        # We print bot messages in green.
+                        print(f"\033[92m{bot_message['content']}\033[0m")
+
         history.append(bot_message)
 
         # We print bot messages in green.
@@ -292,19 +363,28 @@ async def _run_chat_v1_1(rails_app: LLMRails):
             await _process_input_events()
 
 
-async def input_async(prompt_message: str = "") -> str:
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, prompt, prompt_message)
-
-
-def run_chat(config_path: Optional[str] = None, verbose: bool = False):
+def run_chat(
+    config_path: Optional[str] = None,
+    verbose: bool = False,
+    streaming: bool = False,
+    server_url: Optional[str] = None,
+    config_id: Optional[str] = None,
+):
     """Runs a chat session in the terminal."""
 
     rails_config = RailsConfig.from_path(config_path)
     rails_app = LLMRails(rails_config, verbose=verbose)
 
     if rails_config.colang_version == "1.0":
-        _run_chat_v1_0(rails_app)
+        asyncio.run(
+            _run_chat_v1_0(
+                config_path=config_path,
+                verbose=verbose,
+                streaming=streaming,
+                server_url=server_url,
+                config_id=config_id,
+            )
+        )
     elif rails_config.colang_version == "1.1":
         asyncio.run(_run_chat_v1_1(rails_app))
     else:

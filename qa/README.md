@@ -1,33 +1,20 @@
 # QA Started
 
-This is a QA started guide for using automated tests to test all the examples in `nemoguardrails/examples` folder. This guide will cover:
+This is a QA started guide for using automated tests to test all the examples in `nemoguardrails/examples/_deprecated` folder. This guide will cover:
 
 1. Software installation prerequisites;
-2. Download models required by NLTK;
-3. Running automated tests;
-4. Analyzing logs if there are any failure(s).
+2. Running automated tests;
+3. Analyzing logs if there are any failure(s).
 
 ## Installation
 
-1. Install NLTK for validating bot response.
+1. Install scikit-learn for validating bot response.
 
  ```bash
- > sudo apt update
- > sudo apt install python3-nltk
+ > pip install -U scikit-learn
  ```
 
-2. Download models required by NLTK.
-
- ```bash
- > python3
- > import nltk
- > nltk.download('punkt')
- > nltk.download('averaged_perceptron_tagger')
- > nltk.download('wordnet')
- > exit()
- ```
-
-## Running automated tests to test all the examples in `nemoguardrails/examples` folder.
+## Running automated tests to test all the examples in `nemoguardrails/examples/_deprecated` folder.
 
 Please refer to the [installation guide](installation-guide.md) for instructions on how to install the NeMo Guardrails toolkit.
 

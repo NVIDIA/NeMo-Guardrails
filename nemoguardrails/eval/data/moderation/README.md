@@ -1,4 +1,4 @@
-## Running the Evaluation for Moderation Rails
+# Running the Evaluation for Moderation Rails
 
 The jailbreak and output moderation rails can be evaluated using the following command:
 

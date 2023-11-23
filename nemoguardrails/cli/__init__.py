@@ -15,7 +15,7 @@
 
 import logging
 import os
-from typing import List
+from typing import List, Optional
 
 import typer
 import uvicorn
@@ -29,7 +29,7 @@ from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
 
 app = typer.Typer()
-app.add_typer(evaluate.app, name="evaluate")
+app.add_typer(evaluate.app, name="evaluate", short_help="Run an evaluation task.")
 app.pretty_exceptions_enable = False
 
 logging.getLogger().setLevel(logging.WARNING)
@@ -50,8 +50,20 @@ def chat(
         default=[],
         help="Enable debug mode which prints rich information about the flows execution. Available levels: WARNING, INFO, DEBUG",
     ),
+    streaming: bool = typer.Option(
+        default=False,
+        help="If the chat should use the streaming mode, if possible.",
+    ),
+    server_url: Optional[str] = typer.Option(
+        default=None,
+        help="If specified, the chat CLI will interact with a server, rather than load the config. "
+        "In this case, the --config-id must also be specified.",
+    ),
+    config_id: Optional[str] = typer.Option(
+        default=None, help="The config_id to be used when interacting with the server."
+    ),
 ):
-    """Starts an interactive chat session."""
+    """Start an interactive chat session."""
     if verbose:
         set_verbose(True)
 
@@ -65,8 +77,14 @@ def chat(
         root_logger.addHandler(RichHandler(markup=True))
         logging.getLogger().setLevel(debug_level[0])
 
-    typer.echo("Starting the chat...")
-    run_chat(config_path=config[0], verbose=verbose)
+    typer.echo("Starting the chat (Press Ctrl + C to quit) ...")
+    run_chat(
+        config_path=config[0],
+        verbose=verbose,
+        streaming=streaming,
+        server_url=server_url,
+        config_id=config_id,
+    )
 
 
 @app.command()
@@ -93,7 +111,7 @@ def server(
         help="A prefix that should be added to all server paths. Should start with '/'.",
     ),
 ):
-    """Starts a NeMo Guardrails server."""
+    """Start a NeMo Guardrails server."""
     if config:
         api.app.rails_config_path = config[0]
     else:
@@ -128,6 +146,6 @@ def action_server(
         default=8001, help="The port that the server should listen on. "
     ),
 ):
-    """Starts a NeMo Guardrails actions server."""
+    """Start a NeMo Guardrails actions server."""
 
     uvicorn.run(actions_server.app, port=port, log_level="info", host="0.0.0.0")
