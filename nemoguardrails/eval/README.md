@@ -118,9 +118,20 @@ Results on _banking_ dataset, metric used is accuracy.
 ## Input and Output Rails
 
 ### Fact-checking Rails
+We provide two approaches out of the box for the fact-checking rail, these are colloqiually referred to as AskLLM and AlignScore in the rest of this documentation.
 
-The default fact checking rail is implemented as an entailment prediction problem. Given an evidence and the predicted answer, we make an LLM call to predict whether the answer is grounded in the evidence or not.
+#### AskLLM
+In this approach, the fact-checking rail is implemented as an entailment prediction problem. Given an evidence passage and the predicted answer, we prompt an LLM to predict yes/no to whether the answer grounded in the evidence or not. This is the default approach.
 
+#### AlignScore
+This approach is based on the AlignScore model [Zha et al. 2023](https://aclanthology.org/2023.acl-long.634.pdf). Given an evidence passage and the predicted answer, the model is finetuned to predict that they are aligned when:
+1. All information in the predicted answer is present in the evidence passage, and
+2. None of the information in the predicted answer contradicts the evidence passage.
+The response is a value between 0.0 and 1.0. In our testing, the best average accuracies were observed with a threshold of 0.7.
+
+Please see the [user guide documentation](./../../docs/user_guides/guardrails-library.md#alignscore) for detailed steps on how to configure your deployment to use AlignScore.
+
+#### Evaluation
 To run the fact checking rail, you can use the following CLI command:
 
 ```nemoguardrails evaluate fact-checking```
@@ -150,18 +161,22 @@ More details on how to set up the data in the right format and run the evaluatio
 
 #### Evaluation Results
 
-We evaluate the performance of the fact checking rail on the [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset. We randomly sample 100 (question, answer, evidence) triples and run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models.
+Evaluation Date - Nov 23, 2023.
 
-Evaluation Date - June 02, 2023.
+We evaluate the performance of the fact checking rail on the [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset using the Ask LLM and the AlignScore approaches.  To build the dataset, we randomly sample 100 (question, correct answer, evidence) triples, and then, for each triple, build a non-factual or incorrect answer to yield 100 (question, incorrect answer, evidence) triples.
 
-We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model on correctly identifying answers that are **not** grounded in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
+We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model on correctly identifying answers that are **not** supported in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
 
-| Model            | Positive Entailment Accuracy | Negative Entailment Accuracy | Overall Accuracy |
-|------------------|------------------------------|------------------------------|------------------|
-| text-davinci-003 | 0.83                         | 0.87                         | 0.85             |
-| gpt-3.5-turbo    | 0.87                         | 0.80                         | 0.83             |
-| nemollm-43b      | 0.80                         | 0.83                         | 0.81             |
+| Model                   | Positive Entailment Accuracy | Negative Entailment Accuracy | Overall Accuracy | Average Time Per Checked Fact (ms) |
+|-------------------------|------------------------------|------------------------------|------------------|------------------------------------|
+| text-davinci-003        | 70.0%                        | **93.0%**                    | 81.5%            | 272.2ms                            |
+| gpt-3.5-turbo           | 76.0%                        | 89.0%                        | 82.5%            | 435.1ms                            |
+| gpt-3.5-turbo-instruct  | **92.0%**                    | 69.0%                        | 80.5%            | 188.8ms                            |
+| align_score-base*       | 81.0%                        | 88.0%                        | 84.5%            | **23.0ms** ^                       |
+| align_score-large*      | 87.0%                        | 90.0%                        | **88.5%**        | 46.0ms ^
 
+*The threshold used for align_score is 0.7, i.e. an align_score >= 0.7 is considered a factual statement, and an align_score < 0.7 signifies an incorrect statement.
+^When the AlignScore model is loaded in-memory and inference is carried out without network overheads, i.e., not as a RESTful service.
 
 ### Moderation Rails
 
