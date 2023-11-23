@@ -17,6 +17,7 @@ import os
 from typing import Optional
 
 import aiohttp
+from prompt_toolkit import prompt
 from prompt_toolkit.patch_stdout import patch_stdout
 
 from nemoguardrails import LLMRails, RailsConfig
@@ -28,7 +29,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 async def input_async(prompt_message: str = "") -> str:
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, input, prompt_message)
+    return await loop.run_in_executor(None, prompt, prompt_message)
 
 
 async def _run_chat_v1_0(
