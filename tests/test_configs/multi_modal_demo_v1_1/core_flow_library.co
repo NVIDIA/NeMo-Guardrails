@@ -310,13 +310,20 @@ flow bot response to unexpected user intent $intent
   activate fallback user intent
   send FinishFlow(flow_id=$intent)
 
+flow _flow_by_name $flow_name
+  $new_flow_start_uid = "{{uid()}}"
+  send StartFlow(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid)
+  match FlowStarted(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid) as $event_ref
+  match $event_ref.flow.Finished()
+
 flow fallback user intent
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   # meta: exclude from llm
   await unhandled user intent
-  await llm interaction continuation
+  $flow_name = await llm create interaction continuation
+  await _flow_by_name $flow_name
 
-flow llm interaction continuation
+flow llm create interaction continuation
   # Generate continuation based current interaction history
   $flow_info = await GenerateFlowContinuationAction(temperature=0.1)
 
@@ -328,10 +335,11 @@ flow llm interaction continuation
       bot say "Sorry, what did you say?"
       return
 
-  $new_flow_start_uid = "{{uid()}}"
-  send StartFlow(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid)
-  match FlowStarted(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid) as $event_ref
-  match $event_ref.flow.Finished()
+  return $flow_info.name
+
+flow llm interaction continuation
+  $generated_flow_name = await llm create interaction continuation
+  await _flow_by_name $generated_flow_name as $llm_response
 
 flow flows fallback
   """We want to start an undefined flow."""
