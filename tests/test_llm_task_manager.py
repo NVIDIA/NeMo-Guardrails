@@ -139,7 +139,7 @@ def test_prompt_length_exceeded_empty_events():
             - task: generate_user_intent
               max_length: 2000
               content: |-
-                {{ general_instruction }}
+                {{ general_instructions }}
 
                 # This is how a conversation between a user and the bot can go:
                 {{ sample_conversation }}
@@ -179,7 +179,7 @@ def test_prompt_length_exceeded_compressed_history():
             - task: generate_user_intent
               max_length: 3000
               content: |-
-                {{ general_instruction }}
+                {{ general_instructions }}
 
                 # This is how a conversation between a user and the bot can go:
                 {{ sample_conversation }}

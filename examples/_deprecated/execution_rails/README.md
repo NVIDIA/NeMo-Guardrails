@@ -334,7 +334,7 @@ new_message = rails.generate(messages=[{
 }])
 print(new_message)
 ```
-Refer to [Python API Documentation](../../../docs/user_guide/interface-guide.md#python-api) for more information.
+Refer to [Python API Documentation](../../../docs/user_guides/interface-guide.md#python-api) for more information.
 ### UI
 Guardrails allows users to interact with the server with a stock UI. To launch the
 server and access the UI to interact with this example, the following steps are
@@ -345,7 +345,7 @@ the UI
 * Click "New Chat" on the top left corner of the screen and then proceed to
 pick `execution_rail` from the drop-down menu.
 
-Refer to [Guardrails Server Documentation](../../../docs/user_guide/interface-guide.md#guardrails-server) for more information.
+Refer to [Guardrails Server Documentation](../../../docs/user_guides/interface-guide.md#guardrails-server) for more information.
 ### Command Line Chat
 
 To chat with the bot with a command line interface simply use the following
@@ -353,7 +353,7 @@ command while you are in this folder.
 ```
 nemoguardrails chat --config=sample_rails
 ```
-Refer to [Guardrails CLI Documentation](../../../docs/user_guide/interface-guide.md#guardrails-cli) for more information.
+Refer to [Guardrails CLI Documentation](../../../docs/user_guides/interface-guide.md#guardrails-cli) for more information.
 
 Wondering what to talk to your bot about?
 * Write your own action!

@@ -20,9 +20,11 @@ from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions import action
 from nemoguardrails.actions.llm.utils import llm_call
+from nemoguardrails.context import llm_call_info_var
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
+from nemoguardrails.logging.explain import LLMCallInfo
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ async def output_moderation(
 ):
     """Checks if the bot response is appropriate and passes moderation."""
 
-    bot_response = context.get("last_bot_message")
+    bot_response = context.get("bot_message")
     if bot_response:
         prompt = llm_task_manager.render_task_prompt(
             task=Task.OUTPUT_MODERATION,
@@ -43,6 +45,9 @@ async def output_moderation(
                 "bot_response": bot_response,
             },
         )
+
+        # Initialize the LLMCallInfo object
+        llm_call_info_var.set(LLMCallInfo(task=Task.OUTPUT_MODERATION.value))
 
         with llm_params(llm, temperature=0.0):
             check = await llm_call(llm, prompt)
@@ -64,8 +69,8 @@ async def output_moderation_v2(
 ):
     """Checks if the bot response is appropriate and passes moderation."""
 
-    bot_response = context.get("last_bot_message")
-    user_input = context.get("last_user_message")
+    bot_response = context.get("bot_message")
+    user_input = context.get("user_message")
     if bot_response:
         prompt = llm_task_manager.render_task_prompt(
             task=Task.OUTPUT_MODERATION_V2,
@@ -74,6 +79,9 @@ async def output_moderation_v2(
                 "bot_response": bot_response,
             },
         )
+
+        # Initialize the LLMCallInfo object
+        llm_call_info_var.set(LLMCallInfo(task=Task.OUTPUT_MODERATION_V2.value))
 
         with llm_params(llm, temperature=0.0):
             check = await llm_call(llm, prompt)

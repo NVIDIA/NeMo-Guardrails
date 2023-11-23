@@ -20,7 +20,7 @@ import logging
 import os
 import threading
 import time
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, AsyncIterator, List, Optional, Tuple, Type, Union
 
 from langchain.llms.base import BaseLLM
 
@@ -33,13 +33,16 @@ from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
 from nemoguardrails.colang.v1_1.runtime.runtime import RuntimeV1_1
+from nemoguardrails.context import explain_info_var, streaming_handler_var
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
+from nemoguardrails.logging.explain import ExplainInfo
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
+from nemoguardrails.streaming import StreamingHandler
 from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
@@ -81,6 +84,9 @@ class LLMRails:
         #   should be removed
         self.events_history_cache = {}
 
+        # Weather the main LLM supports streaming
+        self.main_llm_supports_streaming = False
+
         # We also load the default flows from the `default_flows.yml` file in the current folder.
         # But only for version 1.0.
         # TODO: decide on the default flows for 1.1.
@@ -94,6 +100,10 @@ class LLMRails:
                 default_flows = parse_colang_file(
                     default_flows_file, default_flows_content
                 )["flows"]
+
+            # We mark all the default flows as system flows.
+            for flow_config in default_flows:
+                flow_config["is_system_flow"] = True
 
             # We add the default flows to the config.
             self.config.flows.extend(default_flows)
@@ -110,15 +120,33 @@ class LLMRails:
                                 file, content=f.read(), version=config.colang_version
                             )
 
-                            # We load all the flows
-                            self.config.flows.extend(content["flows"])
+                        # We mark all the flows coming from the guardrails library as system flows.
+                        for flow_config in content["flows"]:
+                            flow_config["is_system_flow"] = True
 
-                            # And all the messages as well, if they have not been overwritten
-                            for message_id, utterances in content.get(
-                                "bot_messages", {}
-                            ).items():
-                                if message_id not in self.config.bot_messages:
-                                    self.config.bot_messages[message_id] = utterances
+                        # We load all the flows
+                        self.config.flows.extend(content["flows"])
+
+                        # And all the messages as well, if they have not been overwritten
+                        for message_id, utterances in content.get(
+                            "bot_messages", {}
+                        ).items():
+                            if message_id not in self.config.bot_messages:
+                                self.config.bot_messages[message_id] = utterances
+
+        # Last but not least, we mark all the flows that are used in any of the rails
+        # as system flows (so they don't end up in the prompt).
+        rail_flow_ids = (
+            config.rails.input.flows
+            + config.rails.output.flows
+            + config.rails.retrieval.flows
+        )
+        for flow_config in self.config.flows:
+            if flow_config.get("id") in rail_flow_ids:
+                flow_config["is_system_flow"] = True
+
+                # We also mark them as subflows by default, to simplify the syntax
+                flow_config["is_subflow"] = True
 
         # We check if the configuration has a config.py module associated with it.
         config_module = None
@@ -172,7 +200,9 @@ class LLMRails:
         self.runtime.register_actions(self.llm_generation_actions, override=False)
 
         # Next, we initialize the Knowledge Base
-        if check_sync_call_from_async_loop():
+        # There are still some edge cases not covered by nest_asyncio.
+        # Using a separate thread always for now.
+        if True or check_sync_call_from_async_loop():
             t = threading.Thread(target=asyncio.run, args=(self._init_kb(),))
             t.start()
             t.join()
@@ -181,6 +211,9 @@ class LLMRails:
 
         # We also register the kb as a parameter that can be passed to actions.
         self.runtime.register_action_param("kb", self.kb)
+
+        # Reference to the general ExplainInfo object.
+        self.explain_info = None
 
     async def _init_kb(self):
         """Initializes the knowledge base."""
@@ -236,12 +269,22 @@ class LLMRails:
                         "gooseai",
                         "nlpcloud",
                         "petals",
+                        "trt_llm",
                     ]:
                         kwargs["model_name"] = llm_config.model
                     else:
                         # The `__fields__` attribute is computed dynamically by pydantic.
                         if "model" in provider_cls.__fields__:
                             kwargs["model"] = llm_config.model
+
+                if self.config.streaming:
+                    if "streaming" in provider_cls.__fields__:
+                        kwargs["streaming"] = True
+                        self.main_llm_supports_streaming = True
+                    else:
+                        log.warning(
+                            f"The provider {provider_cls.__name__} does not support streaming."
+                        )
 
                 if llm_config.type == "main" or len(self.config.models) == 1:
                     self.llm = provider_cls(**kwargs)
@@ -340,7 +383,10 @@ class LLMRails:
         return events
 
     async def generate_async(
-        self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None
+        self,
+        prompt: Optional[str] = None,
+        messages: Optional[List[dict]] = None,
+        streaming_handler: Optional[StreamingHandler] = None,
     ) -> Union[str, dict]:
         """Generate a completion or a next message.
 
@@ -359,11 +405,27 @@ class LLMRails:
         Args:
             prompt: The prompt to be used for completion.
             messages: The history of messages to be used to generate the next message.
+            streaming_handler: If specified, and the config supports streaming, the
+              provided handler will be used for streaming.
 
         Returns:
             The completion (when a prompt is provided) or the next message.
 
         System messages are not yet supported."""
+        if streaming_handler:
+            streaming_handler_var.set(streaming_handler)
+
+        # Initialize the object with additional explanation information.
+        # We allow this to also be set externally. This is useful when multiple parallel
+        # requests are made.
+        explain_info = explain_info_var.get()
+        if explain_info is None:
+            explain_info = ExplainInfo()
+            explain_info_var.set(explain_info)
+
+            # We also keep a general reference to this object
+            self.explain_info = explain_info
+
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
             new_message = await self.generate_async(
@@ -417,14 +479,38 @@ class LLMRails:
 
         # If logging is enabled, we log the conversation
         # TODO: add support for logging flag
+        explain_info.colang_history = get_colang_history(events)
         if self.verbose:
-            history = get_colang_history(events)
-            log.info(f"Conversation history so far: \n{history}")
+            log.info(f"Conversation history so far: \n{explain_info.colang_history}")
 
         log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
         log.info("--- :: Stats: %s" % llm_stats)
 
+        # If there is a streaming handler, we make sure we close it now
+        streaming_handler = streaming_handler_var.get()
+        if streaming_handler:
+            # print("Closing the stream handler explicitly")
+            await streaming_handler.push_chunk(None)
+
         return new_message
+
+    def stream_async(
+        self,
+        prompt: Optional[str] = None,
+        messages: Optional[List[dict]] = None,
+    ) -> AsyncIterator[str]:
+        """Simplified interface for getting directly the streamed tokens from the LLM."""
+        streaming_handler = StreamingHandler()
+
+        asyncio.create_task(
+            self.generate_async(
+                prompt=prompt,
+                messages=messages,
+                streaming_handler=streaming_handler,
+            )
+        )
+
+        return streaming_handler
 
     def generate(
         self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None
@@ -568,3 +654,7 @@ class LLMRails:
         """
 
         self.embedding_search_providers[name] = cls
+
+    def explain(self) -> ExplainInfo:
+        """Helper function to return the latest ExplainInfo object."""
+        return self.explain_info

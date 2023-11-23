@@ -5,16 +5,20 @@
 # <kbd>module</kbd> `nemoguardrails.rails.llm.llmrails`
 LLM Rails entry point.
 
+**Global Variables**
+---------------
+- **explain_info_var**
+- **streaming_handler_var**
 
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L38"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L45"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ## <kbd>class</kbd> `LLMRails`
 Rails based on a given configuration.
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L41"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L48"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.__init__`
 
@@ -41,7 +45,19 @@ Initializes the LLMRails instance.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L281"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L560"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+
+### <kbd>method</kbd> `LLMRails.explain`
+
+```python
+explain() → ExplainInfo
+```
+
+Helper function to return the latest ExplainInfo object.
+
+---
+
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L464"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.generate`
 
@@ -53,14 +69,15 @@ Synchronous version of generate_async.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L207"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L347"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.generate_async`
 
 ```python
 generate_async(
     prompt: Optional[str] = None,
-    messages: Optional[List[dict]] = None
+    messages: Optional[List[dict]] = None,
+    streaming_handler: Optional[nemoguardrails.streaming.StreamingHandler] = None
 ) → Union[str, dict]
 ```
 
@@ -84,6 +101,7 @@ The format for messages is the following:
 
  - <b>`prompt`</b>:  The prompt to be used for completion.
  - <b>`messages`</b>:  The history of messages to be used to generate the next message.
+ - <b>`streaming_handler`</b>:  If specified, and the config supports streaming, the  provided handler will be used for streaming.
 
 
 
@@ -94,7 +112,7 @@ System messages are not yet supported.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L335"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L513"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.generate_events`
 
@@ -106,7 +124,7 @@ Synchronous version of `LLMRails.generate_events_async`.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L299"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L477"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.generate_events_async`
 
@@ -138,7 +156,7 @@ The format for events is the following:
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L351"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L524"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.register_action`
 
@@ -153,7 +171,7 @@ Register a custom action for the rails configuration.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L355"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L528"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.register_action_param`
 
@@ -165,7 +183,29 @@ Registers a custom action parameter.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L359"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L548"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+
+### <kbd>method</kbd> `LLMRails.register_embedding_search_provider`
+
+```python
+register_embedding_search_provider(
+    name: str,
+    cls: Type[nemoguardrails.embeddings.index.EmbeddingsIndex]
+) → None
+```
+
+Register a new embedding search provider.
+
+
+
+**Args:**
+
+ - <b>`name`</b>:  The name of the embedding search provider that will be used.
+ - <b>`cls`</b>:  The class that will be used to generate and search embedding
+
+---
+
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L532"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.register_filter`
 
@@ -180,7 +220,7 @@ Register a custom filter for the rails configuration.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L363"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L536"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.register_output_parser`
 
@@ -192,7 +232,7 @@ Register a custom output parser for the rails configuration.
 
 ---
 
-<a href="../../nemoguardrails/rails/llm/llmrails.py#L367"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L540"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
 
 ### <kbd>method</kbd> `LLMRails.register_prompt_context`
 
@@ -203,3 +243,18 @@ register_prompt_context(name: str, value_or_fn: Any)
 Register a value to be included in the prompt context.
 
 :name: The name of the variable or function that will be used. :value_or_fn: The value or function that will be used to generate the value.
+
+---
+
+<a href="../../nemoguardrails/rails/llm/llmrails.py#L446"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square" /></a>
+
+### <kbd>method</kbd> `LLMRails.stream_async`
+
+```python
+stream_async(
+    prompt: Optional[str] = None,
+    messages: Optional[List[dict]] = None
+) → AsyncIterator[str]
+```
+
+Simplified interface for getting directly the streamed tokens from the LLM.

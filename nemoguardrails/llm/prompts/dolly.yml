@@ -15,7 +15,7 @@ prompts:
       - databricks/dolly-v2-3b
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -36,7 +36,7 @@ prompts:
       - databricks/dolly-v2-3b
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -57,7 +57,7 @@ prompts:
       - databricks/dolly-v2-3b
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:
@@ -85,7 +85,7 @@ prompts:
       - databricks/dolly-v2-3b
     content: |-
       """
-      {{ general_instruction }}
+      {{ general_instructions }}
       """
 
       # This is how a conversation between a user and the bot can go:

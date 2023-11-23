@@ -22,11 +22,15 @@ import time
 from typing import List, Optional
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from starlette import status
+from starlette.responses import JSONResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.streaming import StreamingHandler
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -88,6 +92,12 @@ class RequestBody(BaseModel):
     context: Optional[dict] = Field(
         default=None,
         description="Additional context data to be added to the conversation.",
+    )
+    stream: Optional[bool] = Field(
+        default=False,
+        description="If set, partial message deltas will be sent, like in ChatGPT. "
+        "Tokens will be sent as data-only server-sent events as they become "
+        "available, with the stream terminated by a data: [DONE] message.",
     )
 
 
@@ -178,15 +188,31 @@ async def chat_completion(body: RequestBody, request: Request):
         if body.context:
             messages.insert(0, {"role": "context", "content": body.context})
 
-        bot_message = await llm_rails.generate_async(messages=messages)
+        if (
+            body.stream
+            and llm_rails.config.streaming_supported
+            and llm_rails.main_llm_supports_streaming
+        ):
+            # Create the streaming handler instance
+            streaming_handler = StreamingHandler()
+
+            # Start the generation
+            asyncio.create_task(
+                llm_rails.generate_async(
+                    messages=messages, streaming_handler=streaming_handler
+                )
+            )
+
+            return StreamingResponse(streaming_handler)
+        else:
+            bot_message = await llm_rails.generate_async(messages=messages)
+            return {"messages": [bot_message]}
 
     except Exception as ex:
         log.exception(ex)
         return {
             "messages": [{"role": "assistant", "content": "Internal server error."}]
         }
-
-    return {"messages": [bot_message]}
 
 
 # By default, there are no challenges
@@ -333,3 +359,21 @@ def start_auto_reload_monitoring():
         )
         # Force close everything.
         os._exit(-1)
+
+
+# Register a nicer error message for 422 error
+def register_exception(app: FastAPI):
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
+        exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
+        # or logger.error(f'{exc}')
+        log.error(request, exc_str)
+        content = {"status_code": 10422, "message": exc_str, "data": None}
+        return JSONResponse(
+            content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+        )
+
+
+register_exception(app)
