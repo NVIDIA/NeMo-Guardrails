@@ -1739,6 +1739,9 @@ def create_internal_flow_event(
     """Creates and returns a internal flow event"""
     if arguments is None:
         arguments = dict()
+    for arg in source_flow_state.arguments:
+        if arg in source_flow_state.context:
+            arguments.update({arg: source_flow_state.context[arg]})
     arguments.update(
         {
             "source_flow_instance_uid": source_flow_state.uid,
@@ -1748,9 +1751,6 @@ def create_internal_flow_event(
     )
     if "flow_start_uid" in source_flow_state.context:
         arguments["flow_start_uid"] = source_flow_state.context["flow_start_uid"]
-    for arg in source_flow_state.arguments:
-        if arg in source_flow_state.context:
-            arguments.update({arg: source_flow_state.context[arg]})
     return create_internal_event(
         event_name,
         arguments,
