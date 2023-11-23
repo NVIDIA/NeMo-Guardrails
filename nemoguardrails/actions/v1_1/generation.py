@@ -24,8 +24,10 @@ from nemoguardrails.actions.actions import action
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import (
     get_first_nonempty_line,
+    get_initial_actions,
     get_last_user_utterance_event_v1_1,
     llm_call,
+    remove_action_intent_identifiers,
 )
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
 from nemoguardrails.colang.v1_1.runtime.flows import ActionEvent, InternalEvent
@@ -54,16 +56,6 @@ def _remove_leading_empty_lines(s: str):
     while lines and lines[0].strip() == "":
         lines = lines[1:]
     return "\n".join(lines)
-
-
-def _remove_identifiers(lines: List[str]) -> List[str]:
-    return [
-        s.replace("bot intent: ", "")
-        .replace("bot action: ", "")
-        .replace("user intent: ", "")
-        .replace("user action: ", "")
-        for s in lines
-    ]
 
 
 class LLMGenerationActionsV1dot1(LLMGenerationActions):
@@ -147,7 +139,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         self,
         state: State,
         events: List[dict],
-        user_utterance: str,
+        user_action: str,
         max_example_flows: int = 5,
         llm: Optional[BaseLLM] = None,
     ):
@@ -164,7 +156,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         if self.user_message_index:
             results = await self.user_message_index.search(
-                text=user_utterance, max_results=max_example_flows
+                text=user_action, max_results=max_example_flows
             )
 
             # We add these in reverse order so the most relevant is towards the end.
@@ -198,6 +190,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
             context={
                 "examples": examples,
                 "potential_user_intents": ", ".join(potential_user_intents),
+                "user_action": user_action,
             },
         )
 
@@ -224,7 +217,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         return f"{user_intent}" or "user unknown intent"
 
-    @action(name="CheckIfFlowExistsAction", is_system_action=True)
+    @action(name="CheckValidFlowExistsAction", is_system_action=True)
     async def check_if_flow_exists(self, state: "State", flow_id: str):
         return flow_id in state.flow_id_states
 
@@ -356,9 +349,13 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
     async def generate_flow_continuation(
         self,
         events: List[dict],
+        temperature: Optional[float] = None,
         llm: Optional[BaseLLM] = None,
     ):
         """Generate a continuation for the flow representing the current conversation."""
+
+        if temperature is None:
+            temperature = 0.0
 
         if self.instruction_flows_index is None:
             raise RuntimeError("No instruction flows index has been created.")
@@ -390,7 +387,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         )
 
         # We make this call with temperature 0 to have it as deterministic as possible.
-        with llm_params(llm, temperature=self.config.lowest_temperature):
+        with llm_params(llm, temperature=temperature):
             result = await llm_call(llm, prompt)
 
         lines = _remove_leading_empty_lines(result).split("\n")
@@ -402,18 +399,30 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
             }
 
         line_0 = lines[0].lstrip(" ")
+        uuid = new_uuid()[0:8]
         if line_0.startswith("bot intent:") or line_0.startswith("user intent:"):
-            flow_name = _remove_identifiers([line_0])[0].strip(" ")
+            intent = (
+                remove_action_intent_identifiers([line_0])[0]
+                .strip(" ")
+                .replace("'", "")
+            )
+            flow_name = f"_dynamic_{uuid} {intent}"
+            # TODO: parse potential parameters from flow name with a regex
+            flow_parameters: List[Any] = []
             lines = lines[1:]
         else:
-            flow_id = new_uuid()[0:4]
-            flow_name = f"dynamic_{flow_id}"
+            intent = "unknown"
+            flow_name = f"_dynamic_{uuid}"
+            flow_parameters = []
 
-        lines = _remove_identifiers(lines)
+        lines = remove_action_intent_identifiers(lines)
+        lines = get_initial_actions(lines)
 
         return {
             "name": flow_name,
+            "parameters": flow_parameters,
             "body": f"flow {flow_name}\n"
+            + f'  # meta: bot intent = "{intent}"\n'
             + "\n".join(["  " + l.strip(" ") for l in lines]),
         }
 

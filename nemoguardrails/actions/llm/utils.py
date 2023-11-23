@@ -163,12 +163,12 @@ def get_colang_history(
                 placeholder_text = "<<<This text is hidden because the assistant should not talk about this.>>>"
                 history = placeholder_text.join(split_history)
 
-    else:
+    elif colang_version == "1.1":
         new_history: List[str] = []
 
         # Structure the user/bot intent/action events
         action_group: List[InternalEvent] = []
-        current_intent_flow_id: Optional[str] = None
+        current_intent: Optional[str] = None
         for event in events:
             if not isinstance(event, InternalEvent):
                 continue
@@ -178,20 +178,20 @@ def get_colang_history(
                 or event.name == InternalEvents.USER_ACTION_LOG
             ):
                 if len(action_group) > 0 and (
-                    current_intent_flow_id is None
-                    or current_intent_flow_id != event.arguments["intent_flow_id"]
+                    current_intent is None
+                    or current_intent != event.arguments["intent_flow_id"]
                 ):
                     new_history.append(events_to_dialog_history(action_group))
                     new_history.append("")
                     action_group.clear()
 
                 action_group.append(event)
-                current_intent_flow_id = event.arguments["intent_flow_id"]
+                current_intent = event.arguments["intent_flow_id"]
             elif (
                 event.name == InternalEvents.BOT_INTENT_LOG
                 or event.name == InternalEvents.USER_INTENT_LOG
             ):
-                if event.arguments["flow_id"] == current_intent_flow_id:
+                if event.arguments["flow_id"] == current_intent:
                     # Found parent of current group
                     if event.name == InternalEvents.BOT_INTENT_LOG:
                         new_history.append(events_to_dialog_history([event]))
@@ -202,13 +202,14 @@ def get_colang_history(
                     new_history.append("")
                 else:
                     # New unrelated intent
-                    new_history.append(events_to_dialog_history(action_group))
-                    new_history.append("")
+                    if action_group:
+                        new_history.append(events_to_dialog_history(action_group))
+                        new_history.append("")
                     new_history.append(events_to_dialog_history([event]))
                     new_history.append("")
                 # Start a new group
                 action_group.clear()
-                current_intent_flow_id = None
+                current_intent = None
 
         if action_group:
             new_history.append(events_to_dialog_history(action_group))
@@ -244,6 +245,7 @@ def from_log_event_to_identifier(event_name: str) -> str:
         return "user intent"
     elif event_name == InternalEvents.USER_ACTION_LOG:
         return "user action"
+    return ""
 
 
 def flow_to_colang(flow: Union[dict, Flow]):
@@ -436,3 +438,23 @@ def get_multiline_response(s: str):
                 break
 
     return result
+
+
+def remove_action_intent_identifiers(lines: List[str]) -> List[str]:
+    """Removes the action/intent identifiers."""
+    return [
+        s.replace("bot intent: ", "")
+        .replace("bot action: ", "")
+        .replace("user intent: ", "")
+        .replace("user action: ", "")
+        for s in lines
+    ]
+
+
+def get_initial_actions(strings):
+    previous_strings = []
+    for string in strings:
+        if string == "":
+            break
+        previous_strings.append(string)
+    return previous_strings

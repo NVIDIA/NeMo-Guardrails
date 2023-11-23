@@ -1,4 +1,4 @@
-flow backchannelling interaction
+flow showcase backchannelling interaction
   bot inform "First, I am going to ask you about your day and will react to keywords such as nice, great or terrible."
   bot inform "Try to answer with a long sentence that contains one of these keywords to see the effect."
   wait 1.0
@@ -61,7 +61,9 @@ flow bot asks email address
 
   while True
     when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : r"@$"}])
-        bot say "And now only the domain missing!" and bot gesture "success"
+        bot say "And now only the domain missing!"
+    orwhen VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : r"\.org|\.com$"}])
+        bot say "Looks like a valid email address to me" and bot gesture "success"
     orwhen VisualFormSceneAction.ConfirmationUpdated()
         bot say "Thank you" and bot gesture "bowing"
         break

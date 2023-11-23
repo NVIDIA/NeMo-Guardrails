@@ -419,7 +419,7 @@ class FlowState:
     flow_id: str
 
     # Interaction loop id
-    loop_id: str
+    loop_id: Optional[str]
 
     # All the heads that point to the positions in the sequence of elements that compose the flow.
     heads: Dict[str, FlowHead] = field(default_factory=dict)

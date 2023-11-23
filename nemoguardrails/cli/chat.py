@@ -152,6 +152,12 @@ async def _run_chat_v1_1(rails_app: LLMRails):
 
                 input_events.append(
                     new_event_dict(
+                        "UtteranceBotActionStarted",
+                        action_uid=event["action_uid"],
+                    )
+                )
+                input_events.append(
+                    new_event_dict(
                         "UtteranceBotActionFinished",
                         action_uid=event["action_uid"],
                         is_success=True,
@@ -164,6 +170,12 @@ async def _run_chat_v1_1(rails_app: LLMRails):
 
                 input_events.append(
                     new_event_dict(
+                        "GestureBotActionStarted",
+                        action_uid=event["action_uid"],
+                    )
+                )
+                input_events.append(
+                    new_event_dict(
                         "GestureBotActionFinished",
                         action_uid=event["action_uid"],
                         is_success=True,
@@ -174,6 +186,12 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 # We print posture messages in green.
                 print(
                     f"\033[92mstart: posture (posture={event['posture']}, action_uid={event['action_uid']}))\033[0m"
+                )
+                input_events.append(
+                    new_event_dict(
+                        "PostureBotActionStarted",
+                        action_uid=event["action_uid"],
+                    )
                 )
 
             elif event["type"] == "StopPostureBotAction":
@@ -193,6 +211,12 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 print(
                     f"\033[92mshow: scene information (title={event['title']}, action_uid={event['action_uid']})\033[0m"
                 )
+                input_events.append(
+                    new_event_dict(
+                        "VisualInformationSceneActionStarted",
+                        action_uid=event["action_uid"],
+                    )
+                )
 
             elif event["type"] == "StopVisualInformationSceneAction":
                 print(
@@ -210,6 +234,12 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 # We print scene messages in green.
                 print(
                     f"\033[92mshow: scene choice (prompt={event['prompt']}, action_uid={event['action_uid']})\033[0m"
+                )
+                input_events.append(
+                    new_event_dict(
+                        "VisualChoiceSceneActionStarted",
+                        action_uid=event["action_uid"],
+                    )
                 )
 
             elif event["type"] == "StopVisualChoiceSceneAction":
@@ -232,6 +262,12 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 if action_uid not in running_timer_tasks:
                     task = asyncio.create_task(timer)
                     running_timer_tasks.update({action_uid: task})
+                input_events.append(
+                    new_event_dict(
+                        "TimerBotActionStarted",
+                        action_uid=event["action_uid"],
+                    )
+                )
 
             elif event["type"] == "StopTimerBotAction":
                 # print(f"\033[92mstart timer: {event['timer_name']} {event['duration']}\033[0m")

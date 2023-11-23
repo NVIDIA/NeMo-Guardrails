@@ -7,32 +7,30 @@ flow showcase posture capabilities
   activate posture management
 
   bot inform "So now observe how my posture changes when I am talking."
-  bot ask "And now it is your turn, you can say something now."
+  bot ask "And now it is your turn, you can say something now. Try a long sentence."
   while True
     when user expressed done
       bot inform "That was fun."
       break
     orwhen user said something
-      bot ask "Now I would ask a question. To end this show case just say 'I am done'"
+      bot ask "So now I again in the talking posture. We can keep interacting like this if you want to see the posture changes or you can just say 'I am done' to end the showcase."
 
 flow listening posture
   user started saying something
   start bot posture "listening"
+  start scene show short information $info="Listening"
   user said something
 
 flow talking posture
   bot started saying something
   start bot posture "talking"
+  start scene show short information $info="Talking"
   bot said something
-
-flow attentive posture
-  bot asked something
-  start bot posture "attentive"
-  bot said something or user said something
 
 flow posture management
   activate listening posture
   activate talking posture
-  activate attentive posture
-  start bot posture "idle"
+  #activate attentive posture
+  start bot posture "attentive"
+  start scene show short information $info="Attentive"
   wait indefinitely

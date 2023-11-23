@@ -107,6 +107,7 @@ def create_flow_instance(
     if flow_config.loop_type == InteractionLoopType.NEW:
         loop_uid = new_uid()
     elif flow_config.loop_type == InteractionLoopType.NAMED:
+        assert flow_config.loop_id is not None
         loop_uid = flow_config.loop_id
     # For type InteractionLoopType.PARENT we keep it None to infer loop_id at run_time from parent
 
@@ -373,7 +374,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     element = get_element_from_head(state, head)
                     flow_state = get_flow_state_from_head(state, head)
 
-                    # Create a potential reference form the match
+                    # Create a potential reference from the match
                     if element.spec.ref is not None:
                         flow_state.context.update(
                             _create_event_reference(state, flow_state, element, event)
@@ -611,17 +612,19 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         elif flow_aborted:
             log.debug(f"Flow aborted: {head.flow_state_uid} by 'abort' statement")
 
-        all_heads_at_real_match_elements = False
+        all_heads_are_waiting = False
         if not flow_finished and not flow_aborted:
-            # Check if all all flow heads at a match element
-            all_heads_at_real_match_elements = True
+            # Check if all all flow heads are waiting at match or wait_for_heads statements
+            all_heads_are_waiting = True
             for temp_head in flow_state.active_heads.values():
                 element = flow_config.elements[temp_head.position]
-                if not is_match_op_element(element) or "internal" in element.info:
-                    all_heads_at_real_match_elements = False
+                if not isinstance(element, WaitForHeads) and (
+                    not is_match_op_element(element) or "internal" in element.info
+                ):
+                    all_heads_are_waiting = False
                     break
 
-        if flow_finished or all_heads_at_real_match_elements:
+        if flow_finished or all_heads_are_waiting:
             if flow_state.status == FlowStatus.STARTING:
                 flow_state.status = FlowStatus.STARTED
                 event = create_internal_flow_event(
@@ -1029,7 +1032,8 @@ def _start_flow(
             )
 
     # Initialize new flow instance of flow
-    add_new_flow_instance(state, create_flow_instance(flow_config))
+    if not flow_config.id == "main" and not flow_config.id.startswith("_dynamic_"):
+        add_new_flow_instance(state, create_flow_instance(flow_config))
 
 
 def _abort_flow(
@@ -1134,14 +1138,16 @@ def _finish_flow(
 
     # Check if it was an user/bot intent/action flow a generate internal events
     event_type: Optional[str] = None
-    if "meta: user intent" in state.flow_configs[flow_state.flow_id].source_code:
-        event_type = InternalEvents.USER_INTENT_LOG
-    elif "meta: bot intent" in state.flow_configs[flow_state.flow_id].source_code:
-        event_type = InternalEvents.BOT_INTENT_LOG
-    elif "meta: user action" in state.flow_configs[flow_state.flow_id].source_code:
-        event_type = InternalEvents.USER_ACTION_LOG
-    elif "meta: bot action" in state.flow_configs[flow_state.flow_id].source_code:
-        event_type = InternalEvents.BOT_ACTION_LOG
+    source_code = state.flow_configs[flow_state.flow_id].source_code
+    if source_code is not None:
+        if "meta: user intent" in source_code:
+            event_type = InternalEvents.USER_INTENT_LOG
+        elif "meta: bot intent" in source_code:
+            event_type = InternalEvents.BOT_INTENT_LOG
+        elif "meta: user action" in source_code:
+            event_type = InternalEvents.USER_ACTION_LOG
+        elif "meta: bot action" in source_code:
+            event_type = InternalEvents.BOT_ACTION_LOG
 
     if (
         event_type == InternalEvents.USER_INTENT_LOG
@@ -1149,8 +1155,13 @@ def _finish_flow(
     ):
         event = create_internal_event(
             event_type,
+            # TODO: Refactor how we define intents and there relation to flow names
             {
-                "flow_id": flow_state.flow_id,
+                "flow_id": (
+                    flow_state.flow_id
+                    if not flow_state.flow_id.startswith("_dynamic_")
+                    else flow_state.flow_id[18:]
+                ),
                 "parameter": flow_state.context.get("$0", None),
             },
             matching_scores,
@@ -1164,21 +1175,26 @@ def _finish_flow(
         hierarchy = _get_flow_state_hierarchy(state, flow_state.uid)
         # Find next intent in hierarchy
         # TODO: Generalize to multi intents
-        intent_flow_id = None
+        intent = None
         for flow_state_uid in reversed(hierarchy):
             flow_config = state.flow_configs[state.flow_states[flow_state_uid].flow_id]
-            if (
-                "# meta: bot intent" in flow_config.source_code
-                or "# meta: user intent" in flow_config.source_code
-            ):
-                intent_flow_id = flow_config.id
+            if flow_config.source_code is not None:
+                match = re.search(
+                    r'#\W*meta:\W*(bot intent|user intent)(\W*=\W*"([a-zA-Z0-9_ ]*)")?',
+                    flow_config.source_code,
+                )
+                if match:
+                    if match.group(3) is not None:
+                        intent = match.group(3)
+                    else:
+                        intent = flow_config.id
 
         event = create_internal_event(
             event_type,
             {
                 "flow_id": flow_state.flow_id,
                 "parameter": flow_state.context.get("$0", None),
-                "intent_flow_id": intent_flow_id,
+                "intent_flow_id": intent,
             },
             matching_scores,
         )
@@ -1234,12 +1250,6 @@ def _is_inactive_flow(flow_state: FlowState) -> bool:
 def _generate_action_event(state: State, event: Event) -> None:
     umim_event = create_umim_event(event, event.arguments)
     state.outgoing_events.append(umim_event)
-    # Also push them on the internal event queue
-    if isinstance(event, ActionEvent):
-        state.internal_events.append(ActionEvent.from_umim_event(umim_event))
-    elif isinstance(event, Event):
-        state.internal_events.append(Event.from_umim_event(umim_event))
-
     log.info(f"[bold violet]<- Action[/]: {event}")
 
     # Update the status of relevant actions by event

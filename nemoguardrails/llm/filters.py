@@ -17,12 +17,20 @@ import re
 import textwrap
 from typing import List
 
-from nemoguardrails.actions.llm.utils import get_colang_history
+from nemoguardrails.actions.llm.utils import (
+    get_colang_history,
+    remove_action_intent_identifiers,
+)
 
 
 def colang(events: List[dict]) -> str:
     """Filter that turns an array of events into a colang history."""
     return get_colang_history(events)
+
+
+def colang_without_identifiers(events: List[dict]) -> str:
+    """Filter that turns an array of events into a colang history."""
+    return remove_action_intent_identifiers([get_colang_history(events)])[0]
 
 
 def to_messages(colang_history: str) -> List[dict]:
@@ -130,7 +138,7 @@ def first_turns(colang_history: str, n: int) -> str:
     turn_count = 0
     i = 0
     while i < len(lines):
-        if lines[i].startswith('user "'):
+        if lines[i].startswith('user "') or lines[i].startswith("user intent: "):
             turn_count += 1
         if turn_count == n + 1:
             break
@@ -145,7 +153,7 @@ def last_turns(colang_history: str, n: int) -> str:
     turn_count = 0
     i = len(lines) - 1
     while i > 0:
-        if lines[i].startswith('user "'):
+        if lines[i].startswith('user "') or lines[i].startswith("user intent: "):
             turn_count += 1
         if turn_count == n:
             break

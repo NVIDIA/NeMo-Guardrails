@@ -53,7 +53,7 @@ def eval_expression(expr: str, context: dict) -> Any:
                     f"Error evaluating inner expression: '{expr}': {str(ex)}"
                 )
             if isinstance(value, str):
-                value = value.replace('"', '\\"')
+                value = value.replace('"', '\\"').replace("'", "\\'")
             inner_expression_values.append(value)
         expr = re.sub(
             inner_expression_pattern,

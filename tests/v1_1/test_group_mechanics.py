@@ -434,40 +434,81 @@ def test_await_and_or_grouping():
     )
 
 
-# def test_await_and_group_immediate_end():
-#     """"""
+def test_await_and_group_immediate_end():
+    """"""
 
-#     content = """
-#     flow bot say $text
-#       await UtteranceBotAction(script=$text)
+    content = """
+    flow _bot_say $text
+      await UtteranceBotAction(script=$text) as $action
 
-#     flow bot gesture $gesture
-#       await GestureBotAction(gesture=$gesture)
+    flow bot say $text
+      await _bot_say $text
 
-#     flow main
-#         await user say "test"
-#           and bot gesture "smile"
-#         UtteranceBotAction(script="Success")
-#     """
+    flow bot gesture $gesture
+      await GestureBotAction(gesture=$gesture)
 
-#     state = run_to_completion(_init_state(content), start_main_flow_event)
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [],
-#     )
-#     state = run_to_completion(
-#         state,
-#         {
-#             "type": "UtteranceBotActionFinished",
-#             "final_script": "test",
-#             "action_uid": state.outgoing_events[0]["action_uid"],
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [],
-#     )
+    flow bot express $text
+      await _bot_say $text
+
+    flow bot express greeting
+      (bot express "Hi there!"
+        or bot express "Welcome!")
+        and bot gesture "Wave with one hand"
+
+    flow main
+      bot express greeting
+        and bot gesture "Smile"
+      UtteranceBotAction(script="Success")
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+            },
+            {"type": "StartGestureBotAction", "gesture": "Wave with one hand"},
+            {"type": "StartGestureBotAction", "gesture": "Smile"},
+        ],
+    )
+    utterance_action_uid = state.outgoing_events[0]["action_uid"]
+    gesture_1_action_uid = state.outgoing_events[1]["action_uid"]
+    gesture_2_action_uid = state.outgoing_events[2]["action_uid"]
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "action_uid": utterance_action_uid,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "GestureBotActionFinished",
+            "action_uid": gesture_1_action_uid,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "GestureBotActionFinished",
+            "action_uid": gesture_2_action_uid,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [{"type": "StartUtteranceBotAction", "script": "Success"}],
+    )
 
 
 if __name__ == "__main__":
-    test_await_or_grouping()
+    test_await_and_group_immediate_end()

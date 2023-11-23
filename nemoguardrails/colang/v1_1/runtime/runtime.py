@@ -74,6 +74,8 @@ class RuntimeV1_1(Runtime):
                 include_source_mapping=True,
             )
         except Exception as ex:
+            return []
+            # Alternatively, we could through an exceptions
             raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
 
         added_flows: List[str] = []
@@ -401,6 +403,7 @@ class RuntimeV1_1(Runtime):
                 state = State.from_dict(state)
 
         assert isinstance(state, State)
+        assert state.main_flow_state is not None
         main_flow_uid = state.main_flow_state.uid
 
         # Check if we have new finished async local action events to add
@@ -484,6 +487,9 @@ class RuntimeV1_1(Runtime):
                                 if main_flow_uid not in self.async_actions:
                                     self.async_actions[main_flow_uid] = []
                                 self.async_actions[main_flow_uid].append(local_action)
+
+                            # We need to feedback the start events of the local actions
+                            input_events.append(out_event)
                         else:
                             output_events.append(out_event)
                     else:
