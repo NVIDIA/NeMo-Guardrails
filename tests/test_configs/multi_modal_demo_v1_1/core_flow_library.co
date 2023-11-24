@@ -103,19 +103,19 @@ flow bot was silent $time_s
 
 flow bot started saying $text
   # meta: exclude from llm
-  match FlowStarted(flow_id="_bot_say", script=$text) as $even
+  match FlowStarted(flow_id="_bot_say", script=$text) as $event
 
 flow bot started saying something
   # meta: exclude from llm
-  match FlowStarted(flow_id="_bot_say") as $even
+  match FlowStarted(flow_id="_bot_say") as $event
 
 flow bot said $text
   # meta: exclude from llm
-  match FlowFinished(flow_id="_bot_say", script=$text) as $even
+  match FlowFinished(flow_id="_bot_say", script=$text) as $event
 
 flow bot said something
   # meta: exclude from llm
-  match FlowFinished(flow_id="_bot_say") as $even
+  match FlowFinished(flow_id="_bot_say") as $event
 
 flow bot informed something
   # meta: exclude from llm
@@ -140,6 +140,29 @@ flow bot clarified something
 flow bot suggested something
   # meta: exclude from llm
   match FlowFinished(flow_id="bot suggest") as $event
+
+flow bot started gesture $gesture
+  # meta: exclude from llm
+  match FlowStarted(flow_id="bot gesture", gesture=$gesture) as $event
+
+flow bot started a gesture
+  # meta: exclude from llm
+  match FlowStarted(flow_id="bot gesture") as $event
+
+flow bot started posture $posture
+  # meta: exclude from llm
+  match FlowStarted(flow_id="bot posture", posture=$posture) as $event
+
+flow bot started a posture
+  # meta: exclude from llm
+  match FlowStarted(flow_id="bot posture") as $event
+
+flow bot started an action
+  # meta: exclude from llm
+  # meta: bot action
+  match bot started saying something
+    or bot started a gesture
+    or bot started a posture
 
 # ----------------------------------
 # Bot UMIM action wrapper flows
@@ -229,6 +252,19 @@ flow bot suggest $text
 # ----------------------------------
 # Core mechanic flows
 # ----------------------------------
+
+flow stop all bot actions
+  """Stops all the current bot actions."""
+  send StopFlow(flow_id="_bot_say")
+  send StopFlow(flow_id="bot gesture")
+  #send StopFlow(flow_id="bot posture")
+
+flow stop all scene actions
+  """Stops all the current scene actions."""
+  send StopFlow(flow_id="scene show choice")
+  send StopFlow(flow_id="scene show textual information")
+  send StopFlow(flow_id="scene show short information")
+  send StopFlow(flow_id="scene show form")
 
 flow wait indefinitely
   """Little helper flow to wait indefinitely."""
