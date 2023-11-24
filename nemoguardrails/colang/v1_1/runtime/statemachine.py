@@ -574,7 +574,14 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         flow_state = get_flow_state_from_head(state, head)
         flow_config = get_flow_config_from_head(state, head)
 
-        if head.status == FlowHeadStatus.INACTIVE:
+        if (
+            head.status == FlowHeadStatus.INACTIVE
+            or not _is_listening_flow(flow_state)
+            or (
+                flow_state.parent_uid is not None
+                and not _is_listening_flow(state.flow_states[flow_state.parent_uid])
+            )
+        ):
             continue
         elif head.status == FlowHeadStatus.MERGING and len(state.internal_events) > 0:
             # We only advance merging heads if all internal events were processed
