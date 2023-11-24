@@ -143,10 +143,6 @@ define subflow check blocked terms
 
 The last step is to add the `check blocked terms` to the list of output flows:
 
-```python
-- check blocked terms
-```
-
 ```yaml
 rails:
   input:
@@ -200,7 +196,7 @@ print(info.llm_calls[1].completion)
  The proprietary software used by our company has greatly improved our efficiency.
 ```
 
-As we can see, the generated message did contain the word "proprietary" and it was blocked by the output `check blocked terms` output rail.
+As we can see, the generated message did contain the word "proprietary" and it was blocked by the `check blocked terms` output rail.
 
 Similarly, you can add any number of custom output rails. In one of the next guides we will look at adding the fact-checking output rail as well.
 
