@@ -574,7 +574,14 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         flow_state = get_flow_state_from_head(state, head)
         flow_config = get_flow_config_from_head(state, head)
 
-        if head.status == FlowHeadStatus.INACTIVE:
+        if (
+            head.status == FlowHeadStatus.INACTIVE
+            or not _is_listening_flow(flow_state)
+            or (
+                flow_state.parent_uid is not None
+                and not _is_listening_flow(state.flow_states[flow_state.parent_uid])
+            )
+        ):
             continue
         elif head.status == FlowHeadStatus.MERGING and len(state.internal_events) > 0:
             # We only advance merging heads if all internal events were processed
@@ -1564,9 +1571,14 @@ def get_event_from_element(
         member = None
         if element_spec.members is not None:
             for member in element_spec.members[:-1]:
-                if not hasattr(obj, member.name):
-                    raise ColangValueError(f"No attribute '{member.name}' in {obj}")
-                obj = getattr(obj, member.name)
+                if isinstance(obj, dict):
+                    if member.name not in obj:
+                        raise ColangValueError(f"No attribute '{member.name}' in {obj}")
+                    obj = obj[member.name]
+                else:
+                    if not hasattr(obj, member.name):
+                        raise ColangValueError(f"No attribute '{member.name}' in {obj}")
+                    obj = getattr(obj, member.name)
         if element_spec.members is not None:
             member = element_spec.members[-1]
 
@@ -1739,6 +1751,9 @@ def create_internal_flow_event(
     """Creates and returns a internal flow event"""
     if arguments is None:
         arguments = dict()
+    for arg in source_flow_state.arguments:
+        if arg in source_flow_state.context:
+            arguments.update({arg: source_flow_state.context[arg]})
     arguments.update(
         {
             "source_flow_instance_uid": source_flow_state.uid,
@@ -1748,9 +1763,6 @@ def create_internal_flow_event(
     )
     if "flow_start_uid" in source_flow_state.context:
         arguments["flow_start_uid"] = source_flow_state.context["flow_start_uid"]
-    for arg in source_flow_state.arguments:
-        if arg in source_flow_state.context:
-            arguments.update({arg: source_flow_state.context[arg]})
     return create_internal_event(
         event_name,
         arguments,

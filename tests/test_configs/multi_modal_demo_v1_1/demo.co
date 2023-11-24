@@ -261,3 +261,10 @@ flow main
   #showcase posture capabilities
   #showcase proactive turn taking
   wait indefinitely
+
+flow user interrupted bot talking
+  bot started saying something as $ref
+  when user started say something
+    send $ref.Stop()
+  orwhen $ref.Finished()
+    pass

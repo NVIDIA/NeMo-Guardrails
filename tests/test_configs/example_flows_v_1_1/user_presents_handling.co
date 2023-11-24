@@ -43,10 +43,9 @@ flow user_is_present
   if $user_is_present
     return
 
-  activate active_zone_handling as $active_zone_flow
-    and approach_zone_handling as $approach_zone_flow
-    and passive_zone_handling as $passive_zone_flow
-  match $active_zone_flow.Finished()
+  activate active_zone_handling
+    and approach_zone_handling
+    and passive_zone_handling
 
 flow main
   await user_is_present

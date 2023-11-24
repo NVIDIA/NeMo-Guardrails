@@ -18,10 +18,8 @@ import logging
 
 from rich.logging import RichHandler
 
-from nemoguardrails.colang.v1_1.runtime.statemachine import (
-    InternalEvent,
-    run_to_completion,
-)
+from nemoguardrails.colang.v1_1.runtime.statemachine import (InternalEvent,
+                                                             run_to_completion)
 from tests.utils import _init_state, is_data_in_events
 
 FORMAT = "%(message)s"
@@ -605,8 +603,8 @@ def test_stop_activate_flow_mechanism():
         match UtteranceUserAction().Finished(final_transcript="Hi")
 
     flow main
-      activate a as $ref
-      send $ref.Stop()
+      activate a
+      send StopFlow(flow_id="a")
       start UtteranceBotAction(script="End")
       match WaitAction().Finished()
     """
@@ -907,5 +905,83 @@ def test_abort_flow_propagation_v_b():
     )
 
 
+def test_flow_deactivation():
+    """Test if an activated flow is fully stopped when parent has finished."""
+
+    content = """
+    flow a
+      activate b
+      match UtteranceUserAction().Finished(final_transcript="End")
+      start UtteranceBotAction(script="Done")
+
+    flow b
+      activate c
+      match WaitEvent()
+
+    flow c
+      match UtteranceUserAction().Finished(final_transcript="Ping")
+      start UtteranceBotAction(script="Pong")
+
+    flow main
+      await a
+      match WaitEvent()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Ping",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Pong",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "End",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Done",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Next",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+
+
 if __name__ == "__main__":
-    test_conflicting_actions_reference_sharing()
+    test_flow_deactivation()

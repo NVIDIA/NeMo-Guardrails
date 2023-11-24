@@ -37,8 +37,8 @@ flow bot reacts to nice things
     and bot gesture "celebrate something going well"
 
 flow bot asks user how the day was
-  activate bot reacts to nice things as $react_nice_flow
-  activate bot reacts to bad things as $react_bad_flow
+  activate bot reacts to nice things
+  activate bot reacts to bad things
 
   bot say "How was your day?"
   start bot posture "attentive"
@@ -48,8 +48,9 @@ flow bot asks user how the day was
       and bot gesture "looking concerned to the user"
   orwhen user said something
     bot say "Great. And any plans for the rest of the day?"
-  send $react_nice_flow.Stop()
-  send $react_bad_flow.Stop()
+
+  send StopFlow(flow_id="bot reacts to nice things")
+  send StopFlow(flow_id="bot reacts to bad things")
 
   user said something
   bot say "Thanks for sharing"

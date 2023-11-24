@@ -17,10 +17,10 @@ flow bot ask confirmation question $utterance $max_repetition=2
       bot say "Just say 'yes' to confirm!"
 
 flow main
-  activate bot ask confirmation question "Do you want to pay now?" as $question
-  when $question.Finished("confirmed")
+  activate bot ask confirmation question "Do you want to pay now?"
+  when bot ask confirmation question.Finished("confirmed")
     bot say "Great!"
-  orwhen $question.Finished("denied")
+  orwhen bot ask confirmation question.Finished("denied")
     bot say "No problem"
   else # In the case that the question is not answered and failed
     bot say "Never mind"
