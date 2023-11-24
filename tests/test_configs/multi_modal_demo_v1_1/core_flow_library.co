@@ -43,8 +43,8 @@ flow user saying something
   # meta: exclude from llm
   # meta: user intent
   match UtteranceUserAction.TranscriptUpdated() as $event
-  send UserActionLog(flow_id="user saying", parameter=$event.arguments.final_transcript, intent_flow_id="user saying something")
-  return $event.arguments.final_transcript
+  send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
+  return $event.arguments.interim_transcript
 
 flow unhandled user intent
   # meta: exclude from llm

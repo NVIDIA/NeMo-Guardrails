@@ -138,7 +138,7 @@ def first_turns(colang_history: str, n: int) -> str:
     turn_count = 0
     i = 0
     while i < len(lines):
-        if lines[i].startswith('user "') or lines[i].startswith("user intent: "):
+        if lines[i].startswith('user "') or lines[i].startswith("user action: "):
             turn_count += 1
         if turn_count == n + 1:
             break
@@ -153,7 +153,7 @@ def last_turns(colang_history: str, n: int) -> str:
     turn_count = 0
     i = len(lines) - 1
     while i > 0:
-        if lines[i].startswith('user "') or lines[i].startswith("user intent: "):
+        if lines[i].startswith('user "') or lines[i].startswith("user action: "):
             turn_count += 1
         if turn_count == n:
             break
