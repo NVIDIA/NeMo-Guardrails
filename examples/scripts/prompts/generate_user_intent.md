@@ -16,7 +16,7 @@ user asked about capabilities
 
 bot respond about capabilities
 bot say "As an AI assistant, I can help you with a wide range of tasks."
-  and gesture "open both hands making an inviting move"
+  and bot gesture "open both hands making an inviting move"
 
 user said "Tell me a bit about the history of NVIDIA."
 user asked general question
@@ -40,7 +40,7 @@ user said "thanks"
 user expressed appreciation
 
 bot express appreciation and offer additional help
-bot express "You're welcome. If you have any more questions or if there's anything else I can help you with, please don't hesitate to ask." and gesture "putting flat hands together and make little bow"
+bot express "You're welcome. If you have any more questions or if there's anything else I can help you with, please don't hesitate to ask." and bot gesture "putting flat hands together and make little bow"
 
 # This is how the user talks
 

@@ -38,14 +38,14 @@ user intent: user asked about capabilities
 
 bot intent: bot respond about capabilities
 bot action: bot say "As an AI assistant, I can help you with a wide range of tasks."
-  and gesture "open both hands making an inviting move"
+  and bot gesture "open both hands making an inviting move"
 
 user action: user said "ddsf poenwrfbjvhjhd sfd dfs"
 user intent: user said something unclear
 
 bot intent: bot inform about unclear user input
 bot action: bot inform "Excuse me! I did not get that! Can you repeat please?"
-  and gesture "Making a sad face"
+  and bot gesture "Making a sad face"
 
 user action: user said "Tell me a bit about the history of NVIDIA."
 user intent: user asked general question
@@ -73,7 +73,7 @@ user intent: user expressed appreciation
 
 bot intent: bot express appreciation and offer additional help
 bot action: bot express "You're welcome. If you have any more questions or if there's anything else I can help you with, please don't hesitate to ask."
-  and gesture "putting flat hands together and make little bow"
+  and bot gesture "putting flat hands together and make little bow"
 
 # This is how the user talks
 
@@ -109,14 +109,14 @@ user intent: user asked about capabilities
 
 bot intent: bot respond about capabilities
 bot action: bot say "As an AI assistant, I can help you with a wide range of tasks."
-  and gesture "open both hands making an inviting move"
+  and bot gesture "open both hands making an inviting move"
 
 user action: user said "ddsf poenwrfbjvhjhd sfd dfs"
 user intent: user said something unclear
 
 bot intent: bot inform about unclear user input
 bot action: bot inform "Excuse me! I did not get that! Can you repeat please?"
-  and gesture "Making a sad face"
+  and bot gesture "Making a sad face"
 
 user action: user said "Tell me a bit about the history of NVIDIA."
 user intent: user asked general question
@@ -144,7 +144,7 @@ user intent: user expressed appreciation
 
 bot intent: bot express appreciation and offer additional help
 bot action: bot express "You're welcome. If you have any more questions or if there's anything else I can help you with, please don't hesitate to ask."
-  and gesture "putting flat hands together and make little bow"
+  and bot gesture "putting flat hands together and make little bow"
 
 bot action: bot action: bot say "Welcome! I'm the MVP bot."
 
