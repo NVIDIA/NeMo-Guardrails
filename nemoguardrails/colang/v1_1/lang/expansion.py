@@ -538,6 +538,10 @@ def _expand_activate_element(
         # Single match element
         if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
+            if element.spec.ref is not None:
+                raise ColangSyntaxError(
+                    "Activate statement cannot have a reference assignment!"
+                )
             element_copy = copy.deepcopy(element)
             element_copy.spec.arguments.update(
                 {
