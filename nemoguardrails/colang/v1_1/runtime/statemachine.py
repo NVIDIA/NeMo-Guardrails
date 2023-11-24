@@ -1564,9 +1564,14 @@ def get_event_from_element(
         member = None
         if element_spec.members is not None:
             for member in element_spec.members[:-1]:
-                if not hasattr(obj, member.name):
-                    raise ColangValueError(f"No attribute '{member.name}' in {obj}")
-                obj = getattr(obj, member.name)
+                if isinstance(obj, dict):
+                    if member.name not in obj:
+                        raise ColangValueError(f"No attribute '{member.name}' in {obj}")
+                    obj = obj[member.name]
+                else:
+                    if not hasattr(obj, member.name):
+                        raise ColangValueError(f"No attribute '{member.name}' in {obj}")
+                    obj = getattr(obj, member.name)
         if element_spec.members is not None:
             member = element_spec.members[-1]
 
