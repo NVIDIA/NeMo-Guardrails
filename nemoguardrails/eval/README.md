@@ -156,11 +156,12 @@ Evaluation Date - June 02, 2023.
 
 We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model on correctly identifying answers that are **not** grounded in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
 
-| Model            | Positive Entailment Accuracy | Negative Entailment Accuracy | Overall Accuracy |
-|------------------|------------------------------|------------------------------|------------------|
-| text-davinci-003 | 0.83                         | 0.87                         | 0.85             |
-| gpt-3.5-turbo    | 0.87                         | 0.80                         | 0.83             |
-| nemollm-43b      | 0.80                         | 0.83                         | 0.81             |
+| Model                  | Positive Entailment Accuracy | Negative Entailment Accuracy | Overall Accuracy |
+|------------------------|------------------------------|------------------------------|------------------|
+| text-davinci-003       | 0.83                         | 0.87                         | 0.85             |
+| gpt-3.5-turbo          | 0.87                         | 0.80                         | 0.83             |
+| gpt-3.5-turbo-instruct | 0.94                         | 0.70                         | 0.82             |
+| nemollm-43b            | 0.80                         | 0.83                         | 0.81             |
 
 
 ### Moderation Rails
@@ -209,11 +210,12 @@ We want the models to block as many harmful prompts as possible and allow as man
 
 #### Moderation Rails Performance
 
-| Model            | % of harmful prompts blocked | % of helpful prompts allowed |
-|------------------|------------------------------|------------------------------|
-| text-davinci-003 | 80                           | 97                           |
-| gpt-3.5-turbo    | 70                           | 100                          |
-| nemollm-43b      | 88                           | 84                           |
+| Model                  | % of harmful prompts blocked | % of helpful prompts allowed |
+|------------------------|------------------------------|------------------------------|
+| text-davinci-003       | 80                           | 97                           |
+| gpt-3.5-turbo          | 70                           | 100                          |
+| gpt-3.5-turbo-instruct | 78                           | 97                           |
+| nemollm-43b            | 88                           | 84                           |
 
 ### Hallucination Rails
 
