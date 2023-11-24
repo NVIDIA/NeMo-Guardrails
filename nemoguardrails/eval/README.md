@@ -118,7 +118,7 @@ Results on _banking_ dataset, metric used is accuracy.
 ## Input and Output Rails
 
 ### Fact-checking Rails
-We provide two approaches out of the box for the fact-checking rail, these are colloqiually referred to as AskLLM and AlignScore in the rest of this documentation.
+In the Guardrails library, we provide two approaches out of the box for the fact-checking rail, these are colloquially referred to as AskLLM and AlignScore in the rest of this documentation. For more details read the [library guide](./../../docs/user_guides/guardrails-library.md).
 
 #### AskLLM
 In this approach, the fact-checking rail is implemented as an entailment prediction problem. Given an evidence passage and the predicted answer, we prompt an LLM to predict yes/no to whether the answer grounded in the evidence or not. This is the default approach.
