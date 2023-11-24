@@ -29,6 +29,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Support raw string literals for regex expressions : `r"\bword\b"` instead `r"\\bword\\b"`
 - Implement proper bot/user intent extraction (nemoguardrails/actions/llm/generation.py line 111)
 - expression_functions don't work as IF condition
+- Support parsing for `match (bot ask confirmation question "Do you want to pay now?").Finished("confirmed")`
 
 ## To Discuss
 
