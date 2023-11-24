@@ -210,12 +210,12 @@ We want the models to block as many harmful prompts as possible and allow as man
 
 #### Moderation Rails Performance
 
-| Model            | % of harmful prompts blocked | % of helpful prompts allowed |
-|------------------|------------------------------|------------------------------|
-| text-davinci-003 | 80                           | 97                           |
-| gpt-3.5-turbo    | 70                           | 100                          |
-| gpt-3.5-turbo    | 78                           | 100                          |
-| nemollm-43b      | 88                           | 84                           |
+| Model                  | % of harmful prompts blocked | % of helpful prompts allowed |
+|------------------------|------------------------------|------------------------------|
+| text-davinci-003       | 80                           | 97                           |
+| gpt-3.5-turbo          | 70                           | 100                          |
+| gpt-3.5-turbo-instruct | 78                           | 97                           |
+| nemollm-43b            | 88                           | 84                           |
 
 ### Hallucination Rails
 
