@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+from functools import partial
 import logging
 from typing import Optional
 
@@ -140,8 +142,10 @@ async def check_hallucination(
             if bert_score_model_type is None and bert_score_lang is None:
                 raise ValueError("One of `bert_score_model_type` and `bert_score_lang` is required to use BERT-Score.")
 
+            loop = asyncio.get_event_loop()
             # NOTE: SelfCheckGPT paper uses average BERT-Score while bert_score library only returns the best score
-            _, _, F = score([bot_response], [extra_responses], lang=bert_score_lang, model_type=bert_score_model_type, **kwargs)
+            score_fn = partial(score, [bot_response], [extra_responses], lang=bert_score_lang, model_type=bert_score_model_type, **kwargs)
+            _, _, F = await loop.run_in_executor(None, score_fn)
             if F[0] >= bert_score_threshold:
                 # no hallucination
                 return False
