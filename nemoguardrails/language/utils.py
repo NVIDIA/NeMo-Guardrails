@@ -18,9 +18,22 @@ from typing import List, Optional, Text, Tuple
 
 
 def split_max(text, separator, max_instances):
-    """Helper to simulate the behavior of .split(..., max_instances).
+    """
+    Split a text into parts using a separator, with a maximum number of parts.
 
-    This implementation is meant to transpile correctly to the JS>
+    Args:
+        text (str): The input text to be split.
+        separator (str): The separator used for splitting.
+        max_instances (int): The maximum number of parts to create.
+
+    Returns:
+        List[str]: A list of parts obtained after splitting the text.
+
+    Note:
+        This function splits the input text into parts using the specified separator.
+        If the number of resulting parts exceeds the provided `max_instances`, it combines
+        the extra parts into the last part.
+
     """
     parts = text.split(separator)
     if len(parts) > max_instances + 1:
@@ -32,15 +45,19 @@ def split_max(text, separator, max_instances):
 
 
 def split_args(args_str: str) -> List[str]:
-    """Split a string that represents arguments for a function.
-
-    It supports keyword arguments and also correctly handles strings and lists/dicts.
+    """
+    Split a string representing function arguments into individual argument values.
 
     Args:
-        args_str: The string with the arguments e.g. 'name="John", colors=["blue", "red"]'
+        args_str (str): The string with function arguments, potentially containing keywords and complex data types.
 
     Returns:
-        The string that correspond to each individual argument value.
+        List[str]: A list of individual argument values.
+
+    Note:
+        This function correctly handles splitting function arguments, including keyword arguments,
+        and nested strings, lists, and dictionaries.
+
     """
 
     parts = []
@@ -77,9 +94,19 @@ def split_args(args_str: str) -> List[str]:
 
 
 def get_numbered_lines(content: str):
-    """Helper to returned numbered lines.
+    """
+    Extract numbered lines from content, ignoring comments and empty lines.
 
-    Comments and empty lines are ignored.
+    Args:
+        content (str): The content to extract numbered lines from.
+
+    Returns:
+        List[dict]: A list of dictionaries, each containing information about a numbered line.
+
+    Note:
+        This function extracts numbered lines from the input content, excluding comments and empty lines.
+        It provides information about the text, line number, indentation level, and comments of each line.
+
     """
     raw_lines = content.split("\n")
     lines = []
@@ -160,7 +187,20 @@ def get_numbered_lines(content: str):
 
 
 def remove_token(token: str, line: str):
-    """Helper to remove a token"""
+    """
+    Remove a specified token from the beginning of a line.
+
+    Args:
+        token (str): The token to be removed.
+        line (str): The input line from which the token should be removed.
+
+    Returns:
+        str: The modified line with the token removed.
+
+    Raises:
+        AssertionError: If the token is not found at the beginning of the line.
+
+    """
     line = line.strip()
     parts = split_max(line, " ", 1)
     assert parts[0] == token
@@ -169,7 +209,16 @@ def remove_token(token: str, line: str):
 
 
 def extract_main_token(text: str):
-    """Helper to extract the main token from a line"""
+    """
+    Extract the main token from a line of text.
+
+    Args:
+        text (str): The input text line.
+
+    Returns:
+        str: The main token extracted from the line.
+
+    """
     main_token = text.split(" ")[0]
 
     # For else, we also want to catch the next keyword (if/when)
@@ -185,13 +234,20 @@ def extract_main_token(text: str):
 def char_split(
     text: str, c: str, ignore_parenthesis=False, ignore_strings=False
 ) -> List[str]:
-    """Helper method to split a string by a given character.
+    """
+    Split a string by a specified character, considering parentheses and strings.
 
-    :param text: The text to split.
-    :param c: The character to use as the separator
-    :param ignore_parenthesis: If set, it will now account for lists
-        i.e. starting with [], () or {}
-    :param ignore_strings: If set, it will not take into account strings.
+    Args:
+        text (str): The text to split.
+        c (str): The character to use as the separator.
+        ignore_parenthesis (bool, optional): If True, parentheses are not considered for splitting.
+            Defaults to False.
+        ignore_strings (bool, optional): If True, strings enclosed in double quotes are not considered for splitting.
+            Defaults to False.
+
+    Returns:
+        List[str]: A list of parts obtained after splitting the text.
+
     """
     parts = []
 
@@ -244,7 +300,17 @@ def char_split(
 # duplicate of the one in utils.
 # noinspection DuplicatedCode
 def word_split(text: str, word: str):
-    """A simple logic that splits by word but takes strings into accounts."""
+    """
+    Split a string by a specified word, considering strings enclosed in double quotes.
+
+    Args:
+        text (str): The input text to be split.
+        word (str): The word to be used as the separator.
+
+    Returns:
+        List[str]: A list of parts obtained after splitting the text.
+
+    """
     parts = []
 
     # Edge case
@@ -290,12 +356,30 @@ def word_split(text: str, word: str):
 
 
 def ws_tokenize(text):
-    """Tokenize a text by whitespace and taking strings into account."""
+    """
+    Tokenize a text by whitespace while considering strings enclosed in double quotes.
+
+    Args:
+        text (str): The input text to be tokenized.
+
+    Returns:
+        List[str]: A list of tokens obtained after tokenizing the text.
+
+    """
     return word_split(text, " ")
 
 
 def params_tokenize(text):
-    """Tokenizer specific to the params parsing."""
+    """
+    Tokenize a text specifically for parsing parameters, considering strings enclosed in double quotes.
+
+    Args:
+        text (str): The input text to be tokenized for parameter parsing.
+
+    Returns:
+        List[str]: A list of tokens obtained after tokenizing the text.
+
+    """
     tokens = []
 
     # The current position
@@ -335,24 +419,54 @@ def params_tokenize(text):
 
 
 def get_stripped_tokens(tokens: List[str]):
+    """
+    Get a list of tokens with leading and trailing whitespace removed.
+
+    Args:
+        tokens (List[str]): The list of tokens to be stripped.
+
+    Returns:
+        List[str]: A list of tokens with leading and trailing whitespace removed.
+
+    """
     return [token.strip() for token in tokens]
 
 
 def get_first_key(d: dict):
-    """Helper to get the first key, which transpiles correctly."""
+    """
+    Get the first key from a dictionary.
+
+    Args:
+        d (dict): The input dictionary.
+
+    Returns:
+        Any: The first key found in the dictionary.
+
+    """
     for k in d.keys():
         return k
 
 
 def extract_topic_object(text: Text) -> Tuple[Text, Optional[Text]]:
-    """Helper to extract the object from the definition of a topic.
+    """
+    Extract the object from the definition of a topic.
 
-    Supported expressions
-        is_open_source
-        is_open_source for @roboself
-        is_open_source for $company
-        is_open_source($roboself)
-        is_open_source(@roboself)
+    Supported expressions:
+        - is_open_source
+        - is_open_source for @roboself
+        - is_open_source for $company
+        - is_open_source($roboself)
+        - is_open_source(@roboself)
+
+    Args:
+        text (Text): The input text containing a topic definition.
+
+    Returns:
+        Tuple[Text, Optional[Text]]: A tuple containing the topic name and the object (if present).
+
+    Raises:
+        AssertionError: If the input text does not match any of the supported expressions.
+
     """
     if " " in text:
         parts = ws_tokenize(text)
@@ -369,7 +483,16 @@ def extract_topic_object(text: Text) -> Tuple[Text, Optional[Text]]:
 
 
 def parse_package_name(text):
-    """Helper to extract a normalized package name."""
+    """
+    Extract and normalize a package name from text.
+
+    Args:
+        text (str): The input text containing a package name.
+
+    Returns:
+        str: The normalized package name.
+
+    """
     # get rid of quotes
     package_name = text
     if package_name[0] == '"' or package_name[0] == "'":
@@ -383,16 +506,28 @@ def parse_package_name(text):
 
 
 def new_uuid() -> str:
-    """Helper to generate new UUID v4.
+    """
+    Generate a new UUID v4.
 
     In testing mode, it will generate a predictable set of UUIDs to help debugging.
+
+    Returns:
+        str: A new UUID v4.
+
     """
     return str(uuid.uuid4())
 
 
 def string_hash(s):
-    """A simple string hash with an equivalent implementation in javascript.
+    """
+    Calculate a simple hash value for a given string.
 
+    This function computes a hash value for the input string using a simple algorithm.
+    The equivalent implementation in JavaScript is provided below for reference.
+
+    JavaScript Equivalent:
+    ----------------------
+    ```javascript
     module.exports.string_hash = function(s){
       let hash = 0;
       if (s.length === 0) return hash;
@@ -405,6 +540,14 @@ def string_hash(s):
 
       return hash.toString(16);
     }
+    ```
+
+    Args:
+        s (str): The input string for which the hash is calculated.
+
+    Returns:
+        str: A hexadecimal string representing the calculated hash value.
+
     """
     _hash = 0
     if len(s) == 0:

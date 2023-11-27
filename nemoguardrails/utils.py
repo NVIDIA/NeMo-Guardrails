@@ -103,7 +103,16 @@ _action_to_modality_info: Dict[str, Tuple[str, str]] = {
 
 
 def _add_modality_info(event_dict: Dict[str, Any]) -> None:
-    """Add modality related information to the action event"""
+    """Add modality-related information to the action event.
+
+    Args:
+        event_dict (Dict[str, Any]): The event dictionary to which modality info will be added.
+
+    Note:
+        This function adds modality-related information to the provided event dictionary based on
+        predefined mappings in `_action_to_modality_info`. Modality info includes the modality name
+        and policy.
+    """
     for action_name, modality_info in _action_to_modality_info.items():
         modality_name, modality_policy = modality_info
         if action_name in event_dict["type"]:
@@ -112,7 +121,15 @@ def _add_modality_info(event_dict: Dict[str, Any]) -> None:
 
 
 def _update_action_properties(event_dict: Dict[str, Any]) -> None:
-    """Update action related even properties and ensure UMIM compliance (very basic)"""
+    """Update action-related event properties and ensure UMIM compliance (very basic).
+
+    Args:
+        event_dict (Dict[str, Any]): The event dictionary to update.
+
+    Note:
+        This function updates action-related event properties such as timestamps and unique identifiers.
+        It also ensures basic compliance with UMIM (Unified Modality Interaction Model).
+    """
 
     if "Started" in event_dict["type"]:
         event_dict["action_started_at"] = datetime.now(timezone.utc).isoformat()
@@ -126,13 +143,28 @@ def _update_action_properties(event_dict: Dict[str, Any]) -> None:
 
 
 def ensure_valid_event(event: Dict[str, Any]) -> None:
-    """Performs basic event validation and throws an AssertionError if any of the validators fail."""
+    """Perform basic event validation and raise an AssertionError if any validator fails.
+
+    Args:
+        event (Dict[str, Any]): The event dictionary to validate.
+
+    Raises:
+        AssertionError: If any of the validators fail, this function raises an AssertionError
+            with the description of the validation error.
+    """
     for validator in _event_validators:
         assert validator.function(event), validator.description
 
 
 def is_valid_event(event: Dict[str, Any]) -> bool:
-    """Performs a basic event validation and returns True if the event conforms."""
+    """Perform basic event validation and return True if the event conforms.
+
+    Args:
+        event (Dict[str, Any]): The event dictionary to validate.
+
+    Returns:
+        bool: True if the event passes all validation checks; False otherwise.
+    """
     for validator in _event_validators:
         if not validator.function(event):
             return False
@@ -140,8 +172,20 @@ def is_valid_event(event: Dict[str, Any]) -> bool:
 
 
 def new_event_dict(event_type: str, **payload) -> Dict[str, Any]:
-    """Helper to create a generic event structure."""
+    """Create a generic event structure.
 
+    Args:
+        event_type (str): The type of the event.
+        **payload: Additional key-value pairs to include in the event dictionary.
+
+    Returns:
+        Dict[str, Any]: A dictionary representing the event with specified type and payload.
+
+    Note:
+        This function creates a generic event dictionary with a provided event type and additional
+        payload. It includes timestamps, unique identifiers, and modality information for action events.
+        The event is also validated for compliance.
+    """
     event: Dict[str, Any] = {
         "type": event_type,
         "uid": new_uid(),

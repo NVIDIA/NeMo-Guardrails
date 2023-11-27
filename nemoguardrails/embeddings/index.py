@@ -19,39 +19,140 @@ from typing import Dict, List
 
 @dataclass
 class IndexItem:
+    """
+    Represents an item in the embeddings index.
+
+    Attributes:
+        text (str): The text content of the item.
+        meta (Dict, optional): Additional metadata for the item. Defaults to an empty dictionary.
+
+    Example:
+        ```python
+        # Create an IndexItem with text and metadata
+        item = IndexItem(text="Example text", meta={"key": "value"})
+        ```
+    """
+
     text: str
     meta: Dict = field(default_factory=dict)
 
 
 class EmbeddingsIndex:
-    """The embeddings index is responsible for computing and searching a set of embeddings."""
+    """
+    The embeddings index is responsible for computing and searching a set of embeddings.
+
+    Note:
+        This class defines the interface for an embeddings index, which is responsible for managing
+        and searching a collection of embeddings.
+
+    Example:
+        ```python
+        # Create a custom EmbeddingsIndex implementation
+        class MyEmbeddingsIndex(EmbeddingsIndex):
+            # Implement the required methods
+            ...
+
+        # Instantiate the custom index
+        index = MyEmbeddingsIndex()
+        ```
+    """
 
     @property
     def embedding_size(self):
+        """
+        Get the size of the embeddings.
+
+        Returns:
+            int: The size of the embeddings.
+
+        Raises:
+            NotImplementedError: This method should be implemented in subclasses.
+        """
         raise NotImplementedError
 
     async def add_item(self, item: IndexItem):
-        """Adds a new item to the index."""
+        """
+        Adds a new item to the index.
+
+        Args:
+            item (IndexItem): The item to add to the index.
+
+        Raises:
+            NotImplementedError: This method should be implemented in subclasses.
+        """
         raise NotImplementedError()
 
     async def add_items(self, items: List[IndexItem]):
-        """Adds multiple items to the index."""
+        """
+        Adds multiple items to the index.
+
+        Args:
+            items (List[IndexItem]): The list of items to add to the index.
+
+        Raises:
+            NotImplementedError: This method should be implemented in subclasses.
+        """
         raise NotImplementedError()
 
     async def build(self):
-        """Build the index, after the items are added.
+        """
+        Build the index after adding items.
 
-        This is optional, might not be needed for all implementations."""
+        This method is optional and might not be needed for all implementations.
+
+        Raises:
+            NotImplementedError: This method should be implemented in subclasses if needed.
+        """
         pass
 
     async def search(self, text: str, max_results: int) -> List[IndexItem]:
-        """Searches the index for the closes matches to the provided text."""
+        """
+        Searches the index for the closest matches to the provided text.
+
+        Args:
+            text (str): The text to search for.
+            max_results (int): The maximum number of results to return.
+
+        Returns:
+            List[IndexItem]: A list of IndexItem objects representing the closest matches.
+
+        Raises:
+            NotImplementedError: This method should be implemented in subclasses.
+        """
         raise NotImplementedError()
 
 
 class EmbeddingModel:
-    """The embedding model is responsible for creating the embeddings."""
+    """
+    The embedding model is responsible for creating embeddings from text documents.
+
+    Note:
+        This class defines the interface for an embedding model, which is responsible for encoding
+        text documents into embeddings.
+
+    Example:
+        ```python
+        # Create a custom EmbeddingModel implementation
+        class MyEmbeddingModel(EmbeddingModel):
+            # Implement the required methods
+            ...
+
+        # Instantiate the custom embedding model
+        model = MyEmbeddingModel()
+        ```
+    """
 
     def encode(self, documents: List[str]) -> List[List[float]]:
-        """Encode the provided documents into embeddings."""
+        """
+        Encode a list of text documents into embeddings.
+
+        Args:
+            documents (List[str]): The list of text documents to encode.
+
+        Returns:
+            List[List[float]]: A list of lists, where each inner list represents the embedding of a document.
+
+        Raises:
+            NotImplementedError: This method should be implemented in subclasses.
+        """
         raise NotImplementedError()

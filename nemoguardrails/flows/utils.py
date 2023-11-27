@@ -15,7 +15,24 @@
 
 
 class AttributeDict(dict):
-    """Simple utility to allow accessing dict members as attributes."""
+    """
+    Simple utility to allow accessing dict members as attributes.
+
+    This class allows you to access dictionary keys as if they were attributes of an object.
+    For example, if you have a dictionary `my_dict` with a key "key1", you can access it as
+    `my_dict.key1`.
+
+    Usage:
+    ```python
+    my_dict = AttributeDict({"key1": "value1", "key2": {"subkey": "subvalue"}})
+    print(my_dict.key1)  # Accessing a top-level key
+    print(my_dict.key2.subkey)  # Accessing a nested key
+    ```
+
+    Note: Be careful when using this class, as it may not handle all cases perfectly,
+    especially if your dictionary keys contain special characters or conflict with
+    Python's reserved attribute names.
+    """
 
     def __getattr__(self, attr):
         val = self.get(attr, None)

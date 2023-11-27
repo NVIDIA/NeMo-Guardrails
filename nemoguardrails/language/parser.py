@@ -28,10 +28,20 @@ log = logging.getLogger(__name__)
 
 
 def _extract_flow_code(file_content: str, flow_elements: List[dict]) -> Optional[str]:
-    """Helper to extract the source code for a flow.
+    """
+    Helper function to extract the source code for a flow.
 
-    Currently, it uses a simple heuristic that copies all the lines between the minimum
-    and the maximum lines
+    Args:
+        file_content (str): The content of the source file.
+        flow_elements (List[dict]): A list of flow elements containing source mapping information.
+
+    Returns:
+        Optional[str]: The extracted source code for the flow if found, or None.
+
+    Note:
+        This function extracts the source code for a flow by identifying the range of lines that
+        correspond to the flow elements' source mappings. It excludes non-blank lines from the code.
+
     """
 
     content_lines = file_content.split("\n")
@@ -62,7 +72,17 @@ def _extract_flow_code(file_content: str, flow_elements: List[dict]) -> Optional
 
 
 def parse_colang_file(filename: str, content: str):
-    """Parse the content of a .co file into the CoYML format."""
+    """
+    Parse the content of a .co file into the CoYML format.
+
+    Args:
+        filename (str): The name of the file being parsed.
+        content (str): The content of the .co file.
+
+    Returns:
+        dict: A dictionary containing user messages, bot messages, and extracted flows.
+
+    """
     snippets, imports = parse_snippets_and_imports(filename, content)
     result = parse_coflows_to_yml_flows(
         filename, content, snippets=snippets, include_source_mapping=True

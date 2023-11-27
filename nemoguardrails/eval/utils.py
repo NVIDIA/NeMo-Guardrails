@@ -20,7 +20,15 @@ from nemoguardrails.rails.llm.config import Model
 
 
 def initialize_llm(model_config: Model):
-    """Initializes the model from LLM provider."""
+    """
+    Initializes the Language Model (LLM) from an LLM provider.
+
+    Args:
+        model_config (Model): Configuration specifying the LLM engine and model.
+
+    Returns:
+        LLMProvider: An instance of the LLM provider with specified settings.
+    """
     if model_config.engine not in get_llm_provider_names():
         raise Exception(f"Unknown LLM engine: {model_config.engine}")
     provider_cls = get_llm_provider(model_config)
@@ -39,8 +47,15 @@ def initialize_llm(model_config: Model):
 
 
 def load_dataset(dataset_path: str):
-    """Loads a dataset from a file."""
+    """
+    Loads a dataset from a file.
 
+    Args:
+        dataset_path (str): Path to the dataset file.
+
+    Returns:
+        list or dict: Loaded dataset, either as a list or a dictionary.
+    """
     with open(dataset_path, "r") as f:
         if dataset_path.endswith(".json"):
             dataset = json.load(f)

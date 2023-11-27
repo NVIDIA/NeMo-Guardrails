@@ -1867,13 +1867,17 @@ def parse_coflows_to_yml_flows(
     include_source_mapping: bool = False,
     snippets: Optional[dict] = None,
 ):
-    """Parses a file in .co format to a YAML flows format
+    """
+    Parses a file in .co format to a YAML flows format.
 
-    :param filename: The name of the file.
-    :param content: The content.
-    :param include_source_mapping: Whether to include source mapping into the flow elements.
-    :param snippets: Snippets to use when parsing the file.
-    :return:
+    Args:
+    - filename (str): The name of the file.
+    - content (str): The content.
+    - include_source_mapping (bool): Whether to include source mapping into the flow elements.
+    - snippets (Optional[dict]): Snippets to use when parsing the file.
+
+    Returns:
+    - dict: Parsed YAML flows format.
     """
     parser = ColangParser(filename, content, include_source_mapping, snippets)
 
@@ -1881,21 +1885,15 @@ def parse_coflows_to_yml_flows(
 
 
 def parse_snippets_and_imports(filename: str, content: str):
-    """Parses just the snippets and imports from the file.
+    """
+    Parses just the snippets and imports from the file.
 
-    The data is returned in the format
-    {
-        "snippet_name": {
-            "name": "snippet_name",
-            "params": ["T", "A"],
-            "lines": <numbered lines>
-        }
-    }, ["skill_1", ...]
+    Args:
+    - filename (str): The name of the file.
+    - content (str): The content.
 
-
-    :param filename: The name of the file
-    :param content: The content
-    :return:
+    Returns:
+    - Tuple[dict, List[str]]: A tuple containing parsed snippets and a list of skill names.
     """
     parser = ColangParser(filename, content)
 

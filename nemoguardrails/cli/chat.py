@@ -19,7 +19,6 @@ from typing import Optional
 import aiohttp
 
 from nemoguardrails import LLMRails, RailsConfig
-from nemoguardrails.context import streaming_handler_var
 from nemoguardrails.streaming import StreamingHandler
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -114,7 +113,30 @@ def run_chat(
     server_url: Optional[str] = None,
     config_id: Optional[str] = None,
 ):
-    """Runs a chat session in the terminal."""
+    """
+    Runs a chat session in the terminal using NemoGuardRails.
+
+    Args:
+        config_path (Optional[str], optional): The path to the configuration file for NemoGuardRails. Defaults to None.
+        verbose (bool, optional): Whether to enable verbose mode. Defaults to False.
+        streaming (bool): Whether streaming mode should be used or not.
+        server_url (Optional[str]): The guardrails server to which the Chat CLI should be connected to.
+        config_id (Optional[str]): The config id to use from the server.
+
+    Note:
+        This function sets up and runs a chat session in the terminal using NemoGuardRails. It allows
+        users to interact with a language model-based chatbot. User input is processed, and the bot's responses
+        are displayed in the terminal.
+
+    Example:
+        ```python
+        # Run a chat session with default configuration
+        run_chat()
+
+        # Run a chat session with a custom configuration file
+        run_chat("custom_config.yaml", verbose=True)
+        ```
+    """
     asyncio.run(
         run_chat_async(
             config_path=config_path,

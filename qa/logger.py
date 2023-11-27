@@ -18,7 +18,18 @@ import logging
 
 
 def create_logger(filename):
-    """Create a logger specified by the filename"""
+    """Create a logger specified by the filename.
+
+    Args:
+        filename (str): The name of the log file.
+
+    Returns:
+        logging.Logger: A logger instance configured to write log messages to the specified file.
+
+    Note:
+        This function creates a logger instance and configures it to log messages to a file with the given filename.
+        It sets the logging level to INFO and uses a timestamped format for log entries.
+    """
     logger = logging.getLogger(filename)
     logger.setLevel(logging.INFO)
 

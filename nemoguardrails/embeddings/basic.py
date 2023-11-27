@@ -22,10 +22,36 @@ from nemoguardrails.embeddings.index import EmbeddingModel, EmbeddingsIndex, Ind
 
 
 class BasicEmbeddingsIndex(EmbeddingsIndex):
-    """Basic implementation of an embeddings index.
+    """
+    Basic implementation of an embeddings index.
 
-    It uses `sentence-transformers/all-MiniLM-L6-v2` to compute the embeddings.
-    It uses Annoy to perform the search.
+    This index uses the `sentence-transformers/all-MiniLM-L6-v2` model to compute embeddings
+    and employs Annoy for efficient nearest neighbor search.
+
+    Attributes:
+        embedding_model: The name or path of the embedding model to use.
+        embedding_engine: The embedding engine to use.
+        index: The Annoy index for nearest neighbor search.
+
+    Note:
+        This class provides a basic embeddings index implementation. It computes embeddings for text items
+        and allows efficient searching for similar items.
+
+    Example:
+        ```python
+        # Create an instance of BasicEmbeddingsIndex
+        index = BasicEmbeddingsIndex(embedding_model="sentence-transformers/all-MiniLM-L6-v2")
+
+        # Add items to the index
+        items = [IndexItem(text="Example text 1"), IndexItem(text="Example text 2")]
+        await index.add_items(items)
+
+        # Build the index for efficient searching
+        await index.build()
+
+        # Search for similar items
+        results = await index.search("Query text", max_results=5)
+        ```
     """
 
     def __init__(self, embedding_model=None, embedding_engine=None, index=None):
@@ -111,7 +137,25 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
 
 
 class SentenceTransformerEmbeddingModel(EmbeddingModel):
-    """Embedding model using sentence-transformers."""
+    """
+    Embedding model using sentence-transformers.
+
+    Attributes:
+        embedding_model (str): The name or path of the sentence-transformers model to use.
+
+    Note:
+        This class provides an embedding model based on sentence-transformers. It computes embeddings
+        for text documents using the specified sentence-transformers model.
+
+    Example:
+        ```python
+        # Create an instance of SentenceTransformerEmbeddingModel
+        model = SentenceTransformerEmbeddingModel(embedding_model="bert-base-uncased")
+
+        # Encode a list of documents into embeddings
+        embeddings = model.encode(["Document 1", "Document 2"])
+        ```
+    """
 
     def __init__(self, embedding_model: str):
         from sentence_transformers import SentenceTransformer
@@ -126,7 +170,25 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
 
 
 class OpenAIEmbeddingModel(EmbeddingModel):
-    """Embedding model using OpenAI API."""
+    """
+    Embedding model using OpenAI API.
+
+    Attributes:
+        embedding_model (str): The name or path of the OpenAI API model to use.
+
+    Note:
+        This class provides an embedding model based on the OpenAI API. It computes embeddings
+        for text documents using the specified OpenAI API model.
+
+    Example:
+        ```python
+        # Create an instance of OpenAIEmbeddingModel
+        model = OpenAIEmbeddingModel(embedding_model="gpt-3.5-turbo")
+
+        # Encode a list of documents into embeddings
+        embeddings = model.encode(["Document 1", "Document 2"])
+        ```
+    """
 
     def __init__(self, embedding_model: str):
         self.model = embedding_model
@@ -143,7 +205,25 @@ class OpenAIEmbeddingModel(EmbeddingModel):
 
 
 def init_embedding_model(embedding_model: str, embedding_engine: str) -> EmbeddingModel:
-    """Initialize the embedding model."""
+    """
+    Initialize the embedding model based on the specified engine.
+
+    Args:
+        embedding_model (str): The name or path of the embedding model to use.
+        embedding_engine (str): The embedding engine to use.
+
+    Returns:
+        EmbeddingModel: An instance of the specified embedding model.
+
+    Raises:
+        ValueError: If the specified embedding engine is invalid.
+
+    Example:
+        ```python
+        # Initialize an embedding model based on the engine
+        model = init_embedding_model(embedding_model="bert-base-uncased", embedding_engine="SentenceTransformers")
+        ```
+    """
     if embedding_engine == "SentenceTransformers":
         return SentenceTransformerEmbeddingModel(embedding_model)
     elif embedding_engine == "openai":
