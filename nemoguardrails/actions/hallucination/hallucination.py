@@ -16,7 +16,8 @@
 import logging
 from typing import Optional
 
-from langchain import LLMChain, PromptTemplate
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
 from langchain.llms import OpenAI
 from langchain.llms.base import BaseLLM
 

@@ -14,12 +14,7 @@
 # limitations under the License.
 
 import logging
-import random
 from typing import Optional
-
-from langchain import LLMChain, PromptTemplate
-from langchain.llms import BaseLLM
-
 from nemoguardrails.actions.actions import ActionResult, action
 from nemoguardrails.kb.kb import KnowledgeBase
 
