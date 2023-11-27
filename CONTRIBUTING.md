@@ -61,7 +61,7 @@ To get started quickly, follow the steps below.
 6. Install the main dependencies from `requirements.txt`:
 
    ```
-   pip install -r requirements-dev.txt
+   pip install -r requirements.txt
    ```
 
 7. Install the development dependencies from `requirements-dev.txt`:
