@@ -183,10 +183,10 @@ def fact_checking(
     ),
     llm: str = typer.Option("openai", help="LLM provider to be used for fact checking"),
     model_name: str = typer.Option(
-        "text-davinci-003", help="Model name ex. text-davinci-003"
+        "gpt-3.5-turbo-instruct", help="Model name ex. gpt-3.5-turbo-instruct"
     ),
     num_samples: int = typer.Option(50, help="Number of samples to be evaluated"),
-    create_negatives: bool = typer.Argument(
+    create_negatives: bool = typer.Option(
         True, help="create synthetic negative samples"
     ),
     output_dir: str = typer.Option(
