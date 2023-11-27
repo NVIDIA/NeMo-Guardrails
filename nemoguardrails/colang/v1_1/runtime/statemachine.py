@@ -574,14 +574,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         flow_state = get_flow_state_from_head(state, head)
         flow_config = get_flow_config_from_head(state, head)
 
-        if (
-            head.status == FlowHeadStatus.INACTIVE
-            or not _is_listening_flow(flow_state)
-            or (
-                flow_state.parent_uid is not None
-                and not _is_listening_flow(state.flow_states[flow_state.parent_uid])
-            )
-        ):
+        if head.status == FlowHeadStatus.INACTIVE or not _is_listening_flow(flow_state):
             continue
         elif head.status == FlowHeadStatus.MERGING and len(state.internal_events) > 0:
             # We only advance merging heads if all internal events were processed
@@ -1055,13 +1048,9 @@ def _abort_flow(
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
-            child_flow_state.status = FlowStatus.STOPPING
-            internal_event = create_stop_flow_internal_event(
-                child_flow_state.uid, flow_state.uid, matching_scores
-            )
-            _push_internal_event(state, internal_event)
+            _abort_flow(state, child_flow_state, matching_scores, True)
 
-    # Abort all stared actions that have not finished yet
+    # Abort all started actions that have not finished yet
     for action_uid in flow_state.action_uids:
         action = state.actions[action_uid]
         if (
@@ -1115,11 +1104,7 @@ def _finish_flow(
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
-            child_flow_state.status = FlowStatus.STOPPING
-            internal_event = create_stop_flow_internal_event(
-                child_flow_state.uid, flow_state.uid, matching_scores, True
-            )
-            _push_internal_event(state, internal_event)
+            _abort_flow(state, child_flow_state, matching_scores, True)
 
     # Abort all started actions that have not finished yet
     for action_uid in flow_state.action_uids:
