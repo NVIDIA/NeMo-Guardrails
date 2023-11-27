@@ -5,6 +5,7 @@
     "files.trimTrailingWhitespace": true,
     "files.trimFinalNewlines": true,
     "prettier.tabWidth": 4,
+    "isort.args": ["--profile", "black"],
 
     // MARKDOWN
     "[markdown]": {
@@ -61,8 +62,6 @@
     "cSpell.enableFiletypes": ["co", "colang"],
 
     // FLAKE8
-    "flake8.args": [
-        "--max-line-length=120"
-    ],
+    "flake8.args": ["--max-line-length=120"],
     "python.formatting.provider": "none"
 }
