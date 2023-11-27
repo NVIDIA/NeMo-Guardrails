@@ -606,12 +606,6 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
             else:
                 flow_finished = True
 
-        # TODO: Use additional element to finish flow
-        if flow_finished:
-            log.debug(f"Flow finished: {head.flow_state_uid} with last element")
-        elif flow_aborted:
-            log.debug(f"Flow aborted: {head.flow_state_uid} by 'abort' statement")
-
         all_heads_are_waiting = False
         if not flow_finished and not flow_aborted:
             # Check if all all flow heads are waiting at match or wait_for_heads statements
@@ -636,21 +630,14 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         ):
             actionable_heads.append(head)
 
-        # Check if flow has finished or was aborted
         if flow_finished:
-            flow_state.status = FlowStatus.FINISHING
-            event = create_finish_flow_internal_event(
-                flow_state.uid, flow_state.uid, head.matching_scores
-            )
-            _push_internal_event(state, event)
+            _finish_flow(state, flow_state, head.matching_scores)
+            flow_finished = True
+            log.debug(f"Flow finished: {head.flow_state_uid} with last element")
         elif flow_aborted:
-            flow_state.status = FlowStatus.STOPPING
-            event = create_stop_flow_internal_event(
-                flow_state.uid,
-                flow_state.uid,
-                head.matching_scores,
-            )
-            _push_internal_event(state, event)
+            _abort_flow(state, flow_state, head.matching_scores)
+            flow_aborted = True
+            log.debug(f"Flow aborted: {head.flow_state_uid} by 'abort' statement")
 
     # Make sure that all actionable heads still exist in flows, otherwise remove them
     actionable_heads = [
@@ -957,14 +944,7 @@ def slide(
             for flow_uid in flow_uids:
                 child_flow_state = state.flow_states[flow_uid]
                 if _is_listening_flow(child_flow_state):
-                    child_flow_state.status = FlowStatus.STOPPING
-                    event = create_stop_flow_internal_event(
-                        child_flow_state.uid,
-                        flow_state.uid,
-                        head.matching_scores,
-                        True,
-                    )
-                    _push_internal_event(state, event)
+                    _abort_flow(state, child_flow_state, head.matching_scores)
             for action_uid in action_uids:
                 action = state.actions[action_uid]
                 if (

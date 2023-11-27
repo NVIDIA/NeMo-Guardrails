@@ -401,7 +401,6 @@ class FlowStatus(Enum):
     STARTED = "started"  # Flow is considered started when head arrived at second match statement
     STOPPING = "stopping"  # Flow was stopped from inside ('abort') but did not yet stop all child flows or actions
     STOPPED = "stopped"  # Flow has stopped/failed and all child flows and actions
-    FINISHING = "finishing"  # Flow has finished (end or early return), did not yet stop child flows or actions
     FINISHED = (
         "finished"  # Flow has finished and all child flows and actions were stopped
     )
