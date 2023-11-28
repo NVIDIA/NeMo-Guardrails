@@ -99,11 +99,6 @@ class RuntimeV1_1(Runtime):
             # Add flow config to state.flow_configs
             state.flow_configs.update({flow.name: flow_config})
 
-            # Create an instance of the flow in flow_states
-            add_new_flow_instance(
-                state, create_flow_instance(state.flow_configs[flow.name])
-            )
-
             added_flows.append(flow.name)
 
         return added_flows

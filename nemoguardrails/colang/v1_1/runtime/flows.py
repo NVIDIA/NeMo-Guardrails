@@ -420,6 +420,10 @@ class FlowState:
     # Interaction loop id
     loop_id: Optional[str]
 
+    # An identifier that determines the exact position in the flow hierarchy tree.
+    # E.g. in "0.1.0.4" each number represents the related start/activation element position in the related parent flow
+    hierarchy_position: str
+
     # All the heads that point to the positions in the sequence of elements that compose the flow.
     heads: Dict[str, FlowHead] = field(default_factory=dict)
 

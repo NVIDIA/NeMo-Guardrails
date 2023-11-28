@@ -71,17 +71,14 @@ def initialize_state(state) -> None:
 
     # Create main flow state first
     main_flow_config = state.flow_configs["main"]
-    main_flow = add_new_flow_instance(state, create_flow_instance(main_flow_config))
+    main_flow = add_new_flow_instance(
+        state, create_flow_instance(main_flow_config, "0")
+    )
     if main_flow_config.loop_id is None:
         main_flow.loop_id = new_readable_uid("main")
     else:
         main_flow.loop_id = main_flow_config.loop_id
     state.main_flow_state = main_flow
-
-    # Create flow states for all other flows and start with head at position 0.
-    for flow_config in state.flow_configs.values():
-        if flow_config.id != "main":
-            add_new_flow_instance(state, create_flow_instance(flow_config))
 
 
 def initialize_flow(state: State, flow_config: FlowConfig) -> None:
@@ -101,7 +98,7 @@ def initialize_flow(state: State, flow_config: FlowConfig) -> None:
 
 
 def create_flow_instance(
-    flow_config: FlowConfig, parent_uid: Optional[str] = None
+    flow_config: FlowConfig, flow_hierarchy_position: str
 ) -> FlowState:
     loop_uid: Optional[str] = None
     if flow_config.loop_type == InteractionLoopType.NEW:
@@ -116,9 +113,9 @@ def create_flow_instance(
     head_uid = new_uid()
     flow_state = FlowState(
         uid=flow_uid,
-        parent_uid=parent_uid,
         flow_id=flow_config.id,
         loop_id=loop_uid,
+        hierarchy_position=flow_hierarchy_position,
         heads={
             head_uid: FlowHead(
                 uid=head_uid,
@@ -144,7 +141,7 @@ def create_flow_instance(
     return flow_state
 
 
-def add_new_flow_instance(state, flow_state: FlowState) -> FlowState:
+def add_new_flow_instance(state: State, flow_state: FlowState) -> FlowState:
     # Update state structures
     state.flow_states.update({flow_state.uid: flow_state})
     if flow_state.flow_id in state.flow_id_states:
@@ -226,15 +223,18 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
                 # Handle internal events that have no default matchers in flows yet
                 handled_event_loops = set()
-                # TODO: Let's see if we need this
-                # if event.name == InternalEvents.START_SIBLING_FLOW:
-                #     # Convert it into a normal START_FLOW event and only switch source flow instance to parent flow uid
-                #     event.name = InternalEvents.START_FLOW
-                #     parent_state_uid = state.flow_states[
-                #         event.arguments["source_flow_instance_uid"]
-                #     ].parent_uid
-                #     event.arguments["source_flow_instance_uid"] = parent_state_uid
-                if event.name == InternalEvents.FINISH_FLOW:
+                if event.name == InternalEvents.START_FLOW:
+                    # Start new flow state instance of flow exists
+                    flow_id = event.arguments["flow_id"]
+                    if flow_id in state.flow_configs and flow_id != "main":
+                        add_new_flow_instance(
+                            state,
+                            create_flow_instance(
+                                state.flow_configs[flow_id],
+                                event.arguments["flow_hierarchy_position"],
+                            ),
+                        )
+                elif event.name == InternalEvents.FINISH_FLOW:
                     if "flow_instance_uid" in event.arguments:
                         flow_instance_uid = event.arguments["flow_instance_uid"]
                         if flow_instance_uid in state.flow_states:
@@ -382,8 +382,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
                     if (
                         event.name == InternalEvents.START_FLOW
-                        and event.arguments["flow_id"]
-                        == get_flow_state_from_head(state, head).flow_id
+                        and event.arguments["flow_id"] == flow_state.flow_id
                         and head.position == 0
                     ):
                         _start_flow(state, flow_state, head, event.arguments)
@@ -684,6 +683,15 @@ def slide(
                         "source_head_uid": head.uid,
                     }
                 )
+
+                if event.name == InternalEvents.START_FLOW:
+                    event_arguments.update(
+                        {
+                            "flow_hierarchy_position": flow_state.hierarchy_position
+                            + f".{head.position}",
+                        }
+                    )
+
                 new_event = create_internal_event(
                     event.name, event_arguments, head.matching_scores
                 )
@@ -1011,10 +1019,6 @@ def _start_flow(
                 f"To many parameters provided in start of flow '{flow_state.flow_id}'"
             )
 
-    # Initialize new flow instance of flow
-    if not flow_config.id == "main" and not flow_config.id.startswith("_dynamic_"):
-        add_new_flow_instance(state, create_flow_instance(flow_config))
-
 
 def _abort_flow(
     state: State,
@@ -1057,8 +1061,8 @@ def _abort_flow(
     )
 
     if (
-        not deactivate_flow
-        and flow_state.activated
+        flow_state.activated
+        and not deactivate_flow
         and not flow_state.new_instance_started
     ):
         event = _create_restart_flow_internal_event(state, flow_state, matching_scores)
@@ -1574,7 +1578,7 @@ def get_event_from_element(
         if element_spec.spec_type == SpecType.FLOW:
             # Flow object
             flow_config = state.flow_configs[element_spec.name]
-            temp_flow_state = create_flow_instance(flow_config)
+            temp_flow_state = create_flow_instance(flow_config, "")
             flow_event_name = element_spec.members[0]["name"]
             flow_event_arguments = element_spec.members[0]["arguments"]
             flow_event_arguments = _evaluate_arguments(
@@ -1663,6 +1667,7 @@ def _create_restart_flow_internal_event(
             "flow_id": flow_state.context["flow_id"],
             "source_flow_instance_uid": flow_state.context["source_flow_instance_uid"],
             "source_head_uid": flow_state.context["source_head_uid"],
+            "flow_hierarchy_position": flow_state.context["flow_hierarchy_position"],
             "activated": flow_state.context["activated"],
         }
     )

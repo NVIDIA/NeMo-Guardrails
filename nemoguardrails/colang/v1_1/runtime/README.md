@@ -30,6 +30,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 - Implement proper bot/user intent extraction (nemoguardrails/actions/llm/generation.py line 111)
 - expression_functions don't work as IF condition
 - Support parsing for `match (bot ask confirmation question "Do you want to pay now?").Finished("confirmed")`
+- Refactor event parameters of internal events to be encapsulated in an 'internal' dict to prevent parameter conflicts with flow variables
 
 ## To Discuss
 
