@@ -307,7 +307,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
                 # TODO: Create a head dict for all active flows to speed this up
                 # Iterate over all flow states to check for the heads to match the event
-                for flow_state in state.flow_states.values():
+                sorted_flow_states = sorted(
+                    list(state.flow_states.values()), key=lambda s: s.hierarchy_position
+                )
+                for flow_state in sorted_flow_states:
                     if not _is_listening_flow(flow_state):
                         continue
 
