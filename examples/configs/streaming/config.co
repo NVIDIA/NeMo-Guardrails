@@ -1,0 +1,23 @@
+define user express greeting
+  "Hello"
+  "Hi"
+
+define user ask about capabilities
+  "What can you do?"
+  "What can you help me with?"
+  "tell me what you can do"
+  "tell me about you"
+
+define flow
+  user express greeting
+  bot express greeting
+
+define bot express greeting
+  "Hello there!"
+
+define flow
+  user ask about capabilities
+  bot inform capabilities
+
+define bot inform capabilities
+  "I am an AI assistant and I'm here to help."

@@ -7,49 +7,58 @@ The documentation is divided into the following sections:
 3. [User Guide](#user-guide)
 4. [Evaluation Tools](#evaluation-tools)
 5. [Architecture Guide](#architecture-guide)
-6. [Security Guidelines](./security/guidelines.md)
+6. [Security](#security)
 7. [API Reference](./api/README.md)
 
 ## Getting Started
 
-The getting started section covers two topics:
+This section will help you get started quickly with NeMo Guardrails.
 
-* [Installation Guide](./getting_started/installation-guide.md): This guide walks you through the process of setting up an environment to run Guardrails. It also showcases the various ways in which you can interact with the bot.
-* [The "Hello World" example](./getting_started/hello-world.md): This example walks you through setting up basic rails along with peeling some layers for the Guardrail runtime to explain how the rails work.
+* [Installation guide](getting_started/installation-guide.md): This guide walks you through the process of setting up your environment and installing NeMo Guardrails
+* [Getting Started guides](./getting_started): A series of guides that will help you understand the core concepts and build your first guardrails configurations. These guides include Jupyter notebooks that you can experiment with.
 
 ## Examples
 
-Five reference examples are provided as a general demonstration for building different types of rails:
+The [`examples` folder](../examples) contains multiple examples that showcase a particular aspect of using NeMo Guardrails.
 
-* [Topical Rail](../examples/topical_rail/README.md): Making the bot stick to a specific topic of conversation.
-* [Moderation Rail](../examples/moderation_rail/README.md): Moderating a bot's response.
-* [Fact Checking and Hallucination Rail](../examples/grounding_rail/README.md): Ensuring factual answers.
-* [Secure Execution Rail](../examples/execution_rails/README.md): Executing a third-party service with LLMs.
-* [Jailbreaking Rail](../examples/jailbreak_check/README.md): Ensuring safe answers despite malicious intent from the user.
+* [Bots](../examples/bots): This section includes two example configurations.
+  * [HelloWorldBot](../examples/bots/hello_world): This basic configuration instructs the bot to greet the user using "Hello World!" and to not talk about politics or the stock market.
+  * [InfoBot](../examples/bots/info): This more complex configuration includes topical rails, input and output moderation, retrieval augmented generation, fact-checking and hallucination detection.
+* [Configs](../examples/configs): These example configurations showcase specific NeMo Guardrails features, e.g., how to use various LLM providers, Retrieval Augmented Generation, streaming, red-teaming, authentication, etc.
+* [Notebooks](../examples/notebooks): These notebooks provide additional examples using Jupyter notebooks, e.g., creating a Pincone index that you can use with NeMo Guardrails.
+* [Scripts](../examples/scripts): These short scripts showcase various aspects of the main Python API.
+
 
 > **Note:** These examples are meant to showcase the process of building rails, not as out-of-the-box safety features. Customization and strengthening of the rails is highly recommended.
 
-## User Guide
+## User Guides
 
-The user guide covers the core details of the Guardrails toolkit and how to configure and use different features to make your own rails.
+The user guides cover the core details of the NeMo Guardrails toolkit and how to configure and use different features to make your own rails.
 
-* [Colang Language Guide](./user_guide/colang-language-syntax-guide.md): Learn about Colang, the language at the heart of NeMo Guardrails.
-* [Colang Syntax Reference Guide](./user_guide/colang-syntax-reference.md): General keyword ledger.
-* [Guardrails Configuration Guide](./user_guide/configuration-guide.md): Learn how to do general configurations such as adding a system prompt.
-* [Python API](./user_guide/python-api.md): Explore the Python API for Guardrails!
-* [Integration with LangChain](./user_guide/integration-with-langchain.md): Integrate Guardrails in your existing LangChain-powered app or bring your preferred Chains to Guardrails.
-* [Server Guide](./user_guide/server-guide.md): General explanation for the Guardrails Servers.
-* [Interface Guide](./user_guide/server-guide.md): Learn the different ways in which to interact with the bot.
+* [Guardrails Configuration Guide](user_guides/configuration-guide.md): The complete guide to all the configuration options available in the `config.yml` file.
+* [Guardrails Library](user_guides/guardrails-library.md): An overview of the starter built-in rails that NeMo Guardrails provide.
+* [Guardrails Process](user_guides/guardrails-process.md): A detailed description of the guardrails process, i.e., the categories of rails and how they are called.
+* [Colang Language Guide](user_guides/colang-language-syntax-guide.md): Learn the syntax and core concepts of Colang.
+* [LLM Support for Guardrails](user_guides/llm-support.md): An easy to grasp summary of the current LLM support.
+* [Python API](user_guides/python-api.md): Learn about the Python API, e.g., the `RailsConfig` and `LLMRails` classes.
+* [CLI](user_guides/cli.md): Learn about the NeMo Guardrails CLI that can help you use the Chat CLI or start a server.
+* [Server Guide](user_guides/server-guide.md): Learn how to use the NeMo Guardrails server.
+* [Integration with LangChain](user_guides/integration-with-langchain.md): Integrate guardrails in your existing LangChain-powered app.
 
 The following guides explain in more details various specific topics:
 
-* [Extract User Provided Values](./user_guide/advanced/extract-user-provided-values.md): Learn how to extract user-provided values like a name, a date or a query.
-* [Prompt Customization](./user_guide/advanced/prompt-customization.md): Learn how to customize the prompts for a new (or existing) type of LLM.
-* [Bot Message Instructions](./user_guide/advanced/bot-message-instructions.md): Learn how to further tweak the bot messages with specific instructions at runtime.
+* [Extract User-provided Values](user_guides/advanced/extract-user-provided-values.md): Learn how to extract user-provided values like a name, a date or a query.
+* [Prompt Customization](user_guides/advanced/prompt-customization.md): Learn how to customize the prompts for a new (or existing) type of LLM.
+* [Bot Message Instructions](user_guides/advanced/bot-message-instructions.md): Learn how to further tweak the bot messages with specific instructions at runtime.
+* [Streaming](user_guides/advanced/streaming.md): Learn about the streaming support in NeMo Guardrails.
+* [Embedding Search Providers](user_guides/advanced/embedding-search-providers.md): Learn about the core embedding search interface that NeMo guardrails uses for some of the core features.
+* [Event-based API](user_guides/advanced/event-based-api.md): Learn about the generic event-based interface that you can use to process additional information in your guardrails configuration.
+* [Nested AsyncIO Loop](user_guides/advanced/nested-async-loop.md): Understand some of the low level issues regarding `asyncio` and how they are handled in NeMo Guardrails.
+* [AlignScore deployment](user_guides/advanced/align_score_deployment.md): Learn how to deploy an AlignScore server either directly or using Docker.
 
 ## Evaluation Tools
 
-We provide a set of CLI evaluation tools and experimental results for topical and execution rails.
+NeMo Guardrails provides a set of CLI evaluation tools and experimental results for topical and execution rails.
 There are also detailed guides on how to reproduce results and create datasets for the evaluation of each type of rail.
 
 * [Evaluation Tools and Results](./../nemoguardrails/eval/README.md): General explanation for the CLI evaluation tools and experimental results.
@@ -62,5 +71,14 @@ There are also detailed guides on how to reproduce results and create datasets f
 This guide sheds more light on the infrastructure details and the execution flow for a query when the runtime is used:
 
 * [The Guardrails Process](./architecture/README.md#the-guardrails-process): Learn how the Guardrails runtime works under the hood.
-
 * [Server Architecture](./architecture/README.md#server-architecture): Understand the architecture of the Guardrails server.
+
+# Security
+
+* [Security Guidelines](./security/guidelines.md): Learn about some of the best practices for securely integrating an LLM into your application.
+* [Red-teaming](./security/red-teaming.md): Learn how you can use the experimental NeMo Guardrails red-teaming interface.
+
+## Other
+
+* [Glossary](./glossary.md)
+* [FAQs](./faqs.md)

@@ -37,7 +37,7 @@ def create_chatter(name, configname, logger):
         It logs information about the configuration and any errors encountered during the process creation.
     """
     chatter = None
-    cwd = os.path.join(EXAMPLES_FOLDER, name)
+    cwd = os.path.join(EXAMPLES_FOLDER, configname)
     config = os.path.join(EXAMPLES_FOLDER, configname)
     logger.info(f"config: {config}")
     try:
@@ -56,7 +56,7 @@ def create_chatter(name, configname, logger):
             # Is the chatter process ready?
             # assert "Starting the chat" in output
     except subprocess.CalledProcessError as e:
-        logger.error("Command execution failed: %s", e)
+        logger.error("Command execution for config %s failed: %s", name, e)
         logger.error(f"Error message: {e.stderr}")
         logger.error(traceback.format_exc())
 

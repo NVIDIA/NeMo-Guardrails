@@ -20,26 +20,26 @@ doesn't deviate from a specified topic of conversation. This example covers:
     - Writing basic flows and messages
     - Covers querying and using a Knowledge Base
     - Labels: `Topical`; `good first example`
-    - [Link to example](./topical_rail/README.md)
+    - [Link to example](_deprecated/topical_rail/README.md)
 - **Factual Question Answering:** The example largely focuses on two key aspects - ensuring that
 the bot's response is accurate and mitigates hallucination issues. This example:
     - Covers querying and using a Knowledge Base
     - Ensures answers are factual
     - Reduces hallucination risks
     - Labels: `Topical`
-    - [Link to example](./grounding_rail/README.md)
+    - [Link to example](bots/info/README.md)
 - **Moderating Bots:** Moderation is a complex, multi-pronged approach task. In
 this example, we cover:
     - Ensuring Ethical Responses
     - Blocking restricted words
     - "2 Strikes" ~ shutting down a conversation with a hostile user.
     - Labels: `Safety`; `Security`;
-    - [Link to example](./moderation_rail/README.md)
+    - [Link to example](_deprecated/moderation_rail/README.md)
 - **Detect Jailbreaking Attempts:** Malicious actors will attempt to overwrite a
 bot's safety features. This example:
     - Adds jailbreak check on user's input
     - Labels: `Security`
-    - [Link to example](./jailbreak_check/README.md)
+    - [Link to example](_deprecated/jailbreak_check/README.md)
 - **Safe Execution:** LLMs are versatile but some problems are better solved by
 using pre-existing solutions. For instance, if Wolfram|Alpha is great at
 solving a mathematical problem, it is better to use it to solve mathematical
@@ -49,4 +49,4 @@ This example:
     - Walks through some security guideline
     - Showcases execution for a third-party service
     - Labels: `Security`
-    - [Link to example](./execution_rails/README.md)
+    - [Link to example](_deprecated/execution_rails/README.md)

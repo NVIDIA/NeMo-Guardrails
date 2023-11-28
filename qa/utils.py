@@ -13,11 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import select
+import time
+
 from unittest import TestCase
 
 from .chatter import close_chatter, create_chatter
 from .logger import create_logger
 from .validator import are_strings_semantically_same
+
+TIMEOUT = 15  # in seconds
 
 
 class ExampleConfigChatterTestCase(TestCase):
@@ -26,6 +31,7 @@ class ExampleConfigChatterTestCase(TestCase):
     logger = None
     chatter = None
     example_name = None
+    config_name = None
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -33,7 +39,7 @@ class ExampleConfigChatterTestCase(TestCase):
 
         # Create a logger and a chatter
         cls.logger = create_logger(f"{cls.example_name}.log")
-        cls.chatter = create_chatter(cls.example_name, cls.example_name, cls.logger)
+        cls.chatter = create_chatter(cls.example_name, cls.config_name, cls.logger)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -54,13 +60,41 @@ class ExampleConfigChatterTestCase(TestCase):
                 self.chatter.stdin.flush()
 
                 # Read the answer from chatter
-                output = self.chatter.stdout.readline().strip()
-                self.logger.info(f"Bot: {output}")
+                start_time = time.time()
+                while True:
+                    # Check if the process has completed
+                    retcode = self.chatter.poll()
+                    if retcode is not None:
+                        break
+
+                    rlist, _, _ = select.select([self.chatter.stdout], [], [], 0.1)
+                    if rlist:
+                        output = self.chatter.stdout.readline().strip()
+                        if output:
+                            self.logger.info(f"output: {output}")
+                            break
+
+                    if time.time() - start_time > TIMEOUT:
+                        self.logger.error(
+                            "Timeout reached. No non-empty line received."
+                        )
+                        break
 
                 # Validate the answer
                 if len([answer for answer in expected_answers if answer in output]) > 0:
                     assert True
+                elif (
+                    len(
+                        [
+                            answer
+                            for answer in expected_answers
+                            if are_strings_semantically_same(answer, output)
+                        ]
+                    )
+                    > 0
+                ):
+                    assert True
                 else:
-                    assert are_strings_semantically_same(
-                        expected_answers[0], output
-                    ), f"The output '{output}' was not semantically similar to: '{expected_answers[0]}'"
+                    assert (
+                        False
+                    ), f"The output '{output}' is NOT expected as the bot's response."

@@ -15,10 +15,12 @@
 
 import json
 import os
+import time
 
 import tqdm
 import typer
-from langchain import LLMChain, PromptTemplate
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 
 from nemoguardrails.eval.utils import initialize_llm, load_dataset
 from nemoguardrails.llm.params import llm_params
@@ -124,6 +126,7 @@ class FactCheckEvaluation:
 
         fact_check_predictions = []
         num_correct = 0
+        total_time = 0
 
         for sample in tqdm.tqdm(self.dataset):
             assert (
@@ -139,10 +142,13 @@ class FactCheckEvaluation:
                 answer = sample["incorrect_answer"]
                 label = "no"
 
+            start_time = time.time()
             fact_check_prompt = self.llm_task_manager.render_task_prompt(
                 Task.FACT_CHECKING, {"evidence": evidence, "response": answer}
             )
             fact_check = self.llm(fact_check_prompt)
+            end_time = time.time()
+            time.sleep(0.5)  # avoid rate-limits
             fact_check = fact_check.lower().strip()
 
             if label in fact_check:
@@ -156,23 +162,23 @@ class FactCheckEvaluation:
                 "label": label,
             }
             fact_check_predictions.append(prediction)
+            total_time += end_time - start_time
 
-        return fact_check_predictions, num_correct
+        return fact_check_predictions, num_correct, total_time
 
     def run(self):
         """
         Run the fact checking evaluation and print the results.
         """
-
         if self.create_negatives:
             self.dataset = self.create_negative_samples(self.dataset)
 
         print("Checking facts - positive entailment")
-        positive_fact_check_predictions, pos_num_correct = self.check_facts(
+        positive_fact_check_predictions, pos_num_correct, pos_time = self.check_facts(
             split="positive"
         )
         print("Checking facts - negative entailment")
-        negative_fact_check_predictions, neg_num_correct = self.check_facts(
+        negative_fact_check_predictions, neg_num_correct, neg_time = self.check_facts(
             split="negative"
         )
 
@@ -180,6 +186,11 @@ class FactCheckEvaluation:
         print(f"Negative Accuracy: {neg_num_correct/len(self.dataset) * 100}")
         print(
             f"Overall Accuracy: {(pos_num_correct + neg_num_correct)/(2*len(self.dataset))* 100}"
+        )
+
+        print("---Time taken per sample:---")
+        print(
+            f"Ask LLM ({self.model_config.model}):\t{(pos_time+neg_time)*1000/(2*len(self.dataset)):.1f}ms"
         )
 
         if self.write_outputs:
@@ -198,20 +209,20 @@ class FactCheckEvaluation:
 
 
 def main(
-    data_path: str = typer.Option(
-        "data/factchecking/sample.json",
+    dataset_path: str = typer.Option(
+        "./data/factchecking/sample.json",
         help="Path to the folder containing the dataset",
     ),
     llm: str = typer.Option("openai", help="LLM provider to be used for fact checking"),
     model_name: str = typer.Option(
-        "text-davinci-003", help="Model name ex. text-davinci-003"
+        "gpt-3.5-turbo-instruct", help="Model name ex. gpt-3.5-turbo-instruct"
     ),
     num_samples: int = typer.Option(50, help="Number of samples to be evaluated"),
-    create_negatives: bool = typer.Argument(
+    create_negatives: bool = typer.Option(
         True, help="create synthetic negative samples"
     ),
     output_dir: str = typer.Option(
-        "outputs/factchecking",
+        "eval_outputs/factchecking",
         help="Path to the folder where the outputs will be written",
     ),
     write_outputs: bool = typer.Option(
@@ -231,7 +242,7 @@ def main(
         write_outputs (bool): Whether to write the evaluation predictions to the output directory.
     """
     fact_check = FactCheckEvaluation(
-        data_path,
+        dataset_path,
         llm,
         model_name,
         num_samples,

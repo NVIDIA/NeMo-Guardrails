@@ -62,7 +62,9 @@ Important lessons to be learned from the evaluation results:
 - Each step in the three-step approach (user intent, next step / bot intent, bot message) used by Guardrails offers an improvement in performance.
 - It is important to have at least k=3 samples in the vector database for each user intent (canonical form) for achieving good performance.
 - Some models (e.g., gpt-3.5-turbo) produce a wider variety of canonical forms, even with the few-shot prompting used by Guardrails. In these cases, it is useful to add a similarity match instead of exact match for user intents. In this case, the similarity threshold becomes an important inference parameter.
-- Initial results show that even small models, e.g. [dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b), [vicuna-7b-v1.3](https://huggingface.co/lmsys/vicuna-7b-v1.3), [mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct), have good performance for topical rails.
+- Initial results show that even small models, e.g. [dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b), [vicuna-7b-v1.3](https://huggingface.co/lmsys/vicuna-7b-v1.3), [mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct), [falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct) have good performance for topical rails.
+- Using a single call for topical rails shows similar results to the default method (which uses up to 3 LLM calls for generating the final bot message) in most cases for `text-davinci-003` model.
+- Initial experiments show that using compact prompts has similar or even better performance on these two datasets compared to using the longer prompts.
 
 Evaluation Date - June 21, 2023. Updated July 24, 2023 for Dolly, Vicuna and Mosaic MPT models.
 
@@ -74,37 +76,62 @@ Evaluation Date - June 21, 2023. Updated July 24, 2023 for Dolly, Vicuna and Mos
 Results on _chit-chat_ dataset, metric used is accuracy.
 
 
-| Model                     | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
-|---------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
-| `text-davinci-003, k=all` | 0.89                   | 0.89                   | 0.90                  | 0.90                  | 0.91                   | 0.91                   |
-| `text-davinci-003, k=3`   | 0.82                   | N/A                    | 0.85                  | N/A                   | N/A                    | N/A                    |
-| `text-davinci-003, k=1`   | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
-| `gpt-3.5-turbo, k=all`    | 0.44                   | 0.56                   | 0.50                  | 0.61                  | 0.54                   | 0.65                   |
-| `dolly-v2-3b, k=all`      | 0.80                   | 0.82                   | 0.81                  | 0.83                  | 0.81                   | 0.83                   |
-| `vicuna-7b-v1.3, k=all`   | 0.62                   | 0.75                   | 0.69                  | 0.77                  | 0.71                   | 0.79                   |
-| `mpt-7b-instruct, k=all`  | 0.73                   | 0.81                   | 0.78                  | 0.82                  | 0.80                   | 0.82                   |
+| Model                                  | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
+|----------------------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
+| `text-davinci-003, k=all`              | 0.89                   | 0.89                   | 0.90                  | 0.90                  | 0.91                   | 0.91                   |
+| `text-davinci-003, k=all, single call` | 0.89                   | N/A                    | 0.91                  | N/A                   | 0.91                   | N/A                    |
+| `text-davinci-003, k=all, compact`     | 0.90                   | N/A                    | 0.91                  | N/A                   | 0.91                   | N/A                    |
+| `text-davinci-003, k=3`                | 0.82                   | N/A                    | 0.85                  | N/A                   | N/A                    | N/A                    |
+| `text-davinci-003, k=1`                | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo-instruct, k=all`        | 0.88                   | N/A                    | 0.88                  | N/A                   | 0.88                   | N/A                    |
+| `gpt-3.5-turbo-instruct, single call`  | 0.90                   | N/A                    | 0.91                  | N/A                   | 0.91                   | N/A                    |
+| `gpt-3.5-turbo-instruct, compact`      | 0.89                   | N/A                    | 0.89                  | N/A                   | 0.90                   | N/A                    |
+| `gpt-3.5-turbo, k=all`                 | 0.44                   | 0.56                   | 0.50                  | 0.61                  | 0.54                   | 0.65                   |
+| `llama2-13b-chat, k=all`               | 0.87                   | N/A                    | 0.88                  | N/A                   | 0.89                   | N/A                    |
+| `dolly-v2-3b, k=all`                   | 0.80                   | 0.82                   | 0.81                  | 0.83                  | 0.81                   | 0.83                   |
+| `vicuna-7b-v1.3, k=all`                | 0.62                   | 0.75                   | 0.69                  | 0.77                  | 0.71                   | 0.79                   |
+| `mpt-7b-instruct, k=all`               | 0.73                   | 0.81                   | 0.78                  | 0.82                  | 0.80                   | 0.82                   |
+| `falcon-7b-instruct, k=all`            | 0.81                   | 0.81                   | 0.81                  | 0.82                  | 0.82                   | 0.82                   |
 
 
 Results on _banking_ dataset, metric used is accuracy.
 
 
-| Model                      | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
-|----------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
-| `text-davinci-003, k=all`  | 0.77                   | 0.82                   | 0.83                  | 0.84                  | N/A                    | N/A                    |
-| `text-davinci-003, k=3`    | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
-| `text-davinci-003, k=1`    | 0.50                   | N/A                    | 0.63                  | N/A                   | N/A                    | N/A                    |
-| `gpt-3.5-turbo, k=all`     | 0.38                   | 0.73                   | 0.45                  | 0.73                  | N/A                    | N/A                    |
-| `dolly-v2-3b, k=all`       | 0.32                   | 0.62                   | 0.40                  | 0.64                  | N/A                    | N/A                    |
-| `vicuna-7b-v1.3, k=all`    | 0.39                   | 0.62                   | 0.54                  | 0.65                  | N/A                    | N/A                    |
-| `mpt-7b-instruct, k=all`   | 0.45                   | 0.58                   | 0.50                  | 0.60                  | N/A                    | N/A                    |
+| Model                                  | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
+|----------------------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
+| `text-davinci-003, k=all`              | 0.77                   | 0.82                   | 0.83                  | 0.84                  | N/A                    | N/A                    |
+| `text-davinci-003, k=all, single call` | 0.75                   | N/A                    | 0.81                  | N/A                   | N/A                    | N/A                    |
+| `text-davinci-003, k=all, compact`     | 0.86                   | N/A                    | 0.86                  | N/A                   | N/A                    | N/A                    |
+| `text-davinci-003, k=3`                | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
+| `text-davinci-003, k=1`                | 0.50                   | N/A                    | 0.63                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo-instruct, k=all`        | 0.73                   | N/A                    | 0.74                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo-instruct, single call`  | 0.81                   | N/A                    | 0.83                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo-instruct, compact`      | 0.86                   | N/A                    | 0.87                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo, k=all`                 | 0.38                   | 0.73                   | 0.45                  | 0.73                  | N/A                    | N/A                    |
+| `llama2-13b-chat, k=all`               | 0.76                   | N/A                    | 0.77                  | N/A                   | N/A                    | N/A                    |
+| `dolly-v2-3b, k=all`                   | 0.32                   | 0.62                   | 0.40                  | 0.64                  | N/A                    | N/A                    |
+| `vicuna-7b-v1.3, k=all`                | 0.39                   | 0.62                   | 0.54                  | 0.65                  | N/A                    | N/A                    |
+| `mpt-7b-instruct, k=all`               | 0.45                   | 0.58                   | 0.50                  | 0.60                  | N/A                    | N/A                    |
+| `falcon-7b-instruct, k=all`            | 0.70                   | 0.75                   | 0.76                  | 0.78                  | N/A                    | N/A                    |
 
 
-## Execution Rails
+## Input and Output Rails
 
 ### Fact-checking Rails
+In the Guardrails library, we provide two approaches out of the box for the fact-checking rail, these are colloquially referred to as AskLLM and AlignScore in the rest of this documentation. For more details read the [library guide](./../../docs/user_guides/guardrails-library.md).
 
-The default fact checking rail is implemented as an entailment prediction problem. Given an evidence and the predicted answer, we make an LLM call to predict whether the answer is grounded in the evidence or not.
+#### AskLLM
+In this approach, the fact-checking rail is implemented as an entailment prediction problem. Given an evidence passage and the predicted answer, we prompt an LLM to predict yes/no whether the answer is grounded in the evidence or not. This is the default approach.
 
+#### AlignScore
+This approach is based on the AlignScore model [Zha et al. 2023](https://aclanthology.org/2023.acl-long.634.pdf). Given an evidence passage and the predicted answer, the model is finetuned to predict that they are aligned when:
+1. All information in the predicted answer is present in the evidence passage, and
+2. None of the information in the predicted answer contradicts the evidence passage.
+The response is a value between 0.0 and 1.0. In our testing, the best average accuracies were observed with a threshold of 0.7.
+
+Please see the [user guide documentation](./../../docs/user_guides/guardrails-library.md#alignscore) for detailed steps on how to configure your deployment to use AlignScore.
+
+#### Evaluation
 To run the fact checking rail, you can use the following CLI command:
 
 ```nemoguardrails evaluate fact-checking```
@@ -134,17 +161,22 @@ More details on how to set up the data in the right format and run the evaluatio
 
 #### Evaluation Results
 
-We evaluate the performance of the fact checking rail on the [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset. We randomly sample 100 (question, answer, evidence) triples and run the evaluation using OpenAI `text-davinci-003` and `gpt-3.5-turbo` models.
+Evaluation Date - Nov 23, 2023.
 
-Evaluation Date - June 02, 2023.
+We evaluate the performance of the fact checking rail on the [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset using the Ask LLM and the AlignScore approaches.  To build the dataset, we randomly sample 100 (question, correct answer, evidence) triples, and then, for each triple, build a non-factual or incorrect answer to yield 100 (question, incorrect answer, evidence) triples.
 
-We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model on correctly identifying answers that are **not** grounded in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
+We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model on correctly identifying answers that are **not** supported in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
 
-| Model | Positive Entailment Accuracy  | Negative Entailment Accuracy | Overall Accuracy |
-|-------|----------| ---------------------------- | ----------------------------- |
-| text-davinci-003 | 0.83 | 0.87 | 0.85 |
-| gpt-3.5-turbo | 0.87 | 0.80 | 0.83 |
+| Model                  | Positive Entailment Accuracy | Negative Entailment Accuracy | Overall Accuracy | Average Time Per Checked Fact (ms) |
+|------------------------|------------------------------|------------------------------|------------------|------------------------------------|
+| text-davinci-003       | 70.0%                        | **93.0%**                    | 81.5%            | 272.2ms                            |
+| gpt-3.5-turbo          | 76.0%                        | 89.0%                        | 82.5%            | 435.1ms                            |
+| gpt-3.5-turbo-instruct | **92.0%**                    | 69.0%                        | 80.5%            | 188.8ms                            |
+| align_score-base*      | 81.0%                        | 88.0%                        | 84.5%            | **23.0ms** ^                       |
+| align_score-large*     | 87.0%                        | 90.0%                        | **88.5%**        | 46.0ms ^                           |
 
+*The threshold used for align_score is 0.7, i.e. an align_score >= 0.7 is considered a factual statement, and an align_score < 0.7 signifies an incorrect statement.
+^When the AlignScore model is loaded in-memory and inference is carried out without network overheads, i.e., not as a RESTful service.
 
 ### Moderation Rails
 
@@ -192,10 +224,12 @@ We want the models to block as many harmful prompts as possible and allow as man
 
 #### Moderation Rails Performance
 
-| Model | % of harmful prompts blocked | % of helpful prompts allowed |
-|-------|----------| ---------------------------- |
-| text-davinci-003 | 80 | 97 |
-| gpt-3.5-turbo | 70 | 100 |
+| Model                  | % of harmful prompts blocked | % of helpful prompts allowed |
+|------------------------|------------------------------|------------------------------|
+| text-davinci-003       | 80                           | 97                           |
+| gpt-3.5-turbo          | 70                           | 100                          |
+| gpt-3.5-turbo-instruct | 78                           | 97                           |
+| nemollm-43b            | 88                           | 84                           |
 
 ### Hallucination Rails
 
@@ -237,9 +271,9 @@ We breakdown the performance into the following metrics:
 * % of questions that are intercepted by the model, i.e., % of questions where the model detects are not answerable
 * % of questions that are intercepted by model + hallucination rail, i.e., % of questions where the either the model detects are not answerable or the hallucination rail detects that the model is making up facts
 
-| Model | % intercepted - model |% intercepted - model + hallucination rail|
-|-------|----------| ---------------------------- |
-| text-davinci-003 | 0 | 70 |
-| gpt-3.5-turbo |65 | 90 |
+| Model              | % intercepted - model | % intercepted - model + hallucination rail |
+|--------------------|-----------------------|--------------------------------------------|
+| text-davinci-003   | 0                     | 70                                         |
+| gpt-3.5-turbo      | 65                    | 90                                         |
 
 We find that gpt-3.5-turbo is able to intercept 65% of the questions and identify them as not answerable on its own. Adding the hallucination rail helps intercepts 25% more questions and prevents the model from making up facts.
