@@ -48,7 +48,7 @@ flow bot asks user how the day was
       and bot gesture "looking concerned to the user"
   orwhen user said something
     bot say "Great. And any plans for the rest of the day?"
-
+  
   send StopFlow(flow_id="bot reacts to nice things")
   send StopFlow(flow_id="bot reacts to bad things")
 

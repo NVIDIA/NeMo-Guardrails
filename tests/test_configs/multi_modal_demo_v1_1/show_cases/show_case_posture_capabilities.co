@@ -12,6 +12,9 @@ flow showcase posture capabilities
     when user expressed done
       bot inform "That was fun."
       break
+    orwhen VisualInformationSceneAction.ConfirmationUpdated()
+      bot inform "OK. Let's go back"
+      break
     orwhen user said something
       bot ask "So now I again in the talking posture. We can keep interacting like this if you want to see the posture changes or you can just say 'I am done' to end the showcase."
 
@@ -19,16 +22,13 @@ flow listening posture
   user started saying something
   start bot posture "listening"
   start scene show short information $info="Listening"
-  user said something or bot started saying something or user started saying something
+  user said something
 
 flow talking posture
   bot started saying something
-  log "talking_posture 1"
   start bot posture "talking"
   start scene show short information $info="Talking"
-  log "talking_posture 2"
-  bot said something or user started saying something or bot started saying something
-  log "talking_posture 3"
+  bot said something
 
 flow posture management
   activate listening posture

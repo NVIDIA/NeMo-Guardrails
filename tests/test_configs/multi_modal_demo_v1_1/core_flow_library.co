@@ -253,18 +253,18 @@ flow bot suggest $text
 # Core mechanic flows
 # ----------------------------------
 
-flow stop all bot actions
+flow finish all bot actions
   """Stops all the current bot actions."""
-  send StopFlow(flow_id="_bot_say")
-  send StopFlow(flow_id="bot gesture")
-  #send StopFlow(flow_id="bot posture")
+  send FinishFlow(flow_id="_bot_say")
+  send FinishFlow(flow_id="bot gesture")
+  send FinishFlow(flow_id="bot posture")
 
-flow stop all scene actions
+flow finish all scene actions
   """Stops all the current scene actions."""
-  send StopFlow(flow_id="scene show choice")
-  send StopFlow(flow_id="scene show textual information")
-  send StopFlow(flow_id="scene show short information")
-  send StopFlow(flow_id="scene show form")
+  send FinishFlow(flow_id="scene show choice")
+  send FinishFlow(flow_id="scene show textual information")
+  send FinishFlow(flow_id="scene show short information")
+  send FinishFlow(flow_id="scene show form")
 
 flow wait indefinitely
   """Little helper flow to wait indefinitely."""

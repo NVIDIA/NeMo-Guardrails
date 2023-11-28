@@ -9,6 +9,8 @@ flow showcase number guessing game
   bot ask "Hi, please guess the random number between 0 and 100!"
     and bot gesture "Waving hands"
 
+  #activate reaction to user silence 20.0 "Just say a number between 0 and 100!" as $repeat_question
+
   $attempts = 1
   while True
     user said something

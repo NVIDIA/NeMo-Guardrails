@@ -178,19 +178,25 @@ flow user selected choice $choice_id
 
 flow showcase selector
   activate fallback user said
+  activate interruption handling bot talking
 
   $showcase_selection_ui = None
 
   while True
+    log "while loop restarted"
     if $showcase_selection_ui == None
       start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}]) as $showcase_selection_ui
       start bot inform "Please pick one of the showcases."
 
     when user was silent 8.0
+      log "user was silent"
       llm interaction continuation
+      log "user was silent response done"
 
-    orwhen unhandled user intent
+    orwhen unhandled user intent as $intent_ref
+      log "unhandled user intent: '{{$intent_ref.context.event.arguments.flow_id}}'"
       llm interaction continuation
+      log "unhandled user intent response done"
 
     orwhen user confirmed showcase choice
       $showcase_flow_id = """flow name of showcase that was suggested and confirmed by the user (flow name options: 'showcase number guessing game', 'showcase multimodality', 'showcase backchannelling interaction', 'showcase posture capabilities', 'showcase proactive turn taking'), 'None' if not available."""
@@ -252,7 +258,7 @@ flow main
   activate llm response pooling 1.0
   #activate faq
 
-  bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
+  #bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
   showcase selector
 
   #showcase number guessing game
@@ -262,9 +268,38 @@ flow main
   #showcase proactive turn taking
   wait indefinitely
 
-flow user interrupted bot talking
-  bot started saying something as $ref
-  when user started say something
-    send $ref.Stop()
-  orwhen $ref.Finished()
-    pass
+flow interruption handling bot talking $mode="inform"
+  """Handling the bot talking interruption reaction."""
+  # meta: exclude from llm
+  # meta: loop_id=bot_interruption
+  user interrupted bot talking
+  if $mode == "interrupt"
+    finish all bot actions
+    log "Bot talking stopped"
+  elif $mode == "inform"
+    start scene show short information "Please wait until bot has finished talking!"
+    log "Bot informed user not to talk"
+  elif $mode == "ignore"
+    log "Bot ignored user interruption"
+
+
+flow user interrupted bot talking $sentence_length=15
+  """Triggers when the user starts talking while bot is speaking."""
+  # meta: exclude from llm
+  while True
+    bot started saying something
+    log "Bot started talking..."
+    while True
+      when user saying something as $user_saying_ref
+        $transcript = $user_saying_ref.context.event.arguments.interim_transcript
+        log "User saying something: {{$transcript}}"
+      orwhen user said something as $user_said_ref
+        $transcript = $user_said_ref.context.event.arguments.final_transcript
+        log "User said something: {{$transcript}}"
+      orwhen bot said something
+        log "Bot finished talking without interruption"
+        break
+
+      if "{{len($transcript) > $sentence_length}}" == "True"
+        log "Bot interrupted by user with: {{$transcript}}"
+        return
