@@ -26,7 +26,7 @@ async def check_blocked_terms(context: Optional[dict] = None):
     proprietary_terms = ["proprietary", "proprietary1", "proprietary2"]
 
     for term in proprietary_terms:
-        if term in bot_response:
+        if term in bot_response.lower():
             return True
 
     return False

@@ -4,7 +4,7 @@ This guide will show you how to create a "Hello World" guardrails configuration,
 
 ## Prerequisites
 
-This "Hello World" guardrails configuration will use the OpenAI `text-davinci-003` model, so you need to make sure you have the `openai` package installed and the `OPENAI_API_KEY` environment variable set.
+This "Hello World" guardrails configuration will use the OpenAI `gpt-3.5-turbo-instruct` model, so you need to make sure you have the `openai` package installed and the `OPENAI_API_KEY` environment variable set.
 
 ```bash
 pip install openai==0.28.1
@@ -12,6 +12,14 @@ pip install openai==0.28.1
 
 ```bash
 export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+```
+
+If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+
+```python
+import nest_asyncio
+
+nest_asyncio.apply()
 ```
 
 ## Step 1: create a new guardrails configuration
@@ -63,7 +71,7 @@ from nemoguardrails import LLMRails
 
 rails = LLMRails(config)
 
-response = await rails.generate_async(messages=[{
+response = rails.generate(messages=[{
     "role": "user",
     "content": "Hello!"
 }])
@@ -71,7 +79,7 @@ print(response)
 ```
 
 ```yaml
-{'role': 'assistant', 'content': 'Hello! I am Assistant, an AI trained to help with tasks and provide information. How can I assist you today?'}
+{'role': 'assistant', 'content': "Hello! It's nice to meet you. My name is Assistant. How can I help you today?"}
 ```
 
 The format for the input `messages` array as well as the response follow the same format as the [OpenAI API](https://platform.openai.com/docs/guides/text-generation/chat-completions-api).
@@ -114,7 +122,7 @@ You can now reload the config and test it:
 config = RailsConfig.from_path("./config")
 rails = LLMRails(config)
 
-response = await rails.generate_async(messages=[{
+response = rails.generate(messages=[{
     "role": "user",
     "content": "Hello!"
 }])
@@ -133,7 +141,7 @@ How are you doing?
 What happens if you ask another question? (e.g., "What is the capital France?")
 
 ```python
-response = await rails.generate_async(messages=[{
+response = rails.generate(messages=[{
     "role": "user",
     "content": "What is the capital of France?"
 }])

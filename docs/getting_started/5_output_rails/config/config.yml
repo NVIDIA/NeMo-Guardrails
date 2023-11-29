@@ -39,6 +39,7 @@ rails:
   input:
     flows:
       - check jailbreak
+
   output:
     flows:
       - output moderation

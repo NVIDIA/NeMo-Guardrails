@@ -1,6 +1,6 @@
 # Creating a Pinecone Vector DB and Uploading Data
 
-In order to run this n of the reference demo, you will need to obtain a [Pinecone API key](https://www.pinecone.io/). The instructions to create a Pinecone database, and uploading a few select PDF files to the database are based on the [official examples](https://github.com/pinecone-io/examples/blob/master/docs/langchain-retrieval-augmentation.ipynb) provided by Pinecone. All the API key values are set in the environment and read from there. To test out the code, the Wikipedia page of Nvidia has been used and you might see some outputs in the cells.
+In order to use this guide, you will need to obtain a [Pinecone API key](https://www.pinecone.io/). The instructions to create a Pinecone database, and uploading a few select PDF files to the database are based on the [official examples](https://github.com/pinecone-io/examples/blob/master/docs/langchain-retrieval-augmentation.ipynb) provided by Pinecone. All the API key values are set in the environment and read from there. To test out the code, the Wikipedia page of Nvidia has been used and you might see some outputs in the cells.
 
 ```python
 import os
@@ -17,7 +17,6 @@ Define a helper function to parse PDF files. You can choose to read any format o
 
 ```python
 def load_data_from_pdfs(path):
-    data_local = {}
     local_urls = []
     local_articles = []
     for x in tqdm(os.listdir(path)):

@@ -76,7 +76,7 @@ from nemoguardrails import RailsConfig, LLMRails
 config = RailsConfig.from_path("./config")
 rails = LLMRails(config)
 
-response = await rails.generate_async(messages=[{
+response = rails.generate(messages=[{
     "role": "user",
     "content": "Hello!"
 }])
@@ -123,9 +123,9 @@ info.print_llm_calls_summary()
 ```
 
 ```
-Summary: 1 LLM call(s) took 0.50 seconds and used 524 tokens.
+Summary: 1 LLM call(s) took 0.48 seconds and used 524 tokens.
 
-1. Task `generate_user_intent` took 0.50 seconds and used 524 tokens.
+1. Task `generate_user_intent` took 0.48 seconds and used 524 tokens.
 ```
 
 The `info` object also contains an `info.llm_calls` attribute with detailed information about each LLM call. We will look at this shortly.
@@ -252,7 +252,7 @@ In the above example, we've seen a case where the LLM was prompted only once. Th
 Now, let's look at the same process described above, on the followup question "What is the capital of France?".
 
 ```python
-response = await rails.generate_async(messages=[{
+response = rails.generate(messages=[{
     "role": "user",
     "content": "What is the capital of France?"
 }])
@@ -284,11 +284,11 @@ info.print_llm_calls_summary()
 ```
 
 ```
-Summary: 3 LLM call(s) took 1.90 seconds and used 1374 tokens.
+Summary: 3 LLM call(s) took 1.79 seconds and used 1374 tokens.
 
-1. Task `generate_user_intent` took 0.65 seconds and used 546 tokens.
-2. Task `generate_next_steps` took 0.74 seconds and used 216 tokens.
-3. Task `generate_bot_message` took 0.50 seconds and used 612 tokens.
+1. Task `generate_user_intent` took 0.63 seconds and used 546 tokens.
+2. Task `generate_next_steps` took 0.64 seconds and used 216 tokens.
+3. Task `generate_bot_message` took 0.53 seconds and used 612 tokens.
 ```
 
 Based on the above we can see that the `ask general question` canonical form is predicted for the user utterance "What is the capital of France?". Because there is no flow that matches it, the LLM is asked to predict the next step, which in this case is `bot response for general question`. And because there is no predefined response, the LLM is asked a third time to predict the final message.
@@ -299,7 +299,7 @@ Based on the above we can see that the `ask general question` canonical form is 
 
 ## Wrapping up
 
-This guide has provided a detailed overview of two core Colang concepts: *messages* and *flows*. We've also looked at how the message and flow definitions are used under the hood and how the LLM is prompted.
+This guide has provided a detailed overview of two core Colang concepts: *messages* and *flows*. We've also looked at how the message and flow definitions are used under the hood and how the LLM is prompted. For more details, check out the reference documentation for the [Python API](../../user_guides/python-api.md) and the [Colang Language Syntax](../../user_guides/colang-language-syntax-guide.md).
 
 ## Next
 

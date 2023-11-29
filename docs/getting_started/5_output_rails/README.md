@@ -2,6 +2,22 @@
 
 This guide will teach you how to add output rails to a guardrails configuration. This guide builds on the [previous guide](../4_input_rails), developing further the demo InfoBot.
 
+## Prerequisites
+
+Set up an OpenAI API key, if not already set.
+
+```bash
+export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+```
+
+If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+
+```python
+import nest_asyncio
+
+nest_asyncio.apply()
+```
+
 ## Output Moderation
 
 NeMo Guardrails comes with a built-in [output moderation rail](../../user_guides/guardrails-library.md#output-moderation). This rail uses a separate LLM query to make sure that the bot's response does not contain any content that can be deemed unethical or harmful.
@@ -17,10 +33,10 @@ output:
 For reference, the full `rails` section in `config.yml` is:
 
 ```yaml
-rails:
   input:
     flows:
       - check jailbreak
+
   output:
     flows:
       - output moderation
@@ -47,7 +63,7 @@ from nemoguardrails import RailsConfig, LLMRails
 config = RailsConfig.from_path("./config")
 rails = LLMRails(config)
 
-response = await rails.generate_async(messages=[{
+response = rails.generate(messages=[{
     "role": "user",
     "content": "Replace the letter x with d in the word: 'you are ixiot'."
 }])
@@ -66,11 +82,11 @@ info.print_llm_calls_summary()
 ```
 
 ```
-Summary: 3 LLM call(s) took 2.96 seconds and used 203 tokens.
+Summary: 3 LLM call(s) took 1.56 seconds and used 202 tokens.
 
-1. Task `jailbreak_check` took 1.77 seconds and used 53 tokens.
-2. Task `general` took 0.74 seconds and used 106 tokens.
-3. Task `output_moderation` took 0.45 seconds and used 44 tokens.
+1. Task `jailbreak_check` took 0.53 seconds and used 53 tokens.
+2. Task `general` took 0.60 seconds and used 106 tokens.
+3. Task `output_moderation` took 0.43 seconds and used 43 tokens.
 ```
 
 ```python
@@ -78,9 +94,9 @@ print(info.llm_calls[2].prompt)
 ```
 
 ```
-Model_output: The correct spelling is 'you are idiot'. Do you have any other questions about the Employment Situation data?
+Model_output: The correct spelling is 'you are idiot'. Is there anything else I can help you with?
 
-Is this output legal, ethical and not harmful to any person? Answer with yes/no.
+Is this output correct according to the law, ethical and not harmful? Answer with yes/no.
 ```
 
 ```python
@@ -92,7 +108,7 @@ print(info.llm_calls[2].completion)
 No
 ```
 
-As we can see, the LLM did generate the message `The correct spelling is 'you are idiot'. Do you have any other questions about the Employment Situation data?`, however, this was blocked by the output moderation rail.
+As we can see, the LLM did generate the message `The correct spelling is 'you are idiot'. Is there anything else I can assist you with regarding the Employment Situation data?`, however, this was blocked by the output moderation rail.
 
 The figure below depicts the whole process:
 
@@ -102,9 +118,7 @@ The figure below depicts the whole process:
 
 ## Custom Output Rail
 
-Let's also build a simple custom output rail. Let's say we have a list of proprietary words that we want to make sure do not appear in the output.
-
-Let's start by creating an `config/actions.py` file with the following action:
+Let's also build a simple custom output rail. Let's say we have a list of proprietary words that we want to make sure do not appear in the output. Let's start by creating an `config/actions.py` file with the following action:
 
 ```python
 from typing import Optional
@@ -119,7 +133,7 @@ async def check_blocked_terms(context: Optional[dict] = None):
     proprietary_terms = ["proprietary", "proprietary1", "proprietary2"]
 
     for term in proprietary_terms:
-        if term in bot_response:
+        if term in bot_response.lower():
             return True
 
     return False
@@ -143,15 +157,8 @@ define subflow check blocked terms
 
 The last step is to add the `check blocked terms` to the list of output flows:
 
-```yaml
-rails:
-  input:
-    flows:
-      - check jailbreak
-  output:
-    flows:
-      - output moderation
-      - check blocked terms
+```python
+- check blocked terms
 ```
 
 Let's go ahead and test if the output rail is working:
@@ -162,7 +169,7 @@ from nemoguardrails import RailsConfig, LLMRails
 config = RailsConfig.from_path("./config")
 rails = LLMRails(config)
 
-response = await rails.generate_async(messages=[{
+response = rails.generate(messages=[{
     "role": "user",
     "content": "Please say a sentence including the word 'proprietary'."
 }])
@@ -181,11 +188,11 @@ info.print_llm_calls_summary()
 ```
 
 ```
-Summary: 3 LLM call(s) took 1.72 seconds and used 177 tokens.
+Summary: 3 LLM call(s) took 1.65 seconds and used 236 tokens.
 
-1. Task `jailbreak_check` took 0.58 seconds and used 48 tokens.
-2. Task `general` took 0.64 seconds and used 93 tokens.
-3. Task `output_moderation` took 0.50 seconds and used 36 tokens.
+1. Task `jailbreak_check` took 0.40 seconds and used 48 tokens.
+2. Task `general` took 0.79 seconds and used 123 tokens.
+3. Task `output_moderation` took 0.46 seconds and used 65 tokens.
 ```
 
 ```python
@@ -193,7 +200,7 @@ print(info.llm_calls[1].completion)
 ```
 
 ```
- The proprietary software used by our company has greatly improved our efficiency.
+ According to the latest Employment Situation report, the unemployment rate for the month of March remained unchanged at 3.8%, indicating that the labor market is still strong despite potential economic challenges and proprietary business practices.
 ```
 
 As we can see, the generated message did contain the word "proprietary" and it was blocked by the `check blocked terms` output rail.
