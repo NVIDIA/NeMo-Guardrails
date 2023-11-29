@@ -84,12 +84,19 @@ For each feature or LLM example, check the readme files associated with it.
 
 ## Extra dependencies
 
-The following extra dependencies are defined:
+The `nemoguardrails` package also defines the following extra dependencies:
+
 - `dev`: packages required by some extra Guardrails features for developers (e.g. autoreload feature).
 - `eval`: packages used for the Guardrails [evaluation tools](../../nemoguardrails/eval/README.md).
 - `openai`: installs the latest `openai` package supported by NeMo Guardrails.
 - `sdd`: packages used by the [sensitive data detector](../user_guides/guardrails-library.md#sensitive-data-detection) integrated in NeMo Guardrails.
 - `all`: installs all extra packages.
+
+To keep the footprint of `nemoguardrails` as small as possible, these are not installed by default. To install any of the extra dependency you can use `pip` as well. For example, to install the `dev` extra dependencies, run the following command:
+
+```bash
+> pip install nemoguardrails[dev]
+```
 
 ## What's next?
 
