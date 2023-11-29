@@ -308,12 +308,10 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 # TODO: Create a head dict for all active flows to speed this up
                 # Iterate over all flow states to check for the heads to match the event
                 sorted_flow_states = sorted(
-                    list(state.flow_states.values()), key=lambda s: s.hierarchy_position
+                    [s for s in state.flow_states.values() if _is_listening_flow(s)],
+                    key=lambda s: s.hierarchy_position,
                 )
                 for flow_state in sorted_flow_states:
-                    if not _is_listening_flow(flow_state):
-                        continue
-
                     for head in flow_state.active_heads.values():
                         element = get_element_from_head(state, head)
                         if is_match_op_element(element):
@@ -1664,7 +1662,13 @@ def _create_restart_flow_internal_event(
     state: State, flow_state: FlowState, matching_scores: List[float]
 ) -> InternalEvent:
     # TODO: Check if this creates unwanted side effects of arguments being passed and keeping their state
-    arguments = dict([(arg, flow_state.context[arg]) for arg in flow_state.arguments])
+    arguments = dict(
+        [
+            (arg, flow_state.context[arg])
+            for arg in flow_state.arguments
+            if arg in flow_state.context
+        ]
+    )
     arguments.update(
         {
             "flow_id": flow_state.context["flow_id"],

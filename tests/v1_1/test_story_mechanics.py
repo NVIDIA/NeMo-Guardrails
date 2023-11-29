@@ -188,12 +188,12 @@ def test_when_conflict_issue():
         state.outgoing_events,
         [
             {
-                "type": "StartUtteranceBotAction",
-                "script": "Ok",
-            },
-            {
                 "type": "StartGestureBotAction",
                 "gesture": "test",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Ok",
             },
         ],
     )
@@ -466,4 +466,4 @@ def test_match_colang_error_event():
 
 
 if __name__ == "__main__":
-    test_match_colang_error_event()
+    test_when_conflict_issue()
