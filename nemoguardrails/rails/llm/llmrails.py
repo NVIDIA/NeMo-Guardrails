@@ -469,7 +469,7 @@ class LLMRails:
         if check_sync_call_from_async_loop():
             raise RuntimeError(
                 "You are using the sync `generate` inside async code. "
-                "You should replace with `await generate_async(...)."
+                "You should replace with `await generate_async(...)` or use `nest_asyncio.apply()`."
             )
 
         return asyncio.run(self.generate_async(prompt=prompt, messages=messages))
@@ -516,7 +516,7 @@ class LLMRails:
         if check_sync_call_from_async_loop():
             raise RuntimeError(
                 "You are using the sync `generate_events` inside async code. "
-                "You should replace with `await generate_events_async(...)."
+                "You should replace with `await generate_events_async(...)` or use `nest_asyncio.apply()`."
             )
 
         return asyncio.run(self.generate_events_async(events=events))
