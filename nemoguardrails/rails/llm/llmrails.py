@@ -38,6 +38,7 @@ from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
+from nemoguardrails.rails.llm.options import GenerationOptions, GenerationResponse
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 from nemoguardrails.streaming import StreamingHandler
 
@@ -410,9 +411,10 @@ class LLMRails:
         self,
         prompt: Optional[str] = None,
         messages: Optional[List[dict]] = None,
+        options: Optional[Union[dict, GenerationOptions]] = None,
         streaming_handler: Optional[StreamingHandler] = None,
         return_context: bool = False,
-    ) -> Union[str, dict, Tuple[dict, dict]]:
+    ) -> Union[str, dict, GenerationResponse]:
         """Generate a completion or a next message.
 
         The format for messages is the following:
@@ -430,6 +432,7 @@ class LLMRails:
         Args:
             prompt: The prompt to be used for completion.
             messages: The history of messages to be used to generate the next message.
+            options: Options specific for the generation.
             streaming_handler: If specified, and the config supports streaming, the
               provided handler will be used for streaming.
             return_context: Whether to return the context at the end of the run.
@@ -516,6 +519,7 @@ class LLMRails:
         self,
         prompt: Optional[str] = None,
         messages: Optional[List[dict]] = None,
+        options: Optional[Union[dict, GenerationOptions]] = None,
     ) -> AsyncIterator[str]:
         """Simplified interface for getting directly the streamed tokens from the LLM."""
         streaming_handler = StreamingHandler()
@@ -535,6 +539,7 @@ class LLMRails:
         prompt: Optional[str] = None,
         messages: Optional[List[dict]] = None,
         return_context: bool = False,
+        options: Optional[Union[dict, GenerationOptions]] = None,
     ):
         """Synchronous version of generate_async."""
 
@@ -546,11 +551,18 @@ class LLMRails:
 
         return asyncio.run(
             self.generate_async(
-                prompt=prompt, messages=messages, return_context=return_context
+                prompt=prompt,
+                messages=messages,
+                options=options,
+                return_context=return_context,
             )
         )
 
-    async def generate_events_async(self, events: List[dict]) -> List[dict]:
+    async def generate_events_async(
+        self,
+        events: List[dict],
+        options: Optional[Union[dict, GenerationOptions]] = None,
+    ) -> List[dict]:
         """Generate the next events based on the provided history.
 
         The format for events is the following:
@@ -564,6 +576,7 @@ class LLMRails:
 
         Args:
             events: The history of events to be used to generate the next events.
+            options: The options to be used for the generation.
 
         Returns:
             The newly generate event(s).
@@ -586,7 +599,11 @@ class LLMRails:
 
         return new_events
 
-    def generate_events(self, events: List[dict]) -> List[dict]:
+    def generate_events(
+        self,
+        events: List[dict],
+        options: Optional[Union[dict, GenerationOptions]] = None,
+    ) -> List[dict]:
         """Synchronous version of `LLMRails.generate_events_async`."""
 
         if check_sync_call_from_async_loop():
@@ -595,7 +612,7 @@ class LLMRails:
                 "You should replace with `await generate_events_async(...)` or use `nest_asyncio.apply()`."
             )
 
-        return asyncio.run(self.generate_events_async(events=events))
+        return asyncio.run(self.generate_events_async(events=events, options=options))
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""

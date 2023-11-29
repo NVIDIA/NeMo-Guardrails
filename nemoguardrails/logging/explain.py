@@ -40,6 +40,11 @@ class LLMCallInfo(BaseModel):
     completion_tokens: Optional[int] = Field(
         default=None, description="The number of output tokens."
     )
+    raw_response: Optional[dict] = Field(
+        default=None,
+        description="The raw response received from the LLM. "
+        "May contain additional information, e.g. logprobs.",
+    )
 
 
 class ExplainInfo(BaseModel):
