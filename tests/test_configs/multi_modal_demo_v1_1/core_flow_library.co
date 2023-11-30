@@ -35,7 +35,7 @@ flow user said something
 
 flow user said something unexpected
   # meta: exclude from llm
-  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids=[$loop_id]) as $event
+  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=None)
   return $event.arguments.final_transcript
 
@@ -324,7 +324,7 @@ flow bot respond to user said something
 flow fallback user said
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   # meta: exclude from llm
-  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids=[$loop_id]) as $event
+  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   $transcript = $event.arguments.final_transcript
   $action = 'user said "{{$transcript}}"'
   $intent = await llm derive user intent from user action $action 10

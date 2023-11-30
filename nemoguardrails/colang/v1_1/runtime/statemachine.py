@@ -358,7 +358,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 ):
                     arguments = event.arguments.copy()
                     arguments.update(
-                        {"event": event.name, "loop_ids": list(unhandled_event_loops)}
+                        {"event": event.name, "loop_ids": unhandled_event_loops}
                     )
                     internal_event = create_internal_event(
                         InternalEvents.UNHANDLED_EVENT, arguments, event.matching_scores
