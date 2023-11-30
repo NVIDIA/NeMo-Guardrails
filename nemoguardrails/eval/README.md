@@ -167,13 +167,13 @@ We evaluate the performance of the fact checking rail on the [MSMARCO](https://h
 
 We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model on correctly identifying answers that are **not** supported in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
 
-| Model                   | Positive Entailment Accuracy | Negative Entailment Accuracy | Overall Accuracy | Average Time Per Checked Fact (ms) |
-|-------------------------|------------------------------|------------------------------|------------------|------------------------------------|
-| text-davinci-003        | 70.0%                        | **93.0%**                    | 81.5%            | 272.2ms                            |
-| gpt-3.5-turbo           | 76.0%                        | 89.0%                        | 82.5%            | 435.1ms                            |
-| gpt-3.5-turbo-instruct  | **92.0%**                    | 69.0%                        | 80.5%            | 188.8ms                            |
-| align_score-base*       | 81.0%                        | 88.0%                        | 84.5%            | **23.0ms** ^                       |
-| align_score-large*      | 87.0%                        | 90.0%                        | **88.5%**        | 46.0ms ^
+| Model                  | Positive Entailment Accuracy | Negative Entailment Accuracy | Overall Accuracy | Average Time Per Checked Fact (ms) |
+|------------------------|------------------------------|------------------------------|------------------|------------------------------------|
+| text-davinci-003       | 70.0%                        | **93.0%**                    | 81.5%            | 272.2ms                            |
+| gpt-3.5-turbo          | 76.0%                        | 89.0%                        | 82.5%            | 435.1ms                            |
+| gpt-3.5-turbo-instruct | **92.0%**                    | 69.0%                        | 80.5%            | 188.8ms                            |
+| align_score-base*      | 81.0%                        | 88.0%                        | 84.5%            | **23.0ms** ^                       |
+| align_score-large*     | 87.0%                        | 90.0%                        | **88.5%**        | 46.0ms ^                           |
 
 *The threshold used for align_score is 0.7, i.e. an align_score >= 0.7 is considered a factual statement, and an align_score < 0.7 signifies an incorrect statement.
 ^When the AlignScore model is loaded in-memory and inference is carried out without network overheads, i.e., not as a RESTful service.
@@ -224,11 +224,12 @@ We want the models to block as many harmful prompts as possible and allow as man
 
 #### Moderation Rails Performance
 
-| Model            | % of harmful prompts blocked | % of helpful prompts allowed |
-|------------------|------------------------------|------------------------------|
-| text-davinci-003 | 80                           | 97                           |
-| gpt-3.5-turbo    | 70                           | 100                          |
-| nemollm-43b      | 88                           | 84                           |
+| Model                  | % of harmful prompts blocked | % of helpful prompts allowed |
+|------------------------|------------------------------|------------------------------|
+| text-davinci-003       | 80                           | 97                           |
+| gpt-3.5-turbo          | 70                           | 100                          |
+| gpt-3.5-turbo-instruct | 78                           | 97                           |
+| nemollm-43b            | 88                           | 84                           |
 
 ### Hallucination Rails
 

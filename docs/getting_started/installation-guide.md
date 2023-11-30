@@ -19,6 +19,7 @@ Most systems already have installed a C++ runtime. If `annoy` installation fails
 - For a Linux or Mac / Unix-based OS:
   - First install `gcc` and `g++` using `apt-get install gcc g++`.
   - Then update the following environment variables: `export CC=<path_to_clang>` and `export CXX=<path_to_clang++>` (usually, `<path_to_clang>` is `/usr/bin/clang`).
+  - In some cases, you might also need to install the `python-dev` package using `apt-get install python-dev` (or `apt-get install python3-dev`). Check out this [thread](https://stackoverflow.com/questions/21530577/fatal-error-python-h-no-such-file-or-directory) if the error persists.
 - For Windows:
   - Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/). This should install Microsoft Visual C++ (version 14.0 or greater is required by latest version of `annoy`).
 
@@ -83,12 +84,19 @@ For each feature or LLM example, check the readme files associated with it.
 
 ## Extra dependencies
 
-The following extra dependencies are defined:
+The `nemoguardrails` package also defines the following extra dependencies:
+
 - `dev`: packages required by some extra Guardrails features for developers (e.g. autoreload feature).
 - `eval`: packages used for the Guardrails [evaluation tools](../../nemoguardrails/eval/README.md).
 - `openai`: installs the latest `openai` package supported by NeMo Guardrails.
 - `sdd`: packages used by the [sensitive data detector](../user_guides/guardrails-library.md#sensitive-data-detection) integrated in NeMo Guardrails.
 - `all`: installs all extra packages.
+
+To keep the footprint of `nemoguardrails` as small as possible, these are not installed by default. To install any of the extra dependency you can use `pip` as well. For example, to install the `dev` extra dependencies, run the following command:
+
+```bash
+> pip install nemoguardrails[dev]
+```
 
 ## What's next?
 
