@@ -127,6 +127,7 @@ expr: or_expr
           | atom_expr "." name               -> getattr
           | "[" _exprlist? "]"  -> list
           | "{" _dict_exprlist? "}" -> dict
+          | "{" _exprlist "}" -> set
           | atom
 
 _exprlist: atom_expr (","  atom_expr)* [","]

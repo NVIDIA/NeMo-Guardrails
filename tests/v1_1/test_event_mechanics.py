@@ -744,6 +744,106 @@ def test_event_dict_parameter_match():
     )
 
 
+def test_event_set_parameter_match():
+    """Test start a child flow two times"""
+
+    content = """
+    flow main
+      match Event1(param={"a"})
+      start UtteranceBotAction(script="OK1")
+      match Event1(param={r".*"})
+      start UtteranceBotAction(script="OK2")
+      match Event1(param={"c","a"})
+      await UtteranceBotAction(script="OK3")
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {"c"},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {"a", "b"},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "OK1",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {"sdfsd"},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "OK2",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {"a", "b"},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": {"a", "c"},
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "OK3",
+            }
+        ],
+    )
+
+
 def test_event_list_parameter_match():
     """Test start a child flow two times"""
 
@@ -927,4 +1027,4 @@ def test_action_event_requeuing():
 
 
 if __name__ == "__main__":
-    test_action_event_requeuing()
+    test_event_list_parameter_match()
