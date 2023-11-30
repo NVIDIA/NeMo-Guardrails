@@ -70,12 +70,36 @@ _param_managers: Dict[Type[BaseLanguageModel], Type[LLMParams]] = {}
 
 
 def register_param_manager(llm_type: Type[BaseLanguageModel], manager: Type[LLMParams]):
-    """Register a parameter manager."""
+    """
+    Register a parameter manager for a specific language model type.
+
+    This function registers a parameter manager for a specific language model type,
+    allowing the system to retrieve the appropriate manager when needed.
+
+    Args:
+        llm_type (Type[BaseLanguageModel]): The type of the language model.
+        manager (Type[LLMParams]): The parameter manager associated with the language model.
+
+    """
     _param_managers[llm_type] = manager
 
 
 def llm_params(llm: BaseLanguageModel, **kwargs):
-    """Returns a parameter manager for the given language model."""
+    """
+    Get a parameter manager for a given language model.
+
+    This function returns a parameter manager for a given language model. If a specific
+    manager is registered for the language model type, it will be used; otherwise, a
+    default manager (LLMParams) will be returned.
+
+    Args:
+        llm (BaseLanguageModel): The language model instance.
+        **kwargs: Additional keyword arguments to pass to the parameter manager.
+
+    Returns:
+        LLMParams: A parameter manager for the given language model.
+
+    """
     _llm_params = _param_managers.get(llm.__class__, LLMParams)
 
     return _llm_params(llm, **kwargs)

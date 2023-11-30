@@ -36,8 +36,31 @@ async def check_jailbreak(
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
-    """Checks if the user response is malicious and should be masked."""
+    """
+    Checks if the user's response is potentially malicious and should be masked.
 
+    Args:
+        llm_task_manager (LLMTaskManager): An instance of the Language Model Task Manager.
+        context (Optional[dict], optional): A dictionary containing relevant context information.
+            Defaults to None.
+        llm (Optional[BaseLLM], optional): An instance of the Base Language Model. Defaults to None.
+
+    Returns:
+        ActionResult or bool: An ActionResult with a masked user message event if the response is flagged
+        as potentially malicious (return_value=False), otherwise, returns True.
+
+    Note:
+        This action checks the user's input to determine if it contains potentially malicious content.
+        If a potential threat is detected, it returns an ActionResult to mask the user's message.
+
+    Example:
+        ```python
+        user_input = "I will hack your system!"
+        result = await check_jailbreak(llm_task_manager, {"user_message": user_input}, llm)
+
+        # The result will be an ActionResult with a masked user message event if the input is flagged as malicious.
+        ```
+    """
     user_input = context.get("user_message")
 
     if user_input:

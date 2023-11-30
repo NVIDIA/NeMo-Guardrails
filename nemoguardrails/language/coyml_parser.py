@@ -29,12 +29,15 @@ from .utils import get_stripped_tokens, split_args, split_max, word_split
 
 
 def _to_value(s, remove_quotes: bool = False):
-    """Helper that converts a str/dict to another value.
+    """
+    Helper that converts a string or dictionary to another value.
 
-    It does the following:
-    - if the value is "None" it is converted to None
+    Args:
+        s (str or dict): The input string or dictionary.
+        remove_quotes (bool): Whether to remove quotes when evaluating the string.
 
-    TODO: other useful value shorthands
+    Returns:
+        Any: The converted value.
     """
     if isinstance(s, str):
         # If it's a reference to a variable, we leave as is.
@@ -47,7 +50,16 @@ def _to_value(s, remove_quotes: bool = False):
 
 
 def _extract_inline_params(d_value, d_params):
-    """Helper to extract inline parameters"""
+    """
+    Helper to extract inline parameters from a value and update the parameter dictionary.
+
+    Args:
+        d_value (str): The value to extract parameters from.
+        d_params (dict): The parameter dictionary to update with extracted parameters.
+
+    Returns:
+        str: The modified value with inline parameters removed.
+    """
     if isinstance(d_value, str) and "(" in d_value:
         d_value, params_str = get_stripped_tokens(split_max(d_value, "(", 1))
 
@@ -78,10 +90,14 @@ def _extract_inline_params(d_value, d_params):
 
 
 def _dict_to_element(d):
-    """Helper to turn a short-hand dictionary into an event structure.
+    """
+    Helper function to transform a shorthand dictionary into an event structure.
 
-    :param d: A dictionary in one of the supported formats
-    :return:
+    Args:
+        d (dict): The input dictionary in one of the supported formats.
+
+    Returns:
+        dict: The transformed event structure.
     """
     # if there is any property that stars with ":" we transform it to "_"
     for _k in list(d.keys()):
@@ -403,8 +419,15 @@ def get_events(events_data: List):
 
 
 def _extract_elements(items: List) -> List[dict]:
-    """Helper to convert a list of items data to flow elements"""
-    elements = []
+    """
+    Helper function to convert a list of items data to flow elements.
+
+    Args:
+        items (List): The list of items data to be converted.
+
+    Returns:
+        List[dict]: The list of flow elements.
+    """    elements = []
 
     i = 0
     while i < len(items):
@@ -643,8 +666,15 @@ def _process_ellipsis(elements):
 
 
 def parse_flow_elements(items):
-    """Parses the flow elements from CoYML format to CIL format."""
-    # Extract
+    """
+    Parses the flow elements from CoYML format to CIL format.
+
+    Args:
+        items: List of items in CoYML format.
+
+    Returns:
+        List[dict]: List of flow elements in CIL format.
+    """    # Extract
     elements = _extract_elements(items)
 
     # And resolve goto's

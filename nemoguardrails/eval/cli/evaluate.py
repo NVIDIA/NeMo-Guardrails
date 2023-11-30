@@ -70,9 +70,24 @@ def topical(
         default=None, help="Output directory for predictions."
     ),
 ):
-    """Evaluates the performance of the topical rails defined in a Guardrails application.
-    Computes accuracy for canonical form detection, next step generation, and next bot message generation.
+    """
+    Evaluate the performance of topical rails defined in a Guardrails application.
+
+    This command computes accuracy for canonical form detection, next step generation, and next bot message generation.
     Only a single Guardrails application can be specified in the config option.
+
+    Args:
+        config (List[str]): Path to a directory containing configuration files of the Guardrails application for evaluation.
+            It can also point to a single configuration file.
+        verbose (bool): Enable verbose mode to output prompts and detailed information during evaluation.
+        test_percentage (float): Percentage of samples for an intent to be used as a test set during evaluation.
+        max_tests_intent (int): Maximum number of test samples per intent to be used during testing. If set to 0, there is no limit.
+        max_samples_intent (int): Maximum number of samples per intent to be indexed in the vector database during evaluation.
+            If set to 0, all samples are used.
+        results_frequency (int): Frequency at which intermediate evaluation results are printed.
+        sim_threshold (float): Minimum similarity score required to select the intent when an exact match fails during evaluation.
+        random_seed (int): Random seed used for evaluation.
+        output_dir (str): Output directory for saving evaluation predictions.
     """
     if verbose:
         set_verbose(True)
@@ -124,8 +139,20 @@ def moderation(
     split: str = typer.Option("harmful", help="Whether prompts are harmful or helpful"),
 ):
     """
-    Evaluates the performance of the moderation rails defined in a Guardrails application.
-    Computes accuracy for jailbreak detection and output moderation.
+    Evaluate the performance of the moderation rails defined in a Guardrails application.
+
+    This command computes accuracy for jailbreak detection and output moderation.
+
+    Args:
+        dataset_path (str): Path to the dataset containing prompts for moderation evaluation.
+        llm (str): LLM provider, e.g., OpenAI.
+        model_name (str): LLM model name, e.g., text-davinci-003.
+        num_samples (int): Number of samples to evaluate.
+        check_jailbreak (bool): Evaluate jailbreak rail.
+        check_output_moderation (bool): Evaluate output moderation rail.
+        output_dir (str): Output directory for saving evaluation results.
+        write_outputs (bool): Write evaluation outputs to files.
+        split (str): Specify whether prompts are harmful or helpful for evaluation.
     """
     moderation_check = ModerationRailsEvaluation(
         dataset_path,
@@ -158,8 +185,17 @@ def hallucination(
     write_outputs: bool = typer.Option(True, help="Write outputs to file"),
 ):
     """
-    Evaluates the performance of the hallucination rails defined in a Guardrails application.
-    Computes accuracy for hallucination detection.
+    Evaluate the performance of the hallucination rails defined in a Guardrails application.
+
+    This command computes accuracy for hallucination detection.
+
+    Args:
+        dataset_path (str): Dataset path.
+        llm (str): LLM provider, e.g., OpenAI.
+        model_name (str): LLM model name, e.g., text-davinci-003.
+        num_samples (int): Number of samples to evaluate.
+        output_dir (str): Output directory for saving evaluation results.
+        write_outputs (bool): Write evaluation outputs to files.
     """
     hallucination_check = HallucinationRailsEvaluation(
         dataset_path,
@@ -198,9 +234,18 @@ def fact_checking(
     ),
 ):
     """
-    Evaluates the performance of the fact checking rails defined in a Guardrails application.
-    Computes accuracy for fact checking.
-    Negatives can be created synthetically by an LLM that acts as an adversary and modifies the answer to make it incorrect.
+    Evaluate the performance of the fact checking rails defined in a Guardrails application.
+
+    This command computes accuracy for fact checking.
+
+    Args:
+        dataset_path (str): Path to the folder containing the dataset for fact checking evaluation.
+        llm (str): LLM provider for fact checking, e.g., OpenAI.
+        model_name (str): LLM model name, e.g., text-davinci-003.
+        num_samples (int): Number of samples to evaluate.
+        create_negatives (bool): Create synthetic negative samples for fact checking.
+        output_dir (str): Output directory for saving evaluation results.
+        write_outputs (bool): Write evaluation outputs to the output directory.
     """
     fact_check = FactCheckEvaluation(
         dataset_path,

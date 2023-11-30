@@ -383,7 +383,18 @@ class Runtime:
     async def _get_action_resp(
         self, action_meta: Dict[str, Any], action_name: str, kwargs: Dict[str, Any]
     ) -> Tuple[Dict[str, Any], str]:
-        """Interact with actions and get response from action-server and system actions."""
+        """
+        Interact with actions and get a response from the action-server and system actions.
+
+        Args:
+            action_meta (Dict[str, Any]): Metadata about the action.
+            action_name (str): The name of the action to execute.
+            kwargs (Dict[str, Any]): Keyword arguments for the action.
+
+        Returns:
+            Tuple[Dict[str, Any], str]: A tuple containing the response dictionary and the status.
+        """        
+        
         result, status = {}, "failed"  # default response
         try:
             # Call the Actions Server if it is available.
@@ -421,7 +432,15 @@ class Runtime:
         return result, status
 
     async def _process_start_flow(self, events: List[dict]) -> List[dict]:
-        """Starts a flow."""
+        """
+        Starts a flow based on the provided event.
+
+        Args:
+            events (List[dict]): A list of events in the history.
+
+        Returns:
+            List[dict]: A list of next steps as events.
+        """
 
         event = events[-1]
 

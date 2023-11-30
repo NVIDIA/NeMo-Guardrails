@@ -21,7 +21,17 @@ from nemoguardrails.flows.utils import AttributeDict
 
 
 def eval_expression(expr, context):
-    """Evaluates the provided expression in the given context."""
+    """
+    Evaluates the provided expression using variables from the given context.
+
+    Args:
+        expr (str): The expression to evaluate, which may include variable references.
+        context (dict): A dictionary containing variables and their values.
+
+    Returns:
+        any: The result of evaluating the expression in the context. If the expression
+             is not a string or if it's a boolean or integer, it is returned as-is.
+    """
     # If it's not a string, we should return it as such
     if expr is None:
         return None
