@@ -138,7 +138,7 @@ How are you doing?
 
 ### Other queries
 
-What happens if you ask another question? (e.g., "What is the capital France?")
+What happens if you ask another question? (e.g., "What is the capital of France?")
 
 ```python
 response = rails.generate(messages=[{
