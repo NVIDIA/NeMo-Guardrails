@@ -17,6 +17,13 @@ from typing import List
 
 from annoy import AnnoyIndex
 
+from nemoguardrails.embeddings.cache import (
+    CacheStore,
+    FilesystemCacheStore,
+    KeyGenerator,
+    MD5KeyGenerator,
+    cache_embeddings,
+)
 from nemoguardrails.embeddings.index import EmbeddingModel, EmbeddingsIndex, IndexItem
 
 
@@ -34,21 +41,22 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embeddings (List[List[float]]): The computed embeddings.
     """
 
-    def __init__(self, embedding_model=None, embedding_engine=None, index=None):
-        """Initialize the BasicEmbeddingsIndex.
-
-        Args:
-            embedding_model (str, optional): The model for computing embeddings. Defaults to None.
-            embedding_engine (str, optional): The engine for computing embeddings. Defaults to None.
-            index (AnnoyIndex, optional): The pre-existing index. Defaults to None.
-        """
+    def __init__(
+        self,
+        embedding_model=None,
+        embedding_engine=None,
+        index=None,
+        key_generator: KeyGenerator = None,
+        cache_store: CacheStore = None,
+    ):
         self._model = None
         self._items = []
         self._embeddings = []
         self.embedding_model = embedding_model
         self.embedding_engine = embedding_engine
         self._embedding_size = 0
-
+        self.key_generator = key_generator or MD5KeyGenerator()
+        self.cache_store = cache_store or FilesystemCacheStore()
         # When the index is provided, it means it's from the cache.
         self._index = index
 
@@ -78,6 +86,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
             embedding_model=self.embedding_model, embedding_engine=self.embedding_engine
         )
 
+    @cache_embeddings
     def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Compute embeddings for a list of texts.
 
@@ -236,8 +245,12 @@ class OpenAIEmbeddingModel(EmbeddingModel):
 
     """
 
-    def __init__(self, embedding_model: str):
+    def __init__(
+        self,
+        embedding_model: str,
+    ):
         self.model = embedding_model
+
         self.embedding_size = len(self.encode(["test"])[0])
 
     def encode(self, documents: List[str]) -> List[List[float]]:
