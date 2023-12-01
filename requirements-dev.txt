@@ -11,3 +11,5 @@ pytest-cov==4.1.0
 watchdog==3.0.0
 pytest-httpx==0.24.0
 prompt-toolkit==3.0.38
+openai==0.28.1
+spacy~=3.7.2
