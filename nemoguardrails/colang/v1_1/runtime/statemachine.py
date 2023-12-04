@@ -16,6 +16,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Element,
     EndScope,
     ForkHead,
+    Global,
     Goto,
     Label,
     Log,
@@ -705,7 +706,7 @@ def slide(
                 ), "Flows cannot be instantiated!"
 
                 evaluated_arguments = _evaluate_arguments(
-                    element.spec.arguments, flow_state.context
+                    element.spec.arguments, get_eval_context(state, flow_state)
                 )
                 action = Action(
                     name=element.spec.name,
@@ -735,7 +736,7 @@ def slide(
             head.position += 1
 
         elif isinstance(element, Goto):
-            if eval_expression(element.expression, flow_state.context):
+            if eval_expression(element.expression, get_eval_context(state, flow_state)):
                 if element.label in flow_config.element_labels:
                     head.position = flow_config.element_labels[element.label] + 1
                 else:
@@ -882,15 +883,20 @@ def slide(
 
         elif isinstance(element, Assignment):
             # We need to first evaluate the expression
-            expr_val = eval_expression(element.expression, flow_state.context)
-            flow_state.context.update({element.key: expr_val})
+            expr_val = eval_expression(
+                element.expression, get_eval_context(state, flow_state)
+            )
+            if element.key in flow_state.global_variables:
+                state.global_variables.update({element.key: expr_val})
+            else:
+                flow_state.context.update({element.key: expr_val})
             head.position += 1
 
         elif isinstance(element, Return):
             flow_state.context.update(
                 {
                     "_return_value": eval_expression(
-                        element.expression, flow_state.context
+                        element.expression, get_eval_context(state, flow_state)
                     )
                 }
             )
@@ -913,7 +919,7 @@ def slide(
 
         elif isinstance(element, Log):
             log.info(
-                f"Colang debug info: {eval_expression(element.info,flow_state.context)}"
+                f"Colang debug info: {eval_expression(element.info, get_eval_context(state, flow_state))}"
             )
             head.position += 1
 
@@ -924,6 +930,10 @@ def slide(
                     "priority must be a float number between 0.0 and 1.0!"
                 )
             flow_state.priority = priority
+            head.position += 1
+
+        elif isinstance(element, Global):
+            flow_state.global_variables.add(element.name.lstrip("$"))
             head.position += 1
 
         elif isinstance(element, CatchPatternFailure):
@@ -1569,7 +1579,9 @@ def get_event_from_element(
                 raise ColangValueError(f"Missing event attribute in {obj.name}")
             event_name = member["name"]
             event_arguments = member["arguments"]
-            event_arguments = _evaluate_arguments(event_arguments, flow_state.context)
+            event_arguments = _evaluate_arguments(
+                event_arguments, get_eval_context(state, flow_state)
+            )
             event = obj.get_event(event_name, event_arguments)
 
             if isinstance(event, InternalEvent):
@@ -1591,7 +1603,7 @@ def get_event_from_element(
             flow_event_name = element_spec.members[0]["name"]
             flow_event_arguments = element_spec.members[0]["arguments"]
             flow_event_arguments = _evaluate_arguments(
-                flow_event_arguments, flow_state.context
+                flow_event_arguments, get_eval_context(state, flow_state)
             )
             flow_event: InternalEvent = temp_flow_state.get_event(
                 flow_event_name, flow_event_arguments
@@ -1603,13 +1615,15 @@ def get_event_from_element(
         elif element_spec.spec_type == SpecType.ACTION:
             # Action object
             action_arguments = _evaluate_arguments(
-                element_spec.arguments, flow_state.context
+                element_spec.arguments, get_eval_context(state, flow_state)
             )
             action = Action(element_spec.name, action_arguments, flow_state.flow_id)
             # TODO: refactor the following repetition of code (see above)
             event_name = element_spec.members[0]["name"]
             event_arguments = element_spec.members[0]["arguments"]
-            event_arguments = _evaluate_arguments(event_arguments, flow_state.context)
+            event_arguments = _evaluate_arguments(
+                event_arguments, get_eval_context(state, flow_state)
+            )
             action_event: ActionEvent = action.get_event(event_name, event_arguments)
             if element["op"] == "match":
                 # Delete action_uid from event since the action is only a helper object
@@ -1620,7 +1634,7 @@ def get_event_from_element(
         if element_spec.name.islower() or element_spec.name in InternalEvents.ALL:
             # Flow event
             event_arguments = _evaluate_arguments(
-                element_spec.arguments, flow_state.context
+                element_spec.arguments, get_eval_context(state, flow_state)
             )
             flow_event = InternalEvent(
                 name=element_spec.name, arguments=event_arguments
@@ -1629,7 +1643,7 @@ def get_event_from_element(
         elif "Action" in element_spec.name:
             # Action event
             event_arguments = _evaluate_arguments(
-                element_spec.arguments, flow_state.context
+                element_spec.arguments, get_eval_context(state, flow_state)
             )
             action_event = ActionEvent(
                 name=element_spec.name, arguments=event_arguments
@@ -1638,7 +1652,7 @@ def get_event_from_element(
         else:
             # Event
             event_arguments = _evaluate_arguments(
-                element_spec.arguments, flow_state.context
+                element_spec.arguments, get_eval_context(state, flow_state)
             )
             event = Event(name=element_spec.name, arguments=event_arguments)
             return event
@@ -1775,3 +1789,13 @@ def create_umim_event(event: Event, event_args: dict) -> Dict[str, Any]:
         return new_event_dict(event.name, action_uid=event.action_uid, **new_event_args)
     else:
         return new_event_dict(event.name, **new_event_args)
+
+
+def get_eval_context(state: State, flow_state: FlowState) -> dict:
+    context = flow_state.context.copy()
+    for var in flow_state.global_variables:
+        if var in state.global_variables:
+            context.update({var: state.global_variables[var]})
+        else:
+            context.update({var: None})
+    return context

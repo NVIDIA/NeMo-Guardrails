@@ -90,7 +90,7 @@ def eval_expression(expr: str, context: dict) -> Any:
             )
 
     # We search for all variable names starting with $, remove the $ and add
-    # the value in the globals dict for eval
+    # the value in the dict for eval
     regex_pattern = r"\$([a-zA-Z_][a-zA-Z0-9_]*)"
     var_names = re.findall(regex_pattern, updated_expr)
     updated_expr = re.sub(regex_pattern, r"var_\1", updated_expr)

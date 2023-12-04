@@ -14,7 +14,6 @@
 # limitations under the License.
 
 """Test the core flow mechanics"""
-import copy
 import logging
 
 from rich.logging import RichHandler
@@ -958,5 +957,51 @@ def test_abort_flow():
     )
 
 
+def test_global_statement():
+    """"""
+
+    content = """
+    flow a
+      $var = "Check1"
+      start UtteranceBotAction(script=$var)
+
+    flow b
+      global $var
+      $var = "Check2"
+
+    flow main
+      global $var
+      $var = "Start"
+      start a
+      start UtteranceBotAction(script=$var)
+      start b
+      start UtteranceBotAction(script=$var)
+      match WaitEvent()
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Check1",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Check2",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_when_or_with_references()
+    test_global_statement()

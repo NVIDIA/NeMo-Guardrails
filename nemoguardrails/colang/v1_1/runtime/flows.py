@@ -22,7 +22,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Deque, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
@@ -442,6 +442,9 @@ class FlowState:
     # Child flow ids
     arguments: List[str] = field(default_factory=list)
 
+    # Flow variables that are defined as global
+    global_variables: Set[str] = field(default_factory=set)
+
     # Parent flow id
     # TODO: Implement proper parenting
     parent_uid: Optional[str] = None
@@ -586,6 +589,9 @@ class State:
 
     # The main flow state
     main_flow_state: Optional[FlowState] = None
+
+    # Global variables
+    global_variables: Dict[str, Any] = field(default_factory=dict)
 
     # The next step of the flow-driven system
     outgoing_events: List[dict] = field(default_factory=list)

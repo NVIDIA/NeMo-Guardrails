@@ -350,6 +350,15 @@ class Priority(Element):
 
 @dataclass_json
 @dataclass
+class Global(Element):
+    """Declare a global variable."""
+
+    name: str = ""
+    _type: str = "_global"
+
+
+@dataclass_json
+@dataclass
 class Log(Element):
     """Log a message."""
 
