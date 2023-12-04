@@ -52,19 +52,15 @@ flow user selected choice $choice_id
   match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
   return $event.arguments.current_choice
 
-flow choice selection buffer $choice_buffer
-  match VisualChoiceSceneAction.ChoiceUpdated() as $event
-  $choice_buffer = $event.arguments.current_choice
-
-flow user has selected choice $choice_id $choice_buffer
+flow user has selected choice $choice_id
   # meta: exclude from llm
   # meta: user action
-  if $choice_buffer == None
+  global $choice_selection_state
+  if $choice_selection_state == None
     match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
     $choice = $event.arguments.current_choice
   else
-    $choice = $choice_buffer[0]
-  $choice_buffer = None
+    $choice = $choice_selection_state
   return $choice
 
 flow unhandled user intent
@@ -299,16 +295,47 @@ flow bot suggest $text
   await _bot_say $text
 
 # ----------------------------------
-# Bot UMIM action state tracking flows
+# State tracking flows
 # DON'T CHANGE! Currently, hard-wired with LLM prompt generation
 # -----------------------------------
 
 flow track bot talking state
-   global $bot_talking_state
-   bot started saying something
-   $bot_talking_state = True
-   bot said something
-   $bot_talking_state = False
+  # meta: exclude from llm
+  # meta: loop_id=state_tracking
+  global $bot_talking_state
+  await bot started saying something
+  $bot_talking_state = True
+  await bot said something
+  $bot_talking_state = False
+
+flow track user talking state
+  # meta: exclude from llm
+  # meta: loop_id=state_tracking
+  global $bot_talking_state
+  await user started saying something
+  $user_talking_state = True
+  await user said something
+  $user_talking_state = False
+
+flow track unhandled user intent state
+  # meta: exclude from llm
+  # meta: loop_id=state_tracking
+  global $user_intent_state
+  when unhandled user intent as $flow
+    $unhandled_user_intent_state = $flow.context.flow_name
+  orwhen FlowFinished(flow_id=r"^user ") as $event
+    $unhandled_user_intent_state = None
+
+flow track visual choice selection state
+  # meta: exclude from llm
+  # meta: loop_id=state_tracking
+  global $choice_selection_state
+  when VisualChoiceSceneAction.Started()
+    $choice_selection_state = None
+  orwhen VisualChoiceSceneAction.ChoiceUpdated() as $event
+    $choice_selection_state = $event.arguments.current_choice
+  orwhen VisualChoiceSceneAction.Finished()
+    $choice_selection_state = None
 
 # ----------------------------------
 # Core mechanic flows

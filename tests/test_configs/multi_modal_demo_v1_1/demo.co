@@ -94,7 +94,7 @@ flow user requested a task
 
 flow user picked number guessing game showcase
   """User picked the number guessing game showcase (A)."""
-  user selected choice "game"
+  user has selected choice "game"
     or user said "I want to play the number guessing game"
     or user said "Show me the game"
     or user said "showcase A"
@@ -102,7 +102,7 @@ flow user picked number guessing game showcase
 
 flow user picked multimodality showcase
    """User picked the multimodality showcase (B)."""
-   user selected choice "multimodality"
+   user has selected choice "multimodality"
      or user said "Show me the multimodality showcase"
      or user said "multimodality"
      or user said "showcase B"
@@ -110,7 +110,7 @@ flow user picked multimodality showcase
 
 flow user picked backchanneling showcase
   """User picked the backchanneling showcase (C)."""
-  user selected choice "backchanneling"
+  user has selected choice "backchanneling"
     or user said "Show me the backchanneling showcase"
     or user said "backchanneling"
     or user said "showcase C"
@@ -118,7 +118,7 @@ flow user picked backchanneling showcase
 
 flow user picked posture showcase
   """User picked the posture showcase (D)."""
-  user selected choice "posture"
+  user has selected choice "posture"
     or user said "Show me the posture showcase"
     or user said "posture"
     or user said "showcase D"
@@ -127,7 +127,7 @@ flow user picked posture showcase
 
 flow user picked proactive showcase
   """User picked the proactive showcase (E)."""
-  user selected choice "proactive"
+  user has selected choice "proactive"
     or user said "Show me the proactive showcase"
     or user said "proactive"
     or user said "showcase E"
@@ -174,6 +174,7 @@ flow faq
 flow showcase selector
   activate fallback user said
   activate interruption handling bot talking "inform"
+  activate track visual choice selection state
 
   $showcase_selection_ui = None
 
