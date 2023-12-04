@@ -865,7 +865,29 @@ def test_event_list_parameter_match():
         state,
         {
             "type": "Event1",
-            "param": [1, 2],
+            "param": [1],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": [2, 1],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+            "param": [0, 1, 5, 2, 0],
         },
     )
     assert is_data_in_events(
@@ -881,7 +903,7 @@ def test_event_list_parameter_match():
         state,
         {
             "type": "Event1",
-            "param": [2, 3],
+            "param": [2],
         },
     )
     assert is_data_in_events(

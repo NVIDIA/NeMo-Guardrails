@@ -1490,10 +1490,18 @@ def _compute_arguments_dict_matching_score(args: Any, ref_args: Any) -> float:
     elif isinstance(ref_args, list):
         if len(ref_args) > len(args):
             return 0.0
-        for idx, ref_val in enumerate(ref_args):
-            score *= _compute_arguments_dict_matching_score(args[idx], ref_val)
-            if score == 0.0:
-                return 0.0
+        ref_idx = 0
+        idx = 0
+        while ref_idx < len(ref_args) and idx < len(args):
+            temp_score = _compute_arguments_dict_matching_score(
+                args[idx], ref_args[ref_idx]
+            )
+            if temp_score > 0.0:
+                score *= temp_score
+                ref_idx += 1
+            idx += 1
+        if ref_idx != len(ref_args):
+            return 0.0
         # Fuzzy match since number of arguments are not the same
         score *= 0.9 ** (len(args) - len(ref_args))
     elif isinstance(ref_args, set):
