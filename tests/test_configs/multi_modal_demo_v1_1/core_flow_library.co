@@ -46,12 +46,34 @@ flow user saying something
   send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
   return $event.arguments.interim_transcript
 
+flow user selected choice $choice_id
+  # meta: exclude from llm
+  # meta: user action
+  match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
+  return $event.arguments.current_choice
+
+flow choice selection buffer $choice_buffer
+  match VisualChoiceSceneAction.ChoiceUpdated() as $event
+  $choice_buffer = $event.arguments.current_choice
+
+flow user has selected choice $choice_id $choice_buffer
+  # meta: exclude from llm
+  # meta: user action
+  if $choice_buffer == None
+    match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
+    $choice = $event.arguments.current_choice
+  else
+    $choice = $choice_buffer[0]
+  $choice_buffer = None
+  return $choice
+
 flow unhandled user intent
   # meta: exclude from llm
   match UnhandledEvent(event="FinishFlow", flow_id=r"^user ") as $event
   return $event.arguments.flow_id
 
 flow user was silent $time_s
+  """Triggers when user was silent for $time_s seconds."""
   # meta: exclude from llm
   # meta: loop_id=user_was_silent
   # meta: user intent
@@ -66,6 +88,7 @@ flow user was silent $time_s
       send $timer_ref.Stop()
 
 flow user didnt respond $time_s
+  """Triggers when user was silent for $time_s seconds while bot was silent."""
   # meta: exclude from llm
   # meta: loop_id=user_did_not_respond
   # meta: user intent
@@ -82,19 +105,27 @@ flow user didnt respond $time_s
     orwhen UtteranceUserAction.Finished() or UtteranceBotAction.Finished()
       send $timer_ref.Stop()
 
-flow bot was silent $time_s
+flow user interrupted bot talking $sentence_length=15
+  """Triggers when the user talked while bot is speaking."""
   # meta: exclude from llm
-  # meta: loop_id=bot_was_silent
-  # meta: bot intent
+  # meta: user intent
   while True
-    start TimerBotAction(timer_name="bot_silence", duration=$time_s) as $timer_ref
-    when $timer_ref.Finished()
-      break
-    orwhen UtteranceBotAction.Started()
-      send $timer_ref.Stop()
-      match UtteranceBotAction.Finished()
-    orwhen UtteranceBotAction.Finished()
-      send $timer_ref.Stop()
+    bot started saying something
+    log "Bot started talking..."
+    while True
+      when user saying something as $user_saying_ref
+        $transcript = $user_saying_ref.context.event.arguments.interim_transcript
+        log "User saying something: {{$transcript}}"
+      orwhen user said something as $user_said_ref
+        $transcript = $user_said_ref.context.event.arguments.final_transcript
+        log "User said something: {{$transcript}}"
+      orwhen bot said something
+        log "Bot finished talking without interruption"
+        break
+
+      if "{{len($transcript) > $sentence_length}}" == "True"
+        log "Bot interrupted by user with: {{$transcript}}"
+        return
 
 # ----------------------------------
 # Bot UMIM event wrapper flows
@@ -163,6 +194,20 @@ flow bot started an action
   match bot started saying something
     or bot started a gesture
     or bot started a posture
+
+flow bot was silent $time_s
+  # meta: exclude from llm
+  # meta: loop_id=bot_was_silent
+  # meta: bot intent
+  while True
+    start TimerBotAction(timer_name="bot_silence", duration=$time_s) as $timer_ref
+    when $timer_ref.Finished()
+      break
+    orwhen UtteranceBotAction.Started()
+      send $timer_ref.Stop()
+      match UtteranceBotAction.Finished()
+    orwhen UtteranceBotAction.Finished()
+      send $timer_ref.Stop()
 
 # ----------------------------------
 # Bot UMIM action wrapper flows
@@ -326,6 +371,7 @@ flow fallback user said
   # meta: exclude from llm
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   $transcript = $event.arguments.final_transcript
+  log "fallback user said: {{$transcript}}"
   $action = 'user said "{{$transcript}}"'
   $intent = await llm derive user intent from user action $action 10
 
@@ -421,3 +467,18 @@ flow custom instructions
   user requested a task
   $instructions = await GetLastUserMessageAction()
   do $instructions
+
+flow interruption handling bot talking $mode="inform"
+  """Handling the bot talking interruption reaction."""
+  # meta: exclude from llm
+  # meta: loop_id=bot_interruption
+  user interrupted bot talking
+  if $mode == "interrupt"
+    finish all bot actions
+    log "Bot talking stopped"
+  elif $mode == "inform"
+    start scene show short information "Please wait until bot has finished talking!"
+    wait 3.0
+    log "Bot informed user not to talk"
+  elif $mode == "ignore"
+    log "Bot ignored user interruption"

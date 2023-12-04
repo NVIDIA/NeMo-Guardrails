@@ -171,14 +171,9 @@ flow faq
 # Main story
 # -----------------------------------
 
-flow user selected choice $choice_id
-  # meta: exclude from llm
-  # meta: user action
-  match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
-
 flow showcase selector
   activate fallback user said
-  activate interruption handling bot talking
+  #activate interruption handling bot talking "interrupt"
 
   $showcase_selection_ui = None
 
@@ -258,7 +253,7 @@ flow main
   activate llm response pooling 1.0
   #activate faq
 
-  #bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
+  bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
   showcase selector
 
   #showcase number guessing game
@@ -267,39 +262,3 @@ flow main
   #showcase posture capabilities
   #showcase proactive turn taking
   wait indefinitely
-
-flow interruption handling bot talking $mode="inform"
-  """Handling the bot talking interruption reaction."""
-  # meta: exclude from llm
-  # meta: loop_id=bot_interruption
-  user interrupted bot talking
-  if $mode == "interrupt"
-    finish all bot actions
-    log "Bot talking stopped"
-  elif $mode == "inform"
-    start scene show short information "Please wait until bot has finished talking!"
-    log "Bot informed user not to talk"
-  elif $mode == "ignore"
-    log "Bot ignored user interruption"
-
-
-flow user interrupted bot talking $sentence_length=15
-  """Triggers when the user starts talking while bot is speaking."""
-  # meta: exclude from llm
-  while True
-    bot started saying something
-    log "Bot started talking..."
-    while True
-      when user saying something as $user_saying_ref
-        $transcript = $user_saying_ref.context.event.arguments.interim_transcript
-        log "User saying something: {{$transcript}}"
-      orwhen user said something as $user_said_ref
-        $transcript = $user_said_ref.context.event.arguments.final_transcript
-        log "User said something: {{$transcript}}"
-      orwhen bot said something
-        log "Bot finished talking without interruption"
-        break
-
-      if "{{len($transcript) > $sentence_length}}" == "True"
-        log "Bot interrupted by user with: {{$transcript}}"
-        return
