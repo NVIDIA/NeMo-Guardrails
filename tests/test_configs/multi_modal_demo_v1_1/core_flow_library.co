@@ -109,9 +109,13 @@ flow user interrupted bot talking $sentence_length=15
   """Triggers when the user talked while bot is speaking."""
   # meta: exclude from llm
   # meta: user intent
+  global $bot_talking_state
   while True
-    bot started saying something
-    log "Bot started talking..."
+    if $bot_talking_state
+      log "Bot is talking..."
+    else
+      bot started saying something
+      log "Bot started talking..."
     while True
       when user saying something as $user_saying_ref
         $transcript = $user_saying_ref.context.event.arguments.interim_transcript
@@ -293,6 +297,18 @@ flow bot suggest $text
   # meta: exclude from llm
   # meta: bot action
   await _bot_say $text
+
+# ----------------------------------
+# Bot UMIM action state tracking flows
+# DON'T CHANGE! Currently, hard-wired with LLM prompt generation
+# -----------------------------------
+
+flow track bot talking state
+   global $bot_talking_state
+   bot started saying something
+   $bot_talking_state = True
+   bot said something
+   $bot_talking_state = False
 
 # ----------------------------------
 # Core mechanic flows

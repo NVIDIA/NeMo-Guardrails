@@ -173,7 +173,7 @@ flow faq
 
 flow showcase selector
   activate fallback user said
-  #activate interruption handling bot talking "interrupt"
+  activate interruption handling bot talking "inform"
 
   $showcase_selection_ui = None
 
@@ -251,6 +251,7 @@ flow main
   activate catch undefined flows
   activate catch colang errors
   activate llm response pooling 1.0
+  activate track bot talking state
   #activate faq
 
   bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
