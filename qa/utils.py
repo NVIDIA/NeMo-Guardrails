@@ -15,7 +15,6 @@
 
 import select
 import time
-
 from unittest import TestCase
 
 from .chatter import close_chatter, create_chatter
