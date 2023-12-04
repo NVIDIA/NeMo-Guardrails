@@ -189,7 +189,7 @@ def cache_embeddings(func):
                 self.cache_store.set(key, result)
             else:
                 print("Fetching from the cache")
-            results.append(result[0])
+            results.append(result)
         return results
 
     return wrapper_decorator
