@@ -190,7 +190,8 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
         Returns:
             List[List[float]]: The list of sentence embeddings, where each embedding is a list of floats.
         """
-        return self.model.encode(documents)
+        
+        return self.model.encode(documents).tolist()
 
 
 class FastEmbedEmbeddingModel(EmbeddingModel):
