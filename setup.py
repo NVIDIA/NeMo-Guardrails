@@ -67,7 +67,7 @@ setup(
         "setuptools~=65.5.1",
         "annoy==1.17.3",
         "sentence-transformers==2.2.2",
-        "fastapi==0.103.1",
+        "fastapi==0.103.2",
         "starlette==0.27.0",
         "uvicorn==0.23.2",
         "httpx==0.25.0",
