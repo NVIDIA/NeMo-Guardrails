@@ -20,7 +20,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="nemoguardrails",
-    version="0.6.0-rc2",
+    version="0.7.3",
     packages=find_packages(),
     author="NVIDIA",
     author_email="nemoguardrails@nvidia.com",
@@ -46,6 +46,7 @@ setup(
     entry_points={
         "console_scripts": ["nemoguardrails=nemoguardrails.__main__:app"],
     },
+    include_package_data=True,
     package_data={
         "nemoguardrails": [
             "**/*.yml",
