@@ -195,34 +195,50 @@ define flow
 This will trigger the fact-checking output rail every time the bot responds to a question about the report (for a complete example, check out [this example config](../../examples/configs/rag/fact_checking)).
 
 
-## Active Fence
+## ActiveFence
 
-NeMo Guardrails supports using the [ActiveFence ActiveScore API](https://docs.activefence.com/index.html) as an input rail out-of-the-box (you need to have the `ACTIVE_FENCE_API_KEY` environment variable set).
+NeMo Guardrails supports using the [ActiveFence ActiveScore API](https://docs.activefence.com/index.html) as an input rail out-of-the-box (you need to have the `ACTIVEFENCE_API_KEY` environment variable set).
 
 ```yaml
 rails:
   input:
     flows:
       # The simplified version
-      - active fence moderation
+      - activefence moderation
 
       # The detailed version with individual risk scores
-      # - active fence moderation detailed
+      # - activefence moderation detailed
 ```
 
-The `active fence moderation` flow uses the maximum risk score with the 0.7 threshold to decide if the input should be allowed or not (i.e., if the risk score is above the threshold, it is considered a violation). The `active fence moderation detailed` has individual scores per category of violations.
+The `activefence moderation` flow uses the maximum risk score with an 0.85 threshold to decide if the input should be allowed or not (i.e., if the risk score is above the threshold, it is considered a violation). The `activefence moderation detailed` has individual scores per category of violation.
 
-To customize the scores, you have to overwrite the [default flows](../../nemoguardrails/library/active_fence/flows.co) in your config. For example, to change the threshold for `active fence moderation` you can add the following flow to your config:
+To customize the scores, you have to overwrite the [default flows](../../nemoguardrails/library/active_fence/flows.co) in your config. For example, to change the threshold for `activefence moderation` you can add the following flow to your config:
 
 ```colang
-define subflow active fence moderation
+define subflow activefence moderation
   """Guardrail based on the maximum risk score."""
-  $result = execute call active fence api
+  $result = execute call activefence api
 
-  if $result.max_risk_score > 0.9
+  if $result.max_risk_score > 0.85
     bot inform cannot answer
     stop
 ```
+
+ActiveFence’s ActiveScore API gives flexibility in controlling the behavior of various supported violations individually. To leverage that, you can use the violations dictionary (`violations_dict`), one of the outputs from the API, to set different thresholds for different violations. Below is an example of one such input moderation flow: 
+
+```colang
+define flow activefence input moderation detailed
+  $result = execute call activefence api(text=$user_message)
+
+  if $result.violations.get(         
+        "abusive_or_harmful.hate_speech", 0) > 0.8
+    bot inform cannot engage in abusive or harmful behavior
+    stop
+
+define bot inform cannot engage in abusive or harmful behavior
+  "I will not engage in any abusive or harmful behavior."
+```
+
 
 ## Sensitive Data Detection
 
