@@ -27,17 +27,20 @@ from langchain.llms.base import BaseLLM
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
 from nemoguardrails.context import explain_info_var, streaming_handler_var
+from nemoguardrails.embeddings.cache import CacheEmbeddings
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.flows.flows import compute_context
 from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
-from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
+from nemoguardrails.llm.providers import (get_llm_provider,
+                                          get_llm_provider_names)
 from nemoguardrails.logging.explain import ExplainInfo
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
-from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
+from nemoguardrails.rails.llm.config import (EmbeddingSearchProvider,
+                                             RailsConfig)
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 from nemoguardrails.streaming import StreamingHandler
 
@@ -335,6 +338,8 @@ class LLMRails:
                 embedding_engine=esp_config.parameters.get(
                     "embedding_engine", self.default_embedding_engine
                 ),
+                use_cache = esp_config.parameters.get("use_cache"),
+                cache_embeddings = CacheEmbeddings.from_dict(esp_config.parameters),
             )
         else:
             if esp_config.name not in self.embedding_search_providers:
