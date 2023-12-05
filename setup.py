@@ -31,7 +31,7 @@ setup(
     Guardrails (or "rails" for short) are specific ways of controlling the output of an LLM,
     e.g., not talking about politics, responding in a particular way to specific user
     requests, following a predefined dialog path, using a particular language style,
-    extracting structured data, etc.""",
+    extracting structured data, etc. updated by FLOWX""",
     long_description_content_type="text/markdown",
     url="https://github.com/NVIDIA/NeMo-Guardrails",
     classifiers=[
