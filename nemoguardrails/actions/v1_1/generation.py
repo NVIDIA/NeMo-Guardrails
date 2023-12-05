@@ -392,7 +392,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         lines = _remove_leading_empty_lines(result).split("\n")
 
-        if len(lines) == 0:
+        if len(lines) == 0 or (len(lines) == 1 and lines[0] == ""):
             return {
                 "name": "bot inform LLM issue",
                 "body": 'flow bot inform LLM issue\n  bot say "Sorry! There was an issue in the LLM result form GenerateFlowContinuationAction!"',
@@ -405,6 +405,9 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
                 remove_action_intent_identifiers([line_0])[0]
                 .strip(" ")
                 .replace("'", "")
+                .replace(" and ", "_and_")
+                .replace(" or ", "_or_")
+                .replace(" as ", "_as_")
             )
             flow_name = f"_dynamic_{uuid} {intent}"
             # TODO: parse potential parameters from flow name with a regex

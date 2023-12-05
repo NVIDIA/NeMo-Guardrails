@@ -1142,11 +1142,12 @@ def _finish_flow(
     ):
         event = create_internal_event(
             event_type,
-            # TODO: Refactor how we define intents and there relation to flow names
+            # TODO: Refactor how we define intents and their relation to flow names
             {
                 "flow_id": (
                     flow_state.flow_id
                     if not flow_state.flow_id.startswith("_dynamic_")
+                    or len(flow_state.flow_id) < 18
                     else flow_state.flow_id[18:]
                 ),
                 "parameter": flow_state.context.get("$0", None),
