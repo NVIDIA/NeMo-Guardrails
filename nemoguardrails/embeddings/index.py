@@ -40,6 +40,9 @@ class EmbeddingsIndex:
     def embedding_size(self):
         raise NotImplementedError
 
+    def _get_embeddings(self, texts: List[str]):
+        raise NotImplementedError
+
     async def add_item(self, item: IndexItem):
         """Adds a new item to the index."""
         raise NotImplementedError()
