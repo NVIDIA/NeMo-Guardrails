@@ -46,7 +46,6 @@ setup(
     entry_points={
         "console_scripts": ["nemoguardrails=nemoguardrails.__main__:app"],
     },
-    package_dir={"": "src"},
     include_package_data=True,
     package_data={"": ["*.co", "*.yaml"]},
     install_requires=[
