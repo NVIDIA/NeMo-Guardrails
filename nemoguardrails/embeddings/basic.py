@@ -17,13 +17,7 @@ from typing import List
 
 from annoy import AnnoyIndex
 
-from nemoguardrails.embeddings.cache import (
-    CacheStore,
-    FilesystemCacheStore,
-    KeyGenerator,
-    MD5KeyGenerator,
-    cache_embeddings,
-)
+from nemoguardrails.embeddings.cache import CacheEmbeddings, cache_embeddings
 from nemoguardrails.embeddings.index import EmbeddingModel, EmbeddingsIndex, IndexItem
 
 
@@ -46,8 +40,8 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embedding_model=None,
         embedding_engine=None,
         index=None,
-        key_generator: KeyGenerator = None,
-        cache_store: CacheStore = None,
+        use_cache: bool = True,
+        cache_embeddings: CacheEmbeddings = None,
     ):
         self._model = None
         self._items = []
@@ -55,8 +49,8 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         self.embedding_model = embedding_model
         self.embedding_engine = embedding_engine
         self._embedding_size = 0
-        self.key_generator = key_generator or MD5KeyGenerator()
-        self.cache_store = cache_store or FilesystemCacheStore()
+        self.use_cache = use_cache
+        self.cache_embeddings = cache_embeddings
         # When the index is provided, it means it's from the cache.
         self._index = index
 
@@ -265,6 +259,10 @@ class OpenAIEmbeddingModel(EmbeddingModel):
 
         """
         import openai
+
+        print("performing embeddings on :", len(documents))
+        if len(documents) == 1:
+            print(documents)
 
         # Make embedding request to OpenAI API
         res = openai.Embedding.create(input=documents, engine=self.model)
