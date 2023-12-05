@@ -16,13 +16,13 @@
 import functools
 import hashlib
 import json
+import logging
 from abc import ABC, abstractmethod
+from functools import singledispatchmethod
 from pathlib import Path
+from typing import List
 
-# NOTE: on KeyGenerator
-# The benefit of this approach is that it allows us to incorporate preprocessing logic directly into the caching layer.
-# For instance, we can handle variations in input such as "adding programmable guardrails" and "adding    programmable guardrails" in a consistent manner.
-# Alternatively, instead of using a class, we could simplify the design by passing a callable function directly to the caching layer.
+log = logging.getLogger(__name__)
 
 
 class KeyGenerator(ABC):
@@ -60,6 +60,11 @@ class CacheStore(ABC):
         """Set a value in the cache."""
         pass
 
+    @abstractmethod
+    def clear(self):
+        """Clear the cache."""
+        pass
+
 
 class InMemoryCacheStore(CacheStore):
     """In-memory cache store.
@@ -81,6 +86,9 @@ class InMemoryCacheStore(CacheStore):
 
     def set(self, key, value):
         self._cache[key] = value
+
+    def clear(self):
+        self._cache = {}
 
 
 class FilesystemCacheStore(CacheStore):
@@ -117,6 +125,10 @@ class FilesystemCacheStore(CacheStore):
         with open(file_path, "w") as file:
             json.dump(value, file)
 
+    def clear(self):
+        for file_path in self._cache_dir.glob("*"):
+            file_path.unlink()
+
 
 class RedisCacheStore(CacheStore):
     """Redis cache store.
@@ -145,6 +157,73 @@ class RedisCacheStore(CacheStore):
     def set(self, key, value):
         self._redis.set(key, value)
 
+    def clear(self):
+        self._redis.flushall()
+
+
+class CacheEmbeddings:
+    def __init__(
+        self, key_generator: KeyGenerator = None, cache_store: CacheStore = None
+    ):
+        self._key_generator = key_generator
+        self._cache_store = cache_store
+
+    @classmethod
+    def from_dict(cls, d):
+        key_generator = d.get("key_generator", MD5KeyGenerator())
+        cache_store = d.get("cache_store", FilesystemCacheStore())
+        return cls(key_generator=key_generator, cache_store=cache_store)
+
+    @classmethod
+    def from_config(cls, config):
+        # config is of type EmbeddingSearchProvider
+        return cls.from_dict(config.parameters)
+
+    @singledispatchmethod
+    def get(self, texts):
+        raise NotImplementedError
+
+    @get.register
+    def _(self, text: str):
+        key = self._key_generator.generate_key(text)
+        log.info(f"Fetching key {key} for text '{text[:10]}...' from cache")
+
+        result = self._cache_store.get(key)
+
+        return result
+
+    @get.register
+    def _(self, texts: list):
+        cached = {}
+
+        for text in texts:
+            result = self.get(text)
+            if result is not None:
+                cached[text] = result
+
+        if len(cached) != len(texts):
+            log.info(f"Cache hit rate: {len(cached) / len(texts)}")
+
+        return cached
+
+    @singledispatchmethod
+    def set(self, texts):
+        raise NotImplementedError
+
+    @set.register
+    def _(self, text: str, value: List[float]):
+        key = self._key_generator.generate_key(text)
+        log.info(f"Cache miss for text '{text}'. Storing key {key} in cache.")
+        self._cache_store.set(key, value)
+
+    @set.register
+    def _(self, texts: list, values: List[List[float]]):
+        for text, value in zip(texts, values):
+            self.set(text, value)
+
+    def clear(self):
+        self._cache_store.clear()
+
 
 def cache_embeddings(func):
     """
@@ -155,7 +234,7 @@ def cache_embeddings(func):
 
     If the class does not have a `key_generator` attribute, it will use the `MD5KeyGenerator`.
     If the class does not have a `cache_store` attribute, it will use the `FilesystemCacheStore`.
-
+    If the class does not have a `use_cache` attribute, it defaults to True.
     This decorator can be applied to any function that accepts a list of strings and returns a list of lists of floats.
 
     Args:
@@ -175,21 +254,32 @@ def cache_embeddings(func):
     def wrapper_decorator(self, texts):
         results = []
 
-        if not hasattr(self, "key_generator"):
-            self.key_generator = MD5KeyGenerator()
-        if not hasattr(self, "cache_store"):
-            self.cache_store = FilesystemCacheStore()
+        if not (hasattr(self, "cache_embeddings") and self.cache_embeddings):
+            self.cache_embeddings = CacheEmbeddings(
+                key_generator=MD5KeyGenerator(), cache_store=FilesystemCacheStore()
+            )
 
-        for text in texts:
-            key = self.key_generator.generate_key(text)
-            result = self.cache_store.get(key)
-            if result is None:
-                print("Does not exist in the cache")
-                result = func(self, text)
-                self.cache_store.set(key, result)
-            else:
-                print("Fetching from the cache")
-            results.append(result)
+        if not hasattr(self, "use_cache"):
+            self.use_cache = True
+
+        if not self.use_cache:
+            # if `use_cache` is False, then compute embeddings for the whole input
+            return func(self, texts)
+
+        cached_texts = {}
+        uncached_texts = []
+
+        cached_texts = self.cache_embeddings.get(texts)
+        uncached_texts = [text for text in texts if text not in cached_texts]
+
+        # Only call func for uncached texts
+        if uncached_texts:
+            uncached_results = func(self, uncached_texts)
+            self.cache_embeddings.set(uncached_texts, uncached_results)
+
+        cached_texts.update(self.cache_embeddings.get(uncached_texts))
+        # Reorder results to match the order of the input texts,
+        results = [cached_texts.get(text) for text in texts]
         return results
 
     return wrapper_decorator
