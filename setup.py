@@ -60,7 +60,7 @@ setup(
     install_requires=[
         "pydantic==1.10.9",
         "aiohttp==3.8.5",
-        "langchain==0.0.322",
+        "langchain==0.0.339",
         "requests>=2.31.0",
         "typer==0.7.0",
         "PyYAML~=6.0",
@@ -70,7 +70,7 @@ setup(
         "fastapi==0.103.1",
         "starlette==0.27.0",
         "uvicorn==0.23.2",
-        "httpx==0.23.3",
+        "httpx==0.25.0",
         "simpleeval==0.9.13",
         "typing-extensions==4.5.0",
         "Jinja2==3.1.2",
