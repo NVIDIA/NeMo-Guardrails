@@ -48,7 +48,7 @@ setup(
     },
     package_dir={"": "src"},
     include_package_data=True,
-    package_data={"": ["*.co", "*.yaml"]}
+    package_data={"": ["*.co", "*.yaml"]},
     install_requires=[
         "pydantic==2.4.2",
         "aiohttp==3.8.5",
