@@ -20,7 +20,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="nemoguardrails",
-    version="0.7.0",
+    version="0.7.2",
     packages=find_packages(),
     author="NVIDIA",
     author_email="nemoguardrails@nvidia.com",
@@ -46,10 +46,7 @@ setup(
     entry_points={
         "console_scripts": ["nemoguardrails=nemoguardrails.__main__:app"],
     },
-    package_data={
-        "nemoguardrails": [
-        ],
-    },
+    include_package_data=True,
     install_requires=[
         "pydantic==2.4.2",
         "aiohttp==3.8.5",
