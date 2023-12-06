@@ -3,7 +3,7 @@ colang_version: "1.1"
 models:
     - type: main
       engine: openai
-      model: text-davinci-003
+      model: gpt-3.5-turbo-instruct
 
 instructions:
     - type: "general"
@@ -60,9 +60,9 @@ sample_conversation: |
       and bot gesture "Making a sad face"
 
     user action: user said "Tell me a bit about the history of NVIDIA."
-    user intent: user asked general question
+    user intent: user asked about nvidia history
 
-    bot intent: bot response for general question
+    bot intent: bot response provide information about NVIDIA history
     bot action: bot response "NVIDIA is a technology company that specializes in designing and manufacturing graphics processing units (GPUs) and other computer hardware. The company was founded in 1993 by Jen-Hsun Huang, Chris Malachowsky, and Curtis Priem."
       and bot gesture "continues explanation hand gestures"
 
