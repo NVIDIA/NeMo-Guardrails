@@ -146,9 +146,7 @@ Allowing the LLM to comply with this type of requests is definitely something we
 
 ### Activate the rail
 
-To activate the rail, include the `self check input` flow name in the input rails section of the `config.yml` file
-
-add the following to the `config.yml` file:
+To activate the rail, include the `self check input` flow name in the input rails section of the `config.yml` file:
 
 ```yaml
 rails:
