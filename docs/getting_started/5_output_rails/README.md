@@ -1,6 +1,6 @@
 # Output Rails
 
-This guide will teach you how to add output rails to a guardrails configuration. This guide builds on the [previous guide](../4_input_rails), developing further the demo InfoBot.
+This guide will teach you how to add output rails to a guardrails configuration. This guide builds on the [previous guide](../4_input_rails), developing further the demo ABC Bot.
 
 ## Prerequisites
 
