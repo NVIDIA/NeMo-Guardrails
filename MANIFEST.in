@@ -5,3 +5,4 @@ include LICENSE.md
 
 recursive-include chat-ui *
 recursive-include examples *
+recursive-include nemoguardrails *
