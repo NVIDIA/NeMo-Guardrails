@@ -167,7 +167,7 @@ async def test_action_execution_with_result(rails_config):
             "type": "StartInternalSystemAction",
         },
         {
-            "data": {"relevant_chunks": ""},
+            "data": {"relevant_chunks": "\n"},
             "source_uid": "NeMoGuardrails",
             "type": "ContextUpdate",
         },
@@ -178,7 +178,7 @@ async def test_action_execution_with_result(rails_config):
             "events": None,
             "is_success": True,
             "is_system_action": True,
-            "return_value": "",
+            "return_value": "\n",
             "source_uid": "NeMoGuardrails",
             "status": "success",
             "type": "InternalSystemActionFinished",
