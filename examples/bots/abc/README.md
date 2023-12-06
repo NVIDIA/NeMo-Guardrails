@@ -7,7 +7,7 @@ This guardrails configuration showcases the final configuration built in the [Ge
 To test this configuration you can use the CLI Chat by running the following command from the `examples/bots/info` folder:
 
 ```bash
-$ nemoguardrails chat
+$ nemoguardrails chat --config=.
 ```
 
 ```

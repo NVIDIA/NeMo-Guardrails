@@ -6,10 +6,11 @@ This guide will walk you through installing NeMo Guardrails, and it will cover:
 2. Installing using `pip`.
 3. Installing from Source Code.
 4. Optional dependencies.
+5. Using Docker.
 
 ## Prerequisites
 
-Python 3.8+.
+Python 3.8, 3.9 or 3.10.
 
 ## Additional dependencies
 
@@ -97,6 +98,10 @@ To keep the footprint of `nemoguardrails` as small as possible, these are not in
 ```bash
 > pip install nemoguardrails[dev]
 ```
+
+## Using Docker
+
+NeMo Guardrails can also be used through Docker. For details on how to build and use the Docker image check out [this guide](../user_guides/advanced/using-docker.md).
 
 ## What's next?
 
