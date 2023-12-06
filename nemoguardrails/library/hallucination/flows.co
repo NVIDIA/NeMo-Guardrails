@@ -1,3 +1,6 @@
+define bot inform answer unknown
+  "I don't know the answer that."
+
 define flow hallucination warning
   """Warning rail for hallucination."""
   bot ...

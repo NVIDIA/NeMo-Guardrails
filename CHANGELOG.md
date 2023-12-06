@@ -36,7 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Upgraded dependencies.
 - Updated the [Getting Started Guide](./docs/getting_started).
 - Main [README](./README.md) now provides more details.
-- Merged original examples into a single [Info Bot](./examples/bots/info) and [deprecated](./examples/_deprecated) the original ones.
+- Merged original examples into a single [Info Bot](./examples/bots/info) and removed the original ones.
 - Documentation improvements.
 
 ### Fixed

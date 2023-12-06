@@ -18,7 +18,7 @@ define subflow active fence moderation
   $result = execute call active fence api
 
   if $result.max_risk_score > 0.7
-    bot inform cannot answer
+    bot refuse to respond
     stop
 
 define subflow active fence moderation detailed

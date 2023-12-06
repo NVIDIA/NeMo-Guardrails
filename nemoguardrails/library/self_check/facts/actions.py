@@ -17,30 +17,31 @@ from typing import Optional
 
 from langchain.llms import BaseLLM
 
+from nemoguardrails.actions import action
 from nemoguardrails.actions.llm.utils import llm_call
 from nemoguardrails.context import llm_call_info_var
-from nemoguardrails.library.factchecking.utils import (
-    get_evidence_and_claim_from_context,
-)
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
 from nemoguardrails.logging.explain import LLMCallInfo
 
 
-async def check_facts(
+@action()
+async def self_check_facts(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
     """Checks the facts for the bot response by appropriately prompting the base llm."""
-    evidence, response = get_evidence_and_claim_from_context(context)
+    evidence = context.get("relevant_chunks", [])
+    response = context.get("bot_message")
+
     if not evidence:
         # If there is no evidence, we always return true
         return True
 
     prompt = llm_task_manager.render_task_prompt(
-        task=Task.FACT_CHECKING,
+        task=Task.SELF_CHECK_FACTS,
         context={
             "evidence": evidence,
             "response": response,
@@ -48,7 +49,7 @@ async def check_facts(
     )
 
     # Initialize the LLMCallInfo object
-    llm_call_info_var.set(LLMCallInfo(task=Task.FACT_CHECKING.value))
+    llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_FACTS.value))
 
     with llm_params(llm, temperature=0.0):
         entails = await llm_call(llm, prompt)

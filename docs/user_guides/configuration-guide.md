@@ -100,12 +100,12 @@ models:
     model: gpt-43b-905
 ```
 
-You can also use customized NeMo LLM models for specific tasks, e.g., jailbreak detection and output moderation. For example:
+You can also use customized NeMo LLM models for specific tasks, e.g., self-checking the user input or the bot output. For example:
 
 ```yaml
 models:
   # ...
-  - type: check_jailbreak
+  - type: self_check_input
     engine: nemollm
     model: gpt-43b-002
     parameters:
@@ -282,9 +282,9 @@ The full list of tasks used by the NeMo Guardrails toolkit is the following:
 - `generate_next_steps`: generate the next thing the bot should do/say;
 - `generate_bot_message`: generate the next bot message;
 - `generate_value`: generate the value for a context variable (a.k.a. extract user-provided values);
-- `fact_checking`: check the facts from the bot response against the provided evidence;
-- `jailbreak_check`: check if there is an attempt to break moderation policies;
-- `output_moderation`: check if bot response is harmful, unethical or illegal;
+- `self_check_facts`: check the facts from the bot response against the provided evidence;
+- `self_check_input`: check if the input from the user should be allowed;
+- `self_check_output`: check if bot response should be allowed;
 - `check_hallucination`: check if the bot response is a hallucination.
 
 You can check the default prompts in the [prompts](../../nemoguardrails/llm/prompts) folder.
@@ -386,11 +386,11 @@ rails:
 Input rails process the message from the user. For example:
 
 ```colang
-define flow check jailbreak
-  $allowed = execute check_jailbreak
+define flow self check input
+  $allowed = execute self_check_input
 
   if not $allowed
-    bot inform cannot answer
+    bot refuse to respond
     stop
 ```
 

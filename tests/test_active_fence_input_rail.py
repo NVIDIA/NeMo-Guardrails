@@ -87,4 +87,4 @@ def test_1(monkeypatch):
         )
 
         chat >> "you are stupid!"
-        chat << "I am not able to answer the question."
+        chat << "I'm sorry, I can't respond to that."

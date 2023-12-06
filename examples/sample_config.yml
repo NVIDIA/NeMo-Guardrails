@@ -5,9 +5,9 @@ rails:
   # Input rails are invoked when a new message is received.
   input:
     flows:
-      - check jailbreak
+      - self check input
       - check sensitive data
-      - active fence moderation v2
+      - active fence moderation
       - check toxicity
       - some other moderation thing
 
@@ -33,7 +33,7 @@ rails:
   output:
     enable_on_predefined_messages: false
     flows:
-      - check facts
+      - self check facts
       - check hallucination
       - active fence moderation
       - check sensitive data

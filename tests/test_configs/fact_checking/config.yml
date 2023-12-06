@@ -6,10 +6,9 @@ models:
 rails:
   config:
     fact_checking:
-      provider: "align_score"
       parameters:
         endpoint: "http://localhost:5000/alignscore_base"
-      fallback_to_ask_llm: True
+      fallback_to_self_check: True
 
   output:
     flows:

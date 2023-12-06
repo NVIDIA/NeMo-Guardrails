@@ -19,6 +19,7 @@ from enum import Enum
 class Task(Enum):
     """The various tasks that can be performed by the LLM."""
 
+    # Core LLM tasks
     GENERAL = "general"
     GENERATE_USER_INTENT = "generate_user_intent"
     GENERATE_NEXT_STEPS = "generate_next_steps"
@@ -26,8 +27,8 @@ class Task(Enum):
     GENERATE_INTENT_STEPS_MESSAGE = "generate_intent_steps_message"
     GENERATE_VALUE = "generate_value"
 
-    FACT_CHECKING = "fact_checking"
-    JAILBREAK_CHECK = "jailbreak_check"
-    OUTPUT_MODERATION = "output_moderation"
-    OUTPUT_MODERATION_V2 = "output_moderation_v2"
+    # Tasks for various rails
+    SELF_CHECK_INPUT = "self_check_input"
+    SELF_CHECK_OUTPUT = "self_check_output"
+    SELF_CHECK_FACTS = "fact_checking"
     CHECK_HALLUCINATION = "check_hallucination"

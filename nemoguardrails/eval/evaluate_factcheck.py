@@ -126,7 +126,7 @@ class FactCheckEvaluation:
 
             start_time = time.time()
             fact_check_prompt = self.llm_task_manager.render_task_prompt(
-                Task.FACT_CHECKING, {"evidence": evidence, "response": answer}
+                Task.SELF_CHECK_FACTS, {"evidence": evidence, "response": answer}
             )
             fact_check = self.llm(fact_check_prompt)
             end_time = time.time()

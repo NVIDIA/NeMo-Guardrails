@@ -31,31 +31,38 @@ log = logging.getLogger(__name__)
 
 
 @action(is_system_action=True)
-async def check_jailbreak(
+async def self_check_input(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
-    """Checks if the user response is malicious and should be masked."""
+    """Checks the input from the user.
+
+    Prompt the LLM, using the `check_input` task prompt, to determine if the input
+    from the user should be allowed or not.
+
+    Returns:
+        True if the input should be allowed, False otherwise.
+    """
 
     user_input = context.get("user_message")
 
     if user_input:
         prompt = llm_task_manager.render_task_prompt(
-            task=Task.JAILBREAK_CHECK,
+            task=Task.SELF_CHECK_INPUT,
             context={
                 "user_input": user_input,
             },
         )
 
         # Initialize the LLMCallInfo object
-        llm_call_info_var.set(LLMCallInfo(task=Task.JAILBREAK_CHECK.value))
+        llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_INPUT.value))
 
         with llm_params(llm, temperature=0.0):
             check = await llm_call(llm, prompt)
 
         check = check.lower().strip()
-        log.info(f"Jailbreak check result is {check}.")
+        log.info(f"Input self-checking result is: `{check}`.")
 
         if "yes" in check:
             return ActionResult(
@@ -66,5 +73,5 @@ async def check_jailbreak(
                     )
                 ],
             )
-    # If there was no user input, we always return True i.e. the user input is allowed
+
     return True

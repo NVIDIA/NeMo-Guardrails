@@ -196,7 +196,7 @@ The various arguments that can be passed to evaluate the moderation rails are
 - `split`: The split of the dataset. This can be either 'helpful' or 'harmful'. This is used to determine the appropriate label for the predictions.
 - `num-samples`: Number of samples to evaluate. Default is 50.
 - `check-jailbreak`: Whether to evaluate the jailbreak rail. Default is True.
-- `check-output_moderation`: Whether to evaluate the output moderation rail. Default is True.
+- `check-check_output`: Whether to evaluate the output moderation rail. Default is True.
 - `output-path`: Folder to write the results to. Default is 'eval_outputs/moderation'.
 
 It is also possible to evaluate each of the rails individually. To evaluate the jailbreak rail only, use the following command:

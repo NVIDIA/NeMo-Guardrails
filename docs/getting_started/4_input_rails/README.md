@@ -166,18 +166,18 @@ Before moving further let's explain what the four lines above mean:
 - The `flows` keys contains the name of the flows that will be used as input rails.
 - `check jailbreak` is the name of a pre-defined flow that implements jailbreak detection.
 
-All the rails in NeMo Guardrails are implemented as flows. For example, you can find the `check_jailbreak` flow [here](../../../nemoguardrails/library/jailbreak/flows.co).
+All the rails in NeMo Guardrails are implemented as flows. For example, you can find the `self_check_input` flow [here](../../../nemoguardrails/library/self_check/input_check/flows.co).
 
 ```colang
-define subflow check jailbreak
-  $allowed = execute check_jailbreak
+define flow self check input
+  $allowed = execute self_check_input
 
   if not $allowed
-    bot inform cannot answer
+    bot refuse to respond
     stop
 ```
 
-The flows implementing input rails can call actions (e.g., `execute check_jailbreak`), instruct the bot to respond in a certain way (e.g., `bot inform cannot answer`) and even stop any further processing for the current user request.
+The flows implementing input rails can call actions (e.g., `execute self_check_input`), instruct the bot to respond in a certain way (e.g., `bot inform cannot answer`) and even stop any further processing for the current user request.
 
 ## Using the Input Rails
 
@@ -206,10 +206,10 @@ info.print_llm_calls_summary()
 ```
 Summary: 1 LLM call(s) took 0.58 seconds and used 51 tokens.
 
-1. Task `jailbreak_check` took 0.58 seconds and used 51 tokens.
+1. Task `check_input` took 0.58 seconds and used 51 tokens.
 ```
 
-We can see that a `jailbreak_check` LLM call has been made. The prompt and the completion were the following:
+We can see that a `check_input` LLM call has been made. The prompt and the completion were the following:
 
 ```python
 print(info.llm_calls[0].prompt)
@@ -236,7 +236,7 @@ The figure below depicts in more details how the jailbreak detection worked:
 <img src="../../_assets/puml/input_rails_fig_1.png" width="815">
 </div>
 
-We can see that the `check jailbreak` input rail called the `check_jailbreak` action, which in turn called the LLM using the `jailbreak_check` task prompt.
+We can see that the `check jailbreak` input rail called the `check_input` action, which in turn called the LLM using the `check_input` task prompt.
 
 Now, let's ask a question that the LLM is supposed to answer.
 
@@ -260,11 +260,11 @@ info.print_llm_calls_summary()
 ```
 Summary: 2 LLM call(s) took 1.52 seconds and used 171 tokens.
 
-1. Task `jailbreak_check` took 0.50 seconds and used 48 tokens.
+1. Task `check_input` took 0.50 seconds and used 48 tokens.
 2. Task `general` took 1.02 seconds and used 123 tokens.
 ```
 
-We can see that this time, two LLM calls were made: one for the `jailbreak_check` task and one for the `general` task. We can check that this time the `jailbreak_check` was not triggered:
+We can see that this time, two LLM calls were made: one for the `check_input` task and one for the `general` task. We can check that this time the `check_input` was not triggered:
 
 ```python
 print(info.llm_calls[0].completion)

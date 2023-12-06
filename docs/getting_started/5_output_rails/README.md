@@ -46,7 +46,7 @@ The output moderation flow itself is similar to the jailbreak detection one:
 
 ```colang
 define subflow output moderation
-  $allowed = execute output_moderation
+  $allowed = execute check_output
 
   if not $allowed
     bot inform cannot answer question
@@ -84,9 +84,9 @@ info.print_llm_calls_summary()
 ```
 Summary: 3 LLM call(s) took 1.56 seconds and used 202 tokens.
 
-1. Task `jailbreak_check` took 0.53 seconds and used 53 tokens.
+1. Task `check_input` took 0.53 seconds and used 53 tokens.
 2. Task `general` took 0.60 seconds and used 106 tokens.
-3. Task `output_moderation` took 0.43 seconds and used 43 tokens.
+3. Task `check_output` took 0.43 seconds and used 43 tokens.
 ```
 
 ```python
@@ -190,9 +190,9 @@ info.print_llm_calls_summary()
 ```
 Summary: 3 LLM call(s) took 1.65 seconds and used 236 tokens.
 
-1. Task `jailbreak_check` took 0.40 seconds and used 48 tokens.
+1. Task `check_input` took 0.40 seconds and used 48 tokens.
 2. Task `general` took 0.79 seconds and used 123 tokens.
-3. Task `output_moderation` took 0.46 seconds and used 65 tokens.
+3. Task `check_output` took 0.46 seconds and used 65 tokens.
 ```
 
 ```python

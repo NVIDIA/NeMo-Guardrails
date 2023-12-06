@@ -112,10 +112,10 @@ Core actions:
 
 Guardrail-specific actions:
 
-- `check_facts`: Check the facts for the last bot response w.r.t. the extracted relevant chunks from the knowledge base.
-- `check_jailbreak`: Check if the user response is malicious and should be masked.
+- `self_check_facts`: Check the facts for the last bot response w.r.t. the extracted relevant chunks from the knowledge base.
+- `self_check_input`: Check if the user input should be allowed.
+- `self_check_output`: Check if the bot response should be allowed.
 - `check_hallucination`: Check if the last bot response is a hallucination.
-- `output_moderation`: Check if the bot response is appropriate and passes moderation.
 
 For convenience, this toolkit also includes a selection of LangChain tools, wrapped as actions:
 

@@ -30,50 +30,28 @@ log = logging.getLogger(__name__)
 
 
 @action(is_system_action=True)
-async def output_moderation(
+async def self_check_output(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
-    """Checks if the bot response is appropriate and passes moderation."""
+    """Checks if the output from the bot.
 
-    bot_response = context.get("bot_message")
-    if bot_response:
-        prompt = llm_task_manager.render_task_prompt(
-            task=Task.OUTPUT_MODERATION,
-            context={
-                "bot_response": bot_response,
-            },
-        )
+    Prompt the LLM, using the `self_check_output` task prompt, to determine if the output
+    from the bot should be allowed or not.
 
-        # Initialize the LLMCallInfo object
-        llm_call_info_var.set(LLMCallInfo(task=Task.OUTPUT_MODERATION.value))
+    The LLM call should return "yes" if the output is bad and should be blocked
+    (this is consistent with self_check_input_prompt).
 
-        with llm_params(llm, temperature=0.0):
-            check = await llm_call(llm, prompt)
-
-        check = check.lower().strip()
-        log.info(f"Output moderation check result is {check}.")
-
-        if "no" in check:
-            return False
-
-    return True
-
-
-@action(is_system_action=True)
-async def output_moderation_v2(
-    llm_task_manager: LLMTaskManager,
-    context: Optional[dict] = None,
-    llm: Optional[BaseLLM] = None,
-):
-    """Checks if the bot response is appropriate and passes moderation."""
+    Returns:
+        True if the output should be allowed, False otherwise.
+    """
 
     bot_response = context.get("bot_message")
     user_input = context.get("user_message")
     if bot_response:
         prompt = llm_task_manager.render_task_prompt(
-            task=Task.OUTPUT_MODERATION_V2,
+            task=Task.SELF_CHECK_OUTPUT,
             context={
                 "user_input": user_input,
                 "bot_response": bot_response,
@@ -81,15 +59,15 @@ async def output_moderation_v2(
         )
 
         # Initialize the LLMCallInfo object
-        llm_call_info_var.set(LLMCallInfo(task=Task.OUTPUT_MODERATION_V2.value))
+        llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_OUTPUT.value))
 
         with llm_params(llm, temperature=0.0):
-            check = await llm_call(llm, prompt)
+            response = await llm_call(llm, prompt)
 
-        check = check.lower().strip()
-        log.info(f"Output moderation check result is {check}.")
+        response = response.lower().strip()
+        log.info(f"Output self-checking result is: `{response}`.")
 
-        if "yes" in check:
+        if "yes" in response:
             return False
 
     return True
