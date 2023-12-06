@@ -25,6 +25,11 @@ rails:
   input:
     flows:
       - self check input
+
+  output:
+    flows:
+      - self check output
+
   dialog:
     single_call:
       enabled: False
