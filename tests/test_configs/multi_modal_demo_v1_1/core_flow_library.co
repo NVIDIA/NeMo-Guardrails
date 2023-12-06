@@ -56,12 +56,14 @@ flow user has selected choice $choice_id
   # meta: exclude from llm
   # meta: user action
   global $choice_selection_state
+  #if $choice_selection_state == None or $choice_selection_state != $choice_id
+  #match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
   if $choice_selection_state == None
+    log "choice_selection_state == None"
     match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
-    $choice = $event.arguments.current_choice
-  else
-    $choice = $choice_selection_state
-  return $choice
+  elif $choice_selection_state != $choice_id
+    log "choice_selection_state == {{$choice_selection_state}}"
+    match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
 
 flow unhandled user intent
   # meta: exclude from llm
@@ -333,7 +335,10 @@ flow track visual choice selection state
   when VisualChoiceSceneAction.Started()
     $choice_selection_state = None
   orwhen VisualChoiceSceneAction.ChoiceUpdated() as $event
-    $choice_selection_state = $event.arguments.current_choice
+    if "{{len($event.arguments.current_choice) > 0}}"
+      $choice_selection_state = $event.arguments.current_choice[0]
+    else
+      $choice_selection_state = None
   orwhen VisualChoiceSceneAction.Finished()
     $choice_selection_state = None
 
