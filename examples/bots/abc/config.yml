@@ -22,6 +22,9 @@ models:
     model: gpt-3.5-turbo-instruct
 
 rails:
+  input:
+    flows:
+      - self check input
   dialog:
     single_call:
-      enabled: True
+      enabled: False

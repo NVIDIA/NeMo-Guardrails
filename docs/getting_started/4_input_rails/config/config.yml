@@ -26,4 +26,4 @@ sample_conversation: |
 rails:
   input:
     flows:
-      - check jailbreak
+      - self check input

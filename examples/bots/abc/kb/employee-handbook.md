@@ -55,8 +55,8 @@ ABC Company works a standard 40-hour workweek, Monday through Friday, 9:00 AM to
 
 Employees are eligible for the following time off:
 
-* Vacation: 15 days per year, accrued monthly.
-* Sick leave: 10 days per year, accrued monthly.
+* Vacation: 20 days per year, accrued monthly.
+* Sick leave: 15 days per year, accrued monthly.
 * Personal days: 5 days per year, accrued monthly.
 * Paid holidays: New Year's Day, Memorial Day, Independence Day, Thanksgiving Day, Christmas Day.
 * Bereavement leave: 3 days paid leave for immediate family members, 1 day for non-immediate family members.
