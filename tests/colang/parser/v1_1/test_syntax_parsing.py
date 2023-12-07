@@ -34,6 +34,7 @@ tests_root = os.path.join(os.path.dirname(__file__), "../../..")
         "colang/parser/v1_1/inputs/test7.co",
         "colang/parser/v1_1/inputs/test8.co",
         "colang/parser/v1_1/inputs/test9.co",
+        "colang/parser/v1_1/inputs/test10.co",
         "test_configs/example_flows_v_1_1/faq_questions.co",
         "test_configs/example_flows_v_1_1/core_flows.co",
         "test_configs/example_flows_v_1_1/confirmation_question.co",

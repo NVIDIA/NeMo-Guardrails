@@ -100,8 +100,8 @@ orwhen_: _OR_WHEN spec_expr suite
 
 // Test expression (used both for conditions and assignment)
 test: or_test
-?or_test: and_test ("or" and_test)*
-?and_test: not_test_ ("and" not_test_)*
+?or_test: and_test (_OR and_test)*
+?and_test: not_test_ (_AND not_test_)*
 ?not_test_: "not" not_test_ -> not_test
          | comparison
 ?comparison: expr (comp_op expr)*
