@@ -1,66 +1,61 @@
-# GuardRails Evaluation
+# Guardrails Evaluation
 
-We propose a set of tools that can be used to evaluate the different types of rails implemented in NeMo Guardrails.
-In the current version, these tools are designed to test the performance of each type of rail individually.
+NeMo Guardrails includes a set of tools that you can use to evaluate the different types of rails. In the current version, these tools test the performance of each type of rail individually. You can use the evaluation tools through the `nemoguardrails` CLI. Examples will be provided for each type of rail.
 
-The evaluation tools can be easily used from the CLI. Examples will be provided for each type of rail.
-
-At the same time, we provide preliminary results on the performance of the rails on a set of public datasets, relevant for each task at hand.
+At the same time, we provide preliminary results on the performance of the rails on a set of public datasets that are relevant to each task at hand.
 
 
-## Topical Rails
+## Dialog Rails
 
-**Aim and Usage**
+### Aim and Usage
 
-Topical rails evaluation focuses on the core mechanism used by NeMo Guardrails to guide conversations using canonical forms and dialogue flows.
-More details about this core functionality is explained [here](./../../docs/architecture/README.md).
+Dialog rails evaluation focuses on NeMo Guardrails's core mechanism to guide conversations using canonical forms and dialogue flows.
+More details about this core functionality are explained [here](./../../docs/architecture/README.md).
 
-Thus, when using topical rails evaluation, we are actually assessing the performance for:
-1. User canonical form (intent) generation
-2. Next step generation - in the current approach, we only assess the performance of bot canonical forms as next step in a flow
-3. Bot message generation
+Thus, when using dialog rails evaluation, we are assessing the performance for:
+1. User canonical form (intent) generation.
+2. Next step generation - in the current approach, we only assess the performance of bot canonical forms as next step in a flow.
+3. Bot message generation.
 
-To use the topical rails evaluation tool, the CLI command is:
+The CLI command for evaluating the dialog rails is:
 
-`nemoguardrails evaluate topical --config=<rails_app_path> --verbose`
+```bash
+$ nemoguardrails evaluate topical --config=<rails_app_path> --verbose
+```
 
-A topical rails evaluation has the following CLI parameters:
+A dialog rails evaluation has the following CLI parameters:
 
 - `config`: The Guardrails app to be evaluated.
-- `verbose`: If the Guardrails app should be run in verbose mode
-- `test-percentage`: Percentage of the samples for an intent to be used as test set
-- `max-tests-intent`: Maximum number of test samples per intent to be used when testing
-(useful to have balanced test data for unbalanced datasets). If the value is 0,
-this parameter is not used.
-- `max-samples-intent`: Maximum number of samples per intent to be used in the
-vector database. If the value is 0, all samples not in test set are used.
+- `verbose`: If the Guardrails app should be run in verbose mode.
+- `test-percentage`: Percentage of the samples for an intent to be used as test set.
+- `max-tests-intent`: Maximum number of test samples per intent to be used when testing (useful to have balanced test data for unbalanced datasets). If the value is 0, this parameter is not used.
+- `max-samples-intent`: Maximum number of samples per intent to be used in the vector database. If the value is 0, all samples not in test set are used.
 - `results-frequency`: If we want to print intermediate results about the
 current evaluation, this is the step.
-- `sim-threshold`: If larger than 0, for intents that do not have an exact match
-pick the most similar intent above this threshold.
+- `sim-threshold`: If larger than 0, for intents that do not have an exact match, pick the most similar intent above this threshold.
 - `random-seed`: Random seed used by the evaluation.
 - `output-dir`: Output directory for predictions.
 
 
-**Evaluation Results**
+### Evaluation Results
 
-For the initial evaluation experiments for topical rails, we have used two datasets used for conversational NLU:
+For the initial evaluation experiments for dialog rails, we have used two datasets for conversational NLU:
 - [_chit-chat_](https://github.com/rahul051296/small-talk-rasa-stack) dataset
 - [_banking_](https://github.com/PolyAI-LDN/task-specific-datasets/tree/master/banking_data) dataset
 
-The datasets were transformed into a NeMo Guardrails app, by defining canonical forms for each intent, specific dialogue flows, and even bot messages (for the _chit-chat_ dataset alone).
-The two datasets have a large number of user intents, thus topical rails. One of them is very generic and with higher-grained intents (_chit-chat_), while the _banking_ dataset is domain-specific and more fine-grained.
-More details about running the topical rails evaluation experiments and the evaluation datasets is available [here](./data/topical/README.md).
+The datasets were transformed into a NeMo Guardrails app by defining canonical forms for each intent, specific dialogue flows, and even bot messages (for the _chit-chat_ dataset alone).
+The two datasets have a large number of user intents, thus dialog rails. One of them is very generic and has higher-grained intents (_chit-chat_), while the _banking_ dataset is domain-specific and more fine-grained.
+More details about running the dialog rails evaluation experiments and the evaluation datasets are available [here](./data/topical/README.md).
 
 Preliminary evaluation results follow next. In all experiments, we have chosen to have a balanced test set with at most 3 samples per intent.
 For both datasets, we have assessed the performance for various LLMs and also for the number of samples (`k = all, 3, 1`) per intent that are indexed in the vector database.
 
 Take into account that the performance of an LLM is heavily dependent on the prompt, especially due to the more complex [prompt used by Guardrails](./../../docs/architecture/README.md#example-prompt).
-Therefore, at the current moment we only release the results for OpenAI models, but more results will follow in next releases. All results are preliminary as better prompting can improve them.
+Therefore, currently, we only release the results for OpenAI models, but more results will follow in the next releases. All results are preliminary, as better prompting can improve them.
 
 Important lessons to be learned from the evaluation results:
-- Each step in the three-step approach (user intent, next step / bot intent, bot message) used by Guardrails offers an improvement in performance.
-- It is important to have at least k=3 samples in the vector database for each user intent (canonical form) for achieving good performance.
+- Each step in the three-step approach (user intent, next step/bot intent, bot message) used by Guardrails offers an improvement in performance.
+- It is important to have at least k=3 samples in the vector database for each user intent (canonical form) to achieve good performance.
 - Some models (e.g., gpt-3.5-turbo) produce a wider variety of canonical forms, even with the few-shot prompting used by Guardrails. In these cases, it is useful to add a similarity match instead of exact match for user intents. In this case, the similarity threshold becomes an important inference parameter.
 - Initial results show that even small models, e.g. [dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b), [vicuna-7b-v1.3](https://huggingface.co/lmsys/vicuna-7b-v1.3), [mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct), [falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct) have good performance for topical rails.
 - Using a single call for topical rails shows similar results to the default method (which uses up to 3 LLM calls for generating the final bot message) in most cases for `text-davinci-003` model.
@@ -118,9 +113,9 @@ Results on _banking_ dataset, metric used is accuracy.
 ## Input and Output Rails
 
 ### Fact-checking Rails
-In the Guardrails library, we provide two approaches out of the box for the fact-checking rail, these are colloquially referred to as AskLLM and AlignScore in the rest of this documentation. For more details read the [library guide](./../../docs/user_guides/guardrails-library.md).
+In the Guardrails library, we provide two approaches out of the box for the fact-checking rail: the Self-Check fact-checking and AlignScore. For more details, read the [library guide](./../../docs/user_guides/guardrails-library.md).
 
-#### AskLLM
+#### Self-Check
 In this approach, the fact-checking rail is implemented as an entailment prediction problem. Given an evidence passage and the predicted answer, we prompt an LLM to predict yes/no whether the answer is grounded in the evidence or not. This is the default approach.
 
 #### AlignScore
@@ -132,13 +127,15 @@ The response is a value between 0.0 and 1.0. In our testing, the best average ac
 Please see the [user guide documentation](./../../docs/user_guides/guardrails-library.md#alignscore) for detailed steps on how to configure your deployment to use AlignScore.
 
 #### Evaluation
-To run the fact checking rail, you can use the following CLI command:
+To run the fact-checking rail, you can use the following CLI command:
 
-```nemoguardrails evaluate fact-checking```
+```bash
+$ nemoguardrails evaluate fact-checking
+```
 
-Here is a list of arguments that you can use to configure the fact checking rail:
+Here is a list of arguments that you can use to configure the fact-checking rail:
 
-- `dataset-path`: Path to the dataset. It should be a json file with the following format:
+- `dataset-path`: Path to the dataset. It should be a JSON file with the following format:
 
     ```
     [
@@ -149,13 +146,12 @@ Here is a list of arguments that you can use to configure the fact checking rail
         },
     }
     ```
-    ,
-- `llm`: The LLM provider to use. Default is openai.
-- `model-name`: The name of the model to use. Default is text-davinci-003.
-- `num-samples`: Number of samples to run the eval on. Default is 50.
-- `create-negatives`: Whether to generate synthetic negative examples or not. Default is True.
-- `output-dir`: The directory to save the output to. Default is eval_outputs/factchecking.
-- `write-outputs`: Whether to write the outputs to a file or not. Default is True.
+- `llm`: The LLM provider to use. The default is `openai`.
+- `model-name`: The name of the model to use. The default is `text-davinci-003`.
+- `num-samples`: Number of samples to run the eval on. The default is 50.
+- `create-negatives`: Whether to generate synthetic negative examples or not. The default is `True`.
+- `output-dir`: The directory to save the output to. The default is `eval_outputs/factchecking`.
+- `write-outputs`: Whether to write the outputs to a file or not. The default is `True`.
 
 More details on how to set up the data in the right format and run the evaluation on your own dataset can be found [here](./data/factchecking/README.md).
 
@@ -163,9 +159,9 @@ More details on how to set up the data in the right format and run the evaluatio
 
 Evaluation Date - Nov 23, 2023.
 
-We evaluate the performance of the fact checking rail on the [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset using the Ask LLM and the AlignScore approaches.  To build the dataset, we randomly sample 100 (question, correct answer, evidence) triples, and then, for each triple, build a non-factual or incorrect answer to yield 100 (question, incorrect answer, evidence) triples.
+We evaluate the performance of the fact-checking rail on the [MSMARCO](https://huggingface.co/datasets/ms_marco) dataset using the Self-Check and the AlignScore approaches. To build the dataset, we randomly sample 100 (question, correct answer, evidence) triples, and then, for each triple, build a non-factual or incorrect answer to yield 100 (question, incorrect answer, evidence) triples.
 
-We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model on correctly identifying answers that are **not** supported in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
+We breakdown the performance into positive entailment accuracy and negative entailment accuracy. Positive entailment accuracy is the accuracy of the model in correctly identifying answers that are grounded in the evidence passage. Negative entailment accuracy is the accuracy of the model in correctly identifying answers that are **not** supported in the evidence. Details on how to create synthetic negative examples can be found [here](./data/factchecking/README.md)
 
 | Model                  | Positive Entailment Accuracy | Negative Entailment Accuracy | Overall Accuracy | Average Time Per Checked Fact (ms) |
 |------------------------|------------------------------|------------------------------|------------------|------------------------------------|
@@ -180,24 +176,27 @@ We breakdown the performance into positive entailment accuracy and negative enta
 
 ### Moderation Rails
 
-The moderation rails involve two components - the jailbreak detection rail and the output moderation rail.
-* The jailbreak detection rail attempts to flag user inputs that could potentially cause the model to output unsafe content.
-* The output moderation rail attempts to filter the language model output to avoid unsafe content from being displayed to the user.
+The moderation involve two components - the jailbreak detection and the output moderation.
+* The jailbreak detection attempts to flag user inputs that could potentially cause the model to output unsafe content.
+* The output moderation attempts to filter the language model output to avoid unsafe content from being displayed to the user.
 
-The jailbreak and output moderation rails can be evaluated using the following CLI command:
+The jailbreak and output moderation can be evaluated using the following CLI command:
 
-```nemoguardrails evaluate moderation```
+```bash
+$ nemoguardrails evaluate moderation --prompts-file=path/to/prompts
+```
 
 The various arguments that can be passed to evaluate the moderation rails are
 
-- `model_name`: Name of the model to use. Default is 'text-davinci-003'.
-- `llm`: Name of the LLM provide. Default is 'openai'.
+- `prompts-file`: The file containing the self-check prompts to be evaluated.
+- `model_name`: Name of the model to use. The default is 'text-davinci-003'.
+- `llm`: Name of the LLM provide. The default is 'openai'.
 - `dataset-path`: Path to the dataset to evaluate the rails on. The dataset should contain one prompt per line.
 - `split`: The split of the dataset. This can be either 'helpful' or 'harmful'. This is used to determine the appropriate label for the predictions.
-- `num-samples`: Number of samples to evaluate. Default is 50.
-- `check-jailbreak`: Whether to evaluate the jailbreak rail. Default is True.
-- `check-check_output`: Whether to evaluate the output moderation rail. Default is True.
-- `output-path`: Folder to write the results to. Default is 'eval_outputs/moderation'.
+- `num-samples`: Number of samples to evaluate. The default is 50.
+- `check-jailbreak`: Whether to evaluate the jailbreak rail. The default is True.
+- `check-ouput`: Whether to evaluate the output moderation rail. The default is True.
+- `output-path`: Folder to write the results to. The default is 'eval_outputs/moderation'.
 
 It is also possible to evaluate each of the rails individually. To evaluate the jailbreak rail only, use the following command:
 
