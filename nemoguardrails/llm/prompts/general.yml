@@ -142,6 +142,7 @@ prompts:
       content: |-
           {{ examples }}
 
+          # Complete the following flow based on its instruction:
           flow {{ flow_name }}
             """{{ instructions }}"""
 
@@ -150,6 +151,7 @@ prompts:
       content: |-
           {{ examples }}
 
+          # Complete the following flow based on its name:
           flow {{ flow_name }}
 
       # Prompt for generating the continuation for the current conversation.
