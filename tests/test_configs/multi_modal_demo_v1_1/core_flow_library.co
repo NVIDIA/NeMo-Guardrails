@@ -56,13 +56,7 @@ flow user has selected choice $choice_id
   # meta: exclude from llm
   # meta: user action
   global $choice_selection_state
-  #if $choice_selection_state == None or $choice_selection_state != $choice_id
-  #match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
-  if $choice_selection_state == None
-    log "choice_selection_state == None"
-    match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
-  elif $choice_selection_state != $choice_id
-    log "choice_selection_state == {{$choice_selection_state}}"
+  if $choice_selection_state == None or $choice_selection_state != $choice_id
     match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
 
 flow unhandled user intent
