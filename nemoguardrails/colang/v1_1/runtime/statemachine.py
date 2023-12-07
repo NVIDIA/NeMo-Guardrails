@@ -258,6 +258,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                                         state,
                                         flow_state,
                                         event.matching_scores,
+                                        event.arguments.get("deactivate", "False"),
                                     )
                                     handled_event_loops.add(flow_state.loop_id)
                 elif event.name == InternalEvents.STOP_FLOW:
@@ -1082,7 +1083,10 @@ def _abort_flow(
 
 
 def _finish_flow(
-    state: State, flow_state: FlowState, matching_scores: List[float]
+    state: State,
+    flow_state: FlowState,
+    matching_scores: List[float],
+    deactivate_flow: bool = False,
 ) -> None:
     """Finishes a flow instance and all its active child flows."""
 
@@ -1192,7 +1196,11 @@ def _finish_flow(
         f"Flow finished: '{_get_readable_flow_state_hierachy(state, flow_state.uid)}' context={_context_log(flow_state)}"
     )
 
-    if flow_state.activated and not flow_state.new_instance_started:
+    if (
+        flow_state.activated
+        and not deactivate_flow
+        and not flow_state.new_instance_started
+    ):
         event = _create_restart_flow_internal_event(state, flow_state, matching_scores)
         _push_left_internal_event(state, event)
         flow_state.new_instance_started = True

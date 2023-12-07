@@ -912,6 +912,69 @@ def test_flow_deactivation():
 
     content = """
     flow a
+      match UtteranceUserAction().Finished(final_transcript="Tick")
+      start UtteranceBotAction(script="Tack")
+
+    flow main
+      activate a
+      match UtteranceUserAction().Finished(final_transcript="Next")
+      send FinishFlow(flow_id="a", deactivate=True)
+      match WaitEvent()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Tick",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Tack",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Next",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Tick",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+
+
+def test_implicit_flow_deactivation():
+    """Test if an activated flow is fully stopped when parent has finished."""
+
+    content = """
+    flow a
       activate b
       match UtteranceUserAction().Finished(final_transcript="End")
       start UtteranceBotAction(script="Done")
