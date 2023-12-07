@@ -458,3 +458,14 @@ def get_initial_actions(strings):
             break
         previous_strings.append(string)
     return previous_strings
+
+
+def escape_flow_name(name: str) -> str:
+    return (
+        name.replace(" and ", "_and_")
+        .replace(" or ", "_or_")
+        .replace(" as ", "_as_")
+        .replace("(", "")
+        .replace(")", "")
+        .replace("'", "")
+    )

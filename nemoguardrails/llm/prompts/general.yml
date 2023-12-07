@@ -23,9 +23,11 @@ prompts:
           {{ history | colang }}
 
 
-          # This are likely user intents:
+          # These are the most likely user intents:
 
           {{ examples }}
+
+
           # Continue with the most likely user intent from above for the following user action. If unrelated, derive a new one that represents in detail what the user said:
 
           user action: {{ user_action }}

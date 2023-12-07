@@ -23,6 +23,7 @@ from langchain.llms import BaseLLM
 from nemoguardrails.actions.actions import action
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import (
+    escape_flow_name,
     get_first_nonempty_line,
     get_initial_actions,
     get_last_user_utterance_event_v1_1,
@@ -183,6 +184,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
                 ):
                     examples += f"user intent: {flow_id}\n\n"
                     potential_user_intents.append(flow_id)
+        examples = examples.strip("\n")
 
         prompt = self.llm_task_manager.render_task_prompt(
             task=Task.GENERATE_USER_INTENT,
@@ -204,11 +206,10 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         )
 
         user_intent = get_first_nonempty_line(result)
-        if user_intent is None:
+        if user_intent is None or not user_intent.startswith("user intent: "):
             user_intent = "unknown message"
 
-        if user_intent and user_intent.startswith("user intent: "):
-            user_intent = user_intent[13:]
+        user_intent = escape_flow_name(user_intent[13:].strip(" "))
 
         log.info(
             "Canonical form for user intent: "
@@ -401,13 +402,8 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         line_0 = lines[0].lstrip(" ")
         uuid = new_uuid()[0:8]
         if line_0.startswith("bot intent:") or line_0.startswith("user intent:"):
-            intent = (
-                remove_action_intent_identifiers([line_0])[0]
-                .strip(" ")
-                .replace("'", "")
-                .replace(" and ", "_and_")
-                .replace(" or ", "_or_")
-                .replace(" as ", "_as_")
+            intent = escape_flow_name(
+                remove_action_intent_identifiers([line_0])[0].strip(" ")
             )
             flow_name = f"_dynamic_{uuid} {intent}"
             # TODO: parse potential parameters from flow name with a regex
