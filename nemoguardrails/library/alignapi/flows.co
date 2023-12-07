@@ -1,0 +1,65 @@
+"""
+
+Supported Violations:
+
+child_exploitation: Child sexual explotation, child sexual abuse, sexual activity with or by children under the age of 18
+child_safety: Physical violence involving children
+drugs_content: Text content that mentions the sale, possession, and usage of drugs
+hate_content: Hate speech directed at minorities and protected groups
+sexual_content: Sexual messages and text content like description of secual activity and mentions of pornography
+violent_content: Text content that mentions violence
+weapons_content: Text content mentions acquisition, construction, possession, or promotion of explosives and firearms
+
+"""
+
+define subflow alignapi moderation
+  """Guardrail based on the maximum risk score."""
+  $result = execute call alignapi
+
+  if $result.max_risk_score > 2
+    bot refuse to respond
+    stop
+
+define subflow alignapi moderation detailed
+  """Guardrail based on individual risk scores."""
+  $result = execute call alignapi
+
+  if $result.violations.get("child_exploitation", 0) > 2
+    bot inform cannot engage in abusive or harmful behavior
+    stop
+
+  if $result.violations.get("child_safety", 0) > 2
+    bot inform cannot engage in abusive or harmful behavior
+    stop
+
+  if $result.violations.get("hate_content", 0) > 2
+    bot inform cannot engage in abusive or harmful behavior
+    stop
+
+  if $result.violations.get("violent_content", 0) > 2
+    bot inform cannot engage in abusive or harmful behavior
+    stop
+
+  if $result.violations.get("weapons_content", 0) > 2
+    bot inform cannot engage in abusive or harmful behavior
+    stop
+
+  if $result.violations.get("drugs_content", 0) > 2
+    bot inform cannot engage with sensitive content
+    stop
+
+  if $result.violations.get("sexual_content", 0) > 2
+    bot inform cannot engage with inappropriate content
+    stop
+
+define bot inform cannot engage in abusive or harmful behavior
+  "I will not engage in any abusive or harmful behavior."
+
+define bot inform cannot engage in self harm behavior
+  "I will not engage in any self harm behavior."
+
+define bot inform cannot engage with inappropriate content
+  "I will not engage with inappropriate content."
+
+define bot inform cannot engage with sensitive content
+  "I will not engage with sensitive content."
