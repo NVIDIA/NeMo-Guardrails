@@ -26,6 +26,7 @@ prompts:
           {{ sample_conversation | first_turns(2) }}
           {{ history | colang }}
 
+          # Infer a user intent from the following user action. Consider the user intent examples above to reuse:
           user action: {{ user_action }}
 
     # Prompt for generating the next steps.
