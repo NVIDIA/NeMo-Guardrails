@@ -16,7 +16,7 @@ flow showcase number guessing game
     user said something
     $user_number = """What is the number the user said?. Return as a single number, e.g. 34. Return 'None' for no number."""
 
-    if $user_number == None
+    if "{{is_int($user_number)}}" == "False"
       bot express "I don't think this is a number!"
         and bot gesture "frown"
       bot ask "Just guess a number between 0 and 100!"

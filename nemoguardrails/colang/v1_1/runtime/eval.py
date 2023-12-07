@@ -121,6 +121,10 @@ def eval_expression(expr: str, context: dict) -> Any:
                 "findall": regex_findall,
                 "uid": new_uid,
                 "escape": escape_string,
+                "is_int": is_int,
+                "is_float": is_float,
+                "is_bool": is_bool,
+                "is_str": is_str,
             },
             names=expr_locals,
         )
@@ -140,3 +144,23 @@ def regex_findall(pattern: str, string: str) -> List[str]:
 def escape_string(string: str) -> str:
     """Escape a string and inner expressions."""
     return string.replace("\\", "\\\\").replace("{{", "\\{").replace("}}", "\\}")
+
+
+def is_int(val: Any) -> bool:
+    """Check if it is an integer."""
+    return isinstance(val, int)
+
+
+def is_float(val: Any) -> bool:
+    """Check if it is an integer."""
+    return isinstance(val, float)
+
+
+def is_bool(val: Any) -> bool:
+    """Check if it is an integer."""
+    return isinstance(val, bool)
+
+
+def is_str(val: Any) -> bool:
+    """Check if it is an integer."""
+    return isinstance(val, str)
