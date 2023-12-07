@@ -12,21 +12,20 @@ prompts:
     # Prompt for detecting the user message canonical form.
     - task: generate_user_intent
       content: |-
-          """
-          {{ general_instructions }}
-          """
-
           # This is how a conversation between a user and the bot can go:
+
           {{ sample_conversation }}
 
-          # This is how the user talks:
-          {{ examples }}
-
           # This is the current conversation between the user and the bot:
-          {{ sample_conversation | first_turns(2) }}
+
           {{ history | colang }}
 
-          # Infer a user intent from the following user action. Consider the user intent examples above to reuse:
+          # This are likely user intents:
+
+          {{ examples }}
+
+          # Find the most related user intent from above for the following user action. If unrelated, derive a new one that represents in detail what the user said:
+
           user action: {{ user_action }}
 
     # Prompt for generating the next steps.
