@@ -173,7 +173,6 @@ flow faq
 
 flow showcase selector
   activate fallback user said
-  activate interruption handling bot talking "inform"
   activate track visual choice selection state
 
   $showcase_selection_ui = None
@@ -181,6 +180,7 @@ flow showcase selector
   while True
     log "while loop restarted"
     if $showcase_selection_ui == None
+      activate interruption handling bot talking "inform"
       start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}]) as $showcase_selection_ui
       start bot inform "Please pick one of the showcases."
 
@@ -211,30 +211,35 @@ flow showcase selector
 
     orwhen user picked number guessing game showcase
       send $showcase_selection_ui.Stop()
+      send FinishFlow(flow_id="interruption handling bot talking", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the number guessing game!"
       showcase number guessing game
 
     orwhen user picked multimodality showcase
       send $showcase_selection_ui.Stop()
+      send FinishFlow(flow_id="interruption handling bot talking", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the multimodality showcase!"
       showcase multimodality
 
     orwhen user picked backchanneling showcase
       send $showcase_selection_ui.Stop()
+      send FinishFlow(flow_id="interruption handling bot talking", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the backchanneling example!"
       showcase backchannelling interaction
 
     orwhen user picked posture showcase
       send $showcase_selection_ui.Stop()
+      send FinishFlow(flow_id="interruption handling bot talking", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the posture showcase!"
       showcase posture capabilities
 
     orwhen user picked proactive showcase
       send $showcase_selection_ui.Stop()
+      send FinishFlow(flow_id="interruption handling bot talking", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the proactive turn-taking example!"
       showcase proactive turn taking
@@ -244,7 +249,10 @@ flow showcase selector
       $showcase_selection_ui = None
       bot say "Ok! It was great talking to you! Goodbye!"
         and bot gesture "Waving hands"
+      start bot posture "Idle" as $idle_posture
       wait 10.0
+      send $idle_posture.Stop()
+      bot say "Welcome back!"
 
 flow main
   # meta: exclude from llm

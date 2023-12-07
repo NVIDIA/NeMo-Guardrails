@@ -525,7 +525,7 @@ flow interruption handling bot talking $mode="inform"
     finish all bot actions
     log "Bot talking stopped"
   elif $mode == "inform"
-    start scene show short information "Please wait until bot has finished talking!"
+    start VisualInformationSceneAction(title="Not listening!", support_prompts=["For robustness reasons you can only talk after the avatar."], content=[])
     wait 3.0
     log "Bot informed user not to talk"
   elif $mode == "ignore"
