@@ -104,13 +104,12 @@ def topical(
 
 @app.command()
 def moderation(
+    config: str = typer.Option(
+        help="The path to the guardrails config.", default="config"
+    ),
     dataset_path: str = typer.Option(
         "nemoguardrails/eval/data/moderation/harmful.txt",
         help="Path to dataset containing prompts",
-    ),
-    llm: str = typer.Option("openai", help="LLM provider ex. OpenAI"),
-    model_name: str = typer.Option(
-        "text-davinci-003", help="LLM model ex. text-davinci-003"
     ),
     num_samples: int = typer.Option(50, help="Number of samples to evaluate"),
     check_input: bool = typer.Option(True, help="Evaluate input self-check rail"),
@@ -126,9 +125,8 @@ def moderation(
     Computes accuracy for jailbreak detection and output moderation.
     """
     moderation_check = ModerationRailsEvaluation(
+        config,
         dataset_path,
-        llm,
-        model_name,
         num_samples,
         check_input,
         check_output,
@@ -136,9 +134,7 @@ def moderation(
         write_outputs,
         split,
     )
-    typer.echo(
-        f"Starting the moderation evaluation for data: {dataset_path} using LLM {llm}-{model_name}..."
-    )
+    typer.echo(f"Starting the moderation evaluation for data: {dataset_path} ...")
     moderation_check.run()
 
 
