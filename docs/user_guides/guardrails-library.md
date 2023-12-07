@@ -584,3 +584,32 @@ define subflow active fence moderation
     bot inform cannot answer
     stop
 ```
+
+### AlignAPI Moderation
+
+NeMo Guardrails supports using the [AlignAPI](https://alignapi.com) as an input rail out-of-the-box (you need to have the `ALIGNAPI_KEY` environment variable set). AlignAPI provides a set of fast moderation APIs with <50ms latency.
+
+```yaml
+rails:
+  input:
+    flows:
+      # The simplified version
+      - alignapi moderation
+
+      # The detailed version with individual risk scores
+      # - alignapi moderation detailed
+```
+
+The `alignapi moderation` flow uses the maximum risk score with the 2 threshold to decide if the input should be allowed (i.e., if the risk score is above the threshold, it is considered a violation). The `alignapi moderation detailed` has individual scores per category of violations. Each category of violations has 4 levels: 0, 1, 2, 3 with higher values means more severe.
+
+To customize the scores, you have to overwrite the [default flows](../../nemoguardrails/library/alignapi/flows.co) in your config. For example, to change the threshold for `alignapi moderation` you can add the following flow to your config:
+
+```colang
+define subflow alignapi moderation
+  """Guardrail based on the maximum risk score."""
+  $result = execute call alignapi
+
+  if $result.max_risk_score > 1
+    bot inform cannot answer
+    stop
+```
