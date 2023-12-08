@@ -365,14 +365,18 @@ flow wait $time_s
   await TimerBotAction(timer_name="wait_timer_{{uid()}}", duration=$time_s)
 
 flow llm response pooling $interval
+  # meta: exclude from llm
+  # meta: loop_id=llm_response_pooling
   match StartGenerateUserIntentAction() as $event_ref
     or StartGenerateFlowContinuationAction() as $event_ref
     or StartGenerateFlowFromNameAction() as $event_ref
     or StartGenerateValueAction() as $event_ref
     or StartGenerateFlowFromInstructionsAction() as $event_ref
   start repeating timer "llm_response_pooling" $interval as $pooling_timer
+  start bot posture "Thinking, idle" as $posture
   match $event_ref.action.Finished()
   send $pooling_timer.Stop()
+  send $posture.Stop()
 
 flow catch colang errors
   """A flow to catch any runtime Colang errors"""
