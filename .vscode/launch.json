@@ -23,6 +23,7 @@
                 "--verbose",
                 "--debug-level=DEBUG"
             ],
+            "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
             }
@@ -34,6 +35,7 @@
             "console": "integratedTerminal",
             "module": "nemoguardrails",
             "args": ["chat", "--config=${fileDirname}", "--verbose"],
+            "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
             }
