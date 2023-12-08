@@ -11,7 +11,7 @@ api_key = os.environ.get("OPENAI_API_KEY")
 with open(f"{current_directory}/prompts/test.md", "r") as file:
     lines = file.readlines()
 
-prompt = "\n".join(lines).strip()
+prompt = "".join(lines)
 
 # Initialize the OpenAI API client
 openai.api_key = api_key
@@ -22,8 +22,13 @@ response = openai.Completion.create(
     prompt=prompt,
     temperature=0.0,
     max_tokens=256,  # Adjust as needed
+    top_p=1,
+    frequency_penalty=0,
+    presence_penalty=0,
     n=1,  # Number of responses to generate
+    request_timeout=None,
 )
+
 print("=" * 50)
 print(response.choices[0].text)
 print("=" * 50)
