@@ -172,5 +172,3 @@ prompts:
 
           # This is the current conversation between the user and the bot:
           {{ history | colang }}
-
-          # The conversation most likely continues with a bot intent and bot action like this:

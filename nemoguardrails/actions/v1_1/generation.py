@@ -375,7 +375,8 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         examples = ""
         for result in reversed(results):
-            examples += f"{result.meta['flow']}\n"
+            examples += f"{result.meta['flow']}"
+        examples = examples.strip("\n")
 
         # TODO: add examples from the actual running flows
 
