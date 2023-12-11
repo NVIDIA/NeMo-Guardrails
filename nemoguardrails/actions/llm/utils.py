@@ -469,5 +469,6 @@ def escape_flow_name(name: str) -> str:
         .replace("(", "")
         .replace(")", "")
         .replace("'", "")
+        .replace("-", "_")
     )
     return re.sub(r"\b\d+\b", lambda match: f"_{match.group()}_", result)

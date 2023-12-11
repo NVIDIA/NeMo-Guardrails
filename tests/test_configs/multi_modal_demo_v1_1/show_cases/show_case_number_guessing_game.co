@@ -2,7 +2,7 @@ flow showcase number guessing game
   """Ask the user to guess a random number between 1 and 100; after each guess let the user know if the number was to low or high. If the user guesses the correct number, congratulate!"""
   activate reaction bot question repetition for user silence 10
 
-  $random_number = """Give me a random number between 1 and 100, e.g. 66 but not 66"""
+  $random_number = """A random explicit integer between 1 and 100, not a function."""
 
   start scene show textual information $title="Little Game" $text="Guess the random number between 0 and 100 (hint: {{$random_number}})" $header_image="question mark horizontal orientation" as $scene
 
@@ -14,7 +14,7 @@ flow showcase number guessing game
   $attempts = 1
   while True
     user said something
-    $user_number = """What is the number the user said?. Return as a single number, e.g. 34. Return 'None' for no number."""
+    $user_number = """What is the number the user said?. Return as a single number (e.g. 34) or 'None' if the user said no number."""
 
     if "{{is_int($user_number)}}" == "False"
       bot express "I don't think this is a number!"

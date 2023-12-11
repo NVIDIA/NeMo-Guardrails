@@ -97,12 +97,9 @@ prompts:
           # This is how a conversation between a user and the bot can go:
           {{ sample_conversation }}
 
-          # This is how the bot thinks:
-          {{ examples }}
-
           # This is the current conversation between the user and the bot:
-          {{ sample_conversation | first_turns(2) }}
           {{ history | colang }}
+
           # {{ instructions }}
           ${{ var_name }} =
 
