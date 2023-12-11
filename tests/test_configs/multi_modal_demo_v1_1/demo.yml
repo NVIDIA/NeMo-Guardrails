@@ -86,6 +86,13 @@ sample_conversation: |
     user action: user said "thanks"
     user intent: user expressed appreciation
 
-    bot intent: bot express appreciation and offer additional help
+    bot intent: bot express appreciation _and_ offer additional help
     bot action: bot express "You're welcome. If you have any more questions or if there's anything else I can help you with, please don't hesitate to ask."
       and bot gesture "putting flat hands together and make little bow"
+
+    user action: user said "Turn around and count to 3"
+    user intent: user instructed to turn around and count to ten
+
+    bot intent: bot turn around and count to ten
+    bot action: bot gesture "Turn around"
+      and bot say "One, two, three"

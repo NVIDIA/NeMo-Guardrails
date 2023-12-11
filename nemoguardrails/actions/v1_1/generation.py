@@ -15,6 +15,7 @@
 
 """A set of actions for generating various types of completions using an LLMs."""
 import logging
+import re
 from ast import literal_eval
 from typing import Any, List, Optional
 
@@ -31,7 +32,11 @@ from nemoguardrails.actions.llm.utils import (
     remove_action_intent_identifiers,
 )
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
-from nemoguardrails.colang.v1_1.runtime.flows import ActionEvent, InternalEvent
+from nemoguardrails.colang.v1_1.runtime.flows import (
+    ActionEvent,
+    InternalEvent,
+    LlmResponseError,
+)
 from nemoguardrails.colang.v1_1.runtime.statemachine import (
     Event,
     InternalEvents,
@@ -206,10 +211,10 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         )
 
         user_intent = get_first_nonempty_line(result)
-        if user_intent is None or not user_intent.startswith("user intent: "):
-            user_intent = "unknown message"
+        if user_intent is None:
+            raise LlmResponseError(f"Issue with LLM response: {result}")
 
-        user_intent = escape_flow_name(user_intent[13:].strip(" "))
+        user_intent = escape_flow_name(user_intent.strip(" "))
 
         log.info(
             "Canonical form for user intent: "
@@ -376,6 +381,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         examples = ""
         for result in reversed(results):
             examples += f"{result.meta['flow']}"
+        examples = re.sub(r"#.*$", "", examples)
         examples = examples.strip("\n")
 
         # TODO: add examples from the actual running flows

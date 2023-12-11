@@ -12,25 +12,21 @@ prompts:
     # Prompt for detecting the user message canonical form.
     - task: generate_user_intent
       content: |-
+          """
+          {{ general_instructions }}
+          """
 
           # This is how a conversation between a user and the bot can go:
-
           {{ sample_conversation }}
 
-
-          # This is the current conversation between the user and the bot:
-
-          {{ history | colang }}
-
-
           # These are the most likely user intents:
-
           {{ examples }}
 
-
-          # Continue with the most likely user intent from above for the following user action. If unrelated, derive a new one that represents in detail what the user said:
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
 
           user action: {{ user_action }}
+          user intent:
 
     # Prompt for generating the next steps.
     - task: generate_next_steps
@@ -143,6 +139,7 @@ prompts:
     # Prompt for generating a flow from instructions.
     - task: generate_flow_from_instructions
       content: |-
+          # Example flows:
           {{ examples }}
 
           # Complete the following flow based on its instruction:
@@ -152,6 +149,7 @@ prompts:
     # Prompt for generating a flow from name.
     - task: generate_flow_from_name
       content: |-
+          # Example flows:
           {{ examples }}
 
           # Complete the following flow based on its name:
@@ -166,9 +164,6 @@ prompts:
 
           # This is how a conversation between a user and the bot can go:
           {{ sample_conversation }}
-
-          # This is how the user talks:
-          {{ examples }}
 
           # This is the current conversation between the user and the bot:
           {{ history | colang }}

@@ -630,3 +630,9 @@ class ColangRuntimeError(Exception):
     """Raises when there is a Colang related runtime exception."""
 
     pass
+
+
+class LlmResponseError(Exception):
+    """Raises when there is an issue with the lmm response."""
+
+    pass

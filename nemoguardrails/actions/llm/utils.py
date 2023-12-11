@@ -461,7 +461,8 @@ def get_initial_actions(strings):
 
 
 def escape_flow_name(name: str) -> str:
-    return (
+    # TODO: We need to figure out how we can distinguish from valid flow parameters
+    result = (
         name.replace(" and ", "_and_")
         .replace(" or ", "_or_")
         .replace(" as ", "_as_")
@@ -469,3 +470,4 @@ def escape_flow_name(name: str) -> str:
         .replace(")", "")
         .replace("'", "")
     )
+    return re.sub(r"\b\d+\b", lambda match: f"_{match.group()}_", result)
