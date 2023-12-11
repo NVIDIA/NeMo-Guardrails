@@ -461,13 +461,14 @@ flow llm create interaction continuation
     if "{{len($flows)}}" == "0"
       log "LLM generated flow parsing failed!"
       bot say "Sorry, what did you say?"
-      return
+      return None
 
   return $flow_info.name
 
 flow llm interaction continuation
   $generated_flow_name = await llm create interaction continuation
-  await _flow_by_name $generated_flow_name as $llm_response
+  if $generated_flow_name != None
+    await _flow_by_name $generated_flow_name
 
 flow flows fallback
   """We want to start an undefined flow."""

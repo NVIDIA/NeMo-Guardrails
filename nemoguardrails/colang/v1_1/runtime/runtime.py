@@ -24,7 +24,7 @@ import aiohttp
 import langchain
 from langchain.chains.base import Chain
 
-langchain.debug = True
+langchain.debug = False
 
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
