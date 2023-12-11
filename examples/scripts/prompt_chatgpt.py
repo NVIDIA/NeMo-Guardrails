@@ -29,6 +29,6 @@ response = openai.Completion.create(
     request_timeout=None,
 )
 
-print("=" * 50)
+print("\n" + "=" * 50)
 print(response.choices[0].text)
-print("=" * 50)
+print("=" * 50 + "\n")
