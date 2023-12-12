@@ -535,8 +535,8 @@ class RuntimeV1_1(Runtime):
 
         # TODO: serialize the state to dict
 
-        # We cap the recent history to the last 100
-        state.last_events = state.last_events[-100:]
+        # We cap the recent history to the last 500
+        state.last_events = state.last_events[-500:]
 
         return output_events, state
 
