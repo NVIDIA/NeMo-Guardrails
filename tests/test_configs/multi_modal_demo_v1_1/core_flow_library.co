@@ -28,7 +28,6 @@ flow user typing $text
 
 flow user said something
   # meta: exclude from llm
-  # meta: user intent
   match UtteranceUserAction.Finished() as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
   return $event.arguments.final_transcript
@@ -41,7 +40,6 @@ flow user said something unexpected
 
 flow user saying something
   # meta: exclude from llm
-  # meta: user intent
   match UtteranceUserAction.TranscriptUpdated() as $event
   send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
   return $event.arguments.interim_transcript
@@ -381,6 +379,7 @@ flow llm response pooling $interval
 flow catch colang errors
   """A flow to catch any runtime Colang errors"""
   # meta: exclude from llm
+  # meta: loop_id=catch_colang_errors
   match ColangError() as $event
   bot say "Oh! Sorry, what did you say? I was fixing some internal processing."
     and bot gesture "Warning: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
