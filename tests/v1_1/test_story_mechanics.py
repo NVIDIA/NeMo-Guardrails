@@ -436,15 +436,31 @@ def test_match_colang_error_event():
       match ColangError() as $event
       await UtteranceBotAction(script="Warning: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}")
 
+    flow a
+      match UtteranceUserAction.Finished(final_transcript="go") as $event
+      start UtteranceBotAction(script="{{$test[0]}}")
+
     flow main
       activate catch colang errors
-      await UtteranceBotAction(script="{{$test[0]}}")
+      activate a
+      match WaitEvent()
     """
 
     config = _init_state(content)
 
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
     try:
-        state = run_to_completion(config, start_main_flow_event)
+        state = run_to_completion(
+            state,
+            {
+                "type": "UtteranceUserActionFinished",
+                "final_transcript": "go",
+            },
+        )
     except Exception as ex:
         new_event = Event(
             name="ColangError",
@@ -454,7 +470,6 @@ def test_match_colang_error_event():
             },
         )
         state = run_to_completion(config, new_event)
-
     assert is_data_in_events(
         state.outgoing_events,
         [
@@ -466,4 +481,4 @@ def test_match_colang_error_event():
 
 
 if __name__ == "__main__":
-    test_when_conflict_issue()
+    test_match_colang_error_event()
