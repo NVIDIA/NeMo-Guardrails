@@ -9,7 +9,7 @@ annoy==1.17.3
 sentence-transformers==2.2.2
 fastapi==0.96.0
 starlette==0.27.0
-uvicorn==0.22.0
+uvicorn==0.23.0
 httpx==0.23.3
 simpleeval==0.9.13
 typing-extensions==4.5.0

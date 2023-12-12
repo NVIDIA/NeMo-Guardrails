@@ -20,7 +20,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="nemoguardrails",
-    version="0.4.1",
+    version="0.4.2",
     packages=find_packages(),
     author="NVIDIA",
     author_email="nemoguardrails@nvidia.com",
@@ -70,7 +70,7 @@ setup(
         "sentence-transformers==2.2.2",
         "fastapi>=0.96.0",
         "starlette==0.27.0",
-        "uvicorn==0.22.0",
+        "uvicorn==0.23.0",
         "httpx==0.23.3",
         "simpleeval==0.9.13",
         "typing-extensions==4.5.0",
