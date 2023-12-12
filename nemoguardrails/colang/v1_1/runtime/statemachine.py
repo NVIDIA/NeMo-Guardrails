@@ -588,49 +588,64 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         if flow_state.status == FlowStatus.WAITING:
             flow_state.status = FlowStatus.STARTING
 
-        new_heads = slide(state, flow_state, flow_config, head)
-
-        # Advance all new heads from a head fork
-        if len(new_heads) > 0:
-            for new_head in _advance_head_front(state, new_heads):
-                if new_head not in actionable_heads:
-                    actionable_heads.append(new_head)
-
-        # Add merging heads to the actionable heads since they need to be advanced in the next iteration
-        if head.status == FlowHeadStatus.MERGING:
-            actionable_heads.append(head)
-
         flow_finished = False
         flow_aborted = False
-        if head.position >= len(flow_config.elements):
-            if flow_state.status == FlowStatus.STOPPING:
-                flow_aborted = True
-            else:
-                flow_finished = True
+        try:
+            new_heads = slide(state, flow_state, flow_config, head)
 
-        all_heads_are_waiting = False
-        if not flow_finished and not flow_aborted:
-            # Check if all all flow heads are waiting at match or wait_for_heads statements
-            all_heads_are_waiting = True
-            for temp_head in flow_state.active_heads.values():
-                element = flow_config.elements[temp_head.position]
-                if not isinstance(element, WaitForHeads) and (
-                    not is_match_op_element(element) or "internal" in element.info
-                ):
-                    all_heads_are_waiting = False
-                    break
+            # Advance all new heads from a head fork
+            if len(new_heads) > 0:
+                for new_head in _advance_head_front(state, new_heads):
+                    if new_head not in actionable_heads:
+                        actionable_heads.append(new_head)
 
-        if flow_finished or all_heads_are_waiting:
-            if flow_state.status == FlowStatus.STARTING:
-                flow_state.status = FlowStatus.STARTED
-                event = create_internal_flow_event(
-                    InternalEvents.FLOW_STARTED, flow_state, head.matching_scores
-                )
-                _push_internal_event(state, event)
-        elif not flow_aborted and is_action_op_element(
-            flow_config.elements[head.position]
-        ):
-            actionable_heads.append(head)
+            # Add merging heads to the actionable heads since they need to be advanced in the next iteration
+            if head.status == FlowHeadStatus.MERGING:
+                actionable_heads.append(head)
+
+            if head.position >= len(flow_config.elements):
+                if flow_state.status == FlowStatus.STOPPING:
+                    flow_aborted = True
+                else:
+                    flow_finished = True
+
+            all_heads_are_waiting = False
+            if not flow_finished and not flow_aborted:
+                # Check if all all flow heads are waiting at match or wait_for_heads statements
+                all_heads_are_waiting = True
+                for temp_head in flow_state.active_heads.values():
+                    element = flow_config.elements[temp_head.position]
+                    if not isinstance(element, WaitForHeads) and (
+                        not is_match_op_element(element) or "internal" in element.info
+                    ):
+                        all_heads_are_waiting = False
+                        break
+
+            if flow_finished or all_heads_are_waiting:
+                if flow_state.status == FlowStatus.STARTING:
+                    flow_state.status = FlowStatus.STARTED
+                    event = create_internal_flow_event(
+                        InternalEvents.FLOW_STARTED, flow_state, head.matching_scores
+                    )
+                    _push_internal_event(state, event)
+            elif not flow_aborted and is_action_op_element(
+                flow_config.elements[head.position]
+            ):
+                actionable_heads.append(head)
+        except Exception as e:
+            # In case there were any runtime error the flow will be aborted (fail)
+            log.warning(
+                f"Colang error: Flow '{flow_state.flow_id}' failed due to runtime exception: '{e}'"
+            )
+            event = Event(
+                name="ColangError",
+                arguments={
+                    "error_type": str(type(e).__name__),
+                    "error": str(e),
+                },
+            )
+            _push_internal_event(state, event)
+            flow_aborted = True
 
         if flow_finished:
             _finish_flow(state, flow_state, head.matching_scores)
