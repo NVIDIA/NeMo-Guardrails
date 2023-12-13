@@ -89,7 +89,7 @@ def topical(
     typer.echo(f"Starting the evaluation for app: {config[0]}...")
 
     topical_eval = TopicalRailsEvaluation(
-        config_path=config[0],
+        config=config[0],
         verbose=verbose,
         test_set_percentage=test_percentage,
         max_samples_per_intent=max_samples_intent,

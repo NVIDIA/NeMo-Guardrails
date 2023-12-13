@@ -36,7 +36,7 @@ class FactCheckEvaluation:
 
     def __init__(
         self,
-        config_path: str,
+        config: str,
         dataset_path: str = "data/factchecking/sample.json",
         num_samples: int = 50,
         create_negatives: bool = True,
@@ -55,7 +55,7 @@ class FactCheckEvaluation:
         - write_outputs: whether to write the predictions to file
         """
 
-        self.config_path = config_path
+        self.config_path = config
         self.dataset_path = dataset_path
         self.rails_config = RailsConfig.from_path(self.config_path)
         self.rails = LLMRails(self.rails_config)

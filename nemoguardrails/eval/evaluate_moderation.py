@@ -32,7 +32,7 @@ class ModerationRailsEvaluation:
 
     def __init__(
         self,
-        config_path: str,
+        config: str,
         dataset_path: str = "nemoguardrails/nemoguardrails/eval/data/moderation/harmful.txt",
         num_samples: int = 50,
         check_input: bool = True,
@@ -54,7 +54,7 @@ class ModerationRailsEvaluation:
         - split: whether the dataset is harmful or helpful
         """
 
-        self.config_path = config_path
+        self.config_path = config
         self.dataset_path = dataset_path
         self.rails_config = RailsConfig.from_path(self.config_path)
         self.rails = LLMRails(self.rails_config)

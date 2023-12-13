@@ -35,7 +35,7 @@ class HallucinationRailsEvaluation:
 
     def __init__(
         self,
-        config_path: str,
+        config: str,
         dataset_path: str = "data/hallucination/sample.txt",
         num_samples: int = 50,
         output_dir: str = "outputs/hallucination",
@@ -52,7 +52,7 @@ class HallucinationRailsEvaluation:
         - write_outputs: whether to write the predictions to file
         """
 
-        self.config_path = config_path
+        self.config_path = config
         self.dataset_path = dataset_path
         self.rails_config = RailsConfig.from_path(self.config_path)
         self.rails = LLMRails(self.rails_config)
