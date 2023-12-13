@@ -147,8 +147,8 @@ rails:
   # Output rails are triggered after a bot message has been generated.
   output:
     flows:
-      - check facts
-      - check hallucination
+      - self check facts
+      - self check hallucination
       - activefence moderation
 
   config:
