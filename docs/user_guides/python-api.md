@@ -115,7 +115,7 @@ Guardrail-specific actions:
 - `self_check_facts`: Check the facts for the last bot response w.r.t. the extracted relevant chunks from the knowledge base.
 - `self_check_input`: Check if the user input should be allowed.
 - `self_check_output`: Check if the bot response should be allowed.
-- `check_hallucination`: Check if the last bot response is a hallucination.
+- `self_check_hallucination`: Check if the last bot response is a hallucination.
 
 For convenience, this toolkit also includes a selection of LangChain tools, wrapped as actions:
 

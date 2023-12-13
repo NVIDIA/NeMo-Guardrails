@@ -285,7 +285,7 @@ The full list of tasks used by the NeMo Guardrails toolkit is the following:
 - `self_check_facts`: check the facts from the bot response against the provided evidence;
 - `self_check_input`: check if the input from the user should be allowed;
 - `self_check_output`: check if bot response should be allowed;
-- `check_hallucination`: check if the bot response is a hallucination.
+- `self_check_hallucination`: check if the bot response is a hallucination.
 
 You can check the default prompts in the [prompts](../../nemoguardrails/llm/prompts) folder.
 
@@ -405,6 +405,53 @@ You can deactivate output rails temporarily for the next bot message, by setting
 ### Retrieval Rails
 
 Retrieval rails process the retrieved chunks, i.e., the `$relevant_chunks` variable.
+
+### Dialog Rails
+
+Dialog rails enforce specific predefined conversational paths. To use dialog rails, you must define canonical form forms for various user messages and use them to trigger the dialog flows. Check out the [Hello World](../../examples/bots/hello_world) bot for a quick example. For a slightly more advanced example, check out the [ABC bot](../../examples/bots/abc), where dialog rails are used to ensure the bot does not talk about specific topics.
+
+The use of dialog rails requires a three-step process:
+
+1. Generate canonical user message
+2. Decide next step(s) and execute them
+3. Generate bot utterance(s)
+
+For a detailed description, check out [The Guardrails Process](../architecture/README.md#the-guardrails-process).
+
+Each of the above steps may require an LLM call.
+
+#### Single Call Mode
+
+As of version `0.6.0`, NeMo Guardrails also supports a "single call" mode, in which all three steps are performed using a single LLM call. To enable it, you must set the `single_call.enabled` flag to `True` as shown below.
+
+```yaml
+rails:
+  dialog:
+    # Whether to try to use a single LLM call for generating the user intent, next step and bot message.
+    single_call:
+      enabled: True
+
+      # If a single call fails, whether to fall back to multiple LLM calls.
+      fallback_to_multiple_calls: True
+```
+
+On a typical RAG (Retrieval Augmented Generation) scenario, using this option brings a 3x improvement in terms of latency and uses 37% fewer tokens.
+
+**IMPORTANT**: currently, the *Single Call Mode* can only predict bot messages as next steps. This means that if you want the LLM to generalize and decide to execute an action on a dynamically generated user canonical form message, it will not work.
+
+#### Embeddings Only
+
+Another option to speed up the dialog rails is to use only the embeddings of the predefined user messages to decide the canonical form for the user input. To enable this option, you have to set the `embeddings_only` flag, as shown below:
+
+```yaml
+rails:
+  dialog:
+    user_messages:
+      # Whether to use only the embeddings when interpreting the user's message
+      embeddings_only: True
+```
+
+**IMPORTANT**: This is recommended only when enough examples are provided.
 
 ## Knowledge base Documents
 
