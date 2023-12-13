@@ -179,8 +179,6 @@ The following parameters are special and are provided automatically by the NeMo 
 
 These parameters are only meant to be used in advanced use cases.
 
-#convert it to a table
-
 ## Action Parameters
 
 The following are the parameters that can be used in the actions:
