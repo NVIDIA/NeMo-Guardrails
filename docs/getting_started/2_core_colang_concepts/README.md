@@ -202,7 +202,7 @@ The prompt has four logical sections:
 
 2. A sample conversation, which can also [be configured](../../user_guides/configuration-guide.md#sample-conversation) using the `sample_conversation` key in `config.yml`.
 
-3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details check out [TODO](#).
+3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details check out the [ABC Bot](../../../examples/bots/abc).
 
 4. The current conversation preceded by the first two turns from the sample conversation.
 

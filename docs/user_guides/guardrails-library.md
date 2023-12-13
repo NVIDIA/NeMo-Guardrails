@@ -14,7 +14,7 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
    - BERT-score Hallucination Checking - *[COMING SOON]*
 
 3. Third-Party APIs
-   - [ActiveFence Moderation](#activefence-moderation)
+   - [ActiveFence Moderation](#activefence)
    - OpenAI Moderation API - *[COMING SOON]*
 
 
@@ -96,13 +96,9 @@ prompts:
       Answer [Yes/No]:
 ```
 
-**TODO**: link to evaluation data for this exact prompt.
-
 ##### Complex
 
 This prompt provides explicit instructions on what should not be allowed. Note that a more comprehensive prompt like this uses more tokens and adds more latency.
-
-**TODO**: update with the exact prompt.
 
 ```yaml
 prompts:
@@ -130,9 +126,6 @@ prompts:
 
       Answer [Yes/No]:
 ```
-
-**TODO**: sample stats about tokens usage and latency versus the previous prompt.
-**TODO**: evaluation results vs. previous prompt.
 
 ### Output Checking
 
@@ -207,13 +200,9 @@ prompts:
       Answer [Yes/No]:
 ```
 
-**TODO**: link to evaluation data for this exact prompt.
-
 ##### Complex
 
 This prompt provides explicit instructions on what should not be allowed. Note that a more comprehensive prompt like this uses more tokens and adds more latency.
-
-**TODO**: update with the exact prompt.
 
 ```yaml
 prompts:
@@ -239,16 +228,11 @@ prompts:
       Answer [Yes/No]:
 ```
 
-**TODO**: sample stats about tokens usage and latency versus the previous prompt.
-**TODO**: evaluation results vs. previous prompt.
-
 ### Fact-Checking
 
 The goal of the self-check fact-checking output rail is to ensure that the answer to a RAG (Retrieval Augmented Generation) query is grounded in the provided evidence extracted from the knowledge base (KB).
 
-NeMo Guardrails uses the concept of **relevant chunks** (which are stored in the `$relevant_chunks` context variable) as the evidence against which fact-checking should be performed. The relevant chunks can be extracted automatically, if the built-in knowledge base support is used, or provided directly alongside the query.
-
-**TODO**: add link to the RAG section of the documentation.
+NeMo Guardrails uses the concept of **relevant chunks** (which are stored in the `$relevant_chunks` context variable) as the evidence against which fact-checking should be performed. The relevant chunks can be extracted automatically, if the built-in knowledge base support is used, or provided directly alongside the query (see the [Getting Started Guide example](../getting_started/7_rag)).
 
 **IMPORTANT**: The performance of this rail is strongly dependent on the capability of the LLM to follow the instructions in the `self_check_facts` prompt.
 
@@ -295,7 +279,7 @@ define subflow self check facts
 
 To trigger the fact-fact checking rail for a bot message, you must set the `$check_facts` context variable to `True` before a bot message requiring fact-checking. This enables you to explicitly enable fact-checking only when needed (e.g. when answering an important question vs. chitchat).
 
-The example below will trigger the fact-checking output rail every time the bot responds to a question about the report (for a complete example, check out **TODO**: add link to example).
+The example below will trigger the fact-checking output rail every time the bot responds to a question about the report.
 
 ```colang
 define flow
