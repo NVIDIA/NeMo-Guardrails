@@ -135,7 +135,7 @@ Below is an example `config.yml`:
 models:
   - type: main
     engine: openai
-    model: text-davinci-003
+    model: gpt-3.5-turbo-instruct
 
 rails:
   # Input rails are invoked when new input from the user is received.
@@ -147,9 +147,9 @@ rails:
   # Output rails are triggered after a bot message has been generated.
   output:
     flows:
-      - check facts
-      - check hallucination
-      - active fence moderation
+      - self check facts
+      - self check hallucination
+      - activefence moderation
 
   config:
     # Configure the types of entities that should be masked on user input.

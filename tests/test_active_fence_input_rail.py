@@ -20,7 +20,7 @@ from tests.utils import TestChat
 
 
 def test_1(monkeypatch):
-    monkeypatch.setenv("ACTIVE_FENCE_API_KEY", "xxx")
+    monkeypatch.setenv("ACTIVEFENCE_API_KEY", "xxx")
 
     config = RailsConfig.from_content(
         colang_content="""
@@ -43,7 +43,7 @@ def test_1(monkeypatch):
             rails:
               input:
                 flows:
-                  - active fence moderation
+                  - activefence moderation
         """,
     )
     chat = TestChat(

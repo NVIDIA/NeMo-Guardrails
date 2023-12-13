@@ -1,13 +1,13 @@
 # Integration with LangChain
 
+**NOTE: Version `0.7.0` will provide an updated method for integrating guardrails with LangChain through a `RailsRunnable` object which can be used in conjunction with LangChain Expression Language. The integration methods below will be deprecated.**
+
 There are multiple ways of using the NeMo Guardrails toolkit together with LangChain in your project:
 
 1. Use existing chains in your guardrails: [Jump to section](#use-chains-in-your-custom-actions)
 2. Add guardrails to existing chains: [Jump to section](#add-guardrails-to-existing-chains)
 3. Use chains in your custom actions: [Jump to section](#use-chains-in-your-custom-actions)
 4. Use LangChain tools as actions in your guardrails: [Jump to section](#use-langchain-tools-as-actions-in-your-guardrails)
-5. Use `RailsChain` - **coming soon**
-6. Use `RailsAgent` - **coming soon**
 
 ## Use existing chains in your guardrails
 

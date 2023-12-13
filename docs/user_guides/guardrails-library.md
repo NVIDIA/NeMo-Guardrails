@@ -14,7 +14,7 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
    - BERT-score Hallucination Checking - *[COMING SOON]*
 
 3. Third-Party APIs
-   - [ActiveFence Moderation](#activefence-moderation)
+   - [ActiveFence Moderation](#activefence)
    - OpenAI Moderation API - *[COMING SOON]*
 
 
@@ -96,13 +96,9 @@ prompts:
       Answer [Yes/No]:
 ```
 
-**TODO**: link to evaluation data for this exact prompt.
-
 ##### Complex
 
 This prompt provides explicit instructions on what should not be allowed. Note that a more comprehensive prompt like this uses more tokens and adds more latency.
-
-**TODO**: update with the exact prompt.
 
 ```yaml
 prompts:
@@ -130,9 +126,6 @@ prompts:
 
       Answer [Yes/No]:
 ```
-
-**TODO**: sample stats about tokens usage and latency versus the previous prompt.
-**TODO**: evaluation results vs. previous prompt.
 
 ### Output Checking
 
@@ -207,13 +200,9 @@ prompts:
       Answer [Yes/No]:
 ```
 
-**TODO**: link to evaluation data for this exact prompt.
-
 ##### Complex
 
 This prompt provides explicit instructions on what should not be allowed. Note that a more comprehensive prompt like this uses more tokens and adds more latency.
-
-**TODO**: update with the exact prompt.
 
 ```yaml
 prompts:
@@ -239,16 +228,11 @@ prompts:
       Answer [Yes/No]:
 ```
 
-**TODO**: sample stats about tokens usage and latency versus the previous prompt.
-**TODO**: evaluation results vs. previous prompt.
-
 ### Fact-Checking
 
 The goal of the self-check fact-checking output rail is to ensure that the answer to a RAG (Retrieval Augmented Generation) query is grounded in the provided evidence extracted from the knowledge base (KB).
 
-NeMo Guardrails uses the concept of **relevant chunks** (which are stored in the `$relevant_chunks` context variable) as the evidence against which fact-checking should be performed. The relevant chunks can be extracted automatically, if the built-in knowledge base support is used, or provided directly alongside the query.
-
-**TODO**: add link to the RAG section of the documentation.
+NeMo Guardrails uses the concept of **relevant chunks** (which are stored in the `$relevant_chunks` context variable) as the evidence against which fact-checking should be performed. The relevant chunks can be extracted automatically, if the built-in knowledge base support is used, or provided directly alongside the query (see the [Getting Started Guide example](../getting_started/7_rag)).
 
 **IMPORTANT**: The performance of this rail is strongly dependent on the capability of the LLM to follow the instructions in the `self_check_facts` prompt.
 
@@ -295,7 +279,7 @@ define subflow self check facts
 
 To trigger the fact-fact checking rail for a bot message, you must set the `$check_facts` context variable to `True` before a bot message requiring fact-checking. This enables you to explicitly enable fact-checking only when needed (e.g. when answering an important question vs. chitchat).
 
-The example below will trigger the fact-checking output rail every time the bot responds to a question about the report (for a complete example, check out **TODO**: add link to example).
+The example below will trigger the fact-checking output rail every time the bot responds to a question about the report.
 
 ```colang
 define flow
@@ -556,31 +540,45 @@ If you want to implement a completely different sensitive data detection mechani
 
 This category of rails relies on 3rd party APIs for various guardrailing tasks.
 
-### ActiveFence Moderation
+### ActiveFence
 
-NeMo Guardrails supports using the [ActiveFence ActiveScore API](https://docs.activefence.com/index.html) as an input rail out-of-the-box (you need to have the `ACTIVE_FENCE_API_KEY` environment variable set).
+NeMo Guardrails supports using the [ActiveFence ActiveScore API](https://docs.activefence.com/index.html) as an input rail out-of-the-box (you need to have the `ACTIVEFENCE_API_KEY` environment variable set).
 
 ```yaml
 rails:
   input:
     flows:
       # The simplified version
-      - active fence moderation
+      - activefence moderation
 
       # The detailed version with individual risk scores
-      # - active fence moderation detailed
+      # - activefence moderation detailed
 ```
 
-The `active fence moderation` flow uses the maximum risk score with the 0.7 threshold to decide if the input should be allowed (i.e., if the risk score is above the threshold, it is considered a violation). The `active fence moderation detailed` has individual scores per category of violations.
+The `activefence moderation` flow uses the maximum risk score with an 0.85 threshold to decide if the input should be allowed or not (i.e., if the risk score is above the threshold, it is considered a violation). The `activefence moderation detailed` has individual scores per category of violation.
 
-To customize the scores, you have to overwrite the [default flows](../../nemoguardrails/library/active_fence/flows.co) in your config. For example, to change the threshold for `active fence moderation` you can add the following flow to your config:
+To customize the scores, you have to overwrite the [default flows](../../nemoguardrails/library/activefence/flows.co) in your config. For example, to change the threshold for `activefence moderation` you can add the following flow to your config:
 
 ```colang
-define subflow active fence moderation
+define subflow activefence moderation
   """Guardrail based on the maximum risk score."""
-  $result = execute call active fence api
+  $result = execute call activefence api
 
-  if $result.max_risk_score > 0.9
+  if $result.max_risk_score > 0.85
     bot inform cannot answer
     stop
+```
+
+ActiveFence’s ActiveScore API gives flexibility in controlling the behavior of various supported violations individually. To leverage that, you can use the violations dictionary (`violations_dict`), one of the outputs from the API, to set different thresholds for different violations. Below is an example of one such input moderation flow:
+
+```colang
+define flow activefence input moderation detailed
+  $result = execute call activefence api(text=$user_message)
+
+  if $result.violations.get("abusive_or_harmful.hate_speech", 0) > 0.8
+    bot inform cannot engage in abusive or harmful behavior
+    stop
+
+define bot inform cannot engage in abusive or harmful behavior
+  "I will not engage in any abusive or harmful behavior."
 ```
