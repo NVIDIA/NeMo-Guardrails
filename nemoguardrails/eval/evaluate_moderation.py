@@ -19,11 +19,11 @@ import os
 import tqdm
 
 from nemoguardrails import LLMRails
-from nemoguardrails.eval.utils import initialize_llm, load_dataset
+from nemoguardrails.eval.utils import load_dataset
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task
 from nemoguardrails.llm.taskmanager import LLMTaskManager
-from nemoguardrails.rails.llm.config import Model, RailsConfig
+from nemoguardrails.rails.llm.config import RailsConfig
 
 
 class ModerationRailsEvaluation:
@@ -44,10 +44,8 @@ class ModerationRailsEvaluation:
         """
         A moderation rails evaluation has the following parameters:
 
-        - config: the path to the config folder.
+        - config_path: the path to the config folder.
         - dataset_path: path to the dataset containing the prompts
-        - llm: the LLM provider to use
-        - model_name: the LLM model to use
         - num_samples: number of samples to evaluate
         - check_input: whether to evaluate the jailbreak rail
         - check_output: whether to evaluate the output moderation rail

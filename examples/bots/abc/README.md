@@ -22,3 +22,7 @@ I am a bot designed to answer employee questions about the ABC Company. I am kno
 ```
 
 To understand in more detail how this was built, check out the [Hello World Guide](../../../docs/getting_started/3_demo_use_case).
+
+## Evaluation results
+
+This guardrails configuration can be used for assessing the performance of moderation

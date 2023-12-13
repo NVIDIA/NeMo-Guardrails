@@ -22,11 +22,12 @@ import typer
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 
-from nemoguardrails.eval.utils import initialize_llm, load_dataset
+from nemoguardrails import LLMRails
+from nemoguardrails.eval.utils import load_dataset
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task
 from nemoguardrails.llm.taskmanager import LLMTaskManager
-from nemoguardrails.rails.llm.config import Model, RailsConfig
+from nemoguardrails.rails.llm.config import RailsConfig
 
 
 class FactCheckEvaluation:
@@ -35,9 +36,8 @@ class FactCheckEvaluation:
 
     def __init__(
         self,
+        config_path: str,
         dataset_path: str = "data/factchecking/sample.json",
-        llm: str = "openai",
-        model_name: str = "text-davinci-003",
         num_samples: int = 50,
         create_negatives: bool = True,
         output_dir: str = "outputs/factchecking",
@@ -45,6 +45,7 @@ class FactCheckEvaluation:
     ):
         """
         A fact checking evaluation has the following parameters:
+        - config_path: the path to the config folder.
         - dataset_path: path to the dataset containing the prompts
         - llm: the LLM provider to use
         - model_name: the LLM model to use
@@ -54,14 +55,15 @@ class FactCheckEvaluation:
         - write_outputs: whether to write the predictions to file
         """
 
+        self.config_path = config_path
         self.dataset_path = dataset_path
-        self.llm_provider = llm
-        self.model_config = Model(type="main", engine=llm, model=model_name)
-        self.rails_config = RailsConfig(models=[self.model_config])
+        self.rails_config = RailsConfig.from_path(self.config_path)
+        self.rails = LLMRails(self.rails_config)
+        self.llm = self.rails.llm
         self.llm_task_manager = LLMTaskManager(self.rails_config)
+
         self.create_negatives = create_negatives
         self.output_dir = output_dir
-        self.llm = initialize_llm(self.model_config)
         self.num_samples = num_samples
         self.dataset = load_dataset(self.dataset_path)[: self.num_samples]
         self.write_outputs = write_outputs
@@ -171,33 +173,28 @@ class FactCheckEvaluation:
         )
 
         print("---Time taken per sample:---")
-        print(
-            f"Ask LLM ({self.model_config.model}):\t{(pos_time+neg_time)*1000/(2*len(self.dataset)):.1f}ms"
-        )
+        print(f"Ask LLM:\t{(pos_time+neg_time)*1000/(2*len(self.dataset)):.1f}ms")
 
         if self.write_outputs:
             dataset_name = os.path.basename(self.dataset_path).split(".")[0]
             with open(
-                f"{self.output_dir}/{dataset_name}_{self.model_config.engine}_{self.model_config.model}_positive_fact_check_predictions.json",
+                f"{self.output_dir}/{dataset_name}_positive_fact_check_predictions.json",
                 "w",
             ) as f:
                 json.dump(positive_fact_check_predictions, f, indent=4)
 
             with open(
-                f"{self.output_dir}/{dataset_name}_{self.model_config.engine}_{self.model_config.model}_negative_fact_check_predictions.json",
+                f"{self.output_dir}/{dataset_name}_negative_fact_check_predictions.json",
                 "w",
             ) as f:
                 json.dump(negative_fact_check_predictions, f, indent=4)
 
 
 def main(
+    config: str,
     dataset_path: str = typer.Option(
         "./data/factchecking/sample.json",
         help="Path to the folder containing the dataset",
-    ),
-    llm: str = typer.Option("openai", help="LLM provider to be used for fact checking"),
-    model_name: str = typer.Option(
-        "gpt-3.5-turbo-instruct", help="Model name ex. gpt-3.5-turbo-instruct"
     ),
     num_samples: int = typer.Option(50, help="Number of samples to be evaluated"),
     create_negatives: bool = typer.Option(
@@ -212,9 +209,8 @@ def main(
     ),
 ):
     fact_check = FactCheckEvaluation(
+        config,
         dataset_path,
-        llm,
-        model_name,
         num_samples,
         create_negatives,
         output_dir,

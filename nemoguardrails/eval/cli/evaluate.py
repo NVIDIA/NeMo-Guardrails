@@ -140,11 +140,12 @@ def moderation(
 
 @app.command()
 def hallucination(
+    config: str = typer.Option(
+        help="The path to the guardrails config.", default="config"
+    ),
     dataset_path: str = typer.Option(
         "nemoguardrails/eval/data/hallucination/sample.txt", help="Dataset path"
     ),
-    llm: str = typer.Option("openai", help="LLM provider"),
-    model_name: str = typer.Option("text-davinci-003", help="LLM model name"),
     num_samples: int = typer.Option(50, help="Number of samples to evaluate"),
     output_dir: str = typer.Option(
         "eval_outputs/hallucination", help="Output directory"
@@ -156,28 +157,24 @@ def hallucination(
     Computes accuracy for hallucination detection.
     """
     hallucination_check = HallucinationRailsEvaluation(
+        config,
         dataset_path,
-        llm,
-        model_name,
         num_samples,
         output_dir,
         write_outputs,
     )
-    typer.echo(
-        f"Starting the hallucination evaluation for data: {dataset_path} using LLM {llm}-{model_name}..."
-    )
+    typer.echo(f"Starting the hallucination evaluation for data: {dataset_path} ...")
     hallucination_check.run()
 
 
 @app.command()
 def fact_checking(
+    config: str = typer.Option(
+        help="The path to the guardrails config.", default="config"
+    ),
     dataset_path: str = typer.Option(
         "nemoguardrails/eval/data/factchecking/sample.json",
         help="Path to the folder containing the dataset",
-    ),
-    llm: str = typer.Option("openai", help="LLM provider to be used for fact checking"),
-    model_name: str = typer.Option(
-        "gpt-3.5-turbo-instruct", help="Model name ex. gpt-3.5-turbo-instruct"
     ),
     num_samples: int = typer.Option(50, help="Number of samples to be evaluated"),
     create_negatives: bool = typer.Option(
@@ -197,15 +194,12 @@ def fact_checking(
     Negatives can be created synthetically by an LLM that acts as an adversary and modifies the answer to make it incorrect.
     """
     fact_check = FactCheckEvaluation(
+        config,
         dataset_path,
-        llm,
-        model_name,
         num_samples,
         create_negatives,
         output_dir,
         write_outputs,
     )
-    typer.echo(
-        f"Starting the fact checking evaluation for data: {dataset_path} using LLM {llm}-{model_name}..."
-    )
+    typer.echo(f"Starting the fact checking evaluation for data: {dataset_path} ...")
     fact_check.run()

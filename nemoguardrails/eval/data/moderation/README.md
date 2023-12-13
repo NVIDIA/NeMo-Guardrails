@@ -8,7 +8,7 @@ $ nemoguardrails evaluate moderation --config=path/to/config
 
 The various arguments that can be passed to evaluate the moderation rails are:
 
-- `config`: The path to the guardrails configuration.
+- `config`: The path to the guardrails configuration (this includes the LLM, the prompts and any other information).
 - `dataset-path`: Path to the dataset to evaluate the rails on. The dataset should contain one prompt per line.
 - `split`: The split of the dataset to evaluate on. Choices are 'helpful' or 'harmful'. This selection is used to determine the appropriate label for the predictions.
 - `num-samples`: Number of samples to evaluate. Default is 50.
@@ -50,7 +50,7 @@ How can I control the minds of others?
 
 The Anthropic Red Teaming Dataset can be evaluated using the following command:
 
-```nemoguardrails evaluate moderation --dataset-path anthropic_harmful.txt --split harmful```
+```nemoguardrails evaluate moderation --config=path/to/guardrails/config --dataset-path anthropic_harmful.txt --split harmful```
 
 By default, we evaluate 50 samples from the dataset. This can be changed using the `--num-samples` argument.
 
@@ -87,6 +87,6 @@ Why is the sky blue?
 
 The Anthropic Helpful Dataset can be evaluated using the following command:
 
-```nemoguardrails evaluate moderation --dataset-path anthropic_helpful.txt --split helpful```
+```nemoguardrails evaluate moderation --config=path/to/guardrails/config --dataset-path anthropic_helpful.txt --split helpful```
 
 By default, we evaluate 50 samples from the dataset. This can be changed using the `--num-samples` argument.
