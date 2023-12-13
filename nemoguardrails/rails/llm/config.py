@@ -25,6 +25,10 @@ from pydantic.fields import Field
 from nemoguardrails.language.coyml_parser import parse_flow_elements
 from nemoguardrails.language.parser import parse_colang_file
 
+# Load the default config values from the file
+with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
+    _default_config = yaml.safe_load(_fc)
+
 
 class Model(BaseModel):
     """Configuration of a model used by the rails engine.
@@ -60,6 +64,42 @@ class Document(BaseModel):
     content: str
 
 
+class SensitiveDataDetectionOptions(BaseModel):
+    entities: List[str] = Field(
+        default_factory=list,
+        description="The list of entities that should be detected. "
+        "Check out https://microsoft.github.io/presidio/supported_entities/ for"
+        "the list of supported entities.",
+    )
+    # TODO: this is not currently in use.
+    mask_token: str = Field(
+        default="*",
+        description="The token that should be used to mask the sensitive data.",
+    )
+
+
+class SensitiveDataDetection(BaseModel):
+    """Configuration of what sensitive data should be detected."""
+
+    recognizers: List[dict] = Field(
+        default_factory=list,
+        description="Additional custom recognizers. "
+        "Check out https://microsoft.github.io/presidio/tutorial/08_no_code/ for more details.",
+    )
+    input: SensitiveDataDetectionOptions = Field(
+        default_factory=SensitiveDataDetectionOptions,
+        description="Configuration of the entities to be detected on the user input.",
+    )
+    output: SensitiveDataDetectionOptions = Field(
+        default_factory=SensitiveDataDetectionOptions,
+        description="Configuration of the entities to be detected on the bot output.",
+    )
+    retrieval: SensitiveDataDetectionOptions = Field(
+        default_factory=SensitiveDataDetectionOptions,
+        description="Configuration of the entities to be detected on retrieved relevant chunks.",
+    )
+
+
 class MessageTemplate(BaseModel):
     """Template for a message structure."""
 
@@ -88,6 +128,14 @@ class TaskPrompt(BaseModel):
     output_parser: Optional[str] = Field(
         default=None,
         description="The name of the output parser to use for this prompt.",
+    )
+    max_length: Optional[int] = Field(
+        default=16000,
+        description="The maximum length of the prompt in number of characters.",
+    )
+    mode: Optional[str] = Field(
+        default=_default_config["prompting_mode"],
+        description="Corresponds to the `prompting_mode` for which this prompt is fetched. Default is 'standard'.",
     )
 
     @root_validator(pre=True, allow_reuse=True)
@@ -133,6 +181,111 @@ class CoreConfig(BaseModel):
     )
 
 
+class InputRails(BaseModel):
+    """Configuration of input rails."""
+
+    flows: List[str] = Field(
+        default_factory=list,
+        description="The names of all the flows that implement input rails.",
+    )
+
+
+class OutputRails(BaseModel):
+    """Configuration of output rails."""
+
+    flows: List[str] = Field(
+        default_factory=list,
+        description="The names of all the flows that implement output rails.",
+    )
+
+
+class RetrievalRails(BaseModel):
+    """Configuration of retrieval rails."""
+
+    flows: List[str] = Field(
+        default_factory=list,
+        description="The names of all the flows that implement retrieval rails.",
+    )
+
+
+class SingleCallConfig(BaseModel):
+    """Configuration for the single LLM call option for topical rails."""
+
+    enabled: bool = False
+    fallback_to_multiple_calls: bool = Field(
+        default=True,
+        description="Whether to fall back to multiple calls if a single call is not possible.",
+    )
+
+
+class UserMessagesConfig(BaseModel):
+    """Configuration for how the user messages are interpreted."""
+
+    embeddings_only: bool = Field(
+        default=False,
+        description="Whether to use only embeddings for computing the user canonical form messages.",
+    )
+
+
+class DialogRails(BaseModel):
+    """Configuration of topical rails."""
+
+    single_call: SingleCallConfig = Field(
+        default_factory=SingleCallConfig,
+        description="Configuration for the single LLM call option.",
+    )
+    user_messages: UserMessagesConfig = Field(
+        default_factory=UserMessagesConfig,
+        description="Configuration for how the user messages are interpreted.",
+    )
+
+
+class FactCheckingRailConfig(BaseModel):
+    """Configuration data for the fact-checking rail."""
+
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    fallback_to_self_check: bool = Field(
+        default=False,
+        description="Whether to fall back to self-check if another method fail.",
+    )
+
+
+class RailsConfigData(BaseModel):
+    """Configuration data for specific rails that are supported out-of-the-box."""
+
+    fact_checking: FactCheckingRailConfig = Field(
+        default_factory=FactCheckingRailConfig,
+        description="Configuration data for the fact-checking rail.",
+    )
+
+    sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
+        default_factory=SensitiveDataDetection,
+        description="Configuration for detecting sensitive data.",
+    )
+
+
+class Rails(BaseModel):
+    """Configuration of specific rails."""
+
+    config: RailsConfigData = Field(
+        default_factory=RailsConfigData,
+        description="Configuration data for specific rails that are supported out-of-the-box.",
+    )
+    input: InputRails = Field(
+        default_factory=InputRails, description="Configuration of the input rails."
+    )
+    output: OutputRails = Field(
+        default_factory=OutputRails, description="Configuration of the output rails."
+    )
+    retrieval: RetrievalRails = Field(
+        default_factory=RetrievalRails,
+        description="Configuration of the retrieval rails.",
+    )
+    dialog: DialogRails = Field(
+        default_factory=DialogRails, description="Configuration of the dialog rails."
+    )
+
+
 # Load the default config values from the file
 with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
     _default_config = yaml.safe_load(_fc)
@@ -175,6 +328,11 @@ def _join_config(dest_config: dict, additional_config: dict):
         "actions_server_url", None
     ) or additional_config.get("actions_server_url", None)
 
+    dest_config["sensitive_data_detection"] = {
+        **dest_config.get("sensitive_data_detection", {}),
+        **additional_config.get("sensitive_data_detection", {}),
+    }
+
     dest_config["embedding_search_provider"] = dest_config.get(
         "embedding_search_provider", {}
     ) or additional_config.get("embedding_search_provider", {})
@@ -184,8 +342,11 @@ def _join_config(dest_config: dict, additional_config: dict):
         "lowest_temperature",
         "enable_multi_step_generation",
         "custom_data",
+        "prompting_mode",
         "knowledge_base",
         "core",
+        "rails",
+        "streaming",
     ]
 
     for field in additional_fields:
@@ -243,6 +404,11 @@ class RailsConfig(BaseModel):
         description="The prompts that should be used for the various LLM tasks.",
     )
 
+    prompting_mode: Optional[str] = Field(
+        default=_default_config["prompting_mode"],
+        description="Allows choosing between different prompting strategies.",
+    )
+
     config_path: Optional[str] = Field(
         default=None, description="The path from which the configuration was loaded."
     )
@@ -275,6 +441,46 @@ class RailsConfig(BaseModel):
         default_factory=CoreConfig,
         description="Configuration for core internal mechanics.",
     )
+
+    rails: Rails = Field(
+        default_factory=Rails,
+        description="Configuration for the various rails (input, output, etc.).",
+    )
+
+    streaming: bool = Field(
+        default=False,
+        description="Whether this configuration should use streaming mode or not.",
+    )
+
+    @root_validator(pre=True, allow_reuse=True)
+    def check_prompt_exist_for_self_check_rails(cls, values):
+        rails = values.get("rails", {})
+
+        enabled_input_rails = rails.get("input", {}).get("flows", [])
+        enabled_output_rails = rails.get("output", {}).get("flows", [])
+        provided_task_prompts = [
+            prompt.get("task") for prompt in values.get("prompts", [])
+        ]
+
+        if (
+            "self check input" in enabled_input_rails
+            and "self_check_input" not in provided_task_prompts
+        ):
+            raise ValueError("You must provide a `self_check_input` prompt template.")
+
+        if (
+            "self check output" in enabled_output_rails
+            and "self_check_output" not in provided_task_prompts
+        ):
+            raise ValueError("You must provide a `self_check_output` prompt template.")
+
+        if (
+            "self check facts" in enabled_output_rails
+            and "self_check_facts" not in provided_task_prompts
+        ):
+            raise ValueError("You must provide a `self_check_facts` prompt template.")
+
+        return values
 
     @staticmethod
     def from_path(
@@ -369,9 +575,11 @@ class RailsConfig(BaseModel):
 
     @staticmethod
     def from_content(
-        colang_content: Optional[str] = None, yaml_content: Optional[str] = None
+        colang_content: Optional[str] = None,
+        yaml_content: Optional[str] = None,
+        config: Optional[dict] = None,
     ):
-        """Loads a configuration from the provided colang/YAML content."""
+        """Loads a configuration from the provided colang/YAML content/config dict."""
         raw_config = {}
 
         if colang_content:
@@ -381,6 +589,9 @@ class RailsConfig(BaseModel):
 
         if yaml_content:
             _join_config(raw_config, yaml.safe_load(yaml_content))
+
+        if config:
+            _join_config(raw_config, config)
 
         # If there are no instructions, we use the default ones.
         if len(raw_config.get("instructions", [])) == 0:
@@ -398,3 +609,14 @@ class RailsConfig(BaseModel):
                 flow_data["elements"] = parse_flow_elements(flow_data["elements"])
 
         return RailsConfig.parse_obj(obj)
+
+    @property
+    def streaming_supported(self):
+        """Whether the current config supports streaming or not.
+
+        Currently, we don't support streaming if there are output rails.
+        """
+        if len(self.rails.output.flows) > 0:
+            return False
+
+        return True

@@ -1,0 +1,12 @@
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003
+
+rails:
+  config:
+    fact_checking:
+      provider: "ask_llm"
+  output:
+    flows:
+      - check facts

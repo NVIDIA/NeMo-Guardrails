@@ -1,0 +1,14 @@
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003
+
+rails:
+  config:
+    fact_checking:
+      parameters:
+        endpoint: "http://localhost:5123/alignscore_base"
+
+  output:
+    flows:
+      - alignscore check facts

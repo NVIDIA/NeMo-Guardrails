@@ -25,7 +25,7 @@ nest_asyncio_patch_applied = False
 def apply():
     global nest_asyncio_patch_applied
 
-    if os.environ.get("DISABLE_NEST_ASYNCIO", "false").lower() not in [
+    if os.environ.get("DISABLE_NEST_ASYNCIO", "true").lower() not in [
         "true",
         "1",
         "yes",
@@ -40,6 +40,9 @@ def check_sync_call_from_async_loop():
     Returns
         True if a sync call is made from an async loop.
     """
+    if hasattr(asyncio, "_nest_patched"):
+        return False
+
     if nest_asyncio_patch_applied:
         return False
 

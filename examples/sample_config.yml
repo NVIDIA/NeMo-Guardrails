@@ -1,0 +1,42 @@
+models:
+  ...
+
+rails:
+  # Input rails are invoked when a new message is received.
+  input:
+    flows:
+      - self check input
+      - check sensitive data
+      - activefence moderation
+      - check toxicity
+      - some other moderation thing
+
+  # Topical rails are triggered after user message is interpreted, i.e., its canonical form
+  # has been computed.
+  dialog:
+    # Whether to try to use a single call
+    single_call:
+      enabled: False
+      # If a single call fails, whether to fall back to multiple LLM calls.
+      fallback_to_multiple_calls: True
+
+    user_messages:
+      # Whether to use only the embeddings when interpreting the user's message
+      embeddings_only: False
+
+  # Retrieval rails are invoked once `$relevant_chunks` are computed.
+  retrieval:
+    flows:
+      - check retrieval sensitive data
+
+  # Output rails are triggered after a bot message has been generated.
+  output:
+    enable_on_predefined_messages: false
+    flows:
+      - self check facts
+      - check hallucination
+      - activefence moderation
+      - check sensitive data
+
+  # Execution rails are triggered before and after an action is invoked
+  # TODO

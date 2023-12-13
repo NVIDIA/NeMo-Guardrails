@@ -20,8 +20,8 @@ from setuptools import find_packages, setup
 
 setup(
     name="nemoguardrails",
-    version="0.5.0",
-    packages=find_packages(),
+    version="0.6.0",
+    packages=find_packages(exclude=["qa", "tests"]),
     author="NVIDIA",
     author_email="nemoguardrails@nvidia.com",
     description="NeMo Guardrails is an open-source toolkit for easily adding "
@@ -35,7 +35,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/NVIDIA/NeMo-Guardrails",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
@@ -58,18 +58,18 @@ setup(
         ],
     },
     install_requires=[
-        "pydantic~=1.10.6",
+        "pydantic==1.10.9",
         "aiohttp==3.8.5",
-        "langchain==0.0.251",
+        "langchain==0.0.322",
         "requests>=2.31.0",
         "typer==0.7.0",
         "PyYAML~=6.0",
         "setuptools~=65.5.1",
         "annoy==1.17.3",
         "sentence-transformers==2.2.2",
-        "fastapi==0.96.0",
+        "fastapi==0.103.1",
         "starlette==0.27.0",
-        "uvicorn==0.22.0",
+        "uvicorn==0.23.2",
         "httpx==0.23.3",
         "simpleeval==0.9.13",
         "typing-extensions==4.5.0",
@@ -77,6 +77,23 @@ setup(
         "nest-asyncio==1.5.6",
     ],
     extras_require={
+        "dev": ["fastapi-utils==0.2.1", "watchdog==3.0.0"],
         "eval": ["tqdm~=4.65", "numpy~=1.24"],
+        "openai": ["openai==0.28.1"],
+        "sdd": [
+            "presidio-analyzer~=2.2.351",
+            "presidio-anonymizer~=2.2.351",
+            "spacy~=3.7.2",
+        ],
+        "all": [
+            "openai==0.28.1",
+            "tqdm~=4.65",
+            "numpy~=1.24",
+            "fastapi-utils==0.2.1",
+            "watchdog==3.0.0",
+            "presidio-analyzer~=2.2.351",
+            "presidio-anonymizer~=2.2.351",
+            "spacy~=3.7.2",
+        ],
     },
 )

@@ -35,8 +35,11 @@ def sync_wrapper(async_func):
     """Wrapper for the evaluate_topical_rails method which is async."""
 
     def wrapper(*args, **kwargs):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(async_func(*args, **kwargs))
+        try:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(async_func(*args, **kwargs))
+        except RuntimeError:
+            return asyncio.run(async_func(*args, **kwargs))
 
     return wrapper
 
@@ -132,7 +135,7 @@ class TopicalRailsEvaluation:
 
     def __init__(
         self,
-        config_path: str,
+        config: str,
         verbose: Optional[bool] = False,
         test_set_percentage: Optional[float] = 0.3,
         max_tests_per_intent: Optional[int] = 3,
@@ -159,7 +162,7 @@ class TopicalRailsEvaluation:
         - random_seed: Random seed used by the evaluation.
         - output_dir: Output directory for predictions.
         """
-        self.config_path = config_path
+        self.config_path = config
         self.verbose = verbose
         self.test_set_percentage = test_set_percentage
         self.max_tests_per_intent = max_tests_per_intent
@@ -287,7 +290,7 @@ class TopicalRailsEvaluation:
                         )
 
                     generated_bot_utterance = get_last_bot_utterance_event(new_events)[
-                        "content"
+                        "script"
                     ]
                     prediction["generated_bot_said"] = generated_bot_utterance
                     found_utterance = False

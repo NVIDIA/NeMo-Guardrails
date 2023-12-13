@@ -1,0 +1,18 @@
+models:
+  - type: main
+    engine: openai
+    model: text-davinci-003
+
+prompting_mode: compact
+
+rails:
+  dialog:
+    # Whether to try to use a single call
+    single_call:
+      enabled: False
+      # If a single call fails, whether to fall back to multiple LLM calls.
+      fallback_to_multiple_calls: False
+
+    user_messages:
+      # Whether to use only the embeddings when interpreting the user's message
+      embeddings_only: False

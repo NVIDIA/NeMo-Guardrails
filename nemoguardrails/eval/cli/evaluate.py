@@ -89,7 +89,7 @@ def topical(
     typer.echo(f"Starting the evaluation for app: {config[0]}...")
 
     topical_eval = TopicalRailsEvaluation(
-        config_path=config[0],
+        config=config[0],
         verbose=verbose,
         test_set_percentage=test_percentage,
         max_samples_per_intent=max_samples_intent,
@@ -104,19 +104,16 @@ def topical(
 
 @app.command()
 def moderation(
+    config: str = typer.Option(
+        help="The path to the guardrails config.", default="config"
+    ),
     dataset_path: str = typer.Option(
         "nemoguardrails/eval/data/moderation/harmful.txt",
         help="Path to dataset containing prompts",
     ),
-    llm: str = typer.Option("openai", help="LLM provider ex. OpenAI"),
-    model_name: str = typer.Option(
-        "text-davinci-003", help="LLM model ex. text-davinci-003"
-    ),
     num_samples: int = typer.Option(50, help="Number of samples to evaluate"),
-    check_jailbreak: bool = typer.Option(True, help="Evaluate jailbreak rail"),
-    check_output_moderation: bool = typer.Option(
-        True, help="Evaluate output moderation rail"
-    ),
+    check_input: bool = typer.Option(True, help="Evaluate input self-check rail"),
+    check_output: bool = typer.Option(True, help="Evaluate output self-check rail"),
     output_dir: str = typer.Option(
         "eval_outputs/moderation", help="Output directory for predictions"
     ),
@@ -128,29 +125,27 @@ def moderation(
     Computes accuracy for jailbreak detection and output moderation.
     """
     moderation_check = ModerationRailsEvaluation(
+        config,
         dataset_path,
-        llm,
-        model_name,
         num_samples,
-        check_jailbreak,
-        check_output_moderation,
+        check_input,
+        check_output,
         output_dir,
         write_outputs,
         split,
     )
-    typer.echo(
-        f"Starting the moderation evaluation for data: {dataset_path} using LLM {llm}-{model_name}..."
-    )
+    typer.echo(f"Starting the moderation evaluation for data: {dataset_path} ...")
     moderation_check.run()
 
 
 @app.command()
 def hallucination(
+    config: str = typer.Option(
+        help="The path to the guardrails config.", default="config"
+    ),
     dataset_path: str = typer.Option(
         "nemoguardrails/eval/data/hallucination/sample.txt", help="Dataset path"
     ),
-    llm: str = typer.Option("openai", help="LLM provider"),
-    model_name: str = typer.Option("text-davinci-003", help="LLM model name"),
     num_samples: int = typer.Option(50, help="Number of samples to evaluate"),
     output_dir: str = typer.Option(
         "eval_outputs/hallucination", help="Output directory"
@@ -162,31 +157,27 @@ def hallucination(
     Computes accuracy for hallucination detection.
     """
     hallucination_check = HallucinationRailsEvaluation(
+        config,
         dataset_path,
-        llm,
-        model_name,
         num_samples,
         output_dir,
         write_outputs,
     )
-    typer.echo(
-        f"Starting the hallucination evaluation for data: {dataset_path} using LLM {llm}-{model_name}..."
-    )
+    typer.echo(f"Starting the hallucination evaluation for data: {dataset_path} ...")
     hallucination_check.run()
 
 
 @app.command()
 def fact_checking(
+    config: str = typer.Option(
+        help="The path to the guardrails config.", default="config"
+    ),
     dataset_path: str = typer.Option(
         "nemoguardrails/eval/data/factchecking/sample.json",
         help="Path to the folder containing the dataset",
     ),
-    llm: str = typer.Option("openai", help="LLM provider to be used for fact checking"),
-    model_name: str = typer.Option(
-        "text-davinci-003", help="Model name ex. text-davinci-003"
-    ),
     num_samples: int = typer.Option(50, help="Number of samples to be evaluated"),
-    create_negatives: bool = typer.Argument(
+    create_negatives: bool = typer.Option(
         True, help="create synthetic negative samples"
     ),
     output_dir: str = typer.Option(
@@ -203,15 +194,12 @@ def fact_checking(
     Negatives can be created synthetically by an LLM that acts as an adversary and modifies the answer to make it incorrect.
     """
     fact_check = FactCheckEvaluation(
+        config,
         dataset_path,
-        llm,
-        model_name,
         num_samples,
         create_negatives,
         output_dir,
         write_outputs,
     )
-    typer.echo(
-        f"Starting the fact checking evaluation for data: {dataset_path} using LLM {llm}-{model_name}..."
-    )
+    typer.echo(f"Starting the fact checking evaluation for data: {dataset_path} ...")
     fact_check.run()

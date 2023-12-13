@@ -14,11 +14,7 @@
 # limitations under the License.
 
 import logging
-import random
 from typing import Optional
-
-from langchain import LLMChain, PromptTemplate
-from langchain.llms import BaseLLM
 
 from nemoguardrails.actions.actions import ActionResult, action
 from nemoguardrails.kb.kb import KnowledgeBase
@@ -34,11 +30,15 @@ async def retrieve_relevant_chunks(
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     user_message = context.get("last_user_message")
     context_updates = {}
-    context_updates["relevant_chunks"] = ""
+
     if user_message and kb:
+        context_updates["relevant_chunks"] = ""
         chunks = await kb.search_relevant_chunks(user_message)
         relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
         context_updates["relevant_chunks"] = relevant_chunks
+    else:
+        # No KB is set up, we keep the existing relevant_chunks if we have them.
+        context_updates["relevant_chunks"] = context.get("relevant_chunks", "") + "\n"
 
     return ActionResult(
         return_value=context_updates["relevant_chunks"],

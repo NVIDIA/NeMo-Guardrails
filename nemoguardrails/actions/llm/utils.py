@@ -14,22 +14,44 @@
 # limitations under the License.
 
 import re
-from typing import List, Union
+from typing import List, Optional, Union
 
 from langchain.base_language import BaseLanguageModel
+from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackManager
 from langchain.prompts.base import StringPromptValue
 from langchain.prompts.chat import ChatPromptValue
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
 
+from nemoguardrails.context import llm_call_info_var
 from nemoguardrails.logging.callbacks import logging_callbacks
+from nemoguardrails.logging.explain import LLMCallInfo
 
 
-async def llm_call(llm: BaseLanguageModel, prompt: Union[str, List[dict]]) -> str:
+async def llm_call(
+    llm: BaseLanguageModel,
+    prompt: Union[str, List[dict]],
+    stop: Optional[List[str]] = None,
+    custom_callback_handlers: Optional[List[AsyncCallbackHandler]] = None,
+) -> str:
     """Calls the LLM with a prompt and returns the generated text."""
+
+    # We initialize a new LLM call if we don't have one already
+    llm_call_info = llm_call_info_var.get()
+    if llm_call_info is None:
+        llm_call_info = LLMCallInfo()
+        llm_call_info_var.set(llm_call_info)
+
+    if custom_callback_handlers and custom_callback_handlers != [None]:
+        all_callbacks = BaseCallbackManager(
+            handlers=logging_callbacks.handlers + custom_callback_handlers,
+            inheritable_handlers=logging_callbacks.handlers + custom_callback_handlers,
+        )
+    else:
+        all_callbacks = logging_callbacks
 
     if isinstance(prompt, str):
         result = await llm.agenerate_prompt(
-            [StringPromptValue(text=prompt)], callbacks=logging_callbacks
+            [StringPromptValue(text=prompt)], callbacks=all_callbacks, stop=stop
         )
 
         # TODO: error handling
@@ -47,7 +69,7 @@ async def llm_call(llm: BaseLanguageModel, prompt: Union[str, List[dict]]) -> st
             else:
                 raise ValueError(f"Unknown message type {_msg['type']}")
         result = await llm.agenerate_prompt(
-            [ChatPromptValue(messages=messages)], callbacks=logging_callbacks
+            [ChatPromptValue(messages=messages)], callbacks=all_callbacks, stop=stop
         )
 
         return result.generations[0][0].text
@@ -84,8 +106,8 @@ def get_colang_history(
         last_bot_intent_idx -= 1
 
     for idx, event in enumerate(events):
-        if event["type"] == "UtteranceUserActionFinished" and include_texts:
-            history += f'user "{event["final_transcript"]}"\n'
+        if event["type"] == "UserMessage" and include_texts:
+            history += f'user "{event["text"]}"\n'
         elif event["type"] == "UserIntent":
             if include_texts:
                 history += f'  {event["intent"]}\n'
@@ -165,8 +187,8 @@ def flow_to_colang(flow: dict):
 def get_last_user_utterance(events: List[dict]):
     """Returns the last user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "UtteranceUserActionFinished":
-            return event["final_transcript"]
+        if event["type"] == "UserMessage":
+            return event["text"]
 
     return None
 
@@ -174,7 +196,7 @@ def get_last_user_utterance(events: List[dict]):
 def get_retrieved_relevant_chunks(events: List[dict]):
     """Returns the retrieved chunks for current user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "UtteranceUserActionFinished":
+        if event["type"] == "UserMessage":
             break
         if event["type"] == "ContextUpdate" and "relevant_chunks" in event.get(
             "data", {}
@@ -187,7 +209,7 @@ def get_retrieved_relevant_chunks(events: List[dict]):
 def get_last_user_utterance_event(events: List[dict]):
     """Returns the last user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "UtteranceUserActionFinished":
+        if event["type"] == "UserMessage":
             return event
 
     return None
@@ -202,10 +224,19 @@ def get_last_user_intent_event(events: List[dict]):
     return None
 
 
+def get_last_bot_intent_event(events: List[dict]):
+    """Returns the last user intent from the events."""
+    for event in reversed(events):
+        if event["type"] == "BotIntent":
+            return event
+
+    return None
+
+
 def get_last_bot_utterance_event(events: List[dict]):
     """Returns the last bot utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "StartInternalSystemAction":
+        if event["type"] == "StartUtteranceBotAction":
             return event
 
     return None
@@ -248,6 +279,20 @@ def get_first_nonempty_line(s: str):
             break
 
     return first_nonempty_line
+
+
+def get_top_k_nonempty_lines(s: str, k: int = 1):
+    """Helper that returns a list with the top k non-empty lines from a string.
+
+    If there are less than k non-empty lines, it returns a smaller number of lines."""
+    if not s:
+        return None
+
+    lines = [line.strip() for line in s.split("\n")]
+    # Ignore line comments and empty lines
+    lines = [line for line in lines if len(line) > 0 and line[0] != "#"]
+
+    return lines[:k]
 
 
 def strip_quotes(s: str):

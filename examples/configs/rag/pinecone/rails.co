@@ -1,0 +1,30 @@
+define user express greeting
+  "hi"
+  "hello"
+
+define bot express greeting
+  "Hello there!"
+
+define user ask question
+  "What does Nvidia do?"
+  "Who is the CEO of Nvidia?"
+
+define flow
+  user express greeting
+  bot express greeting
+
+define flow
+  user ask question
+  # Extract the full user query based on previous turns
+  $full_user_query = ...
+  $answer = execute answer_question_with_sources(query=$full_user_query)
+  bot $answer
+
+define user request summarization
+  "Can you summarize this conversation for me?"
+  "Summarize all these answers for me."
+
+define flow
+  user request summarization
+  # Summarize all the conversation and print
+  bot answer

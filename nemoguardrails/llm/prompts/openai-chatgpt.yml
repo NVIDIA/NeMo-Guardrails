@@ -6,7 +6,7 @@ prompts:
       - openai/gpt-4
     messages:
       - type: system
-        content: "{{ general_instruction }}"
+        content: "{{ general_instructions }}"
 
       - type: system
         content: "This is how a conversation between a user and the bot can go:"
@@ -26,13 +26,30 @@ prompts:
 
     output_parser: "user_intent"
 
+  - task: generate_user_intent
+    models:
+      - openai/gpt-3.5-turbo
+      - openai/gpt-4
+    messages:
+      - type: system
+        content: "{{ general_instructions }}"
+
+      - type: system
+        content: "This is the current conversation between the user and the bot:"
+
+      - "{{ sample_conversation | first_turns(2) | to_messages }}"
+      - "{{ history | colang | to_messages }}"
+
+    mode: compact
+    output_parser: "user_intent"
+
   - task: generate_next_steps
     models:
       - openai/gpt-3.5-turbo
       - openai/gpt-4
     messages:
       - type: system
-        content: "{{ general_instruction }}"
+        content: "{{ general_instructions }}"
 
       - type: system
         content: "This is how a conversation between a user and the bot can go:"
@@ -58,7 +75,7 @@ prompts:
       - openai/gpt-4
     messages:
       - type: system
-        content: "{{ general_instruction }}"
+        content: "{{ general_instructions }}"
 
       - type: system
         content: "This is how a conversation between a user and the bot can go:"
@@ -93,7 +110,7 @@ prompts:
       - openai/gpt-4
     messages:
       - type: system
-        content: "{{ general_instruction }}"
+        content: "{{ general_instructions }}"
 
       - type: system
         content: "This is how a conversation between a user and the bot can go:"

@@ -1,0 +1,15 @@
+models:
+  - type: main
+    engine: nemollm
+    model: gpt-43b-002
+
+rails:
+  config:
+    fact_checking:
+      parameters:
+        endpoint: "http://localhost:5000/alignscore_base"
+      fallback_to_self_check: True
+
+  output:
+    flows:
+      - check facts

@@ -46,8 +46,17 @@ class ActionDispatcher:
         if load_all_actions:
             # TODO: check for better way to find actions dir path or use constants.py
 
-            # First, we load all actions from the library
+            # First, we load all actions from the actions folder
             self.load_actions_from_path(os.path.join(os.path.dirname(__file__), ".."))
+
+            # Next, we load all actions from the library folder
+            library_path = os.path.join(os.path.dirname(__file__), "../library")
+
+            for root, dirs, files in os.walk(library_path):
+                # We only load the actions if there is an `actions` sub-folder or
+                # an `actions.py` file.
+                if "actions" in dirs or "actions.py" in files:
+                    self.load_actions_from_path(root)
 
             # Next, we load all actions from the current working directory
             # TODO: add support for an explicit ACTIONS_PATH
@@ -133,7 +142,9 @@ class ActionDispatcher:
                 try:
                     # We support both functions and classes as actions
                     if inspect.isfunction(fn) or inspect.ismethod(fn):
-                        result = await fn(**params)
+                        result = fn(**params)
+                        if inspect.iscoroutine(result):
+                            result = await result
                     elif isinstance(fn, Chain):
                         try:
                             chain = fn

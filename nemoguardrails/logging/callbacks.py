@@ -23,6 +23,8 @@ from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackManager
 from langchain.callbacks.manager import AsyncCallbackManagerForChainRun
 from langchain.schema import AgentAction, AgentFinish, BaseMessage, LLMResult
 
+from nemoguardrails.context import explain_info_var, llm_call_info_var
+from nemoguardrails.logging.explain import LLMCallInfo
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.logging.verbose import Styles
 
@@ -45,8 +47,22 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Run when LLM starts running."""
+        # We initialize a new LLM call if we don't have one already. This can happen
+        # when a chain is used directly.
+        llm_call_info = llm_call_info_var.get()
+        if llm_call_info is None:
+            llm_call_info = LLMCallInfo()
+            llm_call_info_var.set(llm_call_info)
+
+        # We also add it to the explain object
+        explain_info = explain_info_var.get()
+        if explain_info:
+            explain_info.llm_calls.append(llm_call_info)
+
         log.info("Invocation Params :: %s", kwargs.get("invocation_params", {}))
         log.info("Prompt :: %s", prompts[0])
+        llm_call_info.prompt = prompts[0]
+
         self.last_prompt_timestamp = time()
         llm_stats.inc("total_calls")
 
@@ -60,6 +76,12 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         """Run when a chat model starts running."""
+        # We initialize a new LLM call if we don't have one already. This can happen
+        # when a chain is used directly.
+        llm_call_info = llm_call_info_var.get()
+        if llm_call_info is None:
+            llm_call_info = LLMCallInfo()
+            llm_call_info_var.set(llm_call_info)
 
         prompt = "\n" + "\n".join(
             [
@@ -80,6 +102,7 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
 
         log.info("Invocation Params :: %s", kwargs.get("invocation_params", {}))
         log.info("Prompt Messages :: %s", prompt)
+        llm_call_info.prompt = prompt
         self.last_prompt_timestamp = time()
         llm_stats.inc("total_calls")
 
@@ -107,6 +130,10 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
     ) -> None:
         """Run when LLM ends running."""
         log.info("Completion :: %s", response.generations[0][0].text)
+        llm_call_info = llm_call_info_var.get()
+        if llm_call_info is None:
+            llm_call_info = LLMCallInfo()
+        llm_call_info.completion = response.generations[0][0].text
 
         # If there are additional completions, we show them as well
         if len(response.generations[0]) > 1:
@@ -118,15 +145,19 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
         took = time() - self.last_prompt_timestamp
         log.info("--- :: LLM call took %.2f seconds", took)
         llm_stats.inc("total_time", took)
+        llm_call_info.duration = took
 
         # Update the token usage stats as well
         if response.llm_output:
             token_usage = response.llm_output.get("token_usage", {})
             llm_stats.inc("total_tokens", token_usage.get("total_tokens", 0))
+            llm_call_info.total_tokens = token_usage.get("total_tokens", 0)
             llm_stats.inc("total_prompt_tokens", token_usage.get("prompt_tokens", 0))
+            llm_call_info.prompt_tokens = token_usage.get("prompt_tokens", 0)
             llm_stats.inc(
                 "total_completion_tokens", token_usage.get("completion_tokens", 0)
             )
+            llm_call_info.completion_tokens = token_usage.get("completion_tokens", 0)
 
     async def on_llm_error(
         self,

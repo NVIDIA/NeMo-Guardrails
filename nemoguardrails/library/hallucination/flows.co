@@ -1,0 +1,27 @@
+define bot inform answer unknown
+  "I don't know the answer that."
+
+define flow hallucination warning
+  """Warning rail for hallucination."""
+  bot ...
+  if $hallucination_warning == True
+    $is_hallucination = execute check_hallucination
+    $hallucination_warning = False
+
+    if $is_hallucination
+      bot inform answer prone to hallucination
+
+define bot inform answer prone to hallucination
+  "The previous answer is prone to hallucination and may not be accurate. Please double check the answer using additional sources."
+  "The above response may have been hallucinated, and should be independently verified."
+
+
+define subflow check hallucination
+  """Output rail for checking hallucinations."""
+  if $check_hallucination == True
+    $is_hallucination = execute check_hallucination
+    $check_hallucination = False
+
+    if $is_hallucination
+      bot inform answer unknown
+      stop

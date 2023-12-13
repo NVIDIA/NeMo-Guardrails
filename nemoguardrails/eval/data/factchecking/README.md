@@ -1,14 +1,13 @@
-## Fact Checking Rail
+# Running the Evaluation for Fact-Checking Rails
 
-To run the fact checking rail, you can use the following command:
+To run the fact-checking rail, you can use the following command:
 
-```nemoguardrails evaluate fact-checking```
+```nemoguardrails evaluate fact-checking --config=path/to/guardrails/config```
 
 Here is a list of arguments that you can use to configure the fact checking rail:
 
+- `config`: The path to the guardrails configuration (this includes the LLM, the prompts and any other information).
 - `dataset-path`: Path to the dataset.
-- `llm`: The LLM provider to use. Default is openai.
-- `model-name`: The name of the model to use. Default is text-davinci-003.
 - `num-samples`: Number of samples to run the eval on. Default is 50.
 - `create-negatives`: Whether to generate synthetic negative examples or not. Default is True.
 - `output-dir`: The directory to save the output to. Default is eval_outputs/factchecking.
@@ -50,7 +49,7 @@ By changing small details like the blood pressure value in the answer, the model
 
 In case you already have negative samples in your dataset, you can set the `create-negatives` flag to `False` and we will not generate synthetic negatives.
 
-```nemoguardrails evaluate fact-checking --create-negatives False```
+```nemoguardrails evaluate fact-checking --config=path/to/guardrails/config --create-negatives False```
 
 ## Using the MSMARCO Dataset
 
@@ -77,4 +76,4 @@ This will save the dataset to `msmarco.json`. An example from the dataset is sho
 
 You can then use this file to evaluate the fact checking rail.
 
-```nemoguardrails evaluate fact-checking --dataset-path msmarco.json```
+```nemoguardrails evaluate fact-checking --config=path/to/guardrails/config --dataset-path msmarco.json```
