@@ -21,7 +21,7 @@ from setuptools import find_packages, setup
 setup(
     name="nemoguardrails",
     version="0.6.0",
-    packages=find_packages(),
+    packages=find_packages(exclude=["qa", "tests"]),
     author="NVIDIA",
     author_email="nemoguardrails@nvidia.com",
     description="NeMo Guardrails is an open-source toolkit for easily adding "
