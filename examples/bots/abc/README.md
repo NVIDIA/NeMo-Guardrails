@@ -37,4 +37,4 @@ To understand in more detail how this was built, check out the [Hello World Guid
 
 ## Security Evaluation
 
-**TODO**: add `garak` scan results.
+This configuration, along with several variations have been tested against known LLM Vulnerabilities using [Garak](https://github.com/leondz/garak/). Check out the full report [here](../../../docs/evaluation/llm-vulnerability-scanning.md).

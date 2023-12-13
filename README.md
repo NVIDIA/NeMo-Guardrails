@@ -48,6 +48,14 @@ Key benefits of adding *programmable guardrails* include:
 
 - **Controllable dialog**: you can steer the LLM to follow pre-defined conversational paths, allowing you to design the interaction following conversation design best practices and enforce standard operating procedures (e.g., authentication, support).
 
+### Protecting against LLM Vulnerabilities
+
+NeMo Guardrails provides several mechanisms for protecting an LLM-powered chat application against common LLM vulnerabilities, such as jailbreaks and prompt injections. Below is a sample overview of the protection offered by different guardrails configuration for the example [ABC Bot](./examples/bots/abc) included in this repository. For more details, please refer to the [LLM Vulnerability Scanning](./docs/evaluation/llm-vulnerability-scanning.md) page.
+
+<div align="center">
+<img src="docs/_assets/images/abc-llm-vulnerability-scan-results.png" width="750">
+</div>
+
 
 ### Use Cases
 
@@ -254,6 +262,7 @@ Evaluating the safety of a LLM-based conversational application is a complex tas
 
 1. An [evaluation tool](./nemoguardrails/eval/README.md), i.e. `nemoguardrails evaluate`, with support for topical rails, fact-checking, moderation (jailbreak and output moderation) and hallucination.
 2. An experimental [red-teaming interface](docs/security/red-teaming.md).
+3. Sample LLM Vulnerability Scanning Reports, e.g, [ABC Bot - LLM Vulnerability Scan Results](./docs/evaluation/llm-vulnerability-scanning.md)
 
 
 ## How is this different?
