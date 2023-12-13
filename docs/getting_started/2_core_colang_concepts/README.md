@@ -2,6 +2,22 @@
 
 This guide builds on the previous [Hello World guide](../1_hello_world/README.md) and introduces the core Colang concepts you should understand to get started with NeMo Guardrails.
 
+## Prerequisites
+
+Set up an OpenAI API key, if not already set.
+
+```bash
+export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+```
+
+If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+
+```python
+import nest_asyncio
+
+nest_asyncio.apply()
+```
+
 ## What is Colang?
 
 Colang is a modeling language for conversational applications. Using Colang you can design how the conversation between a user and a **bot** should happen.
