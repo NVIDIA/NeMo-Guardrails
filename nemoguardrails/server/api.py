@@ -71,7 +71,7 @@ if ENABLE_CORS:
 
 # By default, we use the rails in the examples folder
 app.rails_config_path = os.path.join(
-    os.path.dirname(__file__), "..", "..", "examples", "_deprecated"
+    os.path.dirname(__file__), "..", "..", "examples", "bots"
 )
 
 # Weather the chat UI is enabled or not.

@@ -40,7 +40,7 @@ EXPOSE 8000
 
 # We copy the topical/moderation/etc. examples
 WORKDIR /config
-COPY ./examples/_deprecated /config
+COPY ./examples/bots /config
 
 # Run app.py when the container launches
 WORKDIR /nemoguardrails

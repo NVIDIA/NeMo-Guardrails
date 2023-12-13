@@ -23,9 +23,8 @@ The [`examples` folder](../examples) contains multiple examples that showcase a 
 
 * [Bots](../examples/bots): This section includes two example configurations.
   * [HelloWorldBot](../examples/bots/hello_world): This basic configuration instructs the bot to greet the user using "Hello World!" and to not talk about politics or the stock market.
-  * [InfoBot](../examples/bots/info): This more complex configuration includes topical rails, input and output moderation, retrieval augmented generation, fact-checking and hallucination detection.
+  * [ABCBot](../examples/bots/abc): This more complex configuration includes topical rails, input and output moderation and retrieval augmented generation.
 * [Configs](../examples/configs): These example configurations showcase specific NeMo Guardrails features, e.g., how to use various LLM providers, Retrieval Augmented Generation, streaming, red-teaming, authentication, etc.
-* [Notebooks](../examples/notebooks): These notebooks provide additional examples using Jupyter notebooks, e.g., creating a Pincone index that you can use with NeMo Guardrails.
 * [Scripts](../examples/scripts): These short scripts showcase various aspects of the main Python API.
 
 

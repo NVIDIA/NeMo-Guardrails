@@ -19,7 +19,7 @@ import pytest
 from aioresponses import aioresponses
 
 from nemoguardrails import RailsConfig
-from nemoguardrails.actions.actions import ActionResult
+from nemoguardrails.actions.actions import ActionResult, action
 from tests.constants import NEMO_API_URL_GPT_43B_002
 from tests.utils import TestChat
 
@@ -33,6 +33,7 @@ def build_kb():
     return content
 
 
+@action(is_system_action=True)
 async def retrieve_relevant_chunks():
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     context_updates = {}
@@ -93,7 +94,7 @@ async def test_fact_checking_correct(httpx_mock):
         # Fact-checking using AlignScore
         m.post(
             "http://localhost:5000/alignscore_base",
-            payload=0.82,
+            payload={"alignscore": 0.82},
         )
 
         # Succeeded, no more generations needed
@@ -125,26 +126,16 @@ async def test_fact_checking_wrong(httpx_mock):
         },
     )
 
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": "The fact-checking rail failed. Sorry, I don't know the answer to this question"
-        },
-    )
-
     with aioresponses() as m:
         # Fact-checking using AlignScore
         m.post(
             "http://localhost:5000/alignscore_base",
-            payload=0.01,
+            payload={"alignscore": 0.01},
         )
 
         chat >> "What is NeMo Guardrails?"
 
-        await chat.bot_async(
-            "The fact-checking rail failed. Sorry, I don't know the answer to this question"
-        )
+        await chat.bot_async("I don't know the answer that.")
 
 
 @pytest.mark.asyncio
@@ -168,33 +159,22 @@ async def test_fact_checking_uncertain(httpx_mock):
         },
     )
 
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": (
-                "NeMo Guardrails is an open-source toolkit for adding safeguards to conversational systems.\n"
-                + "Attention: the answer above is potentially inaccurate."
-            )
-        },
-    )
-
     with aioresponses() as m:
         ## Fact-checking using AlignScore
         m.post(
             "http://localhost:5000/alignscore_base",
-            payload=0.58,
+            payload={"alignscore": 0.58},
         )
 
         chat >> "What is NeMo Guardrails?"
         await chat.bot_async(
-            "NeMo Guardrails is an open-source toolkit for adding safeguards to conversational systems.\n"
+            "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia.\n"
             + "Attention: the answer above is potentially inaccurate."
         )
 
 
 @pytest.mark.asyncio
-async def test_fact_checking_fallback_to_ask_llm_correct(httpx_mock):
+async def test_fact_checking_fallback_to_self_check_correct(httpx_mock):
     # Test 4 - Factual statement - AlignScore endpoint not set up properly, use ask llm for fact-checking
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
     chat = TestChat(config)
@@ -234,7 +214,7 @@ async def test_fact_checking_fallback_to_ask_llm_correct(httpx_mock):
 
 
 @pytest.mark.asyncio
-async def test_fact_checking_fallback_to_ask_llm_wrong(httpx_mock):
+async def test_fact_checking_fallback_self_check_wrong(httpx_mock):
     # Test 5 - Factual statement - AlignScore endpoint not set up properly, use ask llm for fact-checking
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
     chat = TestChat(config)
@@ -260,14 +240,6 @@ async def test_fact_checking_fallback_to_ask_llm_wrong(httpx_mock):
         json={"text": "no"},
     )
 
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": "The fact-checking rail failed. Sorry, I don't know the answer to this question"
-        },
-    )
-
     with aioresponses() as m:
         # Fact-checking using AlignScore
         m.post(
@@ -276,6 +248,4 @@ async def test_fact_checking_fallback_to_ask_llm_wrong(httpx_mock):
         )
 
         chat >> "What is NeMo Guardrails?"
-        await chat.bot_async(
-            "The fact-checking rail failed. Sorry, I don't know the answer to this question"
-        )
+        await chat.bot_async("I don't know the answer that.")

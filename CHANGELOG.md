@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Unreleased
+## [0.6.0] - 2023-12-13
 
 ### Added
 
@@ -36,7 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Upgraded dependencies.
 - Updated the [Getting Started Guide](./docs/getting_started).
 - Main [README](./README.md) now provides more details.
-- Merged original examples into a single [Info Bot](./examples/bots/info) and [deprecated](./examples/_deprecated) the original ones.
+- Merged original examples into a single [ABC Bot](./examples/bots/abc) and removed the original ones.
 - Documentation improvements.
 
 ### Fixed

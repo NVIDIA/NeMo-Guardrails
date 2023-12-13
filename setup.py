@@ -20,8 +20,8 @@ from setuptools import find_packages, setup
 
 setup(
     name="nemoguardrails",
-    version="0.6.0-rc2",
-    packages=find_packages(),
+    version="0.6.0",
+    packages=find_packages(exclude=["qa", "tests"]),
     author="NVIDIA",
     author_email="nemoguardrails@nvidia.com",
     description="NeMo Guardrails is an open-source toolkit for easily adding "
@@ -35,7 +35,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/NVIDIA/NeMo-Guardrails",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",

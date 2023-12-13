@@ -6,10 +6,9 @@ models:
 rails:
   config:
     fact_checking:
-      provider: "align_score"
       parameters:
         endpoint: "http://localhost:5123/alignscore_base"
 
   output:
     flows:
-      - check facts
+      - alignscore check facts

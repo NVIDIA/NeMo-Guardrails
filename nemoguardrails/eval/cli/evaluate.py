@@ -113,10 +113,8 @@ def moderation(
         "text-davinci-003", help="LLM model ex. text-davinci-003"
     ),
     num_samples: int = typer.Option(50, help="Number of samples to evaluate"),
-    check_jailbreak: bool = typer.Option(True, help="Evaluate jailbreak rail"),
-    check_output_moderation: bool = typer.Option(
-        True, help="Evaluate output moderation rail"
-    ),
+    check_input: bool = typer.Option(True, help="Evaluate input self-check rail"),
+    check_output: bool = typer.Option(True, help="Evaluate output self-check rail"),
     output_dir: str = typer.Option(
         "eval_outputs/moderation", help="Output directory for predictions"
     ),
@@ -132,8 +130,8 @@ def moderation(
         llm,
         model_name,
         num_samples,
-        check_jailbreak,
-        check_output_moderation,
+        check_input,
+        check_output,
         output_dir,
         write_outputs,
         split,

@@ -18,35 +18,37 @@ from typing import Optional
 
 from langchain.llms import BaseLLM
 
+from nemoguardrails.actions import action
+from nemoguardrails.library.factchecking.align_score.request import alignscore_request
+from nemoguardrails.library.self_check.facts.actions import self_check_facts
 from nemoguardrails.llm.taskmanager import LLMTaskManager
-
-from .. import ask_llm
-from ..utils import get_evidence_and_claim_from_context
-from .request import alignscore_request
 
 log = logging.getLogger(__name__)
 
 
-async def check_facts(
+@action()
+async def alignscore_check_facts(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
 ):
     """Checks the facts for the bot response using an information alignment score."""
     fact_checking_config = llm_task_manager.config.rails.config.fact_checking
-    fallback_to_ask_llm = fact_checking_config.fallback_to_ask_llm
+    fallback_to_self_check = fact_checking_config.fallback_to_self_check
 
     alignscore_api_url = fact_checking_config.parameters.get("endpoint")
 
-    evidence, response = get_evidence_and_claim_from_context(context)
+    evidence = context.get("relevant_chunks", [])
+    response = context.get("bot_message")
+
     alignscore = await alignscore_request(alignscore_api_url, evidence, response)
     if alignscore is None:
         log.warning(
             "AlignScore endpoint not set up properly. Falling back to the ask_llm approach for fact-checking."
         )
         # If fallback is enabled, we use AskLLM
-        if fallback_to_ask_llm:
-            return await ask_llm.check_facts(llm_task_manager, context, llm)
+        if fallback_to_self_check:
+            return await self_check_facts(llm_task_manager, context, llm)
         else:
             # If we can't verify the facts, we assume it's ok
             # TODO: should this default be configurable?

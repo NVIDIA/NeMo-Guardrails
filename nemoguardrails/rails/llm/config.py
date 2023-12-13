@@ -243,14 +243,10 @@ class DialogRails(BaseModel):
 class FactCheckingRailConfig(BaseModel):
     """Configuration data for the fact-checking rail."""
 
-    provider: str = Field(
-        default="ask_llm",
-        description="The fact-checking provider. Supported values: 'ask_llm', 'align_score'",
-    )
     parameters: Dict[str, Any] = Field(default_factory=dict)
-    fallback_to_ask_llm: bool = Field(
+    fallback_to_self_check: bool = Field(
         default=False,
-        description="Whether to fall back to asking the main LLM for fact-checkin if other providers fail.",
+        description="Whether to fall back to self-check if another method fail.",
     )
 
 
@@ -455,6 +451,36 @@ class RailsConfig(BaseModel):
         default=False,
         description="Whether this configuration should use streaming mode or not.",
     )
+
+    @root_validator(pre=True, allow_reuse=True)
+    def check_prompt_exist_for_self_check_rails(cls, values):
+        rails = values.get("rails", {})
+
+        enabled_input_rails = rails.get("input", {}).get("flows", [])
+        enabled_output_rails = rails.get("output", {}).get("flows", [])
+        provided_task_prompts = [
+            prompt.get("task") for prompt in values.get("prompts", [])
+        ]
+
+        if (
+            "self check input" in enabled_input_rails
+            and "self_check_input" not in provided_task_prompts
+        ):
+            raise ValueError("You must provide a `self_check_input` prompt template.")
+
+        if (
+            "self check output" in enabled_output_rails
+            and "self_check_output" not in provided_task_prompts
+        ):
+            raise ValueError("You must provide a `self_check_output` prompt template.")
+
+        if (
+            "self check facts" in enabled_output_rails
+            and "self_check_facts" not in provided_task_prompts
+        ):
+            raise ValueError("You must provide a `self_check_facts` prompt template.")
+
+        return values
 
     @staticmethod
     def from_path(

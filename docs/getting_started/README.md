@@ -9,5 +9,3 @@ This *Getting Started* section of the documentation is meant to help you get sta
 5. [Output moderation](./5_output_rails): make sure the output of the bot is not offensive and making sure it does not contain certain words.
 6. [Preventing off-topic questions](./6_topical_rails): make sure that the bot responds only to a specific set of topics.
 7. [Retrieval Augmented Generation](./7_rag): integrate an external knowledge base.
-8. [Fact-checking](./8_fact_checking): make sure the response is factually correct.
-9. [Calling external tools](./9_external_tools): call external tools, e.g. for math

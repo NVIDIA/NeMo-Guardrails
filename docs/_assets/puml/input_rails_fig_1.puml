@@ -23,10 +23,10 @@ activate LLMRails
 LLMRails->IR: <<USER MESSAGE>>
 activate IR
 
-IR->Actions: execute check_jailbreak
+IR->Actions: execute self_check_input
 activate Actions
 
-Actions->LLM: TaskPrompt [jailbreak_check]
+Actions->LLM: TaskPrompt [self_check_input]
 activate LLM
 return "Yes"
 

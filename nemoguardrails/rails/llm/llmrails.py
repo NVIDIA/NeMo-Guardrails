@@ -156,6 +156,9 @@ class LLMRails:
                 self.default_embedding_engine = model.engine
                 break
 
+        # We run some additional checks on the config
+        self._validate_config()
+
         # Next, we initialize the LLM engines (main engine and action engines if specified).
         self._init_llms()
 
@@ -186,6 +189,28 @@ class LLMRails:
 
         # Reference to the general ExplainInfo object.
         self.explain_info = None
+
+    def _validate_config(self):
+        """Runs additional validation checks on the config."""
+        existing_flows_names = set([flow.get("id") for flow in self.config.flows])
+
+        for flow_name in self.config.rails.input.flows:
+            if flow_name not in existing_flows_names:
+                raise ValueError(
+                    f"The provided input rail flow `{flow_name}` does not exist"
+                )
+
+        for flow_name in self.config.rails.output.flows:
+            if flow_name not in existing_flows_names:
+                raise ValueError(
+                    f"The provided output rail flow `{flow_name}` does not exist"
+                )
+
+        for flow_name in self.config.rails.retrieval.flows:
+            if flow_name not in existing_flows_names:
+                raise ValueError(
+                    f"The provided retrieval rail flow `{flow_name}` does not exist"
+                )
 
     async def _init_kb(self):
         """Initializes the knowledge base."""
