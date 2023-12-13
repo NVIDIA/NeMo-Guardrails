@@ -7,13 +7,13 @@ rails:
     flows:
       - self check input
       - check sensitive data
-      - active fence moderation
+      - activefence moderation
       - check toxicity
       - some other moderation thing
 
   # Topical rails are triggered after user message is interpreted, i.e., its canonical form
   # has been computed.
-  topical:
+  dialog:
     # Whether to try to use a single call
     single_call:
       enabled: False
@@ -35,7 +35,7 @@ rails:
     flows:
       - self check facts
       - check hallucination
-      - active fence moderation
+      - activefence moderation
       - check sensitive data
 
   # Execution rails are triggered before and after an action is invoked

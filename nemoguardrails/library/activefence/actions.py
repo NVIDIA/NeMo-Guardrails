@@ -25,12 +25,12 @@ from nemoguardrails.language.utils import new_uuid
 log = logging.getLogger(__name__)
 
 
-@action(name="call active fence api", is_system_action=True)
-async def call_active_fence_api(context: Optional[dict] = None):
-    api_key = os.environ.get("ACTIVE_FENCE_API_KEY")
+@action(name="call activefence api", is_system_action=True)
+async def call_activefence_api(context: Optional[dict] = None):
+    api_key = os.environ.get("ACTIVEFENCE_API_KEY")
 
     if api_key is None:
-        raise ValueError("ACTIVE_FENCE_API_KEY environment variable not set.")
+        raise ValueError("ACTIVEFENCE_API_KEY environment variable not set.")
 
     user_message = context.get("user_message")
 
