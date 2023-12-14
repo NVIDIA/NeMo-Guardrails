@@ -11,18 +11,15 @@ flow user said $text
 
 flow user saying $text
   # meta: exclude from llm
-  # meta: user action
   match UtteranceUserAction.TranscriptUpdated(interim_transcript=r".*{{$text}}((\s*\w+\s*){0,2})\W*$") as $event
   return $event.arguments.interim_transcript
 
 flow user started saying something
   # meta: exclude from llm
-  # meta: user action
   match UtteranceUserAction.Started() as $event
 
 flow user typing $text
   # meta: exclude from llm
-  # meta: user action
   match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*{{$text}}((\s*\w+\s*){0,2})\W*$"}]) as $event
   return $event.arguments.interim_inputs
 
@@ -52,7 +49,6 @@ flow user selected choice $choice_id
 
 flow user has selected choice $choice_id
   # meta: exclude from llm
-  # meta: user action
   global $choice_selection_state
   if $choice_selection_state == None or $choice_selection_state != $choice_id
     match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
@@ -305,7 +301,7 @@ flow track bot talking state
 flow track user talking state
   # meta: exclude from llm
   # meta: loop_id=state_tracking
-  global $bot_talking_state
+  global $user_talking_state
   await user started saying something
   $user_talking_state = True
   await user said something
@@ -414,11 +410,13 @@ flow bot respond to user said something
 flow fallback user said
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   # meta: exclude from llm
+  global $bot_talking_state
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
-  $transcript = $event.arguments.final_transcript
-  log "fallback user said: {{$transcript}}"
-  $action = 'user said "{{$transcript}}"'
-  $intent = await llm derive user intent from user action $action 10
+  if $bot_talking_state == False
+    $transcript = $event.arguments.final_transcript
+    log "fallback user said: {{$transcript}}"
+    $action = 'user said "{{$transcript}}"'
+    $intent = await llm derive user intent from user action $action 10
 
   # We need to log the user action
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=$intent)

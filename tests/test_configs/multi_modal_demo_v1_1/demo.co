@@ -17,6 +17,8 @@ flow reaction bot question repetition for user silence $time_s
     when user was silent $time_s
       $question = $ref.context.event.arguments.text
       $prompt = """Make a new variation of this question: {{$question}}"""
+      if "{{is_str($prompt)}}" == "False"
+        $prompt = "So, what do you think?"
       bot ask $prompt
       break
     orwhen user said something or bot said something
@@ -142,13 +144,6 @@ flow user wanted to end conversation
     or user said "Let's finish this conversation"
     or user said "I want to go back"
 
-flow user confirmed showcase choice
-  """User confirms a previously suggested showcase."""
-  user said "Yes"
-    or user said "Sure, let's do that"
-    or user said "Ok, let's go"
-    or user said "Yes, show me"
-
 # ----------------------------------
 # FAQs
 # -----------------------------------
@@ -172,7 +167,6 @@ flow faq
 # -----------------------------------
 
 flow showcase selector
-  activate fallback user said
   activate track visual choice selection state
 
   $showcase_selection_ui = None
@@ -180,6 +174,7 @@ flow showcase selector
   while True
     log "while loop restarted"
     if $showcase_selection_ui == None
+      activate fallback user said
       activate interruption handling bot talking "inform"
       start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}]) as $showcase_selection_ui
       start bot inform "Please pick one of the showcases."
@@ -194,23 +189,9 @@ flow showcase selector
       llm interaction continuation
       log "unhandled user intent response done"
 
-    orwhen user confirmed showcase choice
-      $showcase_flow_id = """flow name of showcase that was suggested and confirmed by the user (flow name options: 'showcase number guessing game', 'showcase multimodality', 'showcase backchannelling interaction', 'showcase posture capabilities', 'showcase proactive turn taking'), 'None' if not available."""
-      if $showcase_flow_id != None
-        $exists = await CheckValidFlowExistsAction(flow_id=$showcase_flow_id)
-        if $exists
-          #bot say "start: {{$showcase_flow_id}}"
-          $new_flow_start_uid = "{{uid()}}"
-          send StartFlow(flow_id=$showcase_flow_id , flow_start_uid=$new_flow_start_uid)
-          match FlowStarted(flow_id=$showcase_flow_id , flow_start_uid=$new_flow_start_uid) as $event_ref
-          match $event_ref.flow.Finished()
-        else
-          llm interaction continuation
-      else
-        llm interaction continuation
-
     orwhen user picked number guessing game showcase
       send $showcase_selection_ui.Stop()
+      send FinishFlow(flow_id="fallback user said", deactivate=True)
       send FinishFlow(flow_id="interruption handling bot talking", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the number guessing game!"
@@ -218,6 +199,7 @@ flow showcase selector
 
     orwhen user picked multimodality showcase
       send $showcase_selection_ui.Stop()
+      send FinishFlow(flow_id="fallback user said", deactivate=True)
       send FinishFlow(flow_id="interruption handling bot talking", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the multimodality showcase!"
@@ -225,6 +207,7 @@ flow showcase selector
 
     orwhen user picked backchanneling showcase
       send $showcase_selection_ui.Stop()
+      send FinishFlow(flow_id="fallback user said", deactivate=True)
       send FinishFlow(flow_id="interruption handling bot talking", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the backchanneling example!"
@@ -232,6 +215,7 @@ flow showcase selector
 
     orwhen user picked posture showcase
       send $showcase_selection_ui.Stop()
+      send FinishFlow(flow_id="fallback user said", deactivate=True)
       send FinishFlow(flow_id="interruption handling bot talking", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the posture showcase!"
@@ -239,6 +223,7 @@ flow showcase selector
 
     orwhen user picked proactive showcase
       send $showcase_selection_ui.Stop()
+      send FinishFlow(flow_id="fallback user said", deactivate=True)
       send FinishFlow(flow_id="interruption handling bot talking", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the proactive turn-taking example!"
@@ -264,7 +249,7 @@ flow main
   #activate faq
 
   bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
-  showcase selector
+  activate showcase selector
 
   #showcase number guessing game
   #showcase multimodality
