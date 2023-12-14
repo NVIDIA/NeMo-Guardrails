@@ -57,6 +57,18 @@ class LLMRails:
         """
         self.config = config
         self.llm = llm
+
+        # We do a validation to check if we have a main model specified in the config
+        # or an LLM instance has been provided.
+        main_model_count = len([m for m in self.config.models if m.type == "main"])
+
+        if self.llm is None and main_model_count == 0:
+            raise ValueError(
+                "No main LLM model has been provided for `LLMRails`. "
+                "Please specify one in `config.yml` or provide an instance "
+                "using the `llm` parameter."
+            )
+
         self.verbose = verbose
 
         # We allow the user to register additional embedding search providers, so we keep

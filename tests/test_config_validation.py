@@ -22,6 +22,10 @@ def test_input_rail_exists_check():
     with pytest.raises(ValueError) as exc_info:
         config = RailsConfig.from_content(
             yaml_content="""
+            models:
+                - type: main
+                  engine: openai
+                  model: gpt-3.5-turbo-instruct
             rails:
                 input:
                     flows:
@@ -37,6 +41,10 @@ def test_output_rail_exists_check():
     with pytest.raises(ValueError) as exc_info:
         config = RailsConfig.from_content(
             yaml_content="""
+            models:
+                - type: main
+                  engine: openai
+                  model: gpt-3.5-turbo-instruct
             rails:
                 output:
                     flows:
@@ -52,6 +60,10 @@ def test_retrieval_rail_exists_check():
     with pytest.raises(ValueError) as exc_info:
         config = RailsConfig.from_content(
             yaml_content="""
+            models:
+                - type: main
+                  engine: openai
+                  model: gpt-3.5-turbo-instruct
             rails:
                 retrieval:
                     flows:
@@ -67,6 +79,10 @@ def test_self_check_input_prompt_exception():
     with pytest.raises(ValueError) as exc_info:
         config = RailsConfig.from_content(
             yaml_content="""
+            models:
+                - type: main
+                  engine: openai
+                  model: gpt-3.5-turbo-instruct
             rails:
                 input:
                     flows:
@@ -82,6 +98,10 @@ def test_self_check_output_prompt_exception():
     with pytest.raises(ValueError) as exc_info:
         config = RailsConfig.from_content(
             yaml_content="""
+            models:
+                - type: main
+                  engine: openai
+                  model: gpt-3.5-turbo-instruct
             rails:
                 output:
                     flows:
@@ -91,6 +111,14 @@ def test_self_check_output_prompt_exception():
         LLMRails(config=config)
 
     assert "You must provide a `self_check_output` prompt" in str(exc_info.value)
+
+
+def test_no_main_llm_exception():
+    with pytest.raises(ValueError) as exc_info:
+        config = RailsConfig.from_content(yaml_content="models: []")
+        LLMRails(config=config)
+
+    assert "No main LLM model" in str(exc_info.value)
 
 
 # def test_self_check_facts_prompt_exception():
