@@ -420,22 +420,14 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         line_0 = lines[0].lstrip(" ")
         uuid = new_uuid()[0:8]
-        if line_0.startswith("bot intent:") or line_0.startswith("user intent:"):
-            intent = escape_flow_name(
-                remove_action_intent_identifiers([line_0])[0].strip(" ")
-            )
-            flow_name = f"_dynamic_{uuid} {intent}"
-            # TODO: parse potential parameters from flow name with a regex
-            flow_parameters: List[Any] = []
-            lines = lines[1:]
-        else:
-            response = "\n".join(lines)
-            log.warning(
-                f"GenerateFlowContinuationAction\nFAILING-PROMPT ::\n{prompt}\n FAILING-RESPONSE: {response}\n"
-            )
-            intent = "unknown"
-            flow_name = f"_dynamic_{uuid}"
-            flow_parameters = []
+
+        intent = escape_flow_name(
+            remove_action_intent_identifiers([line_0])[0].strip(" ")
+        )
+        flow_name = f"_dynamic_{uuid} {intent}"
+        # TODO: parse potential parameters from flow name with a regex
+        flow_parameters: List[Any] = []
+        lines = lines[1:]
 
         lines = remove_action_intent_identifiers(lines)
         lines = get_initial_actions(lines)
