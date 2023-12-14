@@ -194,9 +194,9 @@ def test_if_branching_mechanic():
     content = """
     flow main
       while $action_ref_3 is None
-        if $event_ref_1 is None
+        if $event_ref_1 is None and True
           start UtteranceBotAction(script="Action1") as $event_ref_1
-        else if $event_ref_2 is None
+        else if $event_ref_2 is None or False
           start UtteranceBotAction(script="Action2") as $event_ref_2
         else
           start UtteranceBotAction(script="ActionElse") as $action_ref_3
@@ -1004,4 +1004,4 @@ def test_global_statement():
 
 
 if __name__ == "__main__":
-    test_global_statement()
+    test_if_branching_mechanic()
