@@ -73,6 +73,7 @@ class RuntimeV1_1(Runtime):
                 include_source_mapping=True,
             )
         except Exception as ex:
+            log.warning(f"FAILING-FLOW-PARSING\n{flow_content}")
             return []
             # Alternatively, we could through an exceptions
             raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")

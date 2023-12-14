@@ -296,6 +296,10 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
                 "body": f"flow {flow_name}\n" + "\n".join(lines),
             }
         else:
+            response = "\n".join(lines)
+            log.warning(
+                f"GenerateFlowFromInstructionsAction\nFAILING-PROMPT ::\n{prompt}\n FAILING-RESPONSE: {response}\n"
+            )
             return {
                 "name": "bot inform LLM issue",
                 "body": 'flow bot inform LLM issue\n  bot say "Sorry! There was an issue in the LLM result form GenerateFlowFromInstructionsAction!"',
@@ -347,6 +351,10 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
             # print(f"Generated flow:\n{result}\n")
             return f"flow {name}\n" + "\n".join(lines)
         else:
+            response = "\n".join(lines)
+            log.warning(
+                f"GenerateFlowFromNameAction\nFAILING-PROMPT ::\n{prompt}\n FAILING-RESPONSE: {response}\n"
+            )
             return "flow bot express unsure\n  bot say 'I don't know how to do that.'"
 
     @action(
@@ -401,6 +409,10 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         lines = _remove_leading_empty_lines(result).split("\n")
 
         if len(lines) == 0 or (len(lines) == 1 and lines[0] == ""):
+            response = "\n".join(lines)
+            log.warning(
+                f"GenerateFlowContinuationAction\nFAILING-PROMPT ::\n{prompt}\n FAILING-RESPONSE: {response}\n"
+            )
             return {
                 "name": "bot inform LLM issue",
                 "body": 'flow bot inform LLM issue\n  bot say "Sorry! There was an issue in the LLM result form GenerateFlowContinuationAction!"',
@@ -417,6 +429,10 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
             flow_parameters: List[Any] = []
             lines = lines[1:]
         else:
+            response = "\n".join(lines)
+            log.warning(
+                f"GenerateFlowContinuationAction\nFAILING-PROMPT ::\n{prompt}\n FAILING-RESPONSE: {response}\n"
+            )
             intent = "unknown"
             flow_name = f"_dynamic_{uuid}"
             flow_parameters = []
