@@ -169,6 +169,21 @@ def get_colang_history(
         # Structure the user/bot intent/action events
         action_group: List[InternalEvent] = []
         current_intent: Optional[str] = None
+
+        # Filter out all unrelated events and eliminate duplicated user actions
+        # TODO: refactor the user action/intent generation
+        events = list(
+            {
+                (
+                    event.name,
+                    event.arguments["flow_id"],
+                    event.arguments.get("parameter", None),
+                ): event
+                for event in events
+                if isinstance(event, InternalEvent) and hasattr(event, "arguments")
+            }.values()
+        )
+
         for event in events:
             if not isinstance(event, InternalEvent):
                 continue
