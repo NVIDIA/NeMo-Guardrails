@@ -101,6 +101,7 @@ flow user picked number guessing game showcase
     or user said "Show me the game"
     or user said "showcase A"
     or user said "First showcase"
+    or user said r"guessing game"
 
 flow user picked multimodality showcase
    """User picked the multimodality showcase (B)."""
@@ -109,6 +110,7 @@ flow user picked multimodality showcase
      or user said "multimodality"
      or user said "showcase B"
      or user said "Second showcase"
+     or user said r"multimodality"
 
 flow user picked backchanneling showcase
   """User picked the backchanneling showcase (C)."""
@@ -117,6 +119,7 @@ flow user picked backchanneling showcase
     or user said "backchanneling"
     or user said "showcase C"
     or user said "Third showcase"
+    or user said r"backchanneling"
 
 flow user picked posture showcase
   """User picked the posture showcase (D)."""
@@ -126,6 +129,7 @@ flow user picked posture showcase
     or user said "showcase D"
     or user said "Fourth showcase"
     or user said "Second last showcase"
+    or user said r"posture"
 
 flow user picked proactive showcase
   """User picked the proactive showcase (E)."""
@@ -135,6 +139,7 @@ flow user picked proactive showcase
     or user said "showcase E"
     or user said "Fifth showcase"
     or user said "Last showcase"
+    or user said r"proactive"
 
 flow user wanted to end conversation
   """User wants to end the open conversation"""
