@@ -32,12 +32,13 @@ class ActionDispatcher:
     def __init__(
         self, load_all_actions: bool = True, config_path: Optional[str] = None
     ):
-        """Initializes an actions dispatcher.
-
-        :param load_all_actions: When set, it will load all actions in the `actions` folder
-          both in the current working directory and in the package.
-        :param config_path: The path from which the configuration was loaded. If there are
-          actions at the specified path, we load them as well.
+        """
+        Initializes an actions dispatcher.
+        Args:
+            load_all_actions (bool, optional): When set to True, it loads all actions in the
+                'actions' folder both in the current working directory and in the package.
+            config_path (str, optional): The path from which the configuration was loaded.
+                If there are actions at the specified path, it loads them as well.
         """
         log.info("Initializing action dispatcher")
 
