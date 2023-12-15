@@ -371,7 +371,7 @@ class FlowHead:
     catch_pattern_failure_label: List[str] = field(default_factory=list)
 
     def get_child_head_uids(self, state: State) -> List[str]:
-        """ "Return uids of all child heads (recursively)."""
+        """Return uids of all child heads (recursively)."""
         flow_state = state.flow_states[self.flow_state_uid]
         child_uids: List[str] = []
         for uid in self.child_head_uids:

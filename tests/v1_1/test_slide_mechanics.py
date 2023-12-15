@@ -915,6 +915,57 @@ def test_when_or_with_references():
     )
 
 
+def test_inside_when_failure_handling():
+    """"""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="Start")
+      when UtteranceUserAction.Finished(final_transcript="A")
+        await b
+      orwhen UtteranceUserAction.Finished(final_transcript="B")
+        await b
+
+    flow b
+      abort
+
+    flow main
+      activate a
+      match WaitEvent()
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "A",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start",
+            },
+        ],
+    )
+
+
 def test_abort_flow():
     """"""
 
@@ -1004,4 +1055,4 @@ def test_global_statement():
 
 
 if __name__ == "__main__":
-    test_if_branching_mechanic()
+    test_inside_when_failure_handling()

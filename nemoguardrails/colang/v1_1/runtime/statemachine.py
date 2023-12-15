@@ -777,9 +777,9 @@ def slide(
                     uid=head_uid,
                     position=pos,
                     flow_state_uid=flow_state.uid,
-                    matching_scores=head.matching_scores,
-                    catch_pattern_failure_label=head.catch_pattern_failure_label,
-                    scope_uids=head.scope_uids,
+                    matching_scores=head.matching_scores.copy(),
+                    catch_pattern_failure_label=head.catch_pattern_failure_label.copy(),
+                    scope_uids=head.scope_uids.copy(),
                 )
                 flow_state.heads[head_uid] = new_head
                 head.child_head_uids.append(new_head.uid)
@@ -829,7 +829,7 @@ def slide(
                                 MergeHeads, flow_config.elements[other_head.position]
                             )
                             if head_uid not in merge_element.head_uids:
-                                # If we still have heads that can be merged independently let's wait with this one
+                                # If we still have heads that can be merged independently let's wait with this ones
                                 break
 
                 # Now we are sure that all other related heads had the chance to process
