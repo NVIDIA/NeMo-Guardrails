@@ -1,0 +1,22 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo-instruct
+
+rails:
+  config:
+    llama_guard:
+      parameters:
+        endpoint: "http://localhost:5000/generate"
+
+  input:
+    flows:
+      - llama guard check input
+
+  output:
+    flows:
+      - llama guard check output
+
+  dialog:
+    single_call:
+      enabled: False

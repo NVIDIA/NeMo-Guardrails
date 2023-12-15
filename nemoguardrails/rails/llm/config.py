@@ -250,12 +250,23 @@ class FactCheckingRailConfig(BaseModel):
     )
 
 
+class LlamaGuardRailConfig(BaseModel):
+    """Configuration data for the LlamaGuard-based input/output checks."""
+
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+
+
 class RailsConfigData(BaseModel):
     """Configuration data for specific rails that are supported out-of-the-box."""
 
     fact_checking: FactCheckingRailConfig = Field(
         default_factory=FactCheckingRailConfig,
         description="Configuration data for the fact-checking rail.",
+    )
+
+    llama_guard: LlamaGuardRailConfig = Field(
+        default_factory=LlamaGuardRailConfig,
+        description="Configuration data for the LlamaGuard-based input/output checks.",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
