@@ -34,10 +34,17 @@ API_URL_BASE = f"https://api.wolframalpha.com/v2/result?appid={APP_ID}"
 async def wolfram_alpha_request(
     query: Optional[str] = None, context: Optional[dict] = None
 ):
-    """Makes a request to the Wolfram Alpha API
+    """Makes a request to the Wolfram Alpha API.
 
-    :param context: The context for the execution of the action.
-    :param query: The query for Wolfram.
+    Args:
+        query (Optional[str]): The query for Wolfram Alpha. Defaults to None.
+        context (Optional[dict]): The context for the execution of the action. Defaults to None.
+
+    Returns:
+        ActionResult or str: The result of the Wolfram Alpha request.
+
+    Raises:
+        Exception: If no query is provided to Wolfram Alpha.
     """
     # If we don't have an explicit query, we take the last user message
     if query is None and context is not None:

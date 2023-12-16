@@ -73,13 +73,21 @@ class ActionDispatcher:
 
     @property
     def registered_actions(self):
+        """
+        Gets the dictionary of registered actions.
+        Returns:
+            dict: A dictionary where keys are action names and values are callable action functions.
+        """
         return self._registered_actions
 
     def load_actions_from_path(self, path: str):
         """Loads all actions from the specified path.
 
-        It will load all actions in the `actions.py` file if it exists and all actions
-        inside the `actions` folder if it exists.
+        This method loads all actions from the `actions.py` file if it exists and
+        all actions inside the `actions` folder if it exists.
+
+        Args:
+            path (str): A string representing the path from which to load actions.
         """
         actions_path = os.path.join(path, "actions")
         if os.path.exists(actions_path):
@@ -96,9 +104,10 @@ class ActionDispatcher:
     ):
         """Registers an action with the given name.
 
-        :param name: The name of the action.
-        :param action: The action function.
-        :param override: If an action already exists, whether it should be overriden or not.
+        Args:
+            action (callable): The action function.
+            name (Optional[str]): The name of the action. Defaults to None.
+            override (bool): If an action already exists, whether it should be overridden or not.
         """
         if name is None:
             action_meta = getattr(action, "action_meta", None)
@@ -111,7 +120,13 @@ class ActionDispatcher:
         self._registered_actions[name] = action
 
     def register_actions(self, actions_obj: any, override: bool = True):
-        """Registers all the actions from the given object."""
+        """Registers all the actions from the given object.
+
+        Args:
+            actions_obj (any): The object containing actions.
+            override (bool): If an action already exists, whether it should be overridden or not.
+        """
+
         # Register the actions
         for attr in dir(actions_obj):
             val = getattr(actions_obj, attr)
@@ -120,13 +135,27 @@ class ActionDispatcher:
                 self.register_action(val, override=override)
 
     def get_action(self, name: str) -> callable:
+        """Get the registered action by name.
+
+        Args:
+            name (str): The name of the action.
+
+        Returns:
+            callable: The registered action.
+        """
         return self._registered_actions.get(name)
 
     async def execute_action(
         self, action_name: str, params: Dict[str, Any]
     ) -> Tuple[Union[str, Dict[str, Any]], str]:
-        """Endpoint called from action server to execute an action.
-        This endpoint interacts with different supported actions
+        """Execute a registered action.
+
+        Args:
+            action_name (str): The name of the action to execute.
+            params (Dict[str, Any]): Parameters for the action.
+
+        Returns:
+            Tuple[Union[str, Dict[str, Any]], str]: A tuple containing the result and status.
         """
 
         if action_name in self._registered_actions:
@@ -177,12 +206,23 @@ class ActionDispatcher:
         return None, "failed"
 
     def get_registered_actions(self) -> List[str]:
-        """Endpoint called from action server to get the list of available actions"""
+        """Get the list of available actions.
+
+        Returns:
+            List[str]: List of available actions.
+        """
         return list(self._registered_actions.keys())
 
     @staticmethod
     def _load_actions_from_module(filepath: str):
-        """Loads the actions from the specified python module."""
+        """Loads the actions from the specified python module.
+
+        Args:
+            filepath (str): The path of the Python module.
+
+        Returns:
+            Dict: Dictionary of loaded actions.
+        """
         action_objects = {}
         filename = os.path.basename(filepath)
 
@@ -219,7 +259,13 @@ class ActionDispatcher:
     @staticmethod
     def _find_actions(directory) -> Dict:
         """Loop through all the subdirectories and check for the class with @action
-        decorator and add in action_classes dict
+        decorator and add in action_classes dict.
+
+        Args:
+            directory: The directory to search for actions.
+
+        Returns:
+            Dict: Dictionary of found actions.
         """
         action_objects = {}
 

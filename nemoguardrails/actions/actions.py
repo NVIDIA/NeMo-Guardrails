@@ -19,7 +19,22 @@ from typing import Any, List, Optional
 
 # A decorator that sets a property on the function to indicate if it's a system action or not.
 def action(is_system_action: bool = False, name: Optional[str] = None):
+    """Decorator to mark a function or class as an action.
+
+    Args:
+        is_system_action (bool): Flag indicating if the action is a system action.
+        name (Optional[str]): The name to associate with the action.
+
+    Returns:
+        callable: The decorated function or class.
+    """
+
     def decorator(fn_or_cls):
+        """Inner decorator function to add metadata to the action.
+
+        Args:
+            fn_or_cls: The function or class being decorated.
+        """
         fn_or_cls.action_meta = {
             "name": name or fn_or_cls.__name__,
             "is_system_action": is_system_action,
@@ -31,6 +46,13 @@ def action(is_system_action: bool = False, name: Optional[str] = None):
 
 @dataclass
 class ActionResult:
+    """Data class representing the result of an action.
+
+    Attributes:
+        return_value (Optional[Any]): The value returned by the action.
+        events (Optional[List[dict]]): The events to be added to the stream.
+        context_updates (Optional[dict]): Updates made to the context by this action.
+    """
     # The value returned by the action
     return_value: Optional[Any] = None
 
