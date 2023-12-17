@@ -38,6 +38,13 @@ class Runtime:
     """Runtime for executing the guardrails."""
 
     def __init__(self, config: RailsConfig, verbose: bool = False):
+        """
+        Initialize the Runtime.
+
+        Args:
+            config (RailsConfig): The configuration for the Rails system.
+            verbose (bool, optional): Whether to enable verbose logging. Defaults to False.
+        """
         self.config = config
         self.verbose = verbose
 
@@ -53,7 +60,15 @@ class Runtime:
         self.llm_task_manager = LLMTaskManager(config)
 
     def _load_flow_config(self, flow: dict):
-        """Loads a flow into the list of flow configurations."""
+        """
+        Load a flow configuration.
+
+        Args:
+            flow (dict): The flow data.
+
+        Returns:
+            None
+        """
 
         # If we don't have an id, we generate a random UID.
         flow_id = flow.get("id") or str(uuid.uuid4())
@@ -106,7 +121,12 @@ class Runtime:
                 )
 
     def _init_flow_configs(self):
-        """Initializes the flow configs based on the config."""
+        """
+        Initialize the flow configurations.
+
+        Returns:
+            None
+        """
         self.flow_configs = {}
 
         for flow in self.config.flows:
@@ -115,27 +135,53 @@ class Runtime:
     def register_action(
         self, action: callable, name: Optional[str] = None, override: bool = True
     ):
-        """Registers an action with the given name.
+        """
+        Register an action.
 
-        :param name: The name of the action.
-        :param action: The action function.
-        :param override: If an action already exists, whether it should be overriden or not.
+        Args:
+            action (callable): The action function.
+            name (str, optional): The name of the action. Defaults to None.
+            override (bool, optional): Whether to override if the action already exists. Defaults to True.
+
+        Returns:
+            None
         """
         self.action_dispatcher.register_action(action, name, override=override)
 
     def register_actions(self, actions_obj: any, override: bool = True):
-        """Registers all the actions from the given object."""
+        """
+        Register actions from an object.
+
+        Args:
+            actions_obj (any): The object containing actions.
+            override (bool, optional): Whether to override if the action already exists. Defaults to True.
+
+        Returns:
+            None
+        """
+
         self.action_dispatcher.register_actions(actions_obj, override=override)
 
     @property
     def registered_actions(self):
+        """
+        Get the registered actions.
+
+        Returns:
+            any: The registered actions.
+        """
         return self.action_dispatcher.registered_actions
 
     def register_action_param(self, name: str, value: any):
-        """Registers an additional parameter that can be passed to the actions.
+        """
+        Register an additional parameter for actions.
 
-        :param name: The name of the parameter.
-        :param value: The value of the parameter.
+        Args:
+            name (str): The name of the parameter.
+            value (any): The value of the parameter.
+
+        Returns:
+            None
         """
         self.registered_action_params[name] = value
 
@@ -145,7 +191,11 @@ class Runtime:
         This is a wrapper around the `process_events` method, that will keep
         processing the events until the `listen` event is produced.
 
-        :return: The list of events.
+        Args:
+            events (List[dict]): The list of events.
+
+        Returns:
+            List[dict]: The list of generated events.
         """
         events = events.copy()
         new_events = []
@@ -193,7 +243,15 @@ class Runtime:
         return new_events
 
     async def compute_next_steps(self, events: List[dict]) -> List[dict]:
-        """Computes the next step based on the current flow."""
+        """
+        Compute the next steps based on the current flow.
+
+        Args:
+            events (List[dict]): The list of events.
+
+        Returns:
+            List[dict]: The list of computed next steps.
+        """
         next_steps = compute_next_steps(
             events, self.flow_configs, rails_config=self.config
         )
@@ -212,7 +270,15 @@ class Runtime:
 
     @staticmethod
     def _internal_error_action_result(message: str):
-        """Helper to construct an action result for an internal error."""
+        """
+        Helper to construct an action result for an internal error.
+
+        Args:
+            message (str): The error message.
+
+        Returns:
+            ActionResult: The action result.
+        """
         return ActionResult(
             events=[
                 {
@@ -229,7 +295,15 @@ class Runtime:
         )
 
     async def _process_start_action(self, events: List[dict]) -> List[dict]:
-        """Starts the specified action, waits for it to finish and posts back the result."""
+        """
+        Start the specified action, wait for it to finish, and post back the result.
+
+        Args:
+            events (List[dict]): The list of events.
+
+        Returns:
+            List[dict]: The list of next steps.
+        """
 
         event = events[-1]
 
@@ -383,7 +457,17 @@ class Runtime:
     async def _get_action_resp(
         self, action_meta: Dict[str, Any], action_name: str, kwargs: Dict[str, Any]
     ) -> Tuple[Dict[str, Any], str]:
-        """Interact with actions and get response from action-server and system actions."""
+        """
+        Interact with actions and get response from the action-server and system actions.
+
+        Args:
+            action_meta (Dict[str, Any]): Metadata for the action.
+            action_name (str): The name of the action.
+            kwargs (Dict[str, Any]): The action parameters.
+
+        Returns:
+            Tuple[Dict[str, Any], str]: The response and status.
+        """
         result, status = {}, "failed"  # default response
         try:
             # Call the Actions Server if it is available.
@@ -421,7 +505,15 @@ class Runtime:
         return result, status
 
     async def _process_start_flow(self, events: List[dict]) -> List[dict]:
-        """Starts a flow."""
+        """
+        Start a flow.
+
+        Args:
+            events (List[dict]): The list of events.
+
+        Returns:
+            List[dict]: The list of next steps.
+        """
 
         event = events[-1]
 
