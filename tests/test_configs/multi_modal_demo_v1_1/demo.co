@@ -254,6 +254,7 @@ flow main
   #activate faq
 
   bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
+    and bot gesture "Welcome user, wave hands"
   activate showcase selector
 
   #showcase number guessing game

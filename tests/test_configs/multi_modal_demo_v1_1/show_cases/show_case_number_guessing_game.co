@@ -8,7 +8,7 @@ flow showcase number guessing game
 
   start scene show textual information $title="Little Game" $text="Guess the random number between 0 and 100 (hint: {{$random_number}})" $header_image="question mark horizontal orientation" as $scene
 
-  bot ask "Hi, please guess the random number between 0 and 100!"
+  bot ask "Guess the random number between 0 and 100!"
     and bot gesture "Waving hands"
 
   #activate reaction to user silence 20.0 "Just say a number between 0 and 100!" as $repeat_question
