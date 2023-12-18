@@ -47,10 +47,10 @@ async def llama_guard_check_input(
             "user_input": user_input,
         },
     )
-    # Testing shows the \n characters lead to inaccurate LLM predictions.
-    llama_guard_input_check_prompt = llama_guard_input_check_prompt.replace(
-        "\n", " "
-    ).strip()
+    # # Testing shows the \n characters lead to inaccurate LLM predictions.
+    # llama_guard_input_check_prompt = llama_guard_input_check_prompt.replace(
+    #     "\n", " "
+    # ).strip()
     llama_guard_api_url = llama_guard_config.parameters.get("endpoint")
 
     result = await llama_guard_request(
@@ -94,10 +94,10 @@ async def llama_guard_check_output(
             "bot_response": bot_response,
         },
     )
-    # Testing shows the \n characters lead to inaccurate LLM predictions.
-    llama_guard_output_check_prompt = llama_guard_output_check_prompt.replace(
-        "\n", " "
-    ).strip()
+    # # Testing shows the \n characters lead to inaccurate LLM predictions.
+    # llama_guard_output_check_prompt = llama_guard_output_check_prompt.replace(
+    #     "\n", " "
+    # ).strip()
     llama_guard_api_url = llama_guard_config.parameters.get("endpoint")
 
     result = await llama_guard_request(
