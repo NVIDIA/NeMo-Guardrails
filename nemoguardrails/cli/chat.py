@@ -144,7 +144,6 @@ async def _run_chat_v1_1(rails_app: LLMRails):
 
         # We detect any "StartUtteranceBotAction" events, show the message, and
         # generate the corresponding Finished events as new input events.
-        input_events = []
         for event in output_events:
             if event["type"] == "StartUtteranceBotAction":
                 # We print bot messages in green.
@@ -299,6 +298,7 @@ async def _run_chat_v1_1(rails_app: LLMRails):
             output_events, output_state = await rails_app.process_events_async(
                 input_events, state
             )
+            input_events = []
 
             # Process output_events and potentially generate new input_events
             _process_output()
@@ -323,6 +323,7 @@ async def _run_chat_v1_1(rails_app: LLMRails):
             output_events, output_state = await rails_app.process_events_async(
                 input_events, state
             )
+            input_events = []
             _process_output()
             # If we don't have a check task, we start it
             if check_task is None:
