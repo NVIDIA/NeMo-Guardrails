@@ -323,7 +323,7 @@ flow track visual choice selection state
   when VisualChoiceSceneAction.Started()
     $choice_selection_state = None
   orwhen VisualChoiceSceneAction.ChoiceUpdated() as $event
-    if "{{len($event.arguments.current_choice) > 0}}"
+    if "{{len($event.arguments.current_choice) > 0}}" == "True"
       $choice_selection_state = $event.arguments.current_choice[0]
     else
       $choice_selection_state = None

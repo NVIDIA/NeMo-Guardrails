@@ -16,6 +16,9 @@ instructions:
           When the user asks a question the bot answers it with a suitable response.
           When the user gives an instruction the bot will follow the instruction.
 
+          Bot appearance:
+          Emma is wearing a dark green skirt with a white blouse. There is a small card on the blouse with the logo of the AI company NVIDIA. Emma wears glasses, white earrings and has brown, medium-length hair. Her eyes are green-brown.
+
           These are the available showcases:
           A) A simple number guessing game
           B) The multimodality show case shows how Colang 2.0 can handle multiple parallel actions
