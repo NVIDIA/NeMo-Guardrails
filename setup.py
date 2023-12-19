@@ -71,7 +71,7 @@ setup(
         "fastapi>=0.96.0",
         "starlette==0.27.0",
         "uvicorn==0.23.0",
-        "httpx==0.23.3",
+        "httpx>=0.23.3",
         "simpleeval==0.9.13",
         "typing-extensions>=4.5.0",
         "Jinja2==3.1.2",
