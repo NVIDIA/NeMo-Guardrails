@@ -21,6 +21,7 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
@@ -453,7 +454,10 @@ class FlowState:
     child_flow_uids: List[str] = field(default_factory=list)
 
     # The current state of the flow
-    status: FlowStatus = FlowStatus.WAITING
+    _status: FlowStatus = FlowStatus.WAITING
+
+    # The current state of the flow
+    status_updated: datetime = datetime.now()
 
     # An activated flow will restart immediately when finished
     activated: bool = False
@@ -467,6 +471,15 @@ class FlowState:
 
     # The flow event name mapping
     _event_name_map: dict = field(init=False)
+
+    @property
+    def status(self) -> FlowStatus:
+        return self._status
+
+    @status.setter
+    def status(self, status: FlowStatus) -> None:
+        self._status = status
+        self.status_updated = datetime.now()
 
     @property
     def active_heads(self):

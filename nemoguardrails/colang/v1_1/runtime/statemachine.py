@@ -4,6 +4,7 @@ import random
 import re
 import time
 from collections import deque
+from datetime import datetime, timedelta
 from typing import Any, Deque, Dict, List, Optional, Tuple, Union, cast
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
@@ -213,6 +214,24 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
 
     actionable_heads: List[FlowHead] = []
     merging_heads: List[FlowHead] = []
+
+    # Remove all old flow states based on last status update to limit their number
+    # TODO: Refactor, ee need to have reference based clean up approach
+    states_to_be_removed = []
+    for flow_state in state.flow_states.values():
+        if _is_done_flow(flow_state) and (
+            datetime.now() - flow_state.status_updated
+        ) > timedelta(seconds=5):
+            states_to_be_removed.append(flow_state.uid)
+    for flow_state_uid in states_to_be_removed:
+        flow_state = state.flow_states[flow_state_uid]
+        if flow_state.parent_uid and flow_state.parent_uid in state.flow_states:
+            state.flow_states[flow_state.parent_uid].child_flow_uids.remove(
+                flow_state_uid
+            )
+        flow_states = state.flow_id_states[state.flow_states[flow_state_uid].flow_id]
+        flow_states.remove(flow_state)
+        del state.flow_states[flow_state_uid]
 
     heads_are_advancing = True
     heads_are_merging = True
@@ -1254,6 +1273,13 @@ def _is_inactive_flow(flow_state: FlowState) -> bool:
     return (
         flow_state.status == FlowStatus.WAITING
         or flow_state.status == FlowStatus.STOPPED
+        or flow_state.status == FlowStatus.FINISHED
+    )
+
+
+def _is_done_flow(flow_state: FlowState) -> bool:
+    return (
+        flow_state.status == FlowStatus.STOPPED
         or flow_state.status == FlowStatus.FINISHED
     )
 
