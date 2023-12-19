@@ -20,7 +20,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="nemoguardrails",
-    version="0.4.2",
+    version="0.4.3",
     packages=find_packages(),
     author="NVIDIA",
     author_email="nemoguardrails@nvidia.com",
