@@ -440,6 +440,7 @@ class RuntimeV1_1(Runtime):
                                 "error": str(ex),
                             },
                         )
+                    await asyncio.sleep(0.001)
 
                 # If we have context updates after this event, we first add that.
                 if state.context_updates:
