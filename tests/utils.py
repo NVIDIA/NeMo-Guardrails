@@ -16,7 +16,7 @@
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 from langchain.llms.base import LLM
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 from nemoguardrails import LLMRails, RailsConfig
 
