@@ -104,6 +104,7 @@ def topical(
 
 @app.command()
 def moderation(
+    # TODO: Update this based on the refactored moderation rail evaluation script.
     config: str = typer.Option(
         help="The path to the guardrails config.", default="config"
     ),

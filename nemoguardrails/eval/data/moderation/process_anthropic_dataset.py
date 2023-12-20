@@ -18,6 +18,9 @@ import json
 
 import typer
 
+# TODO: Update this script to produce the new processed dataset format.
+# See processed_sample.jsonl for an example of the new output format.
+
 
 def load_dataset(input_path, split="harmful"):
     """
