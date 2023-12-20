@@ -42,9 +42,9 @@ def parse_llama_guard_response(response: str):
 
     # If unsafe, extract the violated policy numbers and return it as an array.
     elif response.startswith("unsafe"):
-        violated_policies = response.split("unsafe")[1].strip().split(" ")
-        log.info(f"Violated policies: {violated_policies}")
-        return False, violated_policies
+        policy_violations = response.split("unsafe")[1].strip().split(" ")
+        log.info(f"Violated policies: {policy_violations}")
+        return False, policy_violations
 
     log.warning(
         f"""Unexpected Llama Guard response: {response}\n
@@ -78,9 +78,8 @@ async def llama_guard_check_input(
     with llm_params(llama_guard_llm, temperature=0.0):
         result = await llm_call(llama_guard_llm, check_input_prompt)
 
-    allowed, violated_policies = parse_llama_guard_response(result)
-    # TODO: Can we return a tuple here? Ask Razvan how to read a tuple in Colang.
-    return allowed
+    allowed, policy_violations = parse_llama_guard_response(result)
+    return {"allowed": allowed, "policy_violations": policy_violations}
 
 
 @action()
@@ -112,6 +111,5 @@ async def llama_guard_check_output(
     with llm_params(llama_guard_llm, temperature=0.0):
         result = await llm_call(llama_guard_llm, check_output_prompt)
 
-    allowed, violated_policies = parse_llama_guard_response(result)
-    # TODO: Can we return a tuple here? Ask Razvan how to read a tuple in Colang.
-    return allowed
+    allowed, policy_violations = parse_llama_guard_response(result)
+    return {"allowed": allowed, "policy_violations": policy_violations}
