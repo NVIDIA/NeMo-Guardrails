@@ -17,7 +17,7 @@ import logging
 from typing import Dict, Optional
 
 from fastapi import FastAPI
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 from nemoguardrails.actions.action_dispatcher import ActionDispatcher
 

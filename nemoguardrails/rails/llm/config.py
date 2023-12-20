@@ -19,8 +19,8 @@ import random
 from typing import Any, Dict, List, Optional, Union
 
 import yaml
-from pydantic.v1 import BaseModel, ValidationError, root_validator
-from pydantic.v1.fields import Field
+from pydantic import BaseModel, ValidationError, root_validator
+from pydantic.fields import Field
 
 from nemoguardrails.language.coyml_parser import parse_flow_elements
 from nemoguardrails.language.parser import parse_colang_file

@@ -22,7 +22,7 @@ from typing import List
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig

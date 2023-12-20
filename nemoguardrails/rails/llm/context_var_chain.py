@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
-from pydantic.v1 import Extra, root_validator
+from pydantic import Extra, root_validator
 
 
 class ContextVarChain(LLMChain):
