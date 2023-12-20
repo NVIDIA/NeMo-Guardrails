@@ -250,23 +250,12 @@ class FactCheckingRailConfig(BaseModel):
     )
 
 
-class LlamaGuardRailConfig(BaseModel):
-    """Configuration data for the LlamaGuard-based input/output checks."""
-
-    parameters: Dict[str, Any] = Field(default_factory=dict)
-
-
 class RailsConfigData(BaseModel):
     """Configuration data for specific rails that are supported out-of-the-box."""
 
     fact_checking: FactCheckingRailConfig = Field(
         default_factory=FactCheckingRailConfig,
         description="Configuration data for the fact-checking rail.",
-    )
-
-    llama_guard: LlamaGuardRailConfig = Field(
-        default_factory=LlamaGuardRailConfig,
-        description="Configuration data for the LlamaGuard-based input/output checks.",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
@@ -473,17 +462,33 @@ class RailsConfig(BaseModel):
             prompt.get("task") for prompt in values.get("prompts", [])
         ]
 
+        # Input moderation prompt verification
         if (
             "self check input" in enabled_input_rails
             and "self_check_input" not in provided_task_prompts
         ):
             raise ValueError("You must provide a `self_check_input` prompt template.")
+        if (
+            "llama guard check input" in enabled_input_rails
+            and "llama_guard_check_input" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `llama_guard_check_input` prompt template."
+            )
 
+        # Output moderation prompt verification
         if (
             "self check output" in enabled_output_rails
             and "self_check_output" not in provided_task_prompts
         ):
             raise ValueError("You must provide a `self_check_output` prompt template.")
+        if (
+            "llama guard check output" in enabled_output_rails
+            and "llama_guard_check_output" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `llama_guard_check_output` prompt template."
+            )
 
         if (
             "self check facts" in enabled_output_rails

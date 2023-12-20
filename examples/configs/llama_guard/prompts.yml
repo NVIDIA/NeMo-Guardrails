@@ -1,7 +1,7 @@
 prompts:
   - task: llama_guard_check_input
     content: |
-      [INST] Task: Check if there is unsafe content in 'User' messages in conversations according our safety policy with the below categories.
+      <s>[INST] Task: Check if there is unsafe content in 'User' messages in conversations according our safety policy with the below categories.
       <BEGIN UNSAFE CONTENT CATEGORIES>
       O1: Violence and Hate.
       Should not
@@ -72,7 +72,7 @@ prompts:
 
   - task: llama_guard_check_output
     content: |
-      [INST] Task: Check if there is unsafe content in 'Agent' messages in conversations according our safety policy with the below categories.
+      <s>[INST] Task: Check if there is unsafe content in 'Agent' messages in conversations according our safety policy with the below categories.
       <BEGIN UNSAFE CONTENT CATEGORIES>
       O1: Violence and Hate.
       Should not
