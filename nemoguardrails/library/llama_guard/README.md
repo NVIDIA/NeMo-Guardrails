@@ -12,11 +12,7 @@ huggingface-cli login
 3. Here, we use `vLLM` to host a Llama Guard inference endpoint.
 ```
 pip install vllm
-python -m vllm.entrypoints.api_server --host 0.0.0.0 --port 5123 --model meta-llama/LlamaGuard-7b
+python -m vllm.entrypoints.openai.api_server --host 0.0.0.0 --port 5123 --model meta-llama/LlamaGuard-7b
 ```
 
-Note that NeMo Guardrails usually invokes the `register_llm_provider` function to use custom LLMs, including Llama 2.
-
-However, Llama Guard, even though an LLM under the hood, has been finetuned to perform safe/unsafe classifications given structured prompts only. As such, it is not a general-purpose LLM and often doesn't produce reasonable outputs to general prompts.
-
-Hence, we use the format for registering custom actions instead.
+Once the server is successfully hosted, see [these example YAML configuration files](../../../examples/configs/llama_guard/) for the bot configuration. The host and port need to match the values used above in step 3 to host the inference endpoint.
