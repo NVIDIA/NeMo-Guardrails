@@ -191,6 +191,16 @@ class LLMRails:
         # Reference to the general ExplainInfo object.
         self.explain_info = None
 
+    def update_llm(self, llm):
+        """Replace the main LLM with the provided one.
+
+        Arguments:
+            llm: The new LLM that should be used.
+        """
+        self.llm = llm
+        self.llm_generation_actions.llm = llm
+        self.runtime.register_action_param("llm", llm)
+
     def _validate_config(self):
         """Runs additional validation checks on the config."""
         existing_flows_names = set([flow.get("id") for flow in self.config.flows])
