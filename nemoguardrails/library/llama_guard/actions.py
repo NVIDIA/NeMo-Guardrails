@@ -19,18 +19,44 @@ from typing import Optional
 from langchain.llms import BaseLLM
 
 from nemoguardrails.actions import action
-from nemoguardrails.library.llama_guard.request import llama_guard_request
-from nemoguardrails.library.self_check.facts.actions import self_check_facts
+from nemoguardrails.actions.llm.utils import llm_call
+from nemoguardrails.context import llm_call_info_var
+from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.llm.types import Task
+from nemoguardrails.logging.explain import LLMCallInfo
 
 log = logging.getLogger(__name__)
+
+
+def parse_llama_guard_response(response: str):
+    """
+    Parses the response from the Llama Guard LLM and returns a tuple of:
+    - Whether the response is safe or not.
+    - If not safe, the violated policies.
+    """
+    response = response.lower().strip()
+    log.info(f"Llama Guard response: {response}.")
+    if response.startswith("safe"):
+        return True, None
+
+    # If unsafe, extract the violated policy numbers and return it as an array.
+    elif response.startswith("unsafe"):
+        violated_policies = response.split("unsafe")[1].strip().split(" ")
+        log.info(f"Violated policies: {violated_policies}")
+        return False, violated_policies
+
+    log.warning(
+        f"""Unexpected Llama Guard response: {response}\n
+                If prompted correctly, it should always start with 'safe' or 'unsafe'"""
+    )
 
 
 @action()
 async def llama_guard_check_input(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
+    llama_guard_llm: Optional[BaseLLM] = None,
 ):
     """
     Assumes that a Llama Guard inference endpoint is running locally/on-prem.
@@ -39,43 +65,29 @@ async def llama_guard_check_input(
     Expects the prompt to contain the safety guidelines.
     """
     user_input = context.get("user_message")
-
-    llama_guard_config = llm_task_manager.config.rails.config.llama_guard
-    llama_guard_input_check_prompt = llm_task_manager.render_task_prompt(
+    check_input_prompt = llm_task_manager.render_task_prompt(
         task=Task.LLAMA_GUARD_CHECK_INPUT,
         context={
             "user_input": user_input,
         },
     )
-    # # Testing shows the \n characters lead to inaccurate LLM predictions.
-    # llama_guard_input_check_prompt = llama_guard_input_check_prompt.replace(
-    #     "\n", " "
-    # ).strip()
-    llama_guard_api_url = llama_guard_config.parameters.get("endpoint")
 
-    result = await llama_guard_request(
-        llama_guard_input_check_prompt, api_url=llama_guard_api_url
-    )
-    if result is None:
-        log.debug("DEBUG! Llama Guard API request failed.")
-        return None
+    # Initialize the LLMCallInfo object
+    llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_INPUT.value))
 
-    log.info(f"Llama Guard input check: {result}.")
-    if result.startswith("safe"):
-        return True
+    with llm_params(llama_guard_llm, temperature=0.0):
+        result = await llm_call(llama_guard_llm, check_input_prompt)
 
-    # TODO: If unsafe, extract the violated policy number and return it.
-    elif result.startswith("unsafe"):
-        return False
-
-    log.warning(f"Unexpected Llama Guard response: {result}")
-    return None
+    allowed, violated_policies = parse_llama_guard_response(result)
+    # TODO: Can we return a tuple here? Ask Razvan how to read a tuple in Colang.
+    return allowed
 
 
 @action()
 async def llama_guard_check_output(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
+    llama_guard_llm: Optional[BaseLLM] = None,
 ):
     """
     Assumes that a Llama Guard inference endpoint is running locally/on-prem.
@@ -86,34 +98,20 @@ async def llama_guard_check_output(
     user_input = context.get("user_message")
     bot_response = context.get("bot_message")
 
-    llama_guard_config = llm_task_manager.config.rails.config.llama_guard
-    llama_guard_output_check_prompt = llm_task_manager.render_task_prompt(
+    check_output_prompt = llm_task_manager.render_task_prompt(
         task=Task.LLAMA_GUARD_CHECK_OUTPUT,
         context={
             "user_input": user_input,
             "bot_response": bot_response,
         },
     )
-    # # Testing shows the \n characters lead to inaccurate LLM predictions.
-    # llama_guard_output_check_prompt = llama_guard_output_check_prompt.replace(
-    #     "\n", " "
-    # ).strip()
-    llama_guard_api_url = llama_guard_config.parameters.get("endpoint")
 
-    result = await llama_guard_request(
-        llama_guard_output_check_prompt, api_url=llama_guard_api_url
-    )
-    if result is None:
-        log.debug("DEBUG! Llama Guard API request failed.")
-        return None
+    # Initialize the LLMCallInfo object
+    llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_OUTPUT.value))
 
-    log.info(f"Llama Guard output check: {result}.")
-    if result.startswith("safe"):
-        return True
+    with llm_params(llama_guard_llm, temperature=0.0):
+        result = await llm_call(llama_guard_llm, check_output_prompt)
 
-    # TODO: If unsafe, extract the violated policy number and return it.
-    elif result.startswith("unsafe"):
-        return False
-
-    log.warning(f"Unexpected Llama Guard response: {result}")
-    return None
+    allowed, violated_policies = parse_llama_guard_response(result)
+    # TODO: Can we return a tuple here? Ask Razvan how to read a tuple in Colang.
+    return allowed
