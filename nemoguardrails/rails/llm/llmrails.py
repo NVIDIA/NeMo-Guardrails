@@ -212,6 +212,13 @@ class LLMRails:
                     f"The provided retrieval rail flow `{flow_name}` does not exist"
                 )
 
+        # If both passthrough mode and single call mode are specified, we raise an exception.
+        if self.config.passthrough and self.config.rails.dialog.single_call.enabled:
+            raise ValueError(
+                f"The passthrough mode and the single call dialog rails mode can't be used at the same time. "
+                f"The single call mode needs to use an altered prompt when prompting the LLM. "
+            )
+
     async def _init_kb(self):
         """Initializes the knowledge base."""
         self.kb = None
