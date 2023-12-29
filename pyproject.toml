@@ -1,3 +1,117 @@
+# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[project]
+name = "nemoguardrails"
+description = "NeMo Guardrails is an open-source toolkit for easily adding programmagle guardrails to LLM-based conversational systems."
+authors = [
+  { name = "NVIDIA", email = "nemoguardrails@nvidia.com"}
+]
+license = { file = "LICENSE.md" }
+readme = "README.md"
+dynamic = ["version"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+]
+requires-python = ">=3.8"
+
+dependencies = [
+  "aiohttp==3.8.5",
+  "annoy==1.17.3",
+  "fastapi==0.103.1",
+  "httpx==0.24.1",
+  "jinja2==3.1.2",
+  "langchain==0.0.352",
+  "nest-asyncio==1.5.6",
+  "pydantic==1.10.13",
+  "pyyaml~=6.0",
+  "sentence-transformers==2.2.2",
+  "simpleeval==0.9.13",
+  "starlette==0.27.0",
+  "typer==0.7.0",
+  "uvicorn==0.23.2",
+  "watchdog==3.0.0"
+]
+
+[project.optional-dependencies]
+eval = [
+  "tqdm~=4.65",
+  "numpy~=1.24"
+]
+openai = [
+  "openai==0.28.1"
+]
+sdd = [
+  "presidio-analyzer~=2.2.351",
+  "presidio-anonymizer~=2.2.351",
+  "spacy~=3.7.2",
+]
+all = [
+  "nemo-guardrails[eval,sdd,openai]",
+]
+dev = [
+  "nemoguardrails[all]", # install all dependencies
+  "black==23.3.0",
+  "aioresponses==0.7.4",
+  "mypy==1.1.1",
+  "pre-commit==3.1.1",
+  "pylint==2.17.0",
+  "pytest==7.2.2",
+  "pytest-asyncio==0.21.0",
+  "pytest-cov==4.1.0",
+  "pytest-httpx==0.22.0"
+]
+
+[project.urls]
+homepage = "https://github.com/NVIDIA/nemo-guardrails"
+documentation = "https://github.com/NVIDIA/nemo-guardrails/tree/develop/docs"
+repository = "https://github.com/NVIDIA/nemo-guardrails"
+issues = "https://github.com/NVIDIA/nemo-guardrails/issues"
+changelog = "https://github.com/NVIDIA/NeMo-Guardrails/blob/develop/CHANGELOG.md"
+
+[project.scripts]
+nemoguardrails = "nemoguardrails.__main__:app"
+
+[tool.setuptools]
+packages = ["nemoguardrails"]
+license-files = [
+  "LICENSE.md",
+  "LICENSE-Apache-2.0.txt",
+  "LICENCES-3rd-party.txt"
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "nemoguardrails.__version__"}
+
+[tool.setuptools.package-data]
+nemoguardrails = [
+  "**/*.yml",
+  "**/*.co",
+  "**/*.txt",
+  "**/*.json",
+  "../examples/**/*",
+  "../chat-ui/**/*",
+  "eval/data/**/*",
+]
+
 [tool.pytest.ini_options]
 addopts = "-p no:warnings"
 log-level = "DEBUG"
@@ -8,3 +122,6 @@ log-level = "DEBUG"
 # phase, which will cause tests to fail or "magically" ignored.
 log_cli = "False"
 
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
