@@ -112,10 +112,10 @@ Core actions:
 
 Guardrail-specific actions:
 
-- `check_facts`: Check the facts for the last bot response w.r.t. the extracted relevant chunks from the knowledge base.
-- `check_jailbreak`: Check if the user response is malicious and should be masked.
-- `check_hallucination`: Check if the last bot response is a hallucination.
-- `output_moderation`: Check if the bot response is appropriate and passes moderation.
+- `self_check_facts`: Check the facts for the last bot response w.r.t. the extracted relevant chunks from the knowledge base.
+- `self_check_input`: Check if the user input should be allowed.
+- `self_check_output`: Check if the bot response should be allowed.
+- `self_check_hallucination`: Check if the last bot response is a hallucination.
 
 For convenience, this toolkit also includes a selection of LangChain tools, wrapped as actions:
 
@@ -179,8 +179,6 @@ The following parameters are special and are provided automatically by the NeMo 
 
 These parameters are only meant to be used in advanced use cases.
 
-#convert it to a table
-
 ## Action Parameters
 
 The following are the parameters that can be used in the actions:
@@ -189,4 +187,4 @@ The following are the parameters that can be used in the actions:
 | ---------- | ----------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `events`   | The history of events so far; the last one is the one triggering the action itself. | List[dict] | `[     {'type': 'UtteranceUserActionFinished', ...},     {'type': 'StartInternalSystemAction', 'action_name': 'generate_user_intent', ...},      {'type': 'InternalSystemActionFinished', 'action_name': 'generate_user_intent', ...} ]` |
 | `context`  | The context data available to the action.                                           | dict       | `{ 'last_user_message': ...,  'last_bot_message': ..., 'retrieved_relevant_chunks': ... }`                                                                                                                                               |
-| `llm`      | Access to the LLM instance (BaseLLM from LangChain).                                | BaseLLM    | `OpenAI(model="text-davinci-003",...)`                                                                                                                                                                                                   |
+| `llm`      | Access to the LLM instance (BaseLLM from LangChain).                                | BaseLLM    | `OpenAI(model="gpt-3.5-turbo-instruct",...)`                                                                                                                                                                                                   |

@@ -25,14 +25,14 @@ from nemoguardrails.llm.types import Task
 
 
 def test_openai_text_davinci_prompts():
-    """Test the prompts for the OpenAI text-davinci-003 model."""
+    """Test the prompts for the OpenAI gpt-3.5-turbo-instruct model."""
     config = RailsConfig.from_content(
         yaml_content=textwrap.dedent(
             """
             models:
              - type: main
                engine: openai
-               model: text-davinci-003
+               model: gpt-3.5-turbo-instruct
             """
         )
     )
@@ -59,7 +59,7 @@ def test_openai_text_davinci_prompts():
     ],
 )
 def test_openai_gpt_3_5_turbo_prompts(task):
-    """Test the prompts for the OpenAI GPT-3 5 Turbo model."""
+    """Test the prompts for the OpenAI GPT-3.5 Turbo model."""
     config = RailsConfig.from_content(
         yaml_content=textwrap.dedent(
             """
@@ -134,7 +134,7 @@ def test_prompt_length_exceeded_empty_events():
             models:
              - type: main
                engine: openai
-               model: text-davinci-003
+               model: gpt-3.5-turbo-instruct
             prompts:
             - task: generate_user_intent
               max_length: 2000
@@ -174,7 +174,7 @@ def test_prompt_length_exceeded_compressed_history():
             models:
              - type: main
                engine: openai
-               model: text-davinci-003
+               model: gpt-3.5-turbo-instruct
             prompts:
             - task: generate_user_intent
               max_length: 3000

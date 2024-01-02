@@ -51,10 +51,12 @@ class ActionDispatcher:
 
             # Next, we load all actions from the library folder
             library_path = os.path.join(os.path.dirname(__file__), "../library")
-            for d in os.listdir(library_path):
-                path = os.path.join(library_path, d)
-                if os.path.isdir(path):
-                    self.load_actions_from_path(path)
+
+            for root, dirs, files in os.walk(library_path):
+                # We only load the actions if there is an `actions` sub-folder or
+                # an `actions.py` file.
+                if "actions" in dirs or "actions.py" in files:
+                    self.load_actions_from_path(root)
 
             # Next, we load all actions from the current working directory
             # TODO: add support for an explicit ACTIONS_PATH

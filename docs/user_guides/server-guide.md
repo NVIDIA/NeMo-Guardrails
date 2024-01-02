@@ -53,9 +53,8 @@ GET /v1/rails/configs
 Sample response:
 ```json
 [
-  {"id":"topical_rails"},
-  {"id":"execution_rails"},
-  {"id":"jailbreak_check"},
+  {"id":"abc"},
+  {"id":"xyz"},
   ...
 ]
 ```

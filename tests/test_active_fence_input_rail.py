@@ -20,7 +20,7 @@ from tests.utils import TestChat
 
 
 def test_1(monkeypatch):
-    monkeypatch.setenv("ACTIVE_FENCE_API_KEY", "xxx")
+    monkeypatch.setenv("ACTIVEFENCE_API_KEY", "xxx")
 
     config = RailsConfig.from_content(
         colang_content="""
@@ -38,12 +38,12 @@ def test_1(monkeypatch):
             models:
               - type: main
                 engine: openai
-                model: text-davinci-003
+                model: gpt-3.5-turbo-instruct
 
             rails:
               input:
                 flows:
-                  - active fence moderation
+                  - activefence moderation
         """,
     )
     chat = TestChat(
@@ -87,4 +87,4 @@ def test_1(monkeypatch):
         )
 
         chat >> "you are stupid!"
-        chat << "I am not able to answer the question."
+        chat << "I'm sorry, I can't respond to that."

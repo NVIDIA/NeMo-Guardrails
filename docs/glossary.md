@@ -18,4 +18,3 @@ User messages:
 - the first word should be a verb; "ask", "respond", "inform", "provide", "express", "comment", "confirm", "deny", "request"
 - the rest of the words should be nouns
 - should read naturally (e.g. not `user credit card problem` vs. `user inform credit card problem`)
--

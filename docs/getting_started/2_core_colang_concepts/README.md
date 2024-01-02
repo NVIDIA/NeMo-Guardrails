@@ -2,6 +2,22 @@
 
 This guide builds on the previous [Hello World guide](../1_hello_world/README.md) and introduces the core Colang concepts you should understand to get started with NeMo Guardrails.
 
+## Prerequisites
+
+Set up an OpenAI API key, if not already set.
+
+```bash
+export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+```
+
+If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+
+```python
+import nest_asyncio
+
+nest_asyncio.apply()
+```
+
 ## What is Colang?
 
 Colang is a modeling language for conversational applications. Using Colang you can design how the conversation between a user and a **bot** should happen.
@@ -202,7 +218,7 @@ The prompt has four logical sections:
 
 2. A sample conversation, which can also [be configured](../../user_guides/configuration-guide.md#sample-conversation) using the `sample_conversation` key in `config.yml`.
 
-3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details check out [TODO](#).
+3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details check out the [ABC Bot](../../../examples/bots/abc).
 
 4. The current conversation preceded by the first two turns from the sample conversation.
 

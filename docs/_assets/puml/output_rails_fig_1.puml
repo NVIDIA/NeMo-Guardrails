@@ -24,10 +24,10 @@ activate LLMRails
 LLMRails->IR: <<USER MESSAGE>>
 activate IR
 
-IR->Actions: execute check_jailbreak
+IR->Actions: execute self_check_input
 activate Actions
 
-Actions->LLM: TaskPrompt [jailbreak_check]
+Actions->LLM: TaskPrompt [self_check_input]
 activate LLM
 return "No"
 
@@ -42,12 +42,12 @@ return <<BOT MESSAGE >>
 LLMRails->OR: <<BOT MESSAGE>>
 activate OR
 
-  OR->Actions: execute output_moderation
+  OR->Actions: execute self_check_output
   activate Actions
 
-    Actions->LLM: TaskPrompt [output_moderation]
+    Actions->LLM: TaskPrompt [self_check_output]
     activate LLM
-    return "No."
+    return "Yes."
 
   return False
 

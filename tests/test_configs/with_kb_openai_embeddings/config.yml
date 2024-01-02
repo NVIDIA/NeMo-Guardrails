@@ -2,7 +2,7 @@
 models:
   - type: main
     engine: openai
-    model: text-davinci-003
+    model: gpt-3.5-turbo-instruct
 
 knowledge_base:
   embedding_search_provider:

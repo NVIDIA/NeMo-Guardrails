@@ -135,7 +135,7 @@ class TopicalRailsEvaluation:
 
     def __init__(
         self,
-        config_path: str,
+        config: str,
         verbose: Optional[bool] = False,
         test_set_percentage: Optional[float] = 0.3,
         max_tests_per_intent: Optional[int] = 3,
@@ -162,7 +162,7 @@ class TopicalRailsEvaluation:
         - random_seed: Random seed used by the evaluation.
         - output_dir: Output directory for predictions.
         """
-        self.config_path = config_path
+        self.config_path = config
         self.verbose = verbose
         self.test_set_percentage = test_set_percentage
         self.max_tests_per_intent = max_tests_per_intent

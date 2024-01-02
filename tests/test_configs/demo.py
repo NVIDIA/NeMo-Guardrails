@@ -26,7 +26,7 @@ def demo():
     config = RailsConfig.parse_object(
         {
             "models": [
-                {"type": "main", "engine": "openai", "model": "text-davinci-003"}
+                {"type": "main", "engine": "openai", "model": "gpt-3.5-turbo-instruct"}
             ],
             "instructions": [
                 {

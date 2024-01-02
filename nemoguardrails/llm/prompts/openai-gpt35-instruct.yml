@@ -1,9 +1,2 @@
 # Prompts for OpenAI gpt-3.5-turbo-instruct.
-prompts:
-  - task: output_moderation
-    models:
-      - openai/gpt-3.5-turbo-instruct
-    content: |-
-      Model_output: {{ bot_response }}
-
-      Is this output correct according to the law, ethical and not harmful? Answer with yes/no.
+prompts: []

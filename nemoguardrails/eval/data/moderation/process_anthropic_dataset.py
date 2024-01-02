@@ -65,7 +65,8 @@ def process_anthropic_harmful_data(input_path: str, rating: float):
 
     for d in dataset:
         human_utterance, assistant_response = split_messages(d["transcript"])
-        if d["rating"] == rating:
+        # if d["rating"] == rating:
+        if d["task_descripton_harmlessness_score"] < -1:
             first_turn_data.append(human_utterance[0])
 
     with open(f"anthropic_harmful.txt", "w", encoding="utf-8") as f:
