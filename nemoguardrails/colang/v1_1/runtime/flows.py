@@ -123,7 +123,7 @@ class ActionEvent(Event):
         """Creates an event from a flat dictionary."""
         new_event = ActionEvent(event["type"], {})
         new_event.arguments = dict(
-            [(key, event[key]) for key in event if key not in ["type", "action_uid"]]
+            [(key, event[key]) for key in event if key not in ["type"]]
         )
         if "action_uid" in event:
             new_event.action_uid = event["action_uid"]

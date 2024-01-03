@@ -131,7 +131,11 @@ def _update_action_properties(event_dict: Dict[str, Any]) -> None:
             event_dict["action_uid"] = new_uid()
     elif "Finished" in event_dict["type"]:
         event_dict["action_finished_at"] = datetime.now(timezone.utc).isoformat()
-        if event_dict["is_success"] and "failure_reason" in event_dict:
+        if (
+            "is_success" in event_dict
+            and event_dict["is_success"]
+            and "failure_reason" in event_dict
+        ):
             del event_dict["failure_reason"]
 
 
