@@ -247,6 +247,7 @@ flow showcase selector
 flow main
   # meta: exclude from llm
   #activate catch unexpected user utterance
+  activate ignored_action_bugfix
   activate catch undefined flows
   activate catch colang errors
   activate llm response pooling 1.0
@@ -261,5 +262,18 @@ flow main
   #showcase multimodality
   #showcase backchannelling interaction
   #showcase posture capabilities
-  #showcase proactive turn taking
+  showcase proactive turn taking
   wait indefinitely
+
+flow ignored_action_bugfix
+  # meta: exclude from llm
+  # meta: loop_id=ignored_action_bugfix
+  match StartUtteranceBotAction() as $event
+  log "Event StartUtteranceBotAction {{$event.action_uid}}"
+  start_new_flow_instance:
+  start TimerBotAction(timer_name="action_started_timer_{{uid()}}", duration=3) as $timer_ref
+  when $timer_ref.Finished()
+    log "action_started_timer triggered {{$event.action_uid}}"
+    send UtteranceBotActionFinished(action_uid=$event.action_uid, final_script="", is_success=False, failure_reason="ActionStarted event timeout")
+  orwhen UtteranceBotActionStarted(action_uid=$event.action_uid)
+    log "Event UtteranceBotActionStarted {{$event.action_uid}}"
