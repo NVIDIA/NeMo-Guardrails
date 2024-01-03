@@ -8,19 +8,20 @@ flow reaction to user silence $time_s $text
   user was silent $time_s
   bot inform $text
 
-flow reaction bot question repetition for user silence $time_s
+flow reaction bot question repetition for user silence $time_s $max_repetitions=1
   """Repeat previous bot question when use was silent for specified time."""
   # meta: exclude from llm
   bot asked something as $ref
   #start_new_flow_instance:
-  while True
+  $repetition = 0
+  while $repetition < $max_repetitions
     when user was silent $time_s
       $question = $ref.context.event.arguments.text
       $prompt = """Make a new variation of this question: {{$question}}"""
       if "{{is_str($prompt)}}" == "False"
         $prompt = "So, what do you think?"
       bot ask $prompt
-      break
+      $repetition = $repetition + 1
     orwhen user said something or bot said something
       break
     orwhen bot asked something
@@ -82,7 +83,7 @@ flow user expressed greeting
 
 flow user expressed done
   # meta: user intent
-  user said r"(?i).*[Dd]one.*|.*[Dd]umb.*"
+  user said r"(?i).*done.*|.*end.*showcase.*|.*exit.*"
 
 flow user asked how are you
   # meta: user intent
@@ -119,7 +120,7 @@ flow user picked backchanneling showcase
     or user said "backchanneling"
     or user said "showcase C"
     or user said "Third showcase"
-    or user said r"backchanneling"
+    or user said r"channeling"
 
 flow user picked posture showcase
   """User picked the posture showcase (D)."""
@@ -254,8 +255,10 @@ flow main
   activate track bot talking state
   #activate faq
 
+  start scene show textual information $title="Welcome to the Tech Demo of Colang 2.0" $text="" $header_image="artificial intelligence horizontal orientation" as $welcome_ui
   bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
     and bot gesture "Welcome user, wave hands"
+  send $welcome_ui.Stop()
   activate showcase selector
 
   #showcase number guessing game
