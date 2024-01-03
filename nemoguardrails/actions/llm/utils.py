@@ -238,7 +238,10 @@ def events_to_dialog_history(events: List[InternalEvent]) -> str:
     result = ""
     for idx, event in enumerate(events):
         identifier = from_log_event_to_identifier(event.name)
-        intent = f"{identifier}: {event.arguments['flow_id']}"
+        if idx == 0:
+            intent = f"{identifier}: {event.arguments['flow_id']}"
+        else:
+            intent = f"{event.arguments['flow_id']}"
         param_value = event.arguments["parameter"]
         if param_value is not None:
             if isinstance(param_value, str):
