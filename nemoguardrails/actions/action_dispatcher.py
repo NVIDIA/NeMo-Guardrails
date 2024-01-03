@@ -175,7 +175,7 @@ class ActionDispatcher:
                         result = fn.run(**params)
                     return result, "success"
                 except Exception as e:
-                    log.exception(f"Error {e} while execution {action_name}")
+                    log.warning(f"Error while execution {action_name}: {e}")
 
         return None, "failed"
 
