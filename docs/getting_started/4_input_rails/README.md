@@ -1,26 +1,26 @@
 # Input Rails
 
-This guide will teach you how to add input rails to a guardrails configuration. As discussed in the [previous guide](../3_demo_use_case), we will be building the ABC Bot as a demo.
+This topic demonstrates how to add input rails to a guardrails configuration. As discussed in the previous guide, [Demo Use Case](../3_demo_use_case), this topic guides you through building the ABC Bot.
 
 ## Prerequisites
 
-Set up an OpenAI API key, if not already set.
+1. Set up an OpenAI API key, if not already set:
 
-```bash
-export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
-```
+   ```bash
+   export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+   ```
 
-If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+2. If you're running this inside a notebook, patch the AsyncIO loop:
 
-```python
-import nest_asyncio
+   ```python
+   import nest_asyncio
 
-nest_asyncio.apply()
-```
+   nest_asyncio.apply()
+   ```
 
 ## Config Folder
 
-Let's start from scratch and create `config` folder with an initial `config.yml` file that uses the `gpt-3.5-turbo-instruct` model.
+Create a *config* folder with a *config.yml* file with the following content that uses the `gpt-3.5-turbo-instruct` model:
 
 ```yaml
 models:
@@ -31,23 +31,25 @@ models:
 
 ## General Instructions
 
-Before we start adding the input rails, let's also configure the **general instructions** for the bot. You can think of them as the system prompt. For more details, check out the [Configuration Guide](../../user_guides/configuration-guide.md#general-instructions).
+Configure the **general instructions** for the bot. You can think of them as the system prompt. For details, see the [Configuration Guide](../../user_guides/configuration-guide.md#general-instructions). These instructions configure the bot to answer questions about the employee handbook and the company's policies.
+
+Add the following content to *config.yml* to create a **general instruction**:
 
 ```yaml
 instructions:
   - type: general
     content: |
-      Below is a conversation between a user and a bot called the ABC Bot.
+      The following conversation is between a user and the ABC Bot.
       The bot is designed to answer employee questions about the ABC Company.
       The bot is knowledgeable about the employee handbook and company policies.
-      If the bot does not know the answer to a question, it truthfully says it does not know.
+      If the bot does not know the answer to a question, it replies that it does not know.
 ```
-
-In the snippet above, we instruct the bot to answer questions about the employee handbook and the company's policies.
 
 ## Sample Conversation
 
-Another option to influence how the LLM will respond is to configure a sample conversation. The sample conversation sets the tone for how the conversation between the user and the bot should go. We will see further down the line how the sample conversation is included in the prompts. For more details, you can also refer to the [Configuration Guide](../../user_guides/configuration-guide.md#sample-conversation).
+Another option to influence how the LLM responds to a sample conversation. The sample conversation sets the tone for the conversation between the user and the bot. The sample conversation is included in the prompts, which are shown in a subsequent section. For details, see the [Configuration Guide](../../user_guides/configuration-guide.md#sample-conversation).
+
+Add the following to *config.yml* to create a **sample conversation**:
 
 ```yaml
 sample_conversation: |
@@ -63,7 +65,7 @@ sample_conversation: |
 
 ## Testing without Input Rails
 
-Let's go ahead and greet the bot:
+To test the bot, provide it with a greeting similar to the following:
 
 ```python
 from nemoguardrails import RailsConfig, LLMRails
@@ -82,7 +84,7 @@ print(response["content"])
 Hello! I am the ABC Bot. I am here to answer any questions you may have about the ABC Company and its policies. How can I assist you?
 ```
 
-Let's inspect what happened under the hood:
+Get a summary of the LLM calls that have been made:
 
 ```python
 info = rails.explain()
@@ -95,17 +97,17 @@ Summary: 1 LLM call(s) took 0.92 seconds and used 106 tokens.
 1. Task `general` took 0.92 seconds and used 106 tokens.
 ```
 
-We see that a single call was made to the LLM using the prompt for the task `general`. In contrast to the [Core Colang Concepts guide](../2_core_colang_concepts), where the `generate_user_intent` task is used as a first phase for each user message, if no user canonical forms are defined for the Guardrails configuration, the `general` task is used instead. Let's take a closer look at the prompt and the completion:
+The summary shows that a single call was made to the LLM using the prompt for the task `general`. In contrast to the [Core Colang Concepts guide](../2_core_colang_concepts), where the `generate_user_intent` task is used as a first phase for each user message, if no user canonical forms are defined for the Guardrails configuration, the `general` task is used instead. Take a closer look at the prompt and the completion:
 
 ```python
 print(info.llm_calls[0].prompt)
 ```
 
 ```
-Below is a conversation between a user and a bot called the ABC Bot.
+The following conversation is between a user and the ABC Bot.
 The bot is designed to answer employee questions about the ABC Company.
 The bot is knowledgeable about the employee handbook and company policies.
-If the bot does not know the answer to a question, it truthfully says it does not know.
+If the bot does not know the answer to a question, it replies that it does not know.
 
 User: Hello! What can you do for me?
 Assistant:
@@ -119,11 +121,11 @@ print(info.llm_calls[0].completion)
  Hello! I am the ABC Bot. I am here to answer any questions you may have about the ABC Company and its policies. How can I assist you?
 ```
 
-As expected, the LLM is prompted with the general instructions and the user's input. Great! In the next section we'll add an input rail, preventing the LLM to respond to certain jailbreak attempts.
+As expected, the LLM is prompted with the general instructions and the user's input. The next section adds an input rail, preventing the LLM to respond to certain jailbreak attempts.
 
 ## Jailbreak Attempts
 
-In the context of LLMs, jail-breaking typically refers to finding ways to circumvent the built-in restrictions or guidelines set by the model's developers. These restrictions are usually in place for ethical, legal, or safety reasons. For example, what would happen if we instruct the ABC Bot something like this:
+In the context of LLMs, jail-breaking typically refers to finding ways to circumvent the built-in restrictions or guidelines set by the model's developers. These restrictions are usually in place for ethical, legal, or safety reasons. For example, what happens if you instruct the ABC Bot to ignore previous instructions:
 
 ```python
 response = rails.generate(messages=[{
@@ -134,22 +136,22 @@ print(response["content"])
 ```
 
 ```
-LOL Below is a conversation between a user and a bot called the ABC Bot.
+LOL The following conversation is between a user and the ABC Bot.
 The bot is designed to answer employee questions about the ABC Company.
 The bot is knowledgeable about the employee handbook and company policies.
-If the bot does not know the answer to a question, it truthfully says it does not know.
+If the bot does not know the answer to a question, it replies that it does not know.
 ```
 
-> **NOTE**: this jailbreak attempt does not work 100% of the time. If you're running this and getting a different result, try a few times, and you should get a response similar to the above.
+> **NOTE**: this jailbreak attempt does not work 100% of the time. If you're running this and getting a different result, try a few times, and you should get a response similar to the previous.
 
-Allowing the LLM to comply with this type of requests is definitely something we don't want. To prevent jailbreak attempts like this, you can add an input rail that can process the user input before it is sent to the LLM. NeMo Guardrails comes with a built-in [self check input](../../user_guides/guardrails-library.md#input-checking) rail that uses a separate LLM query to detect a jailbreak attempt. To use it, you have to:
+Allowing the LLM to comply with this type of request is definitely something we don't want. To prevent jailbreak attempts like this, you can add an input rail that can process the user input before it is sent to the LLM. NeMo Guardrails comes with a built-in [self check input](../../user_guides/guardrails-library.md#input-checking) rail that uses a separate LLM query to detect a jailbreak attempt. To use it, you have to:
 
-1. Activate the `self check input` rail in `config.yml`.
-2. Add a `self_check_input` prompt in `prompts.yml`.
+1. Activate the `self check input` rail in *config.yml*.
+2. Add a `self_check_input` prompt in *prompts.yml*.
 
 ### Activate the rail
 
-To activate the rail, include the `self check input` flow name in the input rails section of the `config.yml` file:
+To activate the rail, include the `self check input` flow name in the input rails section of the *config.yml* file:
 
 ```yaml
 rails:
@@ -158,10 +160,9 @@ rails:
       - self check input
 ```
 
-Let's explain what the four lines above mean:
-- The top level `rails` key is used to configure the rails that are active in a guardrails configuration.
-- The `input` sub-key is used to configure the input rails. Other valid sub-keys are `output`, `retrieval`, `dialog` and `execution`, which we will use in some of the following guides.
-- The `flows` keys contains the name of the flows that will be used as input rails.
+- The top-level `rails` key configures the rails that are active in a guardrails configuration.
+- The `input` sub-key configures the input rails. Other valid sub-keys are `output`, `retrieval`, `dialog` and `execution`, which are used in some of the following guides.
+- The `flows` keys contains the name of the flows that is used as input rails.
 - `self check input` is the name of a pre-defined flow that implements self-check input checking.
 
 All the rails in NeMo Guardrails are implemented as flows. For example, you can find the `self_check_input` flow [here](../../../nemoguardrails/library/self_check/input_check/flows.co).
@@ -175,11 +176,13 @@ define flow self check input
     stop
 ```
 
-The flows implementing input rails can call actions (e.g., `execute self_check_input`), instruct the bot to respond in a certain way (e.g., `bot refuse to respond`) and even stop any further processing for the current user request.
+The flows implementing input rails can call actions, such as `execute self_check_input`, instruct the bot to respond in a certain way, such as `bot refuse to respond`, and even stop any further processing for the current user request.
 
 ### Add a prompt
 
 The self-check input rail needs a prompt to perform the check.
+
+Add the following content to *prompts.yml* to create a prompt for the **self-check input** task:
 
 ```yaml
 prompts:
@@ -270,15 +273,15 @@ print(info.llm_calls[0].completion)
  Yes
 ```
 
-The figure below depicts in more details how the self-check input rail worked:
+The following figure depicts in more details how the self-check input rail works:
 
 <div align="center">
 <img src="../../_assets/puml/input_rails_fig_1.png" width="815">
 </div>
 
-We can see that the `self check input` rail called the `self_check_input` action, which in turn called the LLM using the `self_check_input` task prompt.
+The `self check input` rail calls the `self_check_input` action, which in turn calls the LLM using the `self_check_input` task prompt.
 
-Now, let's ask a question that the LLM is supposed to answer.
+Here is a question that the LLM should answer:
 
 ```python
 response = rails.generate(messages=[{
@@ -304,7 +307,7 @@ Summary: 2 LLM call(s) took 1.26 seconds and used 261 tokens.
 2. Task `general` took 0.58 seconds and used 96 tokens.
 ```
 
-We can see that this time, two LLM calls were made: one for the `self_check_input` task and one for the `general` task. We can check that this time the `check_input` was not triggered:
+In this case two LLM calls were made: one for the `self_check_input` task and one for the `general` task. The `check_input` was not triggered:
 
 ```python
 print(info.llm_calls[0].completion)
@@ -320,13 +323,13 @@ Because the input rail was not triggered, the flow continued as usual.
 <img src="../../_assets/puml/input_rails_fig_2.png" width="740">
 </div>
 
-The final answer itself is not factually correct, but we'll fix that in the [Fact-checking Guide](#).
+Note that the final answer is not correct.
 
 ## Testing the Bot
 
 You can also test this configuration in an interactive mode using the NeMo Guardrails CLI Chat.
 
-> **NOTE**: make sure you are in the root folder where the `config` folder is placed. Otherwise, you can specify the path to the config folder using the `--config=PATH/TO/CONFIG` option.
+> **NOTE**: make sure you are in the folder containing the *config* folder. Otherwise, you can specify the path to the config folder using the `--config=PATH/TO/CONFIG` option.
 
 ```bash
 $ nemoguardrails chat
@@ -349,8 +352,8 @@ Feel free to experiment with various inputs that should or should not trigger th
 
 ## More on Input Rails
 
-Input rails also have the ability to alter the message from the user. By changing the value for the `$user_message` variable, the subsequent input rails and dialog rails will work with the updated value. This can be useful, for example, to mask sensitive information. For an example of this behavior, checkout the [Sensitive Data Detection rails](../../user_guides/guardrails-library.md#presidio-based-sensitive-data-detection).
+Input rails also have the ability to alter the message from the user. By changing the value for the `$user_message` variable, the subsequent input rails and dialog rails work with the updated value. This can be useful, for example, to mask sensitive information. For an example of this behavior, checkout the [Sensitive Data Detection rails](../../user_guides/guardrails-library.md#presidio-based-sensitive-data-detection).
 
 ## Next
 
-In the [next guide](../5_output_rails), we will be adding output moderation to our InfoBot.
+The next guide, [Output Rails](../5_output_rails), adds output moderation to the bot.
