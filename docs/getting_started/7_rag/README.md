@@ -4,19 +4,19 @@ This guide will teach you how to apply a guardrails configuration in a RAG scena
 
 ## Prerequisites
 
-Set up an OpenAI API key, if not already set.
+1. Set up an OpenAI API key, if not already set.
 
-```bash
-export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
-```
+   ```bash
+   export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+   ```
 
-If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+2. If you're running this inside a notebook, patch the AsyncIO loop.
 
-```python
-import nest_asyncio
+   ```python
+   import nest_asyncio
 
-nest_asyncio.apply()
-```
+   nest_asyncio.apply()
+   ```
 
 ## Usage
 
@@ -27,7 +27,7 @@ There are two modes in which you can use a guardrails configuration in conjuncti
 
 ### Relevant Chunks
 
-In the previous guide, we've seen that asking "How many free vacation days do I have per year" yields a general response:
+In the previous guide, the message "How many free vacation days do I have per year" yields a general response:
 
 ```python
 from nemoguardrails import RailsConfig, LLMRails
@@ -46,7 +46,7 @@ print(response["content"])
 Full-time employees are eligible for up to two weeks of paid vacation time per year. Part-time employees receive a prorated amount based on their hours worked. Please refer to the employee handbook for more information.
 ```
 
-Let's assume that at the ABC company, the following is included in the Employee Handbook:
+ABC company's Employee Handbook contains the following information:
 
 ```markdown
 Employees are eligible for the following time off:
@@ -58,7 +58,7 @@ Employees are eligible for the following time off:
 * Bereavement leave: 3 days paid leave for immediate family members, 1 day for non-immediate family members.
 ```
 
-We can pass this information directly when making the `generate` call:
+You can pass this information directly to guardrails when making a `generate` call:
 
 ```python
 response = rails.generate(messages=[{
@@ -83,7 +83,7 @@ print(response["content"])
 Eligible employees receive 20 days of paid vacation time per year, which accrues monthly. You can find more information about this in the employee handbook.
 ```
 
-As expected, we now receive the correct answer.
+As expected, the response contains the correct answer.
 
 ### Knowledge Base
 
@@ -95,11 +95,11 @@ There are three ways you can configure a knowledge base directly into a guardrai
 
 For option 1, you can add a knowledge base directly into your guardrails configuration by creating a `kb` folder inside the `config` folder and adding documents there. Currently, only the Markdown format is supported. For a quick example, check out the complete implementation of the [ABC Bot](../../../examples/bots/abc).
 
-Options 2 and 3 represent advanced use cases and will soon detailed in separate guides.
+Options 2 and 3 represent advanced use cases beyond the scope of this topic.
 
 ## Wrapping Up
 
-This guide introduced briefly how a guardrails configuration can be used in the context of a RAG setup.
+This guide introduced how a guardrails configuration can be used in the context of a RAG setup.
 
 ## Next
 
