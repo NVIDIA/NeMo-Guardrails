@@ -6,7 +6,7 @@ flow showcase multimodality
 
   bot inform "The talking action goes like this:"
   wait 1.0
-  bot say "Talking, talking."
+  bot say "The quick brown fox jumps over the lazy dog."
   wait 1.0
 
   bot inform "The gesture action looks like this:"
@@ -37,14 +37,14 @@ flow showcase multimodality
   wait 1.0
 
 flow show sequential actions showcase
-  bot say "Talking, talking."
+  bot say "The quick brown fox jumps over the lazy dog."
   bot gesture "Being silly, suggesting having fun"
 
 flow show parallel actions waiting for both to end showcase
-  bot say "Talking, talking."
+  bot say "The quick brown fox jumps over the lazy dog."
     and bot gesture "Being silly, suggesting having fun"
 
 flow show parallel actions limiting second action by end of first one
-  start bot say "Talking, talking." as $action_1
+  start bot say "The quick brown fox jumps over the lazy dog." as $action_1
   start bot gesture "Being silly, suggesting having fun"
   match $action_1.Finished()

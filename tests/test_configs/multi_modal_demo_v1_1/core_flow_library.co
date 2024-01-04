@@ -11,7 +11,7 @@ flow user said $text
 
 flow user saying $text
   # meta: exclude from llm
-  match UtteranceUserAction.TranscriptUpdated(interim_transcript=r".*{{$text}}((\s*\w+\s*){0,2})\W*$") as $event
+  match UtteranceUserAction.TranscriptUpdated(interim_transcript=r"(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$") as $event
   return $event.arguments.interim_transcript
 
 flow user started saying something
@@ -20,7 +20,7 @@ flow user started saying something
 
 flow user typing $text
   # meta: exclude from llm
-  match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*{{$text}}((\s*\w+\s*){0,2})\W*$"}]) as $event
+  match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*({{$text}})((\s*\w+\s*){0,2})\W*$"}]) as $event
   return $event.arguments.interim_inputs
 
 flow user said something
@@ -64,7 +64,7 @@ flow user was silent $time_s
   # meta: loop_id=user_was_silent
   # meta: user intent
   while True
-    start TimerBotAction(timer_name="user_silence", duration=$time_s) as $timer_ref
+    start wait $time_s as $timer_ref
     when $timer_ref.Finished()
       break
     orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
@@ -79,7 +79,7 @@ flow user didnt respond $time_s
   # meta: loop_id=user_did_not_respond
   # meta: user intent
   while True
-    start TimerBotAction(timer_name="user_no_response", duration=$time_s) as $timer_ref
+    start wait $time_s as $timer_ref
     when $timer_ref.Finished()
       break
     orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
@@ -190,7 +190,7 @@ flow bot was silent $time_s
   # meta: loop_id=bot_was_silent
   # meta: bot intent
   while True
-    start TimerBotAction(timer_name="bot_silence", duration=$time_s) as $timer_ref
+    start wait $time_s as $timer_ref
     when $timer_ref.Finished()
       break
     orwhen UtteranceBotAction.Started()
@@ -352,11 +352,11 @@ flow wait indefinitely
   # meta: exclude from llm
   match NeverComingEvent()
 
-flow wait $time_s
+flow wait $time_s $timer_id="wait_timer_{{uid()}}"
   """Wait the specified number of seconds before continuing."""
   # meta: exclude from llm
-  # meta: loop_id=wait
-  await TimerBotAction(timer_name="wait_timer_{{uid()}}", duration=$time_s)
+  # meta: loop_id=NEW
+  await TimerBotAction(timer_name=$timer_id, duration=$time_s)
 
 flow llm response pooling $interval
   # meta: exclude from llm
@@ -401,7 +401,8 @@ flow repeating timer $timer_id $interval_s
   """Repeating timer."""
   # meta: exclude from llm
   while True
-    await TimerBotAction(timer_name=$timer_id, duration=$interval_s)
+    await wait $interval_s $timer_id
+    # await TimerBotAction(timer_name=$timer_id, duration=$interval_s)
 
 flow bot respond to user said something
   """This flow will react to anything the user said with an LLM generated answer."""

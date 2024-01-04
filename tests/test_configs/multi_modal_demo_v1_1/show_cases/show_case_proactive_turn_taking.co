@@ -1,5 +1,5 @@
 flow showcase proactive turn taking
-  activate reaction bot question repetition for user silence 5
+  activate reaction bot question repetition for user silence 5 1000
 
   bot inform "I am going to ask you questions and if you don't respond within 5 seconds I will repeat them."
 
@@ -9,8 +9,8 @@ flow showcase proactive turn taking
       $question = "Do you like Avatars?"
     bot ask $question
     when user said something
-      bot say "Great, you have answered! After the next question wait a bit for me to repeat it."
-    orwhen bot asked something
+      bot say "Great, you have answered! I will keep asking you questions until you say 'Exit the showcase'!"
+    orwhen user expressed done
       wait 1
-      bot inform "You see, that's how I can be proactive and repeat the question. That's it!"
+      bot inform "Ok! You see, that's how I can be proactive and repeat the question. That's it!"
       break

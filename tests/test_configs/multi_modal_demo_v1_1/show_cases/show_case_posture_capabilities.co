@@ -1,13 +1,19 @@
 flow showcase posture capabilities
-  bot inform "Now I am going to show you how my posture can be controlled based on me or you talking."
-  wait 1.0
-  bot inform "I will switch between listening, talking, and an attentive posture."
-  wait 1.0
+  bot ask "Now I am going to show you how my posture can be controlled based on me or you talking."
+  wait 1.5
+  
+  bot ask "I will switch between listening, talking, and an attentive posture."
+  wait 1.5
 
   activate posture management
+  wait 2.0
 
-  bot inform "So now observe how my posture changes when I am talking."
+  bot ask "So now observe how my posture changes when I am talking."
+  wait 1.5
+  
   bot ask "And now it is your turn, you can say something now. Try a long sentence."
+  wait 1.5
+  
   while True
     when user expressed done
       bot inform "That was fun."
@@ -16,7 +22,7 @@ flow showcase posture capabilities
       bot inform "OK. Let's go back"
       break
     orwhen user said something
-      bot ask "So now I again in the talking posture. We can keep interacting like this if you want to see the posture changes or you can just say 'I am done' to end the showcase."
+      bot ask "So now I am again in the talking posture. We can keep interacting like this if you want to see the posture changes or you can just say 'I am done with this' to end the showcase."
 
 flow listening posture
   user started saying something
@@ -26,9 +32,11 @@ flow listening posture
 
 flow talking posture
   bot started saying something
+  wait 0.5
   start bot posture "talking"
   start scene show short information $info="Talking"
   bot said something
+  wait 0.6
 
 flow posture management
   activate listening posture
