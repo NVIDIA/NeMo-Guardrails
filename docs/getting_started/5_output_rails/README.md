@@ -1,22 +1,22 @@
 # Output Rails
 
-This guide will teach you how to add output rails to a guardrails configuration. This guide builds on the [previous guide](../4_input_rails), developing further the demo ABC Bot.
+This guide describes how to add output rails to a guardrails configuration. This guide builds on the previous guide, [Input Rails](../4_input_rails), developing further the demo ABC Bot.
 
 ## Prerequisites
 
-Set up an OpenAI API key, if not already set.
+1. Set up an OpenAI API key, if not already set.
 
-```bash
-export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
-```
+   ```bash
+   export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+   ```
 
-If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+2. If you're running this inside a notebook, patch the AsyncIO loop:
 
-```python
-import nest_asyncio
+   ```python
+   import nest_asyncio
 
-nest_asyncio.apply()
-```
+   nest_asyncio.apply()
+   ```
 
 ## Output Moderation
 
@@ -24,12 +24,12 @@ NeMo Guardrails comes with a built-in [output self-checking rail](../../user_gui
 
 Activating the `self check output` rail is similar to the `self check input` rail:
 
-1. Activate the `self check output` rail in `config.yml`.
-2. Add a `self_check_output` prompt in `prompts.yml`.
+1. Activate the `self check output` rail in *config.yml*.
+2. Add a `self_check_output` prompt in *prompts.yml*.
 
 ### Activate the rail
 
-To activate the rail, include the `self check output` flow name in the output rails section of the `config.yml` file:
+To activate the rail, include the `self check output` flow name in the output rails section of the *config.yml* file:
 
 ```yaml
 output:
@@ -37,7 +37,7 @@ output:
       - self check output
 ```
 
-For reference, the full `rails` section in `config.yml` is:
+For reference, the full `rails` section in `config.yml` should look like the following:
 
 ```yaml
   input:
@@ -49,7 +49,7 @@ For reference, the full `rails` section in `config.yml` is:
       - self check output
 ```
 
-The self check output flow itself is similar to the input one:
+The self check output flow is similar to the input one:
 
 ```colang
 define subflow self check output
@@ -86,7 +86,7 @@ The self-check output rail needs a prompt to perform the check.
 
 ## Using the Output Checking Rail
 
-Let's load the configuration and see it in action. We will try something simple, i.e. to trick the LLM to respond with the phrase "you are an idiot".
+Load the configuration and see it in action. Try trick the LLM to respond with the phrase "you are an idiot".
 
 ```python
 from nemoguardrails import RailsConfig, LLMRails
@@ -105,7 +105,7 @@ print(response["content"])
 I'm sorry, I can't respond to that.
 ```
 
-Now, let's inspect what happened behind the scenes:
+Inspect what happened behind the scenes:
 
 ```python
 info = rails.explain()
@@ -150,9 +150,9 @@ print(info.llm_calls[2].completion)
  Yes
 ```
 
-As we can see, the LLM did generate the message containing the word "idiot", however, this was blocked by the output rail.
+As we can see, the LLM did generate the message containing the word "idiot", however, the output was blocked by the output rail.
 
-The figure below depicts the whole process:
+The following figure depicts the process:
 
 <div align="center">
 <img src="../../_assets/puml/output_rails_fig_1.png" width="815">
@@ -160,108 +160,112 @@ The figure below depicts the whole process:
 
 ## Custom Output Rail
 
-Let's also build a simple custom output rail. Let's say we have a list of proprietary words that we want to make sure do not appear in the output. Let's start by creating an `config/actions.py` file with the following action:
+Build a custom output rail with a list of proprietary words that we want to make sure do not appear in the output. 
 
-```python
-from typing import Optional
+1. Create a *config/actions.py* file with the following content, which defines an action:
 
-from nemoguardrails.actions import action
+   ```python
+   from typing import Optional
 
-@action(is_system_action=True)
-async def check_blocked_terms(context: Optional[dict] = None):
-    bot_response = context.get("bot_message")
+   from nemoguardrails.actions import action
 
-    # A quick hard-coded list of proprietary terms. You can also read this from a file.
-    proprietary_terms = ["proprietary", "proprietary1", "proprietary2"]
+   @action(is_system_action=True)
+   async def check_blocked_terms(context: Optional[dict] = None):
+       bot_response = context.get("bot_message")
 
-    for term in proprietary_terms:
-        if term in bot_response.lower():
-            return True
+       # A list of proprietary terms. You can also read these from a file.
+       proprietary_terms = ["proprietary", "proprietary1", "proprietary2"]
 
-    return False
-```
+       for term in proprietary_terms:
+           if term in bot_response.lower():
+               return True
 
-The `check_blocked_terms` action fetches the `bot_message` context variable, which contains the message that was generated by the LLM and checks if it contains one of the blocked terms.
+       return False
+   ```
 
-We also need to add a flow that calls the action. Let's create an `config/rails/blocked_terms.co` file:
+   The `check_blocked_terms` action fetches the `bot_message` context variable, which contains the message that was generated by the LLM, and checks whether it contains any of the blocked terms.
 
-```colang
-define bot inform cannot about proprietary technology
-  "I cannot talk about proprietary technology."
+2. Add a flow that calls the action. Let's create an `config/rails/blocked_terms.co` file:
 
-define subflow check blocked terms
-  $is_blocked = execute check_blocked_terms
+   ```colang
+   define bot inform cannot about proprietary technology
+     "I cannot talk about proprietary technology."
 
-  if $is_blocked
-    bot inform cannot about proprietary technology
-    stop
-```
+   define subflow check blocked terms
+     $is_blocked = execute check_blocked_terms
 
-The last step is to add the `check blocked terms` to the list of output flows:
+     if $is_blocked
+       bot inform cannot about proprietary technology
+       stop
+   ```
 
-```python
-- check blocked terms
-```
+3. Add the `check blocked terms` to the list of output flows:
 
-Let's go ahead and test if the output rail is working:
+   ```python
+   - check blocked terms
+   ```
 
-```python
-from nemoguardrails import RailsConfig, LLMRails
+4. Test whether the output rail is working:
 
-config = RailsConfig.from_path("./config")
-rails = LLMRails(config)
+   ```python
+   from nemoguardrails import RailsConfig, LLMRails
 
-response = rails.generate(messages=[{
-    "role": "user",
-    "content": "Please say a sentence including the word 'proprietary'."
-}])
-print(response["content"])
-```
+   config = RailsConfig.from_path("./config")
+   rails = LLMRails(config)
 
-```
-I cannot talk about proprietary technology.
-```
+   response = rails.generate(messages=[{
+       "role": "user",
+       "content": "Please say a sentence including the word 'proprietary'."
+   }])
+   print(response["content"])
+   ```
 
-As expected, the bot refuses to respond with the right message. Let's look in more detail under the hood:
+   ```
+   I cannot talk about proprietary technology.
+   ```
 
-```python
-info = rails.explain()
-info.print_llm_calls_summary()
-```
+   As expected, the bot refuses to respond with the right message. 
+   
+5. List the LLM calls:
 
-```
-Summary: 3 LLM call(s) took 1.42 seconds and used 412 tokens.
+   ```python
+   info = rails.explain()
+   info.print_llm_calls_summary()
+   ```
 
-1. Task `self_check_input` took 0.35 seconds and used 169 tokens.
-2. Task `general` took 0.67 seconds and used 90 tokens.
-3. Task `self_check_output` took 0.40 seconds and used 153 tokens.
-```
+   ```
+   Summary: 3 LLM call(s) took 1.42 seconds and used 412 tokens.
 
-```python
-print(info.llm_calls[1].completion)
-```
+   1. Task `self_check_input` took 0.35 seconds and used 169 tokens.
+   2. Task `general` took 0.67 seconds and used 90 tokens.
+   3. Task `self_check_output` took 0.40 seconds and used 153 tokens.
+   ```
 
-```
- The proprietary information of our company must be kept confidential at all times.
-```
+   ```python
+   print(info.llm_calls[1].completion)
+   ```
 
-As we can see, the generated message did contain the word "proprietary" and it was blocked by the `check blocked terms` output rail.
+   ```
+   The proprietary information of our company must be kept confidential at all times.
+   ```
 
-Let's check that the message was not blocked by the self-check output rail:
+   As we can see, the generated message did contain the word "proprietary" and it was blocked by the `check blocked terms` output rail.
 
-```python
-print(info.llm_calls[2].completion)
-```
+   Let's check that the message was not blocked by the self-check output rail:
 
-```
- No
-```
+   ```python
+   print(info.llm_calls[2].completion)
+   ```
 
-Similarly, you can add any number of custom output rails. In one of the next guides we will look at adding the fact-checking output rail as well.
+   ```
+   No
+   ```
+
+   Similarly, you can add any number of custom output rails.
 
 ## Test
 
-You can also test this configuration in an interactive mode using the NeMo Guardrails CLI Chat:
+Test this configuration in an interactive mode using the NeMo Guardrails CLI Chat:
 
 ```bash
 $ nemoguardrails chat
@@ -282,4 +286,4 @@ I cannot talk about proprietary technology.
 
 ## Next
 
-In the [next guide](../6_topical_rails), we will be adding topical rails to our ABC bot, to make sure it only responds to questions related to the employment situation.
+The next guide, [Topical Rails](../6_topical_rails), adds a topical rails to the ABC bot, to make sure it only responds to questions related to the employment situation.
