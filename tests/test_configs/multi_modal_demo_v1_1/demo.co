@@ -102,7 +102,7 @@ flow user picked number guessing game showcase
     or user said "Show me the game"
     or user said "showcase A"
     or user said "First showcase"
-    or user said r"guessing game"
+    or user said r"(?i)guessing game"
 
 flow user picked multimodality showcase
    """User picked the multimodality showcase (B)."""
@@ -111,7 +111,7 @@ flow user picked multimodality showcase
      or user said "multimodality"
      or user said "showcase B"
      or user said "Second showcase"
-     or user said r"multimodality"
+     or user said r"(?i)multimodality"
 
 flow user picked backchanneling showcase
   """User picked the backchanneling showcase (C)."""
@@ -120,7 +120,7 @@ flow user picked backchanneling showcase
     or user said "backchanneling"
     or user said "showcase C"
     or user said "Third showcase"
-    or user said r"channeling"
+    or user said r"(?i)channeling"
 
 flow user picked posture showcase
   """User picked the posture showcase (D)."""
@@ -130,7 +130,7 @@ flow user picked posture showcase
     or user said "showcase D"
     or user said "Fourth showcase"
     or user said "Second last showcase"
-    or user said r"posture"
+    or user said r"(?i)posture"
 
 flow user picked proactive showcase
   """User picked the proactive showcase (E)."""
@@ -140,7 +140,7 @@ flow user picked proactive showcase
     or user said "showcase E"
     or user said "Fifth showcase"
     or user said "Last showcase"
-    or user said r"proactive"
+    or user said r"(?i)pro\s*active|turn\s*tak[ie]"
 
 flow user wanted to end conversation
   """User wants to end the open conversation"""
@@ -149,6 +149,10 @@ flow user wanted to end conversation
     or user said "Shut up"
     or user said "Let's finish this conversation"
     or user said "I want to go back"
+
+flow bot start the number guessing game
+  """Bot starts the number guessing game"""
+  showcase number guessing game
 
 # ----------------------------------
 # FAQs
@@ -248,7 +252,7 @@ flow showcase selector
 flow main
   # meta: exclude from llm
   #activate catch unexpected user utterance
-  activate ignored_action_bugfix
+  activate ignored_utterance_action_bugfix
   activate catch undefined flows
   activate catch colang errors
   activate llm response pooling 1.0
@@ -265,10 +269,10 @@ flow main
   #showcase multimodality
   #showcase backchannelling interaction
   #showcase posture capabilities
-  showcase proactive turn taking
+  #showcase proactive turn taking
   wait indefinitely
 
-flow ignored_action_bugfix
+flow ignored_utterance_action_bugfix
   # meta: exclude from llm
   # meta: loop_id=ignored_action_bugfix
   match StartUtteranceBotAction() as $event

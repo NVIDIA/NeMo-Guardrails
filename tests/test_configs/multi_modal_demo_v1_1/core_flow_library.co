@@ -377,16 +377,18 @@ flow catch colang errors
   # meta: exclude from llm
   # meta: loop_id=catch_colang_errors
   match ColangError() as $event
-  bot say "Oh! Sorry, what did you say? I was fixing some internal processing."
-    and bot gesture "Warning: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
+  log "Colang error: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
+  bot say "Excuse me, what did you say?"
 
 flow catch undefined flows
   """A flow to catch the start of undefined flows."""
   # meta: exclude from llm
   priority 0.1
   match UnhandledEvent(event="StartFlow") as $event
-  bot say "Oh! Sorry, what did you say? I was fixing some internal processing."
-    and bot gesture "Warning: Undefined flow '{{$event.arguments.flow_id}}' {{$event.arguments.loop_ids}}"
+  log "Undefined flow: '{{$event.arguments.flow_id}}' {{$event.arguments.loop_ids}}"
+  bot say "Excuse me, what did you say?"
+  # We need to abort the flow that sent the FlowStart event since it might be waiting for it
+  send StopFlow(flow_instance_uid=$event.arguments.source_flow_instance_uid)
 
 flow catch unexpected user utterance
   """A flow to catch unhandled user utterances."""
