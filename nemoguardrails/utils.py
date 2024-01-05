@@ -129,6 +129,8 @@ def _update_action_properties(event_dict: Dict[str, Any]) -> None:
     elif "Start" in event_dict["type"]:
         if "action_uid" not in event_dict:
             event_dict["action_uid"] = new_uid()
+    elif "Updated" in event_dict["type"]:
+        event_dict["action_updated_at"] = datetime.now(timezone.utc).isoformat()
     elif "Finished" in event_dict["type"]:
         event_dict["action_finished_at"] = datetime.now(timezone.utc).isoformat()
         if (
