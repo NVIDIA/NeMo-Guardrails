@@ -1,3 +1,18 @@
+# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import copy
 import logging
 import random
@@ -1831,11 +1846,14 @@ def create_internal_event(
     return event
 
 
-def create_umim_event(event: Event, event_args: dict) -> Dict[str, Any]:
+def create_umim_event(event: Event, event_args: Dict[str, Any]) -> Dict[str, Any]:
     """Returns an outgoing UMIM event for the provided action data"""
-    new_event_args = event_args.copy()
+    new_event_args = dict(event_args)
     new_event_args["source_uid"] = "NeMoGuardrails-Colang-1.1"
     if isinstance(event, ActionEvent) and event.action_uid is not None:
+        if "action_uid" in new_event_args:
+            event.action_uid = new_event_args["action_uid"]
+            del new_event_args["action_uid"]
         return new_event_dict(event.name, action_uid=event.action_uid, **new_event_args)
     else:
         return new_event_dict(event.name, **new_event_args)
