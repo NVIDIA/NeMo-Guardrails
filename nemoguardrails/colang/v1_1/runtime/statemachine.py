@@ -231,7 +231,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
     merging_heads: List[FlowHead] = []
 
     # Remove all old flow states based on last status update to limit their number
-    # TODO: Refactor, ee need to have reference based clean up approach
+    # TODO: Refactor, we need to have reference based clean up approach
     states_to_be_removed = []
     for flow_state in state.flow_states.values():
         if _is_done_flow(flow_state) and (
@@ -362,7 +362,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                                     active_interaction_loops.add(flow_state.loop_id)
 
                             matching_score = _compute_event_matching_score(
-                                state, flow_state, element, event
+                                state, flow_state, head, event
                             )
 
                             if matching_score > 0.0:
@@ -1372,14 +1372,31 @@ def _get_flow_state_hierarchy(state: State, flow_state_uid: int) -> List[str]:
 
 
 def _compute_event_matching_score(
-    state: State, flow_state: FlowState, element: SpecOp, event: Event
+    state: State, flow_state: FlowState, head: FlowHead, event: Event
 ) -> float:
     """Checks if the element matches with given event."""
+    element = get_element_from_head(state, head)
     assert is_match_op_element(element), f"Element '{element}' is not a match element!"
+
+    # Check cached ref event name to abort comparison early if possible. This is a efficiency optimization
+    ref_event_name = state.flow_configs[flow_state.flow_id].element_event_names.get(
+        head.position, None
+    )
+    if (
+        ref_event_name is not None
+        and ref_event_name not in InternalEvents.ALL
+        and ref_event_name != event.name
+    ):
+        return 0.0
 
     ref_event = get_event_from_element(state, flow_state, element)
     if not isinstance(ref_event, type(event)):
         return 0.0
+
+    # Refresh event and cache
+    state.flow_configs[flow_state.flow_id].element_event_names[
+        head.position
+    ] = ref_event.name
 
     return _compute_event_comparison_score(state, event, ref_event, flow_state.priority)
 
@@ -1604,9 +1621,9 @@ def get_event_from_element(
     Converts the element into the corresponding event if possible.
 
     Cases:
-    1) Bare event: send/match UtteranceBotActionFinished(args)
-    2) Event as member of a action or flow constructor: send/match UtteranceBotAction(args).Finished(args)
-    3) Event as member of a action or flow reference: send/match $ref.Finished(args) (This is action/flow specific)
+    1) Event as member of an action or flow reference: send/match $ref.Finished(args) (This is action/flow specific)
+    2) Event as member of an action or flow constructor: send/match UtteranceBotAction(args).Finished(args)
+    3) Bare event: send/match UtteranceBotActionFinished(args)
     """
 
     assert isinstance(element.spec, Spec)
@@ -1614,7 +1631,7 @@ def get_event_from_element(
 
     action: Action
     if element_spec["var_name"] is not None:
-        # Case 3)
+        # Case 1)
         variable_name = element_spec["var_name"]
         if variable_name not in flow_state.context:
             raise ColangRuntimeError((f"Unkown variable: '{variable_name}'!"))
@@ -1695,7 +1712,7 @@ def get_event_from_element(
                 action_event.action_uid = None
             return action_event
     else:
-        # Case 1)
+        # Case 3)
         if element_spec.name.islower() or element_spec.name in InternalEvents.ALL:
             # Flow event
             event_arguments = _evaluate_arguments(

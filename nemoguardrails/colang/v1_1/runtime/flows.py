@@ -313,6 +313,9 @@ class FlowConfig:
     loop_id: Optional[str] = None
     loop_type: InteractionLoopType = InteractionLoopType.PARENT
 
+    # Cached element events to speed up matching comparison
+    element_event_names: Dict[int, str] = field(default_factory=dict)
+
     # Whether it is an extension flow or not.
     # Extension flows can interrupt other flows on actionable steps.
     # is_extension: bool = False
