@@ -1379,15 +1379,15 @@ def _compute_event_matching_score(
     assert is_match_op_element(element), f"Element '{element}' is not a match element!"
 
     # Check cached ref event name to abort comparison early if possible. This is a efficiency optimization
-    ref_event_name = state.flow_configs[flow_state.flow_id].element_event_names.get(
-        head.position, None
-    )
-    if (
-        ref_event_name is not None
-        and ref_event_name not in InternalEvents.ALL
-        and ref_event_name != event.name
-    ):
-        return 0.0
+    # ref_event_name = state.flow_configs[flow_state.flow_id].element_event_names.get(
+    #     head.position, None
+    # )
+    # if (
+    #     ref_event_name is not None
+    #     and ref_event_name not in InternalEvents.ALL
+    #     and ref_event_name != event.name
+    # ):
+    #     return 0.0
 
     ref_event = get_event_from_element(state, flow_state, element)
     if not isinstance(ref_event, type(event)):
