@@ -1,6 +1,6 @@
 # Hello World
 
-This guide shows you how to create a "Hello World" guardrails configuration that only controls the greeting behavior. Before you begin, make sure you have [installed NeMo Guardrails](../../getting_started/installation-guide.md).
+This guide shows you how to create a "Hello World" guardrails configuration that controls the greeting behavior. Before you begin, make sure you have [installed NeMo Guardrails](../../getting_started/installation-guide.md).
 
 ## Prerequisites
 
@@ -15,10 +15,10 @@ This "Hello World" guardrails configuration uses the OpenAI `gpt-3.5-turbo-instr
 2. Set the `OPENAI_API_KEY` environment variable:
 
    ```bash
-   export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+   export OPENAI_API_KEY=YOUR_OPENAI_API_KEY
    ```
 
-3. If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+3. If you're running this inside a notebook, patch the AsyncIO loop:
 
    ```python
    import nest_asyncio
@@ -28,7 +28,7 @@ This "Hello World" guardrails configuration uses the OpenAI `gpt-3.5-turbo-instr
 
 ## Step 1: create a new guardrails configuration
 
-Every guardrails configuration must be stored in a folder. The standard folder structure is the following:
+Every guardrails configuration must be stored in a folder. The standard folder structure is as follows:
 
 ```
 .
@@ -41,14 +41,14 @@ Every guardrails configuration must be stored in a folder. The standard folder s
 ```
 See the [Configuration Guide](../../user_guides/configuration-guide.md) for information about the contents of these files.
 
-1. Create a folder, such as `config` for your configuration:
+1. Create a folder, such as *config*, for your configuration:
 
    ```bash
    mkdir config
    cd config
    ```
 
-2. Create a `config.yml` file with the following content:
+2. Create a *config.yml* file with the following content:
 
    ```yaml
    models:
@@ -57,7 +57,7 @@ See the [Configuration Guide](../../user_guides/configuration-guide.md) for info
       model: gpt-3.5-turbo-instruct
    ```
 
-   The `models` key in the `config.yml` file configures the LLM model. For a complete list of supported LLM models, see the [Supported LLM Models](../../user_guides/configuration-guide.md#supported-llm-models) section in the configuration guide.
+   The `models` key in the *config.yml* file configures the LLM model. For a complete list of supported LLM models, see [Supported LLM Models](../../user_guides/configuration-guide.md#supported-llm-models).
 
 ## Step 2: load the guardrails configuration
 
@@ -93,9 +93,9 @@ The format for the input `messages` array as well as the response follow the [Op
 
 ## Step 4: add your first guardrail
 
-To control the greeting response, define the user and bot messages, and the flow that connects the two together. See the [Core Colang Concepts](../2_core_colang_concepts/README.md) topic for definitions of *messages* and *flows*.
+To control the greeting response, define the user and bot messages, and the flow that connects the two together. See [Core Colang Concepts](../2_core_colang_concepts/README.md) for definitions of *messages* and *flows*.
 
-1. Define the "greeting" user message by creating a `config/rails.co` file with the following content:
+1. Define the `greeting` user message by creating a *config/rails.co* file with the following content:
 
    ```colang
    define user express greeting
@@ -104,7 +104,7 @@ To control the greeting response, define the user and bot messages, and the flow
      "Wassup?"
    ```
 
-2. Add a greeting flow which instructs the bot to respond back with "Hello World!" and ask how they are doing by adding the following content to the `rails.co` file:
+2. Add a greeting flow that instructs the bot to respond back with "Hello World!" and ask how they are doing by adding the following content to the *rails.co* file:
 
    ```python
    define flow greeting
@@ -113,7 +113,7 @@ To control the greeting response, define the user and bot messages, and the flow
      bot ask how are you
    ```
 
-3. Define the messages for the response by adding the following content to the `rails.co` file:
+3. Define the messages for the response by adding the following content to the *rails.co* file:
 
    ```python
    define bot express greeting
@@ -163,13 +163,13 @@ For any other input that is not a greeting, the LLM generates the response as us
 
 ## CLI Chat
 
-You can also test this configuration in an interactive mode using the NeMo Guardrails CLI Chat:
+You can also test this configuration in interactive mode using the NeMo Guardrails CLI Chat command:
 
 ```bash
 $ nemoguardrails chat
 ```
 
-Without any additional parameters, the CLI chat loads the configuration from the `config` folder in the current directory.
+Without any additional parameters, the CLI chat loads the configuration from the *config.yml* file in the *config* folder in the current directory.
 
 ### Sample session
 

@@ -67,7 +67,7 @@ You can see that the bot is starting to cooperate.
 
 ### Using Dialog Rails
 
-The [Core Colang Concepts](../2_core_colang_concepts/README.md) section of this getting started series, describes the core Colang concepts **messages** and **flows**. To implement topical rails using dialog, first define the user messages that correspond to the topics. 
+The [Core Colang Concepts](../2_core_colang_concepts/README.md) section of this getting started series, describes the core Colang concepts *messages* and *flows*. To implement topical rails using dialog, first define the user messages that correspond to the topics. 
 
 1. Add the following content to a new Colang file: *config/rails/disallowed_topics.co*:
 
@@ -95,11 +95,11 @@ The [Core Colang Concepts](../2_core_colang_concepts/README.md) section of this 
      "How can I rob a bank?"
    ```
 
-   These are seven topics that the bot should not talk about. For simplicity, there is only one message example for each topic.
+   These are topics that the bot should not talk about. For simplicity, there is only one message example for each topic.
 
    > **NOTE**: the performance of dialog rails is depends strongly on the number and quality of the provided examples.
 
-2. Define the flows that use the defined messages.
+2. Define the following flows that use these messages in *config/rails/disallowed_topics.co*.
 
    ```python
    define flow
@@ -131,7 +131,7 @@ The [Core Colang Concepts](../2_core_colang_concepts/README.md) section of this 
      bot refuse to respond about criminal activity
    ```
 
-   Now, let's reload the config and try again:
+   Reload the configuration and try another message:
 
    ```python
    config = RailsConfig.from_path("./config")

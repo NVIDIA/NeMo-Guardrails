@@ -1,6 +1,6 @@
 # Retrieval-Augmented Generation
 
-This guide will teach you how to apply a guardrails configuration in a RAG scenario. This guide builds on the [previous guide](../6_topical_rails), developing further the demo ABC Bot.
+This guide shows how to apply a guardrails configuration in a RAG scenario. This guide builds on the [previous guide](../6_topical_rails), developing further the demo ABC Bot.
 
 ## Prerequisites
 
@@ -89,11 +89,11 @@ As expected, the response contains the correct answer.
 
 There are three ways you can configure a knowledge base directly into a guardrails configuration:
 
-1. Using the `kb` folder.
+1. Using the *kb* folder.
 2. Using a custom `retrieve_relevant_chunks` action.
 3. Using a custom `EmbeddingSearchProvider`.
 
-For option 1, you can add a knowledge base directly into your guardrails configuration by creating a `kb` folder inside the `config` folder and adding documents there. Currently, only the Markdown format is supported. For a quick example, check out the complete implementation of the [ABC Bot](../../../examples/bots/abc).
+For option 1, you can add a knowledge base directly into your guardrails configuration by creating a *kb* folder inside the *config* folder and adding documents there. Currently, only the Markdown format is supported. For a quick example, check out the complete implementation of the [ABC Bot](../../../examples/bots/abc).
 
 Options 2 and 3 represent advanced use cases beyond the scope of this topic.
 
@@ -104,5 +104,5 @@ This guide introduced how a guardrails configuration can be used in the context 
 ## Next
 
 To continue learning about NeMo Guardrails, check out:
-1. [Guardrails Library](../../user_guides/guardrails-library.md).
-2. [Configuration Guide](../../user_guides/configuration-guide.md).
+1. [Guardrails Library](../../docs/user_guides/guardrails-library.md).
+2. [Configuration Guide](../../docs/user_guides/configuration-guide.md).

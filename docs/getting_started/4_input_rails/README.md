@@ -125,7 +125,7 @@ As expected, the LLM is prompted with the general instructions and the user's in
 
 ## Jailbreak Attempts
 
-In the context of LLMs, jail-breaking typically refers to finding ways to circumvent the built-in restrictions or guidelines set by the model's developers. These restrictions are usually in place for ethical, legal, or safety reasons. For example, what happens if you instruct the ABC Bot to ignore previous instructions:
+In LLMs, *jail-breaking* refers to finding ways to circumvent the built-in restrictions or guidelines set by the model's developers. These restrictions are usually in place for ethical, legal, or safety reasons. For example, what happens if you instruct the ABC Bot to ignore previous instructions:
 
 ```python
 response = rails.generate(messages=[{
@@ -144,7 +144,7 @@ If the bot does not know the answer to a question, it replies that it does not k
 
 > **NOTE**: this jailbreak attempt does not work 100% of the time. If you're running this and getting a different result, try a few times, and you should get a response similar to the previous.
 
-Allowing the LLM to comply with this type of request is definitely something we don't want. To prevent jailbreak attempts like this, you can add an input rail that can process the user input before it is sent to the LLM. NeMo Guardrails comes with a built-in [self check input](../../user_guides/guardrails-library.md#input-checking) rail that uses a separate LLM query to detect a jailbreak attempt. To use it, you have to:
+Allowing the LLM to comply with this type of request is something we don't want. To prevent jailbreak attempts like this, you can add an input rail that can process the user input before it is sent to the LLM. NeMo Guardrails comes with a built-in [self check input](../../user_guides/guardrails-library.md#input-checking) rail that uses a separate LLM query to detect a jailbreak attempt. To use it, you have to:
 
 1. Activate the `self check input` rail in *config.yml*.
 2. Add a `self_check_input` prompt in *prompts.yml*.
@@ -238,7 +238,7 @@ Summary: 1 LLM call(s) took 0.42 seconds and used 181 tokens.
 1. Task `self_check_input` took 0.42 seconds and used 181 tokens.
 ```
 
-We can see that a `self_check_input` LLM call has been made. The prompt and the completion were the following:
+As you can see, the `self_check_input` LLM call has been made. The prompt and the completion were the following:
 
 ```python
 print(info.llm_calls[0].prompt)
@@ -327,7 +327,7 @@ Note that the final answer is not correct.
 
 ## Testing the Bot
 
-You can also test this configuration in an interactive mode using the NeMo Guardrails CLI Chat.
+You can also test this configuration in an interactive mode using NeMo Guardrails CLI Chat.
 
 > **NOTE**: make sure you are in the folder containing the *config* folder. Otherwise, you can specify the path to the config folder using the `--config=PATH/TO/CONFIG` option.
 

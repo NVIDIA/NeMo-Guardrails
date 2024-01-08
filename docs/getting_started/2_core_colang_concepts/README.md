@@ -4,13 +4,13 @@ This guide builds on the [Hello World guide](../1_hello_world/README.md) and int
 
 ## Prerequisites
 
-1. Set up an OpenAI API key, if not already set.
+1. Set up an OpenAI API key, if not already set:
 
    ```bash
-   export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+   export OPENAI_API_KEY=YOUR_OPENAI_API_KEY
    ```
 
-2. If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+2. To run inside a notebook, patch the AsyncIO loop:
 
    ```python
    import nest_asyncio
@@ -20,17 +20,17 @@ This guide builds on the [Hello World guide](../1_hello_world/README.md) and int
 
 ## What is Colang?
 
-Colang is a modeling language for conversational applications. Using Colang you can design how the conversation between a user and a **bot** should happen.
+Colang is a modeling language for conversational applications. Use Colang to design how the conversation between a user and a bot should happen.
 
-> **NOTE**: throughout this guide, the term **bot** is used to mean the entire LLM-based Conversational Application.
+> **NOTE**: throughout this guide, bot means the entire LLM-based Conversational Application.
 
 ## Core Concepts
 
-In Colang, the two core concepts are **messages** and **flows**.
+In Colang, the two core concepts are *messages* and *flows*.
 
 ### Messages
 
-In Colang, a conversation is modeled as an exchange of **messages** between a user and a bot. An exchanged **message** has an **utterance**, such as *"What can you do?"*, and a **canonical form**, such as `ask about capabilities`. A canonical form is a paraphrase of the utterance to a standard, usually shorter, form.
+In Colang, a conversation is modeled as an exchange of messages between a user and a bot. An exchanged message has an *utterance*, such as *"What can you do?"*, and a *canonical form*, such as `ask about capabilities`. A canonical form is a paraphrase of the utterance to a standard, usually shorter, form.
 
 Using Colang, you can define the user messages that are important for your LLM-based application. For example, in the "Hello World" example, the `express greeting` user message is defined as:
 
@@ -53,13 +53,13 @@ define bot ask how are you
   "How are you doing?"
 ```
 
-If more than one utterance is given for a canonical form, a random is used whenever the message is used.
+If more than one utterance is given for a canonical form, the bot uses a random utterance whenever the message is used.
 
-If you are wondering whether the *user message canonical forms* are the same as classical intents, the answer is yes. You can think of them as intents. However, when using them, the bot is not constrained to use only the pre-defined list.
+If you are wondering whether *user message canonical forms* are the same as classical intents, the answer is yes. You can think of them as intents. However, when using them, the bot is not constrained to use only the pre-defined list.
 
 ### Flows
 
-In Colang, **flows** represent patterns of interaction between the user and the bot. In their simplest form, they are sequences of user and bot messages. In the "Hello World" example, the `greeting` flow is defined as:
+In Colang, *flows* represent patterns of interaction between the user and the bot. In their simplest form, they are sequences of user and bot messages. In the "Hello World" example, the `greeting` flow is defined as:
 
 ```colang
 define flow greeting
@@ -72,11 +72,11 @@ This flow instructs the bot to respond with a greeting and ask how the user is f
 
 ## Guardrails
 
-Messages and flows provide the core building blocks for defining **guardrails**,  or "rails" for short. The previous `greeting` flow is in fact a **rail** that guides the LLM how to respond to a greeting.
+Messages and flows provide the core building blocks for defining guardrails,  or rails for short. The previous `greeting` flow is in fact a rail that guides the LLM how to respond to a greeting.
 
 ## How does it work?
 
-Let's take a closer look at what happens under the hood. This section answers the following questions:
+This section answers the following questions:
 
 - How are the user and bot message definitions used?
 - How is the LLM prompted and how many calls are made?
@@ -102,12 +102,12 @@ Hello World!
 How are you doing?
 ```
 
-### The `explain` feature
+### The `ExplainInfo` class
 
-To get more visibility on what happens under the hood, let's use the *explain* feature that the `LLMRails` class provides.
+To get information about the LLM calls, call the **explain** function of the `LLMRails` class.
 
 ```python
-# We fetch the latest `ExplainInfo` object using the `explain` method.
+# Fetch the `ExplainInfo` object.
 info = rails.explain()
 ```
 
@@ -142,7 +142,7 @@ Summary: 1 LLM call(s) took 0.48 seconds and used 524 tokens.
 1. Task `generate_user_intent` took 0.48 seconds and used 524 tokens.
 ```
 
-The `info` object also contains an `info.llm_calls` attribute with detailed information about each LLM call. That attribute is described in a subsequent section.
+The `info` object also contains an `info.llm_calls` attribute with detailed information about each LLM call. That attribute is described in a subsequent guide.
 
 ### The process
 
@@ -152,7 +152,7 @@ Once an input message is received from the user, a multi-step process begins.
 
 After an utterance, such as  "Hello!" in the previous example, is received from the user, the guardrails instance uses the LLM to compute the corresponding canonical form.
 
-> **NOTE**: NeMo Guardrails uses a task-oriented interaction model with the LLM. Every time the LLM is called, it uses a specific task prompt template, such as `generate_user_intent`, `generate_next_step`, `generate_bot_message`. See the [default template prompts](../../../nemoguardrails/llm/prompts/general.yml).
+> **NOTE**: NeMo Guardrails uses a task-oriented interaction model with the LLM. Every time the LLM is called, it uses a specific task prompt template, such as `generate_user_intent`, `generate_next_step`, `generate_bot_message`. See the [default template prompts](../../../nemoguardrails/llm/prompts/general.yml) for details.
 
 In the case of the "Hello!" message, a single LLM call is made using the `generate_user_intent` task prompt template. The prompt looks like the following:
 
@@ -230,7 +230,7 @@ print(info.llm_calls[0].completion)
   express greeting
 ```
 
-As we can see, the LLM correctly predicted the `express greeting` canonical form. It even went further to predict what the bot should do, which is `bot express greeting`, and the utterance that should be used. However, for the `generate_user_intent` task, only the first predicted line is used. If you want the LLM to predict everything in a single call, you can enable the [single LLM call option](#) in *config.yml* by setting the `rails.dialog.single_call` key to `True`.
+As we can see, the LLM correctly predicted the `express greeting` canonical form. It even went further to predict what the bot should do, which is `bot express greeting`, and the utterance that should be used. However, for the `generate_user_intent` task, only the first predicted line is used. If you want the LLM to predict everything in a single call, you can enable the [single LLM call option](#) in *config.yml* by setting the `rails.dialog.single_call` key to **True**.
 
 ### Step 2: Determine the next step
 
@@ -255,7 +255,7 @@ Once the canonical form for what the bot should say has been decided, the messag
 
 2. If a predefined message does not exist, the LLM is prompted to generate the message using the `generate_bot_message` task.
 
-In our "Hello World" example, the predefined messages "Hello world!" and "How are you doing?" have been used.
+In our "Hello World" example, the predefined messages "Hello world!" and "How are you doing?" are used.
 
 ## The follow-up question
 
@@ -319,4 +319,4 @@ This guide provides a detailed overview of two core Colang concepts: *messages* 
 
 ## Next
 
-In the next guide, [Demo Use Case](../3_demo_use_case), we select a demo use case that we use to implement different types of rails, such as for input, output, or dialog.
+The next guide, [Demo Use Case](../3_demo_use_case), guides you through selecting a demo use case to implement different types of rails, such as for input, output, or dialog.
