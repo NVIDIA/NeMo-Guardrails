@@ -34,10 +34,9 @@ class JailbreakCheckRequest(BaseModel):
 @app.get("/")
 def hello_world():
     welcome_str = (
-        f"This is a development server for jailbreak detection.\n"
-        f"<br>Hit the /heuristics endpoint to run all heuristics by sending a POST request with the user prompt."
-        f"<br>Example: curl -X POST -d 'prompt=This is a user prompt' http://localhost:1337/heuristics\n"
-        f"Detailed documentation and all endpoints are included in the README."
+        "This is a development server for jailbreak detection.\n"
+        "Hit the /heuristics endpoint to run all heuristics by sending a POST request with the user prompt.\n"
+        "Detailed documentation and all endpoints are included in the README."
     )
     return welcome_str
 

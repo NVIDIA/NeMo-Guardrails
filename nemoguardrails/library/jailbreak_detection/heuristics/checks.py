@@ -56,7 +56,6 @@ def get_perplexity(input_string: str) -> bool:
 
 
 def check_jb_lp(input_string: str) -> dict:
-    print(input_string)
     perplexity = get_perplexity(input_string)
     jb_lp = len(input_string) / perplexity >= THRESH
     result = {"jailbreak": jb_lp}
