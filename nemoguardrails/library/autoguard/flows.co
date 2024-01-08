@@ -1,0 +1,74 @@
+define bot refuse to respond gender bias
+    "Gender bias detected. I'm sorry, I can't respond to that."
+
+define subflow input gender bias autoguard
+    $result = execute call autoguard gender bias api
+    if $result == True
+        bot refuse to respond gender bias
+        stop
+
+define subflow output gender bias autoguard
+    $result = execute call autoguard gender bias api
+    if $result == True
+        bot refuse to respond gender bias
+        stop
+
+define bot refuse to respond race bias
+    "Race bias detected. I'm sorry, I can't respond to that."
+
+define subflow input race bias autoguard
+    $result = execute call autoguard race bias api
+    if $result == True
+        bot refuse to respond race bias
+        stop
+
+define subflow output race bias autoguard
+    $result = execute call autoguard race bias api
+    if $result == True
+        bot refuse to respond race bias
+        stop
+
+define bot refuse to respond harm detection
+    "Harm to human detected. I'm sorry, I can't respond to that."
+
+define subflow input harm detection autoguard
+    $result = execute call autoguard harm detection api
+    if $result == True
+        bot refuse to respond harm detection
+        stop
+
+define subflow output harm detection autoguard
+    $result = execute call autoguard harm detection api
+    if $result == True
+        bot refuse to respond harm detection
+        stop
+
+define bot refuse to respond toxicity detection
+    "Toxic phrases detected. I'm sorry, I can't respond to that."
+
+define subflow input toxicity detection autoguard
+    $result = execute call autoguard toxicity detection api
+    if $result == True
+        bot refuse to respond toxicity detection
+        stop
+
+define subflow output toxicity detection autoguard
+    $result = execute call autoguard toxicity detection api
+    if $result == True
+        bot refuse to respond toxicity detection
+        stop
+
+define bot refuse to respond jailbreak detection
+    "Jailbreak attempt detected. I'm sorry, I can't respond to that."
+
+define subflow input jailbreak detection autoguard
+    $result = execute call autoguard jailbreak detection api
+    if $result == True
+        bot refuse to respond jailbreak detection
+        stop
+
+define subflow output jailbreak detection autoguard
+    $result = execute call autoguard jailbreak detection api
+    if $result == True
+        bot refuse to respond jailbreak detection
+        stop
