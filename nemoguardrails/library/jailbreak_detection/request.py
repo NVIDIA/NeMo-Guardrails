@@ -21,7 +21,7 @@ from nemoguardrails.actions import action
 log = logging.getLogger(__name__)
 
 
-@action(name="jailbreakcheck heuristic")
+@action(name="jailbreak heuristics")
 async def jailbreak_heuristics(
     prompt: str,
     api_url: str = "http://localhost:1337/heuristics",
