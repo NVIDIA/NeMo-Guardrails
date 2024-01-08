@@ -1393,10 +1393,10 @@ def _compute_event_matching_score(
     if not isinstance(ref_event, type(event)):
         return 0.0
 
-    # Refresh event and cache
-    state.flow_configs[flow_state.flow_id].element_event_names[
-        head.position
-    ] = ref_event.name
+    # Update event cache
+    state.flow_configs[flow_state.flow_id].element_event_names.update(
+        {head.position: ref_event.name}
+    )
 
     return _compute_event_comparison_score(state, event, ref_event, flow_state.priority)
 
