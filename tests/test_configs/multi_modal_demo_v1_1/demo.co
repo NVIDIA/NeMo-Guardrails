@@ -17,7 +17,13 @@ flow reaction bot question repetition for user silence $time_s $max_repetitions=
   while $repetition < $max_repetitions
     when user was silent $time_s
       $question = $ref.context.event.arguments.text
-      $prompt = """Make a new variation of this question: {{$question}}"""
+      
+      start GenerateValueAction(var_name="new_question_variation", instructions="Make a different variation of the following question: '{{$question}}'. Never repeat the same question (see the logs above) and respond only with the question text and nothing else.") as $llm_request      
+      when $llm_request.Finished() as $llm_request_result
+        $prompt = $llm_request_result.arguments.return_value
+      orwhen user started saying something
+        continue
+      
       if "{{is_str($prompt)}}" == "False"
         $prompt = "So, what do you think?"
       bot ask $prompt
@@ -150,10 +156,6 @@ flow user wanted to end conversation
     or user said "Let's finish this conversation"
     or user said "I want to go back"
 
-flow bot start the number guessing game
-  """Bot starts the number guessing game"""
-  showcase number guessing game
-
 # ----------------------------------
 # FAQs
 # -----------------------------------
@@ -180,6 +182,7 @@ flow showcase selector
   activate track visual choice selection state
 
   $showcase_selection_ui = None
+  global $bot_talking_state
 
   while True
     log "while loop restarted"
@@ -189,10 +192,16 @@ flow showcase selector
       start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}]) as $showcase_selection_ui
       start bot inform "Please pick one of the showcases."
 
-    when user was silent 8.0
+    when user was silent 15.0
       log "user was silent"
-      llm interaction continuation
-      log "user was silent response done"
+      start llm interaction continuation as $llm_continuation
+      when $llm_continuation.Finished()
+        log "user was silent llm response done"
+      orwhen user started saying something
+        log "user started saying something while llm response generation"
+        if $bot_talking_state == False
+          send $llm_continuation.Stop()
+          log "user said something during bot thinking (user silent llm response generation)"
 
     orwhen unhandled user intent as $intent_ref
       log "unhandled user intent: '{{$intent_ref.context.event.arguments.flow_id}}'"
@@ -259,7 +268,7 @@ flow main
   activate track bot talking state
   #activate faq
 
-  start scene show textual information $title="Welcome to the Tech Demo of Colang 2.0" $text="" $header_image="artificial intelligence horizontal orientation" as $welcome_ui
+  start scene show textual information $title="Welcome to the Tech Demo of Colang 2.0" $text="" $header_image="https://blogs.nvidia.com/wp-content/uploads/2023/04/NeMo-Guardrails-KV-x1280.jpg" as $welcome_ui
   bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
     and bot gesture "Welcome user, wave hands"
   send $welcome_ui.Stop()
@@ -275,12 +284,19 @@ flow main
 flow ignored_utterance_action_bugfix
   # meta: exclude from llm
   # meta: loop_id=ignored_action_bugfix
+  global $number_of_fails
+  if $number_of_fails == None
+    $number_of_fails = 0
   match StartUtteranceBotAction() as $event
   log "Event StartUtteranceBotAction {{$event.action_uid}}"
   start_new_flow_instance:
-  start TimerBotAction(timer_name="action_started_timer_{{uid()}}", duration=3) as $timer_ref
+  start wait 3.0 as $timer_ref
   when $timer_ref.Finished()
+    # After 3 consecutive fails we will no longer send a Finished event to let the process become idle and terminated
+    if $number_of_fails < 3
+      send UtteranceBotActionFinished(action_uid=$event.action_uid, final_script="", is_success=False, failure_reason="ActionStarted event timeout")
+    $number_of_fails = $number_of_fails + 1
     log "action_started_timer triggered {{$event.action_uid}}"
-    send UtteranceBotActionFinished(action_uid=$event.action_uid, final_script="", is_success=False, failure_reason="ActionStarted event timeout")
   orwhen UtteranceBotActionStarted(action_uid=$event.action_uid)
+    $number_of_fails = 0
     log "Event UtteranceBotActionStarted {{$event.action_uid}}"
