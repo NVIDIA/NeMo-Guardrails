@@ -72,3 +72,27 @@ define subflow output jailbreak detection autoguard
     if $result == True
         bot refuse to respond jailbreak detection
         stop
+
+define bot refuse to respond confidential detection
+    "Confidential information detected. I'm sorry, I can't respond to that."
+
+define subflow input confidential detection autoguard
+    $result = execute call autoguard confidential detection api
+    if $result == True
+        bot refuse to respond confidential detection
+        stop
+
+define subflow output confidential detection autoguard
+    $result = execute call autoguard confidential detection api
+    if $result == True
+        bot refuse to respond confidential detection
+        stop
+
+define bot refuse to respond factcheck
+    "Factcheck violation detected. I'm sorry, I can't respond to that."
+
+define subflow output factcheck
+    $result = execute call autoguard factcheck api
+    if $result == True
+        bot refuse to respond factcheck
+        stop
