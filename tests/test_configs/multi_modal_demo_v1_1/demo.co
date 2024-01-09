@@ -17,13 +17,13 @@ flow reaction bot question repetition for user silence $time_s $max_repetitions=
   while $repetition < $max_repetitions
     when user was silent $time_s
       $question = $ref.context.event.arguments.text
-      
-      start GenerateValueAction(var_name="new_question_variation", instructions="Make a different variation of the following question: '{{$question}}'. Never repeat the same question (see the logs above) and respond only with the question text and nothing else.") as $llm_request      
+
+      start GenerateValueAction(var_name="new_question_variation", instructions="Make a different variation of the following question: '{{$question}}'. Never repeat the same question (see the logs above) and respond only with the question text and nothing else.") as $llm_request
       when $llm_request.Finished() as $llm_request_result
         $prompt = $llm_request_result.arguments.return_value
       orwhen user started saying something
         continue
-      
+
       if "{{is_str($prompt)}}" == "False"
         $prompt = "So, what do you think?"
       bot ask $prompt
@@ -155,6 +155,10 @@ flow user wanted to end conversation
     or user said "Shut up"
     or user said "Let's finish this conversation"
     or user said "I want to go back"
+
+flow bot start the number guessing game
+  """Bot starts the number guessing game"""
+  showcase number guessing game
 
 # ----------------------------------
 # FAQs

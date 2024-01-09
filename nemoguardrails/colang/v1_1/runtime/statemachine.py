@@ -1379,24 +1379,22 @@ def _compute_event_matching_score(
     assert is_match_op_element(element), f"Element '{element}' is not a match element!"
 
     # Check cached ref event name to abort comparison early if possible. This is a efficiency optimization
-    # ref_event_name = state.flow_configs[flow_state.flow_id].element_event_names.get(
-    #     head.position, None
-    # )
-    # if (
-    #     ref_event_name is not None
-    #     and ref_event_name not in InternalEvents.ALL
-    #     and ref_event_name != event.name
-    # ):
-    #     return 0.0
+    ref_event_name = get_event_name_from_element(state, flow_state, element)
+    if (
+        ref_event_name is not None
+        and (
+            ref_event_name not in InternalEvents.ALL
+            or event.name not in InternalEvents.ALL
+            or ref_event_name == InternalEvents.UNHANDLED_EVENT
+            or ref_event_name == InternalEvents.START_FLOW
+        )
+        and ref_event_name != event.name
+    ):
+        return 0.0
 
     ref_event = get_event_from_element(state, flow_state, element)
     if not isinstance(ref_event, type(event)):
         return 0.0
-
-    # Update event cache
-    state.flow_configs[flow_state.flow_id].element_event_names.update(
-        {head.position: ref_event.name}
-    )
 
     return _compute_event_comparison_score(state, event, ref_event, flow_state.priority)
 
@@ -1612,6 +1610,72 @@ def _compute_arguments_dict_matching_score(args: Any, ref_args: Any) -> float:
         return 0.0
 
     return score
+
+
+def get_event_name_from_element(
+    state: State, flow_state: FlowState, element: SpecOp
+) -> str:
+    """
+    Converts the element into the corresponding event name if possible.
+    See also function get_event_from_element which is very similar but returns the full event including parameters.
+    """
+
+    assert isinstance(element.spec, Spec)
+    element_spec: Spec = element.spec
+
+    if element_spec["var_name"] is not None:
+        # Case 1)
+        variable_name = element_spec["var_name"]
+        if variable_name not in flow_state.context:
+            raise ColangRuntimeError((f"Unkown variable: '{variable_name}'!"))
+
+        # Resolve variable and member attributes
+        obj = flow_state.context[variable_name]
+        member = None
+        if element_spec.members is not None:
+            for member in element_spec.members[:-1]:
+                if isinstance(obj, dict):
+                    if member.name not in obj:
+                        raise ColangValueError(f"No attribute '{member.name}' in {obj}")
+                    obj = obj[member.name]
+                else:
+                    if not hasattr(obj, member.name):
+                        raise ColangValueError(f"No attribute '{member.name}' in {obj}")
+                    obj = getattr(obj, member.name)
+        if element_spec.members is not None:
+            member = element_spec.members[-1]
+
+        if isinstance(obj, Event):
+            if element_spec.members is not None:
+                raise ColangValueError("Events have no event attributes!")
+            return obj.name
+        elif isinstance(obj, Action) or isinstance(obj, FlowState):
+            if element_spec.members is None:
+                raise ColangValueError(f"Missing event attribute in {obj.name}")
+            event_name = member["name"]
+            event = obj.get_event(event_name, {})
+            return event.name
+        else:
+            raise ColangRuntimeError(f"Unsupported type '{type(obj)}'")
+
+    elif element_spec.members is not None:
+        if element_spec.spec_type == SpecType.FLOW:
+            # Flow object
+            flow_config = state.flow_configs[element_spec.name]
+            temp_flow_state = create_flow_instance(flow_config, "")
+            flow_event_name = element_spec.members[0]["name"]
+            flow_event: InternalEvent = temp_flow_state.get_event(flow_event_name, {})
+            return flow_event.name
+        elif element_spec.spec_type == SpecType.ACTION:
+            # Action object
+            action = Action(element_spec.name, {}, flow_state.flow_id)
+            event_name = element_spec.members[0]["name"]
+            action_event: ActionEvent = action.get_event(event_name, {})
+            return action_event.name
+        else:
+            raise ColangRuntimeError(f"Unsupported type '{element_spec.spec_type }'")
+    else:
+        return element_spec.name
 
 
 def get_event_from_element(
