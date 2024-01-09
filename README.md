@@ -8,7 +8,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![arXiv](https://img.shields.io/badge/arXiv-2310.10501-b31b1b.svg)](https://arxiv.org/abs/2310.10501)
 
-> **LATEST RELEASE / DEVELOPMENT VERSION**: The [main](https://github.com/NVIDIA/NeMo-Guardrails/tree/main) branch tracks the latest released beta version: [0.6.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.6.0). For the latest development version, checkout the [develop](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop) branch.
+> **LATEST RELEASE / DEVELOPMENT VERSION**: The [main](https://github.com/NVIDIA/NeMo-Guardrails/tree/main) branch tracks the latest released beta version: [0.6.1](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.6.1). For the latest development version, checkout the [develop](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop) branch.
 
 > **DISCLAIMER**: The beta release is undergoing active development and may be subject to changes and improvements, which could cause instability and unexpected behavior. We currently do not recommend deploying this beta version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback are invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit. The examples provided within the documentation are for educational purposes to get started with NeMo Guardrails, and are not meant for use in production applications.
 
@@ -47,6 +47,14 @@ Key benefits of adding *programmable guardrails* include:
 - **Connecting models, chains, and other services securely:** you can connect an LLM to other services (a.k.a. tools) seamlessly and securely.
 
 - **Controllable dialog**: you can steer the LLM to follow pre-defined conversational paths, allowing you to design the interaction following conversation design best practices and enforce standard operating procedures (e.g., authentication, support).
+
+### Protecting against LLM Vulnerabilities
+
+NeMo Guardrails provides several mechanisms for protecting an LLM-powered chat application against common LLM vulnerabilities, such as jailbreaks and prompt injections. Below is a sample overview of the protection offered by different guardrails configuration for the example [ABC Bot](./examples/bots/abc) included in this repository. For more details, please refer to the [LLM Vulnerability Scanning](./docs/evaluation/llm-vulnerability-scanning.md) page.
+
+<div align="center">
+<img src="docs/_assets/images/abc-llm-vulnerability-scan-results.png" width="750">
+</div>
 
 
 ### Use Cases
@@ -254,6 +262,7 @@ Evaluating the safety of a LLM-based conversational application is a complex tas
 
 1. An [evaluation tool](./nemoguardrails/eval/README.md), i.e. `nemoguardrails evaluate`, with support for topical rails, fact-checking, moderation (jailbreak and output moderation) and hallucination.
 2. An experimental [red-teaming interface](docs/security/red-teaming.md).
+3. Sample LLM Vulnerability Scanning Reports, e.g, [ABC Bot - LLM Vulnerability Scan Results](./docs/evaluation/llm-vulnerability-scanning.md)
 
 
 ## How is this different?

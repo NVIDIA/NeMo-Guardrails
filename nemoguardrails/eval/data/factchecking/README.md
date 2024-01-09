@@ -28,7 +28,7 @@ We require the input data to be in a json file with the following format:
 
 Usually, most datasets contain only positive entailment pairs, i.e., the answers are always grounded in the evidence passage. To reliably evaluate the fact checking rail, we need negative examples as well, i.e., examples where the answer is _not_ grounded in the evidence passage. Randomly sampling answers for other questions to be used as negatives leads to very easily identifiable negatives.
 
-To mine hard negatives, we use OpenAI text-davinci-003 to convert the positive entailment pairs to negative ones. We give the model the evidence and the answer, and ask it to subtly modify the answer to make it not grounded in the evidence. We then use the modified answer as a negative example.
+To mine hard negatives, we used OpenAI text-davinci-003 to convert the positive entailment pairs to negative ones. We give the model the evidence and the answer, and ask it to subtly modify the answer to make it not grounded in the evidence. We then use the modified answer as a negative example.
 
 Example:
 

@@ -18,3 +18,5 @@ from . import patch_asyncio
 from .rails import LLMRails, RailsConfig
 
 patch_asyncio.apply()
+
+__version__ = "0.6.1"
