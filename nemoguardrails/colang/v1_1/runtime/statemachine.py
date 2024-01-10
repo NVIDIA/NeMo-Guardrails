@@ -799,23 +799,20 @@ def slide(
         elif isinstance(element, ForkHead):
             # We deactivate current head (parent of new heads)
             head.status = FlowHeadStatus.INACTIVE
+            # Register fork uid for later head merge
+            flow_state.head_fork_uids[element.fork_uid] = head.uid
             # We create the new child heads
             for idx, label in enumerate(element.labels):
-                head_uid = (
-                    element.head_uids[idx]
-                    if len(element.head_uids) > idx
-                    else new_uid()
-                )
+                parent_fork_head_uid = new_uid()
                 pos = flow_config.element_labels[label]
                 new_head = FlowHead(
-                    uid=head_uid,
-                    position=pos,
+                    uid=parent_fork_head_uid,
                     flow_state_uid=flow_state.uid,
                     matching_scores=head.matching_scores.copy(),
                     catch_pattern_failure_label=head.catch_pattern_failure_label.copy(),
                     scope_uids=head.scope_uids.copy(),
                 )
-                flow_state.heads[head_uid] = new_head
+                flow_state.heads[parent_fork_head_uid] = new_head
                 head.child_head_uids.append(new_head.uid)
                 new_heads.append(new_head)
 
@@ -830,40 +827,41 @@ def slide(
                 break
             elif head.status == FlowHeadStatus.MERGING:
                 # Compose a list of all head uids and there children that should be merged
-                head_uids: List[str] = []
+                merging_head_uids: List[str] = []
                 scope_uids: List[str] = []
-                for uid in element.head_uids:
-                    head_uids.append(uid)
-                    # TODO: Make sure that child head uids are kept up-to-date to remove this check
-                    if uid in flow_state.heads:
-                        head_uids.extend(
-                            flow_state.heads[uid].get_child_head_uids(state)
+                parent_fork_head_uid = flow_state.head_fork_uids[element.fork_uid]
+                parent_fork_head = flow_state.heads[parent_fork_head_uid]
+                # TODO: Make sure that child head uids are kept up-to-date to remove this check
+                if parent_fork_head_uid in flow_state.heads:
+                    merging_head_uids.extend(
+                        flow_state.heads[parent_fork_head_uid].get_child_head_uids(
+                            state
                         )
-                        # Merge scope uids from heads
+                    )
+                    # Merge scope uids from heads
+                    # TODO: Should we really merge them or would it be better to close those scopes instead?
+                    for child_heads in parent_fork_head.child_head_uids:
                         scope_uids.extend(
                             [
                                 scope_uid
-                                for scope_uid in flow_state.heads[uid].scope_uids
+                                for scope_uid in flow_state.heads[
+                                    child_heads
+                                ].scope_uids
                                 if scope_uid not in scope_uids
                             ]
                         )
 
-                # Remove all head_uids that no longer exist in heads
-                # TODO: Make sure this is not needed
-                head_uids = [
-                    head_uid for head_uid in head_uids if head_uid in flow_state.heads
-                ]
-
-                # Check that all of the other heads that are on a merging statements do also target the current head
-                for head_uid in head_uids:
+                # Check that all of the other heads that are on a merging statements
+                # do also target to merge at the same fork uid
+                for head_uid in merging_head_uids:
                     if head_uid != head.uid:
                         other_head = flow_state.heads[head_uid]
                         if other_head.status == FlowHeadStatus.MERGING:
                             merge_element = cast(
                                 MergeHeads, flow_config.elements[other_head.position]
                             )
-                            if head_uid not in merge_element.head_uids:
-                                # If we still have heads that can be merged independently let's wait with this ones
+                            if element.fork_uid != merge_element.fork_uid:
+                                # If we still have heads that can be merged independently let's wait
                                 break
 
                 # Now we are sure that all other related heads had the chance to process
@@ -872,7 +870,7 @@ def slide(
                 # Extract all heads that arrived at a merge statement
                 merging_heads = [
                     flow_state.heads[head_uid]
-                    for head_uid in head_uids
+                    for head_uid in merging_head_uids
                     if flow_state.heads[head_uid].status == FlowHeadStatus.MERGING
                 ]
 
@@ -899,20 +897,28 @@ def slide(
                     )
                     picked_head = random.choice(ordered_heads[:equal_heads_index])
 
-                # If the current had is not the winning head it will be merged
-                if picked_head != head:
-                    head.status = FlowHeadStatus.INACTIVE
-                else:
-                    head.status = FlowHeadStatus.ACTIVE
-                    head.scope_uids = scope_uids
+                head.status = FlowHeadStatus.INACTIVE
 
-                    # Remove them from the flow
-                    for uid in head_uids:
-                        if uid != head.uid:
-                            flow_state.heads[uid].status = FlowHeadStatus.INACTIVE
-                            flow_state.heads.pop(uid, None)
+                if picked_head == head:
+                    # We continue only at the position of the winning head with the head that initiated the fork
+                    parent_fork_head.position = head.position
+                    parent_fork_head.status = FlowHeadStatus.ACTIVE
+                    parent_fork_head.scope_uids = scope_uids
+                    parent_fork_head.matching_scores = head.matching_scores
+                    parent_fork_head.catch_pattern_failure_label = (
+                        head.catch_pattern_failure_label
+                    )
+                    parent_fork_head.child_head_uids.clear()
+                    new_heads.append(parent_fork_head)
 
-                    head.position += 1
+                    # Remove all the merged heads
+                    for head_uid in merging_head_uids:
+                        flow_state.heads[head_uid].status = FlowHeadStatus.INACTIVE
+                        del flow_state.heads[head_uid]
+                        if head_uid in flow_state.head_fork_uids:
+                            del flow_state.head_fork_uids[head_uid]
+
+                    del flow_state.head_fork_uids[element.fork_uid]
 
         elif isinstance(element, WaitForHeads):
             # Check if enough heads are on this element to continue

@@ -431,6 +431,9 @@ class FlowState:
     # All active/open scopes that contain a tuple of flow uids and action uids that were started within that scope
     scopes: Dict[str, Tuple(List[str], List[str])] = field(default_factory=dict)
 
+    # Relates head_fork_uids to corresponding child heads
+    head_fork_uids: Dict[str, str] = field(default_factory=dict)
+
     # All actions that were instantiated since the beginning of the flow
     action_uids: List[str] = field(default_factory=list)
 

@@ -309,8 +309,8 @@ class ForkHead(Element):
     For each label a new head.
     """
 
+    fork_uid: str = ""
     labels: List[str] = field(default_factory=list)
-    head_uids: List[str] = field(default_factory=list)
     _type: str = "_fork"
 
 
@@ -323,7 +323,7 @@ class MergeHeads(Element):
     """
 
     _type: str = "_merge"
-    head_uids: List[str] = field(default_factory=list)
+    fork_uid: str = ""
 
 
 @dataclass_json

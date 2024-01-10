@@ -100,8 +100,8 @@ def _expand_element_group(element: SpecOp) -> List[ElementType]:
                 )
     else:
         # Multiple and-groups
-        fork_element = ForkHead()
-        fork_head_uids: List(str) = []
+        fork_uid: str = new_var_uid()
+        fork_element = ForkHead(fork_uid=fork_uid)
         group_label_elements: List[Label] = []
         failure_label_name = f"failure_label_{new_var_uid()}"
         failure_label_element = Label(name=failure_label_name)
@@ -112,8 +112,6 @@ def _expand_element_group(element: SpecOp) -> List[ElementType]:
         for group_idx, and_group in enumerate(normalized_group["elements"]):
             group_label_name = f"group_{group_idx}_{new_var_uid()}"
             group_label_elements.append(Label(name=group_label_name))
-            fork_head_uids.append(new_var_uid())
-            fork_element.head_uids.append(fork_head_uids[-1])
             fork_element.labels.append(group_label_name)
 
         # Generate new element sequence
@@ -134,7 +132,7 @@ def _expand_element_group(element: SpecOp) -> List[ElementType]:
         new_elements.append(CatchPatternFailure(label=None))
         new_elements.append(Abort())
         new_elements.append(end_label_element)
-        new_elements.append(MergeHeads(head_uids=fork_head_uids))
+        new_elements.append(MergeHeads(fork_uid=fork_uid))
 
     return new_elements
 
@@ -356,8 +354,8 @@ def _expand_match_element(
                 )
             )
         else:
-            fork_element = ForkHead()
-            fork_head_uids: List(str) = []
+            fork_uid: str = new_var_uid()
+            fork_element = ForkHead(fork_uid=fork_uid)
             event_label_elements: List[Label] = []
             event_match_elements: List[SpecOp] = []
             goto_group_elements: List[Goto] = []
@@ -379,8 +377,6 @@ def _expand_match_element(
                 for match_element in and_group["elements"]:
                     label_name = f"event_{element_idx}_{new_var_uid()}"
                     event_label_elements.append(Label(name=label_name))
-                    fork_head_uids.append(new_var_uid())
-                    fork_element.head_uids.append(fork_head_uids[-1])
                     fork_element.labels.append(label_name)
                     event_match_elements.append(
                         SpecOp(
@@ -401,7 +397,7 @@ def _expand_match_element(
                     element_idx += 1
                 new_elements.append(group_label_elements[group_idx])
                 new_elements.append(wait_for_heads_elements[group_idx])
-                new_elements.append(MergeHeads(head_uids=fork_head_uids))
+                new_elements.append(MergeHeads(fork_uid=fork_uid))
                 new_elements.append(goto_end_element)
             new_elements.append(end_label_element)
 
@@ -450,8 +446,8 @@ def _expand_await_element(
         # Element group
         normalized_group = normalize_element_groups(element.spec)
 
-        fork_element = ForkHead()
-        fork_head_uids: List(str) = []
+        fork_uid: str = new_var_uid()
+        fork_element = ForkHead(fork_uid=fork_uid)
         group_label_elements: List[Label] = []
         scope_name = f"scope_{new_var_uid()}"
         begin_scope_element = BeginScope(name=scope_name)
@@ -468,8 +464,6 @@ def _expand_await_element(
             group_label_name = f"group_{group_idx}_{new_var_uid()}"
             group_label_elements.append(Label(name=group_label_name))
 
-            fork_head_uids.append(new_var_uid())
-            fork_element.head_uids.append(fork_head_uids[-1])
             fork_element.labels.append(group_label_name)
             start_elements.append([])
             match_elements.append([])
@@ -523,7 +517,7 @@ def _expand_await_element(
             new_elements.append(end_scope_element)
             new_elements.append(Abort())
             new_elements.append(end_label_element)
-            new_elements.append(MergeHeads(head_uids=fork_head_uids))
+            new_elements.append(MergeHeads(fork_uid=fork_uid))
             new_elements.append(CatchPatternFailure(label=None))
             new_elements.append(end_scope_element)
 
@@ -668,8 +662,8 @@ def _expand_when_stmt_element(
     stmt_uid = new_var_uid()
 
     init_case_label_names: List[str] = []
-    cases_fork_head_element = ForkHead()
-    cases_fork_head_uids: List[str] = []
+    cases_fork_uid: str = new_var_uid()
+    cases_fork_head_element = ForkHead(fork_uid=cases_fork_uid)
     groups_fork_head_elements: List[ForkHead] = []
     failure_case_label_names: List[str] = []
     scope_label_name = f"scope_{stmt_uid}"
@@ -684,12 +678,10 @@ def _expand_when_stmt_element(
     for case_idx, case_element in enumerate(element.when_specs):
         case_uid = str(chr(ord("a") + case_idx))
         init_case_label_names.append(f"init_case_{case_uid}_label_{stmt_uid}")
-        cases_fork_head_uids.append(new_var_uid())
-        cases_fork_head_element.head_uids.append(cases_fork_head_uids[-1])
         cases_fork_head_element.labels.append(init_case_label_names[case_idx])
         failure_case_label_names.append(f"failure_case_{case_uid}_label_{stmt_uid}")
         case_label_names.append(f"case_{case_uid}_label_{stmt_uid}")
-        groups_fork_head_elements.append(ForkHead())
+        groups_fork_head_elements.append(ForkHead(fork_uid=new_var_uid()))
 
         if isinstance(case_element, Spec):
             # Single element
@@ -779,7 +771,7 @@ def _expand_when_stmt_element(
 
             # Case groups
             new_elements.append(Label(name=case_label_names[case_idx]))
-            new_elements.append(MergeHeads(head_uids=cases_fork_head_uids))
+            new_elements.append(MergeHeads(fork_uid=cases_fork_uid))
             new_elements.append(CatchPatternFailure(label=None))
             new_elements.append(EndScope(name=scope_label_name))
             new_elements.extend(
@@ -806,124 +798,6 @@ def _expand_when_stmt_element(
 
         # End label
         new_elements.append(Label(name=end_label_name))
-
-    return new_elements
-
-
-def _expand_when_stmt_element_old(
-    element: When, flow_configs: Dict[str, FlowConfig]
-) -> List[ElementType]:
-    start_elements: List[SpecOp] = []
-    fork_head_element = ForkHead()
-    when_group_labels: List[str] = []
-    when_elements: List[SpecOp] = []
-    end_label_name = f"when_end_label_{new_var_uid()}"
-    goto_end_label = Goto(label=end_label_name)
-    end_label = Label(name=end_label_name)
-
-    for idx, when_element in enumerate(element.when_specs):
-        when_group_label_name = f"when_group_{idx}_label_{new_var_uid()}"
-        fork_head_element.labels.append(when_group_label_name)
-        when_group_labels.append(Label(name=when_group_label_name))
-        if isinstance(when_element, Spec):
-            # Single element
-            if when_element.spec_type == SpecType.FLOW:
-                # It's a flow
-                flow_ref_uid = f"_flow_ref_{new_var_uid()}"
-                when_element.ref = create_ref_ast_dict_helper(flow_ref_uid)
-                start_elements.append(
-                    SpecOp(
-                        op="start",
-                        spec=when_element,
-                    )
-                )
-                when_elements.append(
-                    SpecOp(
-                        op="match",
-                        spec=Spec(
-                            var_name=flow_ref_uid,
-                            members=_create_member_ast_dict_helper("Finished", {}),
-                            spec_type=SpecType.REFERENCE,
-                        ),
-                    )
-                )
-            elif (
-                when_element.spec_type == SpecType.ACTION
-                and when_element.members is None
-            ):
-                # It's an UMIM action
-                action_ref_uid = f"_action_ref_{new_var_uid()}"
-                when_element.ref = create_ref_ast_dict_helper(action_ref_uid)
-                start_elements.append(
-                    SpecOp(
-                        op="start",
-                        spec=when_element,
-                    )
-                )
-                when_elements.append(
-                    SpecOp(
-                        op="match",
-                        spec=Spec(
-                            var_name=action_ref_uid,
-                            members=_create_member_ast_dict_helper("Finished", {}),
-                            spec_type=SpecType.REFERENCE,
-                        ),
-                    )
-                )
-            elif (
-                (
-                    when_element.spec_type == SpecType.ACTION
-                    or when_element.spec_type == SpecType.ACTION
-                )
-                and when_element.members is not None
-                or (
-                    when_element.spec_type == SpecType.EVENT
-                    and when_element.members is None
-                )
-            ):
-                # It's an UMIM event
-                when_elements.append(
-                    SpecOp(
-                        op="match",
-                        spec=when_element,
-                    )
-                )
-            else:
-                raise ColangSyntaxError(f"Unsupported spec type '{element.spec}'")
-        else:
-            # Element group
-            # TODO: Fix this such that action are also supported using references for flows and actions
-            normalized_group = normalize_element_groups(when_element)
-            unique_group = convert_to_single_and_element_group(normalized_group)
-            for and_group in unique_group["elements"]:
-                for match_element in and_group["elements"]:
-                    if match_element.spec_type == SpecType.FLOW:
-                        # It's a flow
-                        start_elements.append(
-                            SpecOp(
-                                op="start",
-                                spec=match_element,
-                            )
-                        )
-                    else:
-                        # It's an UMIM action
-                        pass
-            when_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=when_element,
-                )
-            )
-
-    new_elements: List[ElementType] = []
-    new_elements.extend(start_elements)
-    new_elements.append(fork_head_element)
-    for idx, when_group_label in enumerate(when_group_labels):
-        new_elements.append(when_group_label)
-        new_elements.append(MergeHeads())
-        new_elements.extend(expand_elements(element.then_elements[idx], flow_configs))
-        new_elements.append(goto_end_label)
-    new_elements.append(end_label)
 
     return new_elements
 
