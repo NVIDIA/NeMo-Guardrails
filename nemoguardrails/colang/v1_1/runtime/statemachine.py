@@ -18,8 +18,10 @@ import logging
 import random
 import re
 import time
+import traceback
 from collections import deque
 from datetime import datetime, timedelta
+from functools import partial
 from typing import Any, Deque, Dict, List, Optional, Tuple, Union, cast
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
@@ -52,6 +54,7 @@ from nemoguardrails.colang.v1_1.runtime.flows import (
     ActionStatus,
     ColangRuntimeError,
     ColangValueError,
+    ElementType,
     Event,
     FlowConfig,
     FlowHead,
@@ -136,7 +139,6 @@ def create_flow_instance(
         heads={
             head_uid: FlowHead(
                 uid=head_uid,
-                position=0,
                 flow_state_uid=flow_uid,
                 matching_scores=[],
             )
@@ -165,6 +167,11 @@ def add_new_flow_instance(state: State, flow_state: FlowState) -> FlowState:
         state.flow_id_states[flow_state.flow_id].append(flow_state)
     else:
         state.flow_id_states.update({flow_state.flow_id: [flow_state]})
+
+    flow_head = next(iter(flow_state.heads.values()))
+    flow_head.position_changed_callback = partial(_flow_head_changed, state, flow_state)
+    flow_head.status_changed_callback = partial(_flow_head_changed, state, flow_state)
+    _flow_head_changed(state, flow_state, flow_head)
 
     return flow_state
 
@@ -259,7 +266,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 # Handle internal events that have no default matchers in flows yet
                 handled_event_loops = set()
                 if event.name == InternalEvents.START_FLOW:
-                    # Start new flow state instance of flow exists
+                    # Start new flow state instance if flow exists
                     flow_id = event.arguments["flow_id"]
                     if flow_id in state.flow_configs and flow_id != "main":
                         add_new_flow_instance(
@@ -339,51 +346,72 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                 heads_matching: List[FlowHead] = []
                 heads_not_matching: List[FlowHead] = []
                 heads_failing: List[FlowHead] = []
-                active_interaction_loops = set()
 
-                # TODO: Create a head dict for all active flows to speed this up
-                # Iterate over all flow states to check for the heads to match the event
-                sorted_flow_states = sorted(
-                    [s for s in state.flow_states.values() if _is_listening_flow(s)],
-                    key=lambda s: s.hierarchy_position,
+                head_candidates = state.event_matching_heads.get(event.name, []).copy()
+
+                # TODO: We still need to check for those events since they could fail, lets implement that properly
+                if event.name == InternalEvents.FLOW_FINISHED:
+                    head_candidates.extend(
+                        state.event_matching_heads.get(InternalEvents.FLOW_STARTED, [])
+                    )
+                    head_candidates.extend(
+                        state.event_matching_heads.get(InternalEvents.FLOW_FAILED, [])
+                    )
+                elif event.name == InternalEvents.FLOW_FAILED:
+                    head_candidates.extend(
+                        state.event_matching_heads.get(InternalEvents.FLOW_STARTED, [])
+                    )
+                    head_candidates.extend(
+                        state.event_matching_heads.get(InternalEvents.FLOW_FINISHED, [])
+                    )
+
+                # TODO: Check if we really need this
+                sorted_head_candidates = sorted(
+                    head_candidates,
+                    key=lambda s: state.flow_states[s[0]].hierarchy_position,
                 )
-                for flow_state in sorted_flow_states:
-                    for head in flow_state.active_heads.values():
-                        element = get_element_from_head(state, head)
-                        if is_match_op_element(element):
-                            if (
-                                head.position == 0
-                                and event.name != InternalEvents.START_FLOW
-                            ):
-                                # Optimization: Skip matching score computation
-                                continue
-                            else:
-                                if flow_state.loop_id is not None:
-                                    active_interaction_loops.add(flow_state.loop_id)
 
-                            matching_score = _compute_event_matching_score(
-                                state, flow_state, head, event
+                # Find all active interaction loops
+                active_interaction_loops = set()
+                for flow_state in state.flow_states.values():
+                    if _is_listening_flow(flow_state):
+                        active_interaction_loops.add(flow_state.loop_id)
+
+                for flow_state_uid, head_uid in sorted_head_candidates:
+                    flow_state = state.flow_states[flow_state_uid]
+                    head = flow_state.heads[head_uid]
+                    element = get_element_from_head(state, head)
+                    if element is not None and is_match_op_element(element):
+                        if (
+                            head.position == 0
+                            and event.name != InternalEvents.START_FLOW
+                        ):
+                            # Optimization: Skip matching score computation
+                            continue
+
+                        matching_score = _compute_event_matching_score(
+                            state, flow_state, head, event
+                        )
+
+                        if matching_score > 0.0:
+                            head.matching_scores = event.matching_scores.copy()
+                            head.matching_scores.append(matching_score)
+
+                            heads_matching.append(head)
+                            if event.name == InternalEvents.START_FLOW:
+                                handled_event_loops.add("all_loops")
+                            else:
+                                handled_event_loops.add(flow_state.loop_id)
+                            log.info(
+                                f"Matching head: {head} context={_context_log(flow_state)}"
                             )
-
-                            if matching_score > 0.0:
-                                head.matching_scores = event.matching_scores.copy()
-                                head.matching_scores.append(matching_score)
-
-                                heads_matching.append(head)
-                                if event.name == InternalEvents.START_FLOW:
-                                    handled_event_loops.add("all_loops")
-                                else:
-                                    handled_event_loops.add(flow_state.loop_id)
-                                log.info(
-                                    f"Matching head: {head} context={_context_log(flow_state)}"
-                                )
-                            elif matching_score < 0.0:
-                                heads_failing.append(head)
-                                log.info(
-                                    f"Matching head failed: {head} context={_context_log(flow_state)}"
-                                )
-                            else:
-                                heads_not_matching.append(head)
+                        elif matching_score < 0.0:
+                            heads_failing.append(head)
+                            log.info(
+                                f"Matching head failed: {head} context={_context_log(flow_state)}"
+                            )
+                        else:
+                            heads_not_matching.append(head)
 
                 # Create internal events for unhandled events for every independent interaction loop
                 unhandled_event_loops = active_interaction_loops - handled_event_loops
@@ -412,7 +440,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                     flow_state = get_flow_state_from_head(state, head)
 
                     # Create a potential reference from the match
-                    if element.spec.ref is not None:
+                    if element is not None and element.spec.ref is not None:
                         flow_state.context.update(
                             _create_event_reference(state, flow_state, element, event)
                         )
@@ -669,7 +697,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         except Exception as e:
             # In case there were any runtime error the flow will be aborted (fail)
             log.warning(
-                f"Colang error: Flow '{flow_state.flow_id}' failed due to runtime exception: '{e}'"
+                f"Colang error: Flow '{flow_state.flow_id}' failed due to runtime exception: {e}\n{traceback.format_exc()}"
             )
             event = Event(
                 name="ColangError",
@@ -812,9 +840,19 @@ def slide(
                     catch_pattern_failure_label=head.catch_pattern_failure_label.copy(),
                     scope_uids=head.scope_uids.copy(),
                 )
+                new_head.position_changed_callback = partial(
+                    _flow_head_changed, state, flow_state
+                )
+                new_head.status_changed_callback = partial(
+                    _flow_head_changed, state, flow_state
+                )
+
                 flow_state.heads[parent_fork_head_uid] = new_head
                 head.child_head_uids.append(new_head.uid)
                 new_heads.append(new_head)
+
+                # Trigger the registered flow_head_changed callback function
+                new_head.position = pos
 
             log.debug(f"Head forked: {element.labels}")
 
@@ -1113,6 +1151,8 @@ def _abort_flow(
             _generate_action_event(state, action_event)
 
     # Cleanup all head from flow
+    for head in flow_state.heads.values():
+        _remove_head_from_event_matching_structures(state, flow_state, head)
     flow_state.heads.clear()
 
     flow_state.status = FlowStatus.STOPPED
@@ -1172,6 +1212,8 @@ def _finish_flow(
             _generate_action_event(state, action_event)
 
     # Cleanup all head from flow
+    for head in flow_state.heads.values():
+        _remove_head_from_event_matching_structures(state, flow_state, head)
     flow_state.heads.clear()
 
     flow_state.status = FlowStatus.FINISHED
@@ -1261,6 +1303,45 @@ def _finish_flow(
         flow_state.new_instance_started = True
 
 
+def _flow_head_changed(state: State, flow_state: FlowState, head: FlowHead) -> None:
+    _remove_head_from_event_matching_structures(state, flow_state, head)
+    element = get_element_from_head(state, head)
+    if (
+        element is not None
+        and head.status is not FlowHeadStatus.INACTIVE
+        and _is_listening_flow(flow_state)
+        and is_match_op_element(element)
+    ):
+        _add_head_to_event_matching_structures(state, flow_state, head)
+
+
+def _add_head_to_event_matching_structures(state, flow_state, head) -> None:
+    flow_config = state.flow_configs[flow_state.flow_id]
+    element = flow_config.elements[head.position]
+    ref_event_name = get_event_name_from_element(state, flow_state, element)
+    heads = state.event_matching_heads.get(ref_event_name, None)
+    if heads is None:
+        state.event_matching_heads.update(
+            {ref_event_name: [(flow_state.uid, head.uid)]}
+        )
+    else:
+        heads.append((flow_state.uid, head.uid))
+    state.event_matching_heads_reverse_map.update(
+        {(flow_state.uid, head.uid): ref_event_name}
+    )
+
+
+def _remove_head_from_event_matching_structures(state, flow_state, head) -> bool:
+    event_name = state.event_matching_heads_reverse_map.get(
+        (flow_state.uid, head.uid), None
+    )
+    if event_name is not None:
+        state.event_matching_heads[event_name].remove((flow_state.uid, head.uid))
+        state.event_matching_heads_reverse_map.pop((flow_state.uid, head.uid))
+        return True
+    return False
+
+
 def _update_action_status_by_event(state: State, event: ActionEvent) -> None:
     for flow_state in state.flow_states.values():
         if not _is_listening_flow(flow_state):
@@ -1324,9 +1405,13 @@ def _push_left_internal_event(state: State, event: dict) -> None:
     log.debug(f"Created internal event: {event}")
 
 
-def get_element_from_head(state: State, head: FlowHead) -> SpecOp:
+def get_element_from_head(state: State, head: FlowHead) -> Optional[SpecOp]:
     """Returns the element at the flow head position"""
-    return get_flow_config_from_head(state, head).elements[head.position]
+    flow_config = get_flow_config_from_head(state, head)
+    if head.position >= 0 and head.position < len(flow_config.elements):
+        return flow_config.elements[head.position]
+    else:
+        return None
 
 
 def get_flow_config_from_head(state: State, head: FlowHead) -> FlowConfig:
@@ -1348,7 +1433,7 @@ def is_action_op_element(element: SpecOp) -> bool:
     )
 
 
-def is_match_op_element(element: SpecOp) -> bool:
+def is_match_op_element(element: ElementType) -> bool:
     return isinstance(element, SpecOp) and element.op == "match"
 
 
@@ -1382,21 +1467,9 @@ def _compute_event_matching_score(
 ) -> float:
     """Checks if the element matches with given event."""
     element = get_element_from_head(state, head)
-    assert is_match_op_element(element), f"Element '{element}' is not a match element!"
-
-    # Check cached ref event name to abort comparison early if possible. This is a efficiency optimization
-    ref_event_name = get_event_name_from_element(state, flow_state, element)
-    if (
-        ref_event_name is not None
-        and (
-            ref_event_name not in InternalEvents.ALL
-            or event.name not in InternalEvents.ALL
-            or ref_event_name == InternalEvents.UNHANDLED_EVENT
-            or ref_event_name == InternalEvents.START_FLOW
-        )
-        and ref_event_name != event.name
-    ):
-        return 0.0
+    assert element is not None and is_match_op_element(
+        element
+    ), f"Element '{element}' is not a match element!"
 
     ref_event = get_event_from_element(state, flow_state, element)
     if not isinstance(ref_event, type(event)):
@@ -1819,7 +1892,7 @@ def _generate_action_event_from_actionable_element(
     """Helper to create an outgoing event from the flow head element."""
     flow_state = get_flow_state_from_head(state, head)
     element = get_element_from_head(state, head)
-    assert is_action_op_element(
+    assert element is not None and is_action_op_element(
         element
     ), f"Cannot create an event from a non actionable flow element {element}!"
 

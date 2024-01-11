@@ -349,17 +349,11 @@ class FlowHead:
     # The unique id of a flow head
     uid: str
 
-    # The position of the flow element the head is pointing to
-    position: int
-
     # The flow of the head
     flow_state_uid: str
 
     # Matching score history of previous matches that resulted in this head to be advanced
     matching_scores: List[float]
-
-    # Whether a head is active or not (a head fork will deactivate the parent head)
-    status: FlowHeadStatus = FlowHeadStatus.ACTIVE
 
     # List of all scopes that are relevant for the head
     scope_uids: List[str] = field(default_factory=list)
@@ -370,6 +364,40 @@ class FlowHead:
     # If set a flow failure will be diverted to the label, otherwise it will abort the flow
     # Mainly used to simplify inner flow logic
     catch_pattern_failure_label: List[str] = field(default_factory=list)
+
+    # Callback that can be registered to get informed about position updates
+    position_changed_callback: Optional[Callable[[FlowHead], None]] = None
+
+    # Callback that can be registered to get informed about status updates
+    status_changed_callback: Optional[Callable[[FlowHead], None]] = None
+
+    # The position of the flow element the head is pointing to
+    _position: int = 0
+
+    @property
+    def position(self) -> int:
+        return self._position
+
+    @position.setter
+    def position(self, position: int) -> None:
+        if position != self._position:
+            self._position = position
+            if self.position_changed_callback is not None:
+                self.position_changed_callback(self)
+
+    # Whether a head is active or not (a head fork will deactivate the parent head)
+    _status: FlowHeadStatus = FlowHeadStatus.ACTIVE
+
+    @property
+    def status(self) -> FlowHeadStatus:
+        return self._status
+
+    @status.setter
+    def status(self, status: FlowHeadStatus) -> None:
+        if status != self._status:
+            self._status = status
+            if self.status_changed_callback is not None:
+                self.status_changed_callback(self)
 
     def get_child_head_uids(self, state: State) -> List[str]:
         """Return uids of all child heads (recursively)."""
@@ -392,6 +420,9 @@ class FlowHead:
 
     def __str__(self) -> str:
         return f"flow='{self.flow_state_uid.split(')',1)[0][1:]}' pos={self.position}"
+
+    def __repr__(self):
+        return f"FlowHead[uid={self.uid}, flow_state_uid={self.flow_state_uid}]"
 
 
 class FlowStatus(Enum):
@@ -582,6 +613,11 @@ class FlowState:
         )
         return InternalEvent(event_type, arguments)
 
+    def __repr__(self):
+        return (
+            f"FlowState[uid={self.uid}, flow_id={self.flow_id}, loop_id={self.loop_id}]"
+        )
+
 
 @dataclass_json
 @dataclass
@@ -626,8 +662,16 @@ class State:
     # Helper data structures
     ########################
 
-    # dictionary that maps from flow_id (name) to all available flow states
+    # Dictionary that maps from flow_id (name) to all available flow states
     flow_id_states: Dict[str, List[FlowState]] = field(default_factory=dict)
+
+    # Dictionary that maps active event matchers (by event names) to relevant heads (flow_state_uid, head_uid)
+    event_matching_heads: Dict[str, List[Tuple[str, str]]] = field(default_factory=dict)
+
+    # Dictionary that maps active heads (flow_state_uid, head_uid) to event matching names
+    event_matching_heads_reverse_map: Dict[Tuple[str, str], str] = field(
+        default_factory=dict
+    )
 
 
 class ColangSyntaxError(Exception):
