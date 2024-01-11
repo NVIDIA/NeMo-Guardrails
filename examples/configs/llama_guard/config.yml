@@ -17,7 +17,3 @@ rails:
   output:
     flows:
       - llama guard check output
-
-  dialog:
-    single_call:
-      enabled: False

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from langchain.llms import BaseLLM
 
@@ -29,11 +29,11 @@ from nemoguardrails.logging.explain import LLMCallInfo
 log = logging.getLogger(__name__)
 
 
-def parse_llama_guard_response(response: str):
+def parse_llama_guard_response(response: str) -> Tuple[bool, Optional[List[str]]]:
     """
     Parses the response from the Llama Guard LLM and returns a tuple of:
     - Whether the response is safe or not.
-    - If not safe, the violated policies.
+    - If not safe, a list of the violated policies.
     """
     response = response.lower().strip()
     log.info(f"Llama Guard response: {response}.")
@@ -50,6 +50,7 @@ def parse_llama_guard_response(response: str):
         f"""Unexpected Llama Guard response: {response}\n
                 If prompted correctly, it should always start with 'safe' or 'unsafe'"""
     )
+    return False, []
 
 
 @action()
@@ -57,12 +58,10 @@ async def llama_guard_check_input(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llama_guard_llm: Optional[BaseLLM] = None,
-):
+) -> dict:
     """
-    Assumes that a Llama Guard inference endpoint is running locally/on-prem.
-
-    Checks user messages against safety guidelines using Llama Guard.
-    Expects the prompt to contain the safety guidelines.
+    Checks user messages using the configured Llama Guard model
+    and the configured prompt containing the safety guidelines.
     """
     user_input = context.get("user_message")
     check_input_prompt = llm_task_manager.render_task_prompt(
@@ -87,12 +86,10 @@ async def llama_guard_check_output(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llama_guard_llm: Optional[BaseLLM] = None,
-):
+) -> dict:
     """
-    Assumes that a Llama Guard inference endpoint is running locally/on-prem.
-
-    Checks bot messages against safety guidelines using Llama Guard.
-    Expects the prompt to contain the safety guidelines.
+    Check the bot response using the configured Llama Guard model
+    and the configured prompt containing the safety guidelines.
     """
     user_input = context.get("user_message")
     bot_response = context.get("bot_message")

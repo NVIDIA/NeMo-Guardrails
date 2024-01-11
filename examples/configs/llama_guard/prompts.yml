@@ -1,3 +1,4 @@
+# These are the default prompts released by Meta, with the exception of policy O7, which was added to address direct insults.
 prompts:
   - task: llama_guard_check_input
     content: |
