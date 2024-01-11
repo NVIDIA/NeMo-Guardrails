@@ -1149,6 +1149,7 @@ def _abort_flow(
             action_event = action.stop_event({})
             action.status = ActionStatus.STOPPING
             _generate_action_event(state, action_event)
+        del state.actions[action_uid]
 
     # Cleanup all head from flow
     for head in flow_state.heads.values():
@@ -1210,6 +1211,7 @@ def _finish_flow(
             action_event = action.stop_event({})
             action.status = ActionStatus.STOPPING
             _generate_action_event(state, action_event)
+        del state.actions[action_uid]
 
     # Cleanup all head from flow
     for head in flow_state.heads.values():

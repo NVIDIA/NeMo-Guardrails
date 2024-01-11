@@ -53,13 +53,14 @@ class RuntimeV1_1(Runtime):
 
         # Register local system actions
         self.register_action(self._add_flows_action, "AddFlowsAction", False)
+        self.register_action(self._remove_flows_action, "RemoveFlowsAction", False)
 
         # Maps main_flow.uid to a dictionary of actions that are run locally, asynchronously.
         # Dict[main_flow_uid, Dict[action_uid, action_data]]
         self.async_actions: Dict[str, List] = {}
 
         # A way to disable async function execution. Useful for testing.
-        self.disable_async_execution = False
+        self.disable_async_execution = True
 
     async def _add_flows_action(self, state: "State", **args):
         log.info(f"Start AddFlowsAction! {args}")
@@ -102,6 +103,18 @@ class RuntimeV1_1(Runtime):
             added_flows.append(flow.name)
 
         return added_flows
+
+    async def _remove_flows_action(self, state: "State", **args):
+        log.info(f"Start RemoveFlowsAction! {args}")
+        flow_ids = args["flow_ids"]
+        # Remove all related flow states
+        for flow_id in flow_ids:
+            if flow_id in state.flow_id_states:
+                for flow_state in state.flow_id_states[flow_id]:
+                    del state.flow_states[flow_state.uid]
+                del state.flow_id_states[flow_id]
+            if flow_id in state.flow_configs:
+                del state.flow_configs[flow_id]
 
     def _init_flow_configs(self):
         """Initializes the flow configs based on the config."""

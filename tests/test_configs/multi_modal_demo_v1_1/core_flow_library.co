@@ -450,6 +450,8 @@ flow fallback user intent
   await unhandled user intent
   $flow_name = await llm create interaction continuation
   await _flow_by_name $flow_name
+  await RemoveFlowsAction(flow_ids=[$flow_name])
+
 
 flow llm create interaction continuation
   # Generate continuation based current interaction history
@@ -469,6 +471,7 @@ flow llm interaction continuation
   $generated_flow_name = await llm create interaction continuation
   if $generated_flow_name != None
     await _flow_by_name $generated_flow_name
+    await RemoveFlowsAction(flow_ids=[$generated_flow_name])
 
 flow flows fallback
   """We want to start an undefined flow."""
