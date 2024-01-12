@@ -60,7 +60,7 @@ class RuntimeV1_1(Runtime):
         self.async_actions: Dict[str, List] = {}
 
         # A way to disable async function execution. Useful for testing.
-        self.disable_async_execution = True
+        self.disable_async_execution = False
 
     async def _add_flows_action(self, state: "State", **args):
         log.info(f"Start AddFlowsAction! {args}")
