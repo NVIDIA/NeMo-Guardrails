@@ -7,7 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
-- Fixed logging issue where `verbose=true` flag did not trigger expected log output.
+- [#239](https://github.com/NVIDIA/NeMo-Guardrails/pull/239)Fixed logging issue where `verbose=true` flag did not trigger expected log output.
+- [#228](https://github.com/NVIDIA/NeMo-Guardrails/pull/228) Fix docstrings for various functions.
 
 ## [0.6.1] - 2023-12-20
 

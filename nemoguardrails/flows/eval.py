@@ -20,8 +20,6 @@ from simpleeval import simple_eval
 from nemoguardrails.flows.utils import AttributeDict
 
 
-import re
-
 def eval_expression(expr, context):
     """
     Evaluates the provided expression in the given context.

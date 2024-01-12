@@ -53,6 +53,7 @@ class ActionResult:
         events (Optional[List[dict]]): The events to be added to the stream.
         context_updates (Optional[dict]): Updates made to the context by this action.
     """
+
     # The value returned by the action
     return_value: Optional[Any] = None
 

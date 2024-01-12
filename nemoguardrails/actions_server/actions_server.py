@@ -39,6 +39,7 @@ app.action_dispatcher = ActionDispatcher(load_all_actions=True)
 
 class RequestBody(BaseModel):
     """Request body for executing an action."""
+
     action_name: str = ""
     action_parameters: Dict = Field(
         default={}, description="The list of action parameters."
@@ -47,6 +48,7 @@ class RequestBody(BaseModel):
 
 class ResponseBody(BaseModel):
     """Response body for action execution."""
+
     status: str = "success"  # success / failed
     result: Optional[str]
 
