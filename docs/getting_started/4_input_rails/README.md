@@ -142,7 +142,7 @@ If the bot does not know the answer to a question, it truthfully says it does no
 
 > **NOTE**: this jailbreak attempt does not work 100% of the time. If you're running this and getting a different result, try a few times, and you should get a response similar to the above.
 
-Allowing the LLM to comply with this type of requests is definitely something we don't want. To prevent jailbreak attempts like this, you can add an input rail that can process the user input before it is sent to the LLM. NeMo Guardrails comes with a built-in [self check input](../../user_guides/guardrails-library.md#input-checking) rail that uses a separate LLM query to detect a jailbreak attempt. To use it, you have to:
+Allowing the LLM to comply with this type of requests is definitely something we don't want. To prevent jailbreak attempts like this, you can add an input rail that can process the user input before it is sent to the LLM. NeMo Guardrails comes with a built-in [self check input](../../user_guides/guardrails-library.md#self-check-input) rail that uses a separate LLM query to detect a jailbreak attempt. To use it, you have to:
 
 1. Activate the `self check input` rail in `config.yml`.
 2. Add a `self_check_input` prompt in `prompts.yml`.

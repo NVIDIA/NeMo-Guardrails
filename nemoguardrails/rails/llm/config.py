@@ -462,17 +462,33 @@ class RailsConfig(BaseModel):
             prompt.get("task") for prompt in values.get("prompts", [])
         ]
 
+        # Input moderation prompt verification
         if (
             "self check input" in enabled_input_rails
             and "self_check_input" not in provided_task_prompts
         ):
             raise ValueError("You must provide a `self_check_input` prompt template.")
+        if (
+            "llama guard check input" in enabled_input_rails
+            and "llama_guard_check_input" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `llama_guard_check_input` prompt template."
+            )
 
+        # Output moderation prompt verification
         if (
             "self check output" in enabled_output_rails
             and "self_check_output" not in provided_task_prompts
         ):
             raise ValueError("You must provide a `self_check_output` prompt template.")
+        if (
+            "llama guard check output" in enabled_output_rails
+            and "llama_guard_check_output" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `llama_guard_check_output` prompt template."
+            )
 
         if (
             "self check facts" in enabled_output_rails

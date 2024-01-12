@@ -3,13 +3,14 @@
 NeMo Guardrails comes with a library of built-in guardrails that you can easily use:
 
 1. LLM Self-Checking
-   - [Input Checking](#input-checking)
-   - [Output Checking](#output-checking)
+   - [Input Checking](#self-check-input)
+   - [Output Checking](#self-check-output)
    - [Fact Checking](#fact-checking)
    - [Hallucination Detection](#hallucination-detection)
 
 2. Community Models and Libraries
    - [AlignScore-based Fact Checking](#alignscore-based-fact-checking)
+   - [LlamaGuard-based Content Moderation](#llamaguard-based-content-moderation)
    - [Presidio-based Sensitive data detection](#presidio-based-sensitive-data-detection)
    - BERT-score Hallucination Checking - *[COMING SOON]*
 
@@ -25,7 +26,7 @@ This category of rails relies on prompting the LLM to perform various tasks like
 > DISCLAIMER: You should only use the example self-check prompts as a starting point. For production use cases, you should perform additional evaluations and customizations.
 
 
-### Input Checking
+### Self Check Input
 
 The goal of the input self-checking rail is to determine if the input for the user should be allowed for further processing. This rail will prompt the LLM using a custom prompt. Common reasons for rejecting the input from the user include jailbreak attempts, harmful or abusive content, or other inappropriate instructions.
 
@@ -127,7 +128,7 @@ prompts:
       Answer [Yes/No]:
 ```
 
-### Output Checking
+### Self Check Output
 
 The goal of the output self-checking rail is to determine if the output from the bot should be returned to the user. This rail will prompt the LLM using a custom prompt. Common reasons for rejecting the output from the bot include harmful or abusive content, messages about illegal activities, or other inappropriate responses.
 
@@ -379,7 +380,9 @@ This category of rails relies on open-source models and libraries.
 
 NeMo Guardrails provides out-of-the-box support for the [AlignScore metric (Zha et al.)](https://aclanthology.org/2023.acl-long.634.pdf), which uses a RoBERTa-based model for scoring factual consistency in model responses with respect to the knowledge base.
 
-In our testing, we observed an average latency of ~220ms on hosting AlignScore as an HTTP service, and ~45ms on direct inference with the model loaded in-memory. This makes it much faster than the self-check method. However, this method requires an on-prem deployment of the publicly available AlignScore model. Please see the [AlignScore Deployment](./advanced/align_score_deployment.md) guide for more details.
+In our testing, we observed an average latency of ~220ms on hosting AlignScore as an HTTP service, and ~45ms on direct inference with the model loaded in-memory. This makes it much faster than the self-check method. However, this method requires an on-prem deployment of the publicly available AlignScore model. Please see the [AlignScore Deployment](./advanced/align-score-deployment.md) guide for more details.
+
+#### Usage
 
 To use the AlignScore-based fact-checking, you have to set the following configuration options in your `config.yml`:
 
@@ -396,9 +399,7 @@ rails:
       - alignscore check facts
 ```
 
-#### Usage
-
-The usage for the AlignScore-based fact-checking rail is the same as that for the self-check fact-checking rail. To trigger the fact-fact checking rail, you have to set the `$check_facts` context variable to `True` before a bot message that requires fact-checking, e.g.:
+The Colang flow for AlignScore-based fact-checking rail is the same as that for the self-check fact-checking rail. To trigger the fact-checking rail, you have to set the `$check_facts` context variable to `True` before a bot message that requires fact-checking, e.g.:
 
 ```colang
 define flow
@@ -406,6 +407,76 @@ define flow
   $check_facts = True
   bot provide report answer
 ```
+
+### Llama Guard-based Content Moderation
+
+NeMo Guardrails provides out-of-the-box support for content moderation using Meta's [Llama Guard](https://ai.meta.com/research/publications/llama-guard-llm-based-input-output-safeguard-for-human-ai-conversations/) model.
+
+In our testing, we observe significantly improved input and output content moderation performance compared to the [self-check method](#llm-self-checking). Please see additional documentation for more details on the [recommended deployment method](./advanced/llama-guard-deployment.md) and the [performance evaluation](./../evaluation/README.md#llamaguard-based-moderation-rails-performance) numbers.
+
+#### Usage
+
+To configure your bot to use Llama Guard for input/output checking, follow the below steps:
+
+1. Add a model of type `llama_guard` to the models section of the `config.yml` file (the example below uses a vLLM setup):
+```yaml
+models:
+  ...
+
+  - type: llama_guard
+    engine: vllm_openai
+    parameters:
+      openai_api_base: "http://localhost:5123/v1"
+      model_name: "meta-llama/LlamaGuard-7b"
+```
+
+2. Include the `llama guard check input` and `llama guard check output` flow names in the rails section of the `config.yml` file:
+
+```yaml
+rails:
+  input:
+    flows:
+      - llama guard check input
+  output:
+    flows:
+      - llama guard check output
+```
+
+3. Define the `llama_guard_check_input` and the `llama_guard_check_output` prompts in the `prompts.yml` file:
+
+```yml
+prompts:
+  - task: llama_guard_check_input
+    content: |
+      <s>[INST] Task: ...
+      <BEGIN UNSAFE CONTENT CATEGORIES>
+      O1: ...
+      O2: ...
+  - task: llama_guard_check_output
+    content: |
+      <s>[INST] Task: ...
+      <BEGIN UNSAFE CONTENT CATEGORIES>
+      O1: ...
+      O2: ...
+```
+
+The rails execute the [`llama_guard_check_*` actions](../../nemoguardrails/library/llama_guard/actions.py), which return `True` if the user input or the bot message should be allowed, and `False` otherwise, along with a list of the unsafe content categories as defined in the Llama Guard prompt.
+
+```colang
+define flow llama guard check input
+  $llama_guard_response = execute llama_guard_check_input
+  $allowed = $llama_guard_response["allowed"]
+  $llama_guard_policy_violations = $llama_guard_response["policy_violations"]
+
+  if not $allowed
+    bot refuse to respond
+    stop
+
+# (similar flow for checking output)
+```
+
+A complete example configuration that uses Llama Guard for input and output moderation is provided in this [example folder](./../../examples/configs/llama_guard/README.md).
+
 
 ### Presidio-based Sensitive Data Detection
 
