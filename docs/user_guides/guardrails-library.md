@@ -10,7 +10,7 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
 
 2. Community Models and Libraries
    - [AlignScore-based Fact Checking](#alignscore-based-fact-checking)
-   - [LlamaGuard-based Content Moderation](#llamaguard-based-content-moderation)
+   - [LlamaGuard-based Content Moderation](#llama-guard-based-content-moderation)
    - [Presidio-based Sensitive data detection](#presidio-based-sensitive-data-detection)
    - BERT-score Hallucination Checking - *[COMING SOON]*
 
