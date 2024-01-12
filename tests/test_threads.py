@@ -20,7 +20,6 @@ from fastapi.testclient import TestClient
 from nemoguardrails.server import api
 from nemoguardrails.server.api import register_datastore
 from nemoguardrails.server.datastore.memory_store import MemoryStore
-from nemoguardrails.server.datastore.redis_store import RedisStore
 
 register_datastore(MemoryStore())
 api.app.rails_config_path = os.path.join(
@@ -98,6 +97,8 @@ def test_invalid_thread_id():
 
 @pytest.mark.skip(reason="Should only be run locally when Redis is available.")
 def test_with_redis():
+    from nemoguardrails.server.datastore.redis_store import RedisStore
+
     register_datastore(RedisStore("redis://localhost/1"))
     response = client.post(
         "/v1/chat/completions",

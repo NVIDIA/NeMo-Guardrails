@@ -94,6 +94,8 @@ To use server-side threads, you have to register a datastore. To do this, you mu
 
 Out-of-the-box, NeMo Guardrails has support for `MemoryStore` (useful for quick testing) and `RedisStore`. If you want to use a different backend, you can implement the [`DataStore`](../../nemoguardrails/server/datastore/datastore.py) interface and register a different instance in `config.py`.
 
+> NOTE: to use `RedisStore` you must install `aioredis >= 2.0.1`.
+
 Next, when making a call to the `/v1/chat/completions` endpoint, you must also include a `thread_id` field:
 
 ```
