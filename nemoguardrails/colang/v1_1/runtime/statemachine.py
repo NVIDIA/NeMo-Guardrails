@@ -22,7 +22,7 @@ import traceback
 from collections import deque
 from datetime import datetime, timedelta
 from functools import partial
-from typing import Any, Deque, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Abort,
@@ -254,6 +254,15 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
         flow_states = state.flow_id_states[state.flow_states[flow_state_uid].flow_id]
         flow_states.remove(flow_state)
         del state.flow_states[flow_state_uid]
+
+    # Remove all actions that are no longer referenced
+    # TODO: Refactor to use no more ids to simplify memory management
+    new_action_dict: Dict[str, Action] = {}
+    for flow_state in state.flow_states.values():
+        for action_uid in flow_state.action_uids:
+            if action_uid not in new_action_dict:
+                new_action_dict.update({action_uid: state.actions[action_uid]})
+    state.actions = new_action_dict
 
     heads_are_advancing = True
     heads_are_merging = True
@@ -596,7 +605,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> None:
                             competing_flow_state.action_uids[
                                 index
                             ] = winning_event.action_uid
-                            state.actions.pop(competing_event.action_uid, None)
+                            del state.actions[competing_event.action_uid]
 
                         advancing_heads.append(head)
                         log.info(
@@ -1149,7 +1158,6 @@ def _abort_flow(
             action_event = action.stop_event({})
             action.status = ActionStatus.STOPPING
             _generate_action_event(state, action_event)
-        del state.actions[action_uid]
 
     # Cleanup all head from flow
     for head in flow_state.heads.values():
@@ -1211,7 +1219,6 @@ def _finish_flow(
             action_event = action.stop_event({})
             action.status = ActionStatus.STOPPING
             _generate_action_event(state, action_event)
-        del state.actions[action_uid]
 
     # Cleanup all head from flow
     for head in flow_state.heads.values():
