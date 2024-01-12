@@ -354,7 +354,8 @@ class LLMRails:
 
         # For the rest of the messages, we transform them directly into events.
         # TODO: Move this to separate function once more types of messages are supported.
-        for msg in messages[p:]:
+        for idx in range(p, len(messages)):
+            msg = messages[idx]
             if msg["role"] == "user":
                 events.append(
                     {
@@ -362,6 +363,16 @@ class LLMRails:
                         "final_transcript": msg["content"],
                     }
                 )
+
+                # If it's not the last message, we also need to add the `UserMessage` event
+                if idx != len(messages) - 1:
+                    events.append(
+                        {
+                            "type": "UserMessage",
+                            "text": msg["content"],
+                        }
+                    )
+
             elif msg["role"] == "assistant":
                 events.append(
                     {"type": "StartUtteranceBotAction", "script": msg["content"]}
