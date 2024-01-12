@@ -15,7 +15,26 @@
 
 
 class AttributeDict(dict):
-    """Simple utility to allow accessing dict members as attributes."""
+    """
+    A simple utility class that allows accessing dictionary members as attributes.
+
+    This class inherits from the built-in `dict` class and overrides the `__getattr__`
+    and `__setattr__` methods to provide attribute-style access to dictionary keys.
+
+    Example:
+    ```python
+    # Using AttributeDict
+    my_dict = AttributeDict({'key': 'value', 'nested': {'inner_key': 'inner_value'}})
+
+    # Accessing dictionary keys as attributes
+    print(my_dict.key)            # Output: 'value'
+    print(my_dict.nested.inner_key)# Output: 'inner_value'
+    ```
+
+    Note:
+    - If a dictionary value is itself a dictionary, it is converted to an `AttributeDict`.
+    - If a dictionary value is a list of dictionaries, the list is converted to a list of `AttributeDict` objects.
+    """
 
     def __getattr__(self, attr):
         val = self.get(attr, None)

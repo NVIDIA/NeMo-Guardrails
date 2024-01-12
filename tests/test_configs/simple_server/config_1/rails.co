@@ -1,0 +1,14 @@
+define user express greeting
+  "hi"
+
+define bot express greeting
+  "Hello!"
+
+define bot express greeting again
+  "Hello again!"
+
+define flow
+  user express greeting
+  bot express greeting
+  user express greeting
+  bot express greeting again

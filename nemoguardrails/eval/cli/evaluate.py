@@ -73,6 +73,20 @@ def topical(
     """Evaluates the performance of the topical rails defined in a Guardrails application.
     Computes accuracy for canonical form detection, next step generation, and next bot message generation.
     Only a single Guardrails application can be specified in the config option.
+
+    Args:
+        config (List[str], optional): Path to a directory containing configuration files of the Guardrails application for evaluation.
+            Can also point to a single configuration file. Defaults to [""].
+        verbose (bool, optional): If the chat should be verbose and output the prompts. Defaults to False.
+        test_percentage (float, optional): Percentage of the samples for an intent to be used as test set. Defaults to 0.3.
+        max_tests_intent (int, optional): Maximum number of test samples per intent to be used when testing.
+            If value is 0, no limit is used. Defaults to 3.
+        max_samples_intent (int, optional): Maximum number of samples per intent indexed in vector database.
+            If value is 0, all samples are used. Defaults to 0.
+        results_frequency (int, optional): Print evaluation intermediate results using this step. Defaults to 10.
+        sim_threshold (float, optional): Minimum similarity score to select the intent when exact match fails. Defaults to 0.0.
+        random_seed (int, optional): Random seed used by the evaluation. Defaults to None.
+        output_dir (str, optional): Output directory for predictions. Defaults to None.
     """
     if verbose:
         set_verbose(True)
@@ -121,8 +135,21 @@ def moderation(
     split: str = typer.Option("harmful", help="Whether prompts are harmful or helpful"),
 ):
     """
-    Evaluates the performance of the moderation rails defined in a Guardrails application.
-    Computes accuracy for jailbreak detection and output moderation.
+    Evaluate the performance of the moderation rails defined in a Guardrails application.
+
+    This command computes accuracy for jailbreak detection and output moderation.
+
+    Args:
+        config (str): The path to the guardrails config. Defaults to "config".
+        dataset_path (str): Path to the dataset containing prompts.
+            Defaults to "nemoguardrails/eval/data/moderation/harmful.txt".
+        num_samples (int): Number of samples to evaluate. Defaults to 50.
+        check_input (bool): Evaluate the input self-check rail. Defaults to True.
+        check_output (bool): Evaluate the output self-check rail. Defaults to True.
+        output_dir (str): Output directory for predictions.
+            Defaults to "eval_outputs/moderation".
+        write_outputs (bool): Write outputs to file. Defaults to True.
+        split (str): Whether prompts are harmful or helpful. Defaults to "harmful".
     """
     moderation_check = ModerationRailsEvaluation(
         config,
@@ -153,8 +180,16 @@ def hallucination(
     write_outputs: bool = typer.Option(True, help="Write outputs to file"),
 ):
     """
-    Evaluates the performance of the hallucination rails defined in a Guardrails application.
-    Computes accuracy for hallucination detection.
+    Evaluate the performance of the hallucination rails defined in a Guardrails application.
+
+    This command computes accuracy for hallucination detection.
+
+    Args:
+        config (str): The path to the guardrails config. Defaults to "config".
+        dataset_path (str): Dataset path. Defaults to "nemoguardrails/eval/data/hallucination/sample.txt".
+        num_samples (int): Number of samples to evaluate. Defaults to 50.
+        output_dir (str): Output directory. Defaults to "eval_outputs/hallucination".
+        write_outputs (bool): Write outputs to file. Defaults to True.
     """
     hallucination_check = HallucinationRailsEvaluation(
         config,
@@ -189,9 +224,18 @@ def fact_checking(
     ),
 ):
     """
-    Evaluates the performance of the fact checking rails defined in a Guardrails application.
-    Computes accuracy for fact checking.
+    Evaluate the performance of the fact-checking rails defined in a Guardrails application.
+
+    This command computes accuracy for fact-checking.
     Negatives can be created synthetically by an LLM that acts as an adversary and modifies the answer to make it incorrect.
+
+    Args:
+        config (str): The path to the guardrails config. Defaults to "config".
+        dataset_path (str): Path to the folder containing the dataset. Defaults to "nemoguardrails/eval/data/factchecking/sample.json".
+        num_samples (int): Number of samples to be evaluated. Defaults to 50.
+        create_negatives (bool): Create synthetic negative samples. Defaults to True.
+        output_dir (str): Path to the folder where the outputs will be written. Defaults to "eval_outputs/factchecking".
+        write_outputs (bool): Write outputs to the output directory. Defaults to True.
     """
     fact_check = FactCheckEvaluation(
         config,

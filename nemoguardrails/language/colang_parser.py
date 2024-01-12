@@ -96,10 +96,13 @@ class ColangParser:
     ):
         """Parses a file in .co format to a YAML flows format
 
-        :param filename: The name of the file.
-        :param content: The content.
-        :param include_source_mapping: Whether to include source mapping into the flow elements.
-        :param snippets: Snippets to use when parsing the file.
+        Initializes the ColangParser.
+
+        Args:
+            filename (str): The name of the file.
+            content (str): The content.
+            include_source_mapping (bool): Whether to include source mapping into the flow elements.
+            snippets (Optional[dict]): Snippets to use when parsing the file.
         """
         self.filename = filename
         self.content = content
@@ -298,6 +301,7 @@ class ColangParser:
         self.main_token = extract_main_token(self.text)
 
     def _create_namespace(self, namespace):
+        """create a namespace."""
         # First we need to pop all the namespaces at deeper indentation
         while (
             len(self.current_indentations) > 0
@@ -1867,13 +1871,27 @@ def parse_coflows_to_yml_flows(
     include_source_mapping: bool = False,
     snippets: Optional[dict] = None,
 ):
-    """Parses a file in .co format to a YAML flows format
+    """
+    Parses a file in .co format to a YAML flows format.
 
-    :param filename: The name of the file.
-    :param content: The content.
-    :param include_source_mapping: Whether to include source mapping into the flow elements.
-    :param snippets: Snippets to use when parsing the file.
-    :return:
+    Parameters:
+    - filename (str): The name of the file.
+    - content (str): The content of the file.
+    - include_source_mapping (bool): Whether to include source mapping into the flow elements.
+    - snippets (Optional[dict]): Snippets to use when parsing the file.
+
+    Returns:
+    The parsed YAML flows.
+
+    Example:
+    ```python
+    filename = "example.co"
+    content = "..."
+    flows = parse_coflows_to_yml_flows(filename, content, include_source_mapping=True)
+    ```
+
+    Note:
+    - The function uses the ColangParser to convert .co format to YAML flows.
     """
     parser = ColangParser(filename, content, include_source_mapping, snippets)
 
@@ -1881,21 +1899,25 @@ def parse_coflows_to_yml_flows(
 
 
 def parse_snippets_and_imports(filename: str, content: str):
-    """Parses just the snippets and imports from the file.
+    """
+    Parses snippets and imports from a file.
 
-    The data is returned in the format
-    {
-        "snippet_name": {
-            "name": "snippet_name",
-            "params": ["T", "A"],
-            "lines": <numbered lines>
-        }
-    }, ["skill_1", ...]
+    Parameters:
+    - filename (str): The name of the file.
+    - content (str): The content of the file.
 
+    Returns:
+    A dictionary of snippets and a list of skill names.
 
-    :param filename: The name of the file
-    :param content: The content
-    :return:
+    Example:
+    ```python
+    filename = "example.co"
+    content = "..."
+    snippets, skills = parse_snippets_and_imports(filename, content)
+    ```
+
+    Note:
+    - The function uses the ColangParser to extract snippets and imports.
     """
     parser = ColangParser(filename, content)
 

@@ -22,15 +22,22 @@ log = logging.getLogger(__name__)
 
 
 def slide(state: "State", flow_config: "FlowConfig", head: int) -> Optional[int]:
-    """Tries to slide a flow with the provided head.
+    """
+    Try to slide a flow with the provided head.
 
-    Sliding is the operation of moving through "non-matching" elements e.g. check,
-    if, jump, expect etc. It also includes calling sub-flows.
+    Sliding is the operation of moving through "non-matching" elements e.g., check,
+    if, jump, expect, etc. It also includes calling sub-flows.
 
-    :param state: The current state of the dialog.
-    :param flow_config: The config of the flow that should be advanced.
-    :param head: The current head.
-    :return:
+    Args:
+        state (State): The current state of the dialog.
+        flow_config (FlowConfig): The config of the flow that should be advanced.
+        head (int): The current head.
+
+    Returns:
+        Optional[int]: The updated head after sliding. If the flow finishes, returns a negative value.
+
+    Note:
+        The convention is to return the last head multiplied by -1 when the flow finishes.
     """
     context = state.context
 
