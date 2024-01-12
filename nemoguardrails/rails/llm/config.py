@@ -347,6 +347,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "core",
         "rails",
         "streaming",
+        "passthrough",
     ]
 
     for field in additional_fields:
@@ -450,6 +451,12 @@ class RailsConfig(BaseModel):
     streaming: bool = Field(
         default=False,
         description="Whether this configuration should use streaming mode or not.",
+    )
+
+    passthrough: bool = Field(
+        default=False,
+        description="Weather the original prompt should pass through the guardrails configuration as is. "
+        "This means it will not be altered in any way. ",
     )
 
     @root_validator(pre=True, allow_reuse=True)
