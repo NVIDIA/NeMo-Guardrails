@@ -21,6 +21,7 @@ import typer
 import uvicorn
 from fastapi import FastAPI
 
+from nemoguardrails import __version__
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
 from nemoguardrails.eval.cli import evaluate
@@ -139,3 +140,18 @@ def action_server(
     """Start a NeMo Guardrails actions server."""
 
     uvicorn.run(actions_server.app, port=port, log_level="info", host="0.0.0.0")
+
+
+def version_callback(value: bool):
+    if value:
+        typer.echo(__version__)
+        raise typer.Exit()
+
+
+@app.callback()
+def cli(
+    _: Optional[bool] = typer.Option(
+        None, "-v", "--version", callback=version_callback, is_eager=True
+    )
+):
+    pass

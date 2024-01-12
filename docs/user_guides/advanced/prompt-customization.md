@@ -89,13 +89,13 @@ Note that if you specify a custom `prompting_mode` but no prompt definition with
 
 ### Prompt Templates
 
-Depending on the type of LLM, there are two types of templates you can define: **completion** and **chat**. For completion models (e.g., `text-davinci-003`), you need to include the `content` key in the configuration of a prompt:
+Depending on the type of LLM, there are two types of templates you can define: **completion** and **chat**. For completion models (e.g., `gpt-3.5-turbo-instruct`), you need to include the `content` key in the configuration of a prompt:
 
 ```yaml
 prompts:
   - task: generate_user_intent
     models:
-      - openai/text-davinci-003
+      - openai/gpt-3.5-turbo-instruct
     content: |-
       ...
 ```
@@ -202,7 +202,7 @@ Optionally, the output from the LLM can be parsed using an *output parser*. The 
 
 ## Predefined Prompts
 
-Currently, the NeMo Guardrails toolkit includes prompts for `openai/text-davinci-003`, `openai/gpt-3.5-turbo`, `openai/gpt-4`, `databricks/dolly-v2-3b`, `cohere/command`, `cohere/command-light`, `cohere/command-light-nightly`.
+Currently, the NeMo Guardrails toolkit includes prompts for `openai/gpt-3.5-turbo-instruct`, `openai/gpt-3.5-turbo`, `openai/gpt-4`, `databricks/dolly-v2-3b`, `cohere/command`, `cohere/command-light`, `cohere/command-light-nightly`.
 
 **DISCLAIMER**: Evaluating and improving the provided prompts is a work in progress. We do not recommend deploying this alpha version using these prompts in a production setting.
 

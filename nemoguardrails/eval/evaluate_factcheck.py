@@ -75,6 +75,12 @@ class FactCheckEvaluation:
         """
         Create synthetic negative samples for fact checking. The negative samples are created by an LLM that acts
         as an adversary and modifies the answer to make it incorrect.
+
+        Args:
+            dataset (List[Dict]): The dataset to create negative samples for.
+
+        Returns:
+            List[Dict]: The dataset with synthetic negative samples.
         """
 
         create_negatives_template = """You will play the role of an adversary to confuse people with answers
@@ -106,6 +112,13 @@ class FactCheckEvaluation:
         """
         Check facts using the fact checking rail. The fact checking rail is a binary classifier that takes in
         evidence and a response and predicts whether the response is grounded in the evidence or not.
+
+        Args:
+            split (str): The split type for checking facts. Either "positive" or "negative".
+
+        Returns:
+            Tuple[List[FactCheckPrediction], int, float]: Tuple containing fact check predictions,
+            number of correct predictions, and total time taken.
         """
 
         fact_check_predictions = []

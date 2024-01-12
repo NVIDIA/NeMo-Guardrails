@@ -73,15 +73,15 @@ Results on _chit-chat_ dataset, metric used is accuracy.
 
 | Model                                  | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
 |----------------------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
+| `gpt-3.5-turbo-instruct, k=all`        | 0.88                   | N/A                    | 0.88                  | N/A                   | 0.88                   | N/A                    |
+| `gpt-3.5-turbo-instruct, single call`  | 0.90                   | N/A                    | 0.91                  | N/A                   | 0.91                   | N/A                    |
+| `gpt-3.5-turbo-instruct, compact`      | 0.89                   | N/A                    | 0.89                  | N/A                   | 0.90                   | N/A                    |
+| `gpt-3.5-turbo, k=all`                 | 0.44                   | 0.56                   | 0.50                  | 0.61                  | 0.54                   | 0.65                   |
 | `text-davinci-003, k=all`              | 0.89                   | 0.89                   | 0.90                  | 0.90                  | 0.91                   | 0.91                   |
 | `text-davinci-003, k=all, single call` | 0.89                   | N/A                    | 0.91                  | N/A                   | 0.91                   | N/A                    |
 | `text-davinci-003, k=all, compact`     | 0.90                   | N/A                    | 0.91                  | N/A                   | 0.91                   | N/A                    |
 | `text-davinci-003, k=3`                | 0.82                   | N/A                    | 0.85                  | N/A                   | N/A                    | N/A                    |
 | `text-davinci-003, k=1`                | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
-| `gpt-3.5-turbo-instruct, k=all`        | 0.88                   | N/A                    | 0.88                  | N/A                   | 0.88                   | N/A                    |
-| `gpt-3.5-turbo-instruct, single call`  | 0.90                   | N/A                    | 0.91                  | N/A                   | 0.91                   | N/A                    |
-| `gpt-3.5-turbo-instruct, compact`      | 0.89                   | N/A                    | 0.89                  | N/A                   | 0.90                   | N/A                    |
-| `gpt-3.5-turbo, k=all`                 | 0.44                   | 0.56                   | 0.50                  | 0.61                  | 0.54                   | 0.65                   |
 | `llama2-13b-chat, k=all`               | 0.87                   | N/A                    | 0.88                  | N/A                   | 0.89                   | N/A                    |
 | `dolly-v2-3b, k=all`                   | 0.80                   | 0.82                   | 0.81                  | 0.83                  | 0.81                   | 0.83                   |
 | `vicuna-7b-v1.3, k=all`                | 0.62                   | 0.75                   | 0.69                  | 0.77                  | 0.71                   | 0.79                   |
@@ -94,15 +94,15 @@ Results on _banking_ dataset, metric used is accuracy.
 
 | Model                                  | User intent, `w.o sim` | User intent, `sim=0.6` | Bot intent, `w.o sim` | Bot intent, `sim=0.6` | Bot message, `w.o sim` | Bot message, `sim=0.6` |
 |----------------------------------------|------------------------|------------------------|-----------------------|-----------------------|------------------------|------------------------|
+| `gpt-3.5-turbo-instruct, k=all`        | 0.73                   | N/A                    | 0.74                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo-instruct, single call`  | 0.81                   | N/A                    | 0.83                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo-instruct, compact`      | 0.86                   | N/A                    | 0.87                  | N/A                   | N/A                    | N/A                    |
+| `gpt-3.5-turbo, k=all`                 | 0.38                   | 0.73                   | 0.45                  | 0.73                  | N/A                    | N/A                    |
 | `text-davinci-003, k=all`              | 0.77                   | 0.82                   | 0.83                  | 0.84                  | N/A                    | N/A                    |
 | `text-davinci-003, k=all, single call` | 0.75                   | N/A                    | 0.81                  | N/A                   | N/A                    | N/A                    |
 | `text-davinci-003, k=all, compact`     | 0.86                   | N/A                    | 0.86                  | N/A                   | N/A                    | N/A                    |
 | `text-davinci-003, k=3`                | 0.65                   | N/A                    | 0.73                  | N/A                   | N/A                    | N/A                    |
 | `text-davinci-003, k=1`                | 0.50                   | N/A                    | 0.63                  | N/A                   | N/A                    | N/A                    |
-| `gpt-3.5-turbo-instruct, k=all`        | 0.73                   | N/A                    | 0.74                  | N/A                   | N/A                    | N/A                    |
-| `gpt-3.5-turbo-instruct, single call`  | 0.81                   | N/A                    | 0.83                  | N/A                   | N/A                    | N/A                    |
-| `gpt-3.5-turbo-instruct, compact`      | 0.86                   | N/A                    | 0.87                  | N/A                   | N/A                    | N/A                    |
-| `gpt-3.5-turbo, k=all`                 | 0.38                   | 0.73                   | 0.45                  | 0.73                  | N/A                    | N/A                    |
 | `llama2-13b-chat, k=all`               | 0.76                   | N/A                    | 0.77                  | N/A                   | N/A                    | N/A                    |
 | `dolly-v2-3b, k=all`                   | 0.32                   | 0.62                   | 0.40                  | 0.64                  | N/A                    | N/A                    |
 | `vicuna-7b-v1.3, k=all`                | 0.39                   | 0.62                   | 0.54                  | 0.65                  | N/A                    | N/A                    |
@@ -164,9 +164,9 @@ We breakdown the performance into positive entailment accuracy and negative enta
 
 | Model                  | Positive Entailment Accuracy | Negative Entailment Accuracy | Overall Accuracy | Average Time Per Checked Fact (ms) |
 |------------------------|------------------------------|------------------------------|------------------|------------------------------------|
-| text-davinci-003       | 70.0%                        | **93.0%**                    | 81.5%            | 272.2ms                            |
-| gpt-3.5-turbo          | 76.0%                        | 89.0%                        | 82.5%            | 435.1ms                            |
 | gpt-3.5-turbo-instruct | **92.0%**                    | 69.0%                        | 80.5%            | 188.8ms                            |
+| gpt-3.5-turbo          | 76.0%                        | 89.0%                        | 82.5%            | 435.1ms                            |
+| text-davinci-003       | 70.0%                        | **93.0%**                    | 81.5%            | 272.2ms                            |
 | align_score-base*      | 81.0%                        | 88.0%                        | 84.5%            | **23.0ms** ^                       |
 | align_score-large*     | 87.0%                        | 90.0%                        | **88.5%**        | 46.0ms ^                           |
 
@@ -175,8 +175,8 @@ We breakdown the performance into positive entailment accuracy and negative enta
 
 ### Moderation Rails
 
-The moderation involves two components: jailbreak detection and output moderation.
-* The jailbreak detection attempts to flag user inputs that could potentially cause the model to output unsafe content.
+The moderation involves two components: input and output moderation.
+* The input moderation attempts to block user inputs that are designed to elicit harmful responses from the bot.
 * The output moderation attempts to filter the language model output to avoid unsafe content from being displayed to the user.
 
 #### Self-Check
@@ -198,11 +198,11 @@ The various arguments that can be passed to evaluate the moderation rails are
 - `dataset-path`: Path to the dataset to evaluate the rails on. The dataset should contain one prompt per line.
 - `split`: The split of the dataset to evaluate on. Choices are 'helpful' or 'harmful'. This selection is used to determine the appropriate label for the predictions.
 - `num-samples`: Number of samples to evaluate. Default is 50.
-- `check-input`: Whether to evaluate the jailbreak rail. Default is True.
+- `check-input`: Whether to evaluate the input moderation rail. Default is True.
 - `check-output`: Whether to evaluate the output moderation rail. Default is True.
 - `output-path`: Folder to write the results to. Default is 'eval_outputs/moderation'.
 
-It is also possible to evaluate each of the rails individually. To evaluate the jailbreak rail only, use the following command:
+It is also possible to evaluate each of the rails individually. To evaluate the input rail only, use the following command:
 
 ```nemoguardrails evaluate moderation --check-output False --config=path/to/guardrails/config```
 
@@ -231,10 +231,34 @@ These results are using the _Simple_ prompt defined in the LLM Self-Checking met
 
 | Model                  | % of harmful prompts blocked | % of helpful prompts allowed |
 |------------------------|------------------------------|------------------------------|
-| text-davinci-003       | 80                           | 97                           |
-| gpt-3.5-turbo          | 70                           | 100                          |
 | gpt-3.5-turbo-instruct | 78                           | 97                           |
+| gpt-3.5-turbo          | 70                           | 100                          |
+| text-davinci-003       | 80                           | 97                           |
 | nemollm-43b            | 88                           | 84                           |
+
+##### LlamaGuard-based Moderation Rails Performance
+Evaluation date: January 8, 2024.
+
+Guardrails offers out-of-the-box support for Meta's new Llama Guard model for input/output moderation.
+Below, we evaluate Llama Guard and compare it to the self-checking approach with the _Complex_ prompt for two popular datasets.
+
+Results on the OpenAI Moderation test set
+Dataset size: 1,680
+Number of user inputs labeled harmful: 552 (31.1%)
+| Main LLM               | Input Rail               | Accuracy | Precision | Recall | F1 score |
+|------------------------|--------------------------|----------|-----------|--------|----------|
+| gpt-3.5-turbo-instruct | self check input         | 65.9%    | 0.47      | 0.88   | 0.62     |
+| gpt-3.5-turbo-instruct | llama guard check input  | 81.9%    | 0.73      | 0.66   | 0.69     |
+
+Results on the ToxicChat dataset:
+Dataset size: 10,165
+Number of user inputs labeled harmful: 730 (7.2%)
+| Main LLM               | Input Rail               | Accuracy | Precision | Recall | F1 score |
+|------------------------|--------------------------|----------|-----------|--------|----------|
+| gpt-3.5-turbo-instruct | self check input         | 66.5%    | 0.16      | 0.85   | 0.27     |
+| gpt-3.5-turbo-instruct | llama guard check input  | 94.4%    | 0.67      | 0.44   | 0.53     |
+
+The low precision and high recall numbers from the self check input with the complex prompt indicates an overly defensive behavior from the self check input rail. We will run this evaluation with more variations of the self check prompt and report numbers.
 
 ### Hallucination Rails
 For general questions that the model uses parametric knowledge to answer, we can define a hallucination rail to detect when the model is potentially making up facts. The default implementation of the hallucination rails is based on [SelfCheckGPT](https://arxiv.org/abs/2303.08896).

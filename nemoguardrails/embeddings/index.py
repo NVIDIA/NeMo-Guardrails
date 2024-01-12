@@ -24,7 +24,17 @@ class IndexItem:
 
 
 class EmbeddingsIndex:
-    """The embeddings index is responsible for computing and searching a set of embeddings."""
+    """The embeddings index is responsible for computing and searching a set of embeddings.
+
+    Attributes:
+        embedding_size (int): The size of the embeddings.
+
+    Methods:
+        add_item(item: IndexItem) -> None: Adds a new item to the index.
+        add_items(items: List[IndexItem]) -> None: Adds multiple items to the index.
+        build() -> None: Builds the index after the items are added. This is optional and might not be needed for all implementations.
+        search(text: str, max_results: int) -> List[IndexItem]: Searches the index for the closest matches to the provided text.
+    """
 
     @property
     def embedding_size(self):
@@ -45,7 +55,7 @@ class EmbeddingsIndex:
         pass
 
     async def search(self, text: str, max_results: int) -> List[IndexItem]:
-        """Searches the index for the closes matches to the provided text."""
+        """Searches the index for the closest matches to the provided text."""
         raise NotImplementedError()
 
 

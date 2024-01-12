@@ -37,7 +37,7 @@ class Model(BaseModel):
     {
         "type": "main",
         "engine": "openai",
-        "model": "text-davinci-003"
+        "model": "gpt-3.5-turbo-instruct"
     }
     """
 
@@ -422,7 +422,7 @@ class RailsConfig(BaseModel):
         description="The lowest temperature that should be used for the LLM.",
     )
 
-    # This should only be enabled for highly capable LLMs i.e. ~text-davinci-003.
+    # This should only be enabled for highly capable LLMs i.e. gpt-3.5-turbo-instruct or similar.
     enable_multi_step_generation: Optional[bool] = Field(
         default=False,
         description="Whether to enable multi-step generation for the LLM.",
@@ -469,17 +469,33 @@ class RailsConfig(BaseModel):
             prompt.get("task") for prompt in values.get("prompts", [])
         ]
 
+        # Input moderation prompt verification
         if (
             "self check input" in enabled_input_rails
             and "self_check_input" not in provided_task_prompts
         ):
             raise ValueError("You must provide a `self_check_input` prompt template.")
+        if (
+            "llama guard check input" in enabled_input_rails
+            and "llama_guard_check_input" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `llama_guard_check_input` prompt template."
+            )
 
+        # Output moderation prompt verification
         if (
             "self check output" in enabled_output_rails
             and "self_check_output" not in provided_task_prompts
         ):
             raise ValueError("You must provide a `self_check_output` prompt template.")
+        if (
+            "llama guard check output" in enabled_output_rails
+            and "llama_guard_check_output" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `llama_guard_check_output` prompt template."
+            )
 
         if (
             "self check facts" in enabled_output_rails
