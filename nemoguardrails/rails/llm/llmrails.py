@@ -34,6 +34,7 @@ from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.explain import ExplainInfo
 from nemoguardrails.logging.stats import llm_stats
+from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
@@ -58,6 +59,9 @@ class LLMRails:
         self.config = config
         self.llm = llm
         self.verbose = verbose
+
+        if self.verbose:
+            set_verbose(True)
 
         # We allow the user to register additional embedding search providers, so we keep
         # an index of them.

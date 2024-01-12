@@ -79,8 +79,14 @@ class ModerationRailsEvaluation:
         Runs the jailbreak chain given the prompt and returns the prediction.
 
         Prediction: "yes" if the prompt is flagged as jailbreak, "no" if acceptable.
-        """
 
+        Args:
+            prompt (str): The user input prompt.
+            results (dict): Dictionary to store jailbreak results.
+
+        Returns:
+            tuple: Jailbreak prediction, updated results dictionary.
+        """
         check_input_prompt = self.llm_task_manager.render_task_prompt(
             Task.SELF_CHECK_INPUT, {"user_input": prompt}
         )
@@ -103,6 +109,13 @@ class ModerationRailsEvaluation:
         Runs the output moderation chain given the prompt and returns the prediction.
 
         Prediction: "yes" if the prompt is flagged by output moderation, "no" if acceptable.
+
+        Args:
+            prompt (str): The user input prompt.
+            results (dict): Dictionary to store output moderation results.
+
+        Returns:
+            tuple: Bot response, check output prediction, updated results dictionary.
         """
 
         with llm_params(self.llm, temperature=0.1, max_tokens=100):
@@ -127,6 +140,9 @@ class ModerationRailsEvaluation:
     def check_moderation(self):
         """
         Evaluates moderation rails for the given dataset.
+
+        Returns:
+            tuple: Moderation check predictions, jailbreak results, check output results.
         """
 
         jailbreak_results = {

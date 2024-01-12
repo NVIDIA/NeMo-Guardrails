@@ -21,12 +21,29 @@ import yaml
 def split_markdown_in_topic_chunks(
     content: str, max_chunk_size: int = 400
 ) -> List[dict]:
-    """Splits a markdown content into topic chunks.
-
-    :param content: The markdown content to be split.
-    :param max_chunk_size: The maximum size of a chunk.
     """
+    Splits a markdown content into topic chunks.
 
+    This function takes a markdown content as input and divides it into topic chunks based on
+    headings and subsections. Each chunk includes a title and body, with an optional maximum size.
+
+    Parameters:
+    - content (str): The markdown content to be split.
+    - max_chunk_size (int): The maximum size of a chunk. Default is 400.
+
+    Returns:
+    List[dict]: A list of dictionaries, each representing a topic chunk with 'title' and 'body' keys.
+
+    Example:
+    ```python
+    content = "# Introduction\n\nThis is an introduction.\n## Section 1\n\nContent of section 1."
+    chunks = split_markdown_in_topic_chunks(content, max_chunk_size=500)
+    ```
+
+    Note:
+    - The function considers '#' as heading markers.
+    - Meta information can be included at the beginning of the markdown using triple backticks.
+    """
     chunks = []
     lines = content.strip().split("\n")
 
