@@ -26,23 +26,6 @@ define user express greeting
 define bot refuse to respond
   "I'm sorry, I can't respond to that."
 
-define flow llama guard check input
-  $llama_guard_response = execute llama_guard_check_input
-  $allowed = $llama_guard_response["allowed"]
-  $llama_guard_policy_violations = $llama_guard_response["policy_violations"]
-
-  if not $allowed
-    bot refuse to respond
-    stop
-
-define flow llama guard check output
-  $llama_guard_response = execute llama_guard_check_output
-  $allowed = $llama_guard_response["allowed"]
-  $llama_guard_policy_violations = $llama_guard_response["policy_violations"]
-
-  if not $allowed
-    bot refuse to respond
-    stop
 """
 
 YAML_CONFIG = """
@@ -124,7 +107,6 @@ def test_llama_guard_check_input_unsafe():
     llama_guard_llm = FakeLLM(
         responses=[
             "unsafe",  # llama_guard_check_input
-            # "safe",  # commented out to assert that the flow never reaches llama_guard_check_output (since input check failed)
         ]
     )
     chat.app.register_action_param("llama_guard_llm", llama_guard_llm)
@@ -152,7 +134,6 @@ def test_llama_guard_check_input_error():
     llama_guard_llm = FakeLLM(
         responses=[
             "error",  # llama_guard_check_input
-            # "safe",  # commented out to assert that the flow never reaches llama_guard_check_output (since input check failed)
         ]
     )
     chat.app.register_action_param("llama_guard_llm", llama_guard_llm)

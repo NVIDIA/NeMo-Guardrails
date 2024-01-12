@@ -409,20 +409,19 @@ define flow
 ```
 
 ### Llama Guard-based Content Moderation
+
 NeMo Guardrails provides out-of-the-box support for content moderation using Meta's [Llama Guard](https://ai.meta.com/research/publications/llama-guard-llm-based-input-output-safeguard-for-human-ai-conversations/) model.
 
-In our testing, we observe significantly improved input and output content moderation performance as compared to the [self-check method](#llm-self-checking). Please see additional documentation for more details on the [recommended deployment method](./advanced/llama-guard-deployment.md) and the [performance evaluation](./../evaluation/README.md#llamaguard-based-moderation-rails-performance) numbers.
+In our testing, we observe significantly improved input and output content moderation performance compared to the [self-check method](#llm-self-checking). Please see additional documentation for more details on the [recommended deployment method](./advanced/llama-guard-deployment.md) and the [performance evaluation](./../evaluation/README.md#llamaguard-based-moderation-rails-performance) numbers.
 
 #### Usage
 
 To configure your bot to use Llama Guard for input/output checking, follow the below steps:
 
-1. Add a model of type `llama_guard` to the models section of the `config.yml` file:
+1. Add a model of type `llama_guard` to the models section of the `config.yml` file (the example below uses a vLLM setup):
 ```yaml
 models:
-  - type: main
-    engine: <choice of main LLM provider>
-    model: <choice of main LLM>
+  ...
 
   - type: llama_guard
     engine: vllm_openai
@@ -476,7 +475,7 @@ define flow llama guard check input
 # (similar flow for checking output)
 ```
 
-A complete example configuration that uses Llama Guard for input and output moderation is provided in the [examples folder](./../../examples/configs/llama_guard/README.md).
+A complete example configuration that uses Llama Guard for input and output moderation is provided in this [example folder](./../../examples/configs/llama_guard/README.md).
 
 
 ### Presidio-based Sensitive Data Detection
