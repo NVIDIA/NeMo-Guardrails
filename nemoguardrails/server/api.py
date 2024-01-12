@@ -30,6 +30,7 @@ from starlette.responses import JSONResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.server.datastore.datastore import DataStore
 from nemoguardrails.streaming import StreamingHandler
 
 logging.basicConfig(level=logging.INFO)
@@ -44,6 +45,11 @@ api_description = """Guardrails Sever API."""
 # The headers for each request
 api_request_headers = contextvars.ContextVar("headers")
 
+# The datastore that the Server should use.
+# This is currently used only for storing threads.
+# TODO: refactor to wrap the FastAPI instance inside a RailsServer class
+#  and get rid of all the global attributes.
+datastore: Optional[DataStore] = None
 
 app = FastAPI(
     title="Guardrails Server API",
@@ -86,6 +92,10 @@ app.stop_signal = False
 
 class RequestBody(BaseModel):
     config_id: str = Field(description="The id of the configuration to be used.")
+    thread_id: Optional[str] = Field(
+        default=None,
+        description="The id of an existing thread to which the messages should be added.",
+    )
     messages: List[dict] = Field(
         default=None, description="The list of messages in the current conversation."
     )
@@ -188,6 +198,32 @@ async def chat_completion(body: RequestBody, request: Request):
         if body.context:
             messages.insert(0, {"role": "context", "content": body.context})
 
+        # If we have a `thread_id` specified, we need to look up the thread
+        datastore_key = None
+
+        if body.thread_id:
+            if datastore is None:
+                raise RuntimeError("No DataStore has been configured.")
+
+            # We make sure the `thread_id` meets the minimum complexity requirement.
+            if len(body.thread_id) < 16:
+                return {
+                    "messages": [
+                        {
+                            "role": "assistant",
+                            "content": "The `thread_id` must have a minimum length of 16 characters.",
+                        }
+                    ]
+                }
+
+            # Fetch the existing thread messages. For easier management, we prepend
+            # the string `thread-` to all thread keys.
+            datastore_key = "thread-" + body.thread_id
+            thread_messages = json.loads(await datastore.get(datastore_key) or "[]")
+
+            # And prepend them.
+            messages = thread_messages + messages
+
         if (
             body.stream
             and llm_rails.config.streaming_supported
@@ -203,9 +239,17 @@ async def chat_completion(body: RequestBody, request: Request):
                 )
             )
 
+            # TODO: Add support for thread_ids in streaming mode
+
             return StreamingResponse(streaming_handler)
         else:
             bot_message = await llm_rails.generate_async(messages=messages)
+
+            # If we're using threads, we also need to update the data before returning
+            # the message.
+            if body.thread_id:
+                await datastore.set(datastore_key, json.dumps(messages + [bot_message]))
+
             return {"messages": [bot_message]}
 
     except Exception as ex:
@@ -238,6 +282,13 @@ async def get_challenges():
     return challenges
 
 
+def register_datastore(datastore_instance: DataStore):
+    """Registers a DataStore to be used by the server."""
+    global datastore
+
+    datastore = datastore_instance
+
+
 @app.on_event("startup")
 async def startup_event():
     """Register any additional challenges, if available at startup."""
@@ -254,6 +305,10 @@ async def startup_event():
         spec = importlib.util.spec_from_file_location(filename, filepath)
         config_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(config_module)
+
+        # If there is an `init` function, we call it with the reference to the app.
+        if config_module is not None and hasattr(config_module, "init"):
+            config_module.init(app)
 
     # Finally, we register the static frontend UI serving
 
