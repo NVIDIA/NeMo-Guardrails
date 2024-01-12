@@ -38,6 +38,7 @@ app.action_dispatcher = ActionDispatcher(load_all_actions=True)
 
 
 class RequestBody(BaseModel):
+    """Request body for executing an action."""
     action_name: str = ""
     action_parameters: Dict = Field(
         default={}, description="The list of action parameters."
@@ -45,6 +46,7 @@ class RequestBody(BaseModel):
 
 
 class ResponseBody(BaseModel):
+    """Response body for action execution."""
     status: str = "success"  # success / failed
     result: Optional[str]
 
@@ -55,7 +57,14 @@ class ResponseBody(BaseModel):
     response_model=ResponseBody,
 )
 async def run_action(body: RequestBody):
-    """Execute action_name with action_parameters and return result."""
+    """Execute the specified action and return the result.
+
+    Args:
+        body (RequestBody): The request body containing action_name and action_parameters.
+
+    Returns:
+        dict: The response containing the execution status and result.
+    """
 
     log.info(f"Request body: {body}")
     result, status = await app.action_dispatcher.execute_action(

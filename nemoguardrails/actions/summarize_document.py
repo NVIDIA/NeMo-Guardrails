@@ -22,9 +22,20 @@ from nemoguardrails.actions.actions import action
 
 @action(name="summarize_document")
 class SummarizeDocument:
-    """Sample implementation of a document summarization action.
+    """Action for summarizing a document.
 
-    The implementation uses the summarization chain from LangChain.
+    This class provides a sample implementation of document summarization using LangChain's summarization chain.
+
+    Args:
+        document_path (str): The path to the document to be summarized.
+        llm (BaseLLM): The Language Model for the summarization process.
+
+    Example:
+        ```python
+        summarizer = SummarizeDocument(document_path="path/to/document.txt", llm=my_language_model)
+        result = summarizer.run()
+        print(result)  # The summarized document
+        ```
     """
 
     def __init__(self, document_path: str, llm: BaseLLM):

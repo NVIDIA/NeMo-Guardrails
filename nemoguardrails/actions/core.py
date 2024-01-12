@@ -27,7 +27,15 @@ async def create_event(
     event: dict,
     context: Optional[dict] = None,
 ):
-    """Checks the facts for the bot response."""
+    """Creates an event for the bot based on the provided data.
+
+    Args:
+        event (dict): The input event data.
+        context (Optional[dict]): The context for the action. Defaults to None.
+
+    Returns:
+        ActionResult: An action result containing the created event.
+    """
 
     event_dict = new_event_dict(
         event["_type"], **{k: v for k, v in event.items() if k != "_type"}
