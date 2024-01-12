@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Optional, Type
 from langchain import llms
 from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.manager import CallbackManagerForLLMRun
-from langchain.chat_models import ChatOpenAI
+from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
 from langchain.llms.base import LLM
 from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 
@@ -137,6 +137,9 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
         and "instruct" not in model_config.model
     ):
         return ChatOpenAI
+    elif (model_config.engine == "azure"
+        and ("gpt-3.5" in model_config.model or "gpt-4" in model_config.model)):
+        return AzureChatOpenAI
     else:
         return _providers[model_config.engine]
 
