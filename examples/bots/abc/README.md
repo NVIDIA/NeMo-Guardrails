@@ -10,8 +10,8 @@ The ABC bot is an example of a guardrails configuration for a bot that assists e
 
 The ABC bot has the following guardrails enabled:
 
-1. Input validation using a [self-check input](../../../docs/user_guides/guardrails-library.md#input-checking) rail.
-2. Output moderation using a [self-check output](../../../docs/user_guides/guardrails-library.md#output-checking) rail.
+1. Input validation using a [self-check input](../../../docs/user_guides/guardrails-library.md#self-check-input) rail.
+2. Output moderation using a [self-check output](../../../docs/user_guides/guardrails-library.md#self-check-output) rail.
 3. Topical rails, i.e., preventing the bot from talking about unwanted topics, using dialog rails (see [disallow.co](./rails/disallowed.co)).
 
 ## Test

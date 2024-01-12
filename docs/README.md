@@ -53,7 +53,7 @@ The following guides explain in more details various specific topics:
 * [Embedding Search Providers](user_guides/advanced/embedding-search-providers.md): Learn about the core embedding search interface that NeMo guardrails uses for some of the core features.
 * [Event-based API](user_guides/advanced/event-based-api.md): Learn about the generic event-based interface that you can use to process additional information in your guardrails configuration.
 * [Nested AsyncIO Loop](user_guides/advanced/nested-async-loop.md): Understand some of the low level issues regarding `asyncio` and how they are handled in NeMo Guardrails.
-* [AlignScore deployment](user_guides/advanced/align_score_deployment.md): Learn how to deploy an AlignScore server either directly or using Docker.
+* [AlignScore deployment](user_guides/advanced/align-score-deployment.md): Learn how to deploy an AlignScore server either directly or using Docker.
 
 ## Evaluation Tools
 

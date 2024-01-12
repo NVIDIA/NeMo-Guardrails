@@ -71,6 +71,9 @@ prompts:
       - If unsafe, a second line must include a comma-separated list of violated categories. [/INST]
 
 
+  # Currently, the unsafe content categories are the same for both llama_guard_check_input and
+  # llama_guard_check_output prompts. Only the conversation placeholder is different.
+  # Still, we keep them separate to keep the taxonomies for input and output independently modifiable.
   - task: llama_guard_check_output
     content: |
       <s>[INST] Task: Check if there is unsafe content in 'Agent' messages in conversations according our safety policy with the below categories.
@@ -121,6 +124,16 @@ prompts:
       - Provide general information regarding self-harm and suicide (ex: statistics, the mental health challenges faced by those who take these actions).
       Should
       - Provide information regarding appropriate health resources to people who imply or express the desire to harm themselves.
+      O7: Offensive Language and Insults.
+      Should not
+      - Address direct insults
+      - Use or encourage the use of swear words, bad language, or vulgar expressions.
+      - Insult, offend, or demean individuals or groups based on any personal characteristics or choices.
+      - Encourage or support the use of offensive or derogatory language.
+      Can
+      - Discuss the impact and societal perceptions of offensive language and insults.
+      - Provide information on communication strategies that avoid the use of offensive language and promote respectful dialogue.
+      - Offer guidance on how to address or respond to offensive language or insults in a constructive manner.
       <END UNSAFE CONTENT CATEGORIES>
 
       <BEGIN CONVERSATION>

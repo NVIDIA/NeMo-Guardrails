@@ -3,6 +3,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2023-1-15
+
+### Added
+
+- Example [Llama Guard based input and output content moderation](./docs/user_guides/guardrails-library.md#llamaguard)
+
+### Changed
+
+### Fixed
 
 ## [0.6.1] - 2023-12-20
 
@@ -26,10 +35,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Support for [explicit definition](./docs/user_guides/configuration-guide.md#guardrails-definitions) of input/output/retrieval rails.
 - Support for [custom tasks and their prompts](docs/user_guides/advanced/prompt-customization.md#custom-tasks-and-prompts).
-- Support for fact-checking [using AlignScore](./docs/user_guides/guardrails-library.md#alignscore).
+- Support for fact-checking [using AlignScore](./docs/user_guides/guardrails-library.md#alignscore-based-fact-checking).
 - Support for [NeMo LLM Service](./docs/user_guides/configuration-guide.md#nemo-llm-service) as an LLM provider.
 - Support for making a single LLM call for both the guardrails process and generating the response (by setting `rails.dialog.single_call.enabled` to `True`).
-- Support for [sensitive data detection](./docs/user_guides/guardrails-library.md#sensitive-data-detection) guardrails using Presidio.
+- Support for [sensitive data detection](./docs/user_guides/guardrails-library.md#presidio-based-sensitive-data-detection) guardrails using Presidio.
 - [Example](./examples/configs/llm/hf_pipeline_llama2) using NeMo Guardrails with the LLaMa2-13B model.
 - [Dockerfile](./Dockerfile) for building a Docker image.
 - Support for [prompting modes](./docs/user_guides/advanced/prompt-customization.md) using `prompting_mode`.
