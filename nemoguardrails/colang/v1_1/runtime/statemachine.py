@@ -1064,9 +1064,11 @@ def slide(
             # Remove scope and stop all started flows/actions in scope
             flow_uids, action_uids = flow_state.scopes.pop(element.name)
             for flow_uid in flow_uids:
-                child_flow_state = state.flow_states[flow_uid]
-                if _is_listening_flow(child_flow_state):
-                    _abort_flow(state, child_flow_state, head.matching_scores)
+                # TODO: This should not be needed if states would be cleaned-up correctly
+                if flow_uid in state.flow_states:
+                    child_flow_state = state.flow_states[flow_uid]
+                    if _is_listening_flow(child_flow_state):
+                        _abort_flow(state, child_flow_state, head.matching_scores)
             for action_uid in action_uids:
                 action = state.actions[action_uid]
                 if (
