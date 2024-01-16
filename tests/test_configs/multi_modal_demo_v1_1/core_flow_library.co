@@ -38,7 +38,7 @@ flow user said something unexpected
 flow user saying something
   # meta: exclude from llm
   match UtteranceUserAction.TranscriptUpdated() as $event
-  send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
+  #send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
   return $event.arguments.interim_transcript
 
 flow user selected choice $choice_id
@@ -452,7 +452,6 @@ flow fallback user intent
   await _flow_by_name $flow_name
   await RemoveFlowsAction(flow_ids=[$flow_name])
 
-
 flow llm create interaction continuation
   # Generate continuation based current interaction history
   $flow_info = await GenerateFlowContinuationAction(temperature=0.1)
@@ -468,6 +467,7 @@ flow llm create interaction continuation
   return $flow_info.name
 
 flow llm interaction continuation
+  # meta: exclude from llm
   $generated_flow_name = await llm create interaction continuation
   if $generated_flow_name != None
     await _flow_by_name $generated_flow_name
