@@ -197,7 +197,7 @@ def get_colang_history(
                     if event.name == InternalEvents.BOT_INTENT_LOG:
                         new_history.append(events_to_dialog_history([event]))
                         new_history.append(events_to_dialog_history(action_group))
-                    else:
+                    elif event.arguments["flow_id"] != None:
                         new_history.append(events_to_dialog_history(action_group))
                         new_history.append(events_to_dialog_history([event]))
                     new_history.append("")
@@ -215,7 +215,7 @@ def get_colang_history(
         if action_group:
             new_history.append(events_to_dialog_history(action_group))
 
-        history = "\n".join(new_history)
+        history = "\n".join(new_history).rstrip("\n")
 
     return history
 
