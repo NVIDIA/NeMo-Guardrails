@@ -326,7 +326,7 @@ def _init_state(colang_content) -> State:
     )
 
     json.dump(config, sys.stdout, indent=4, cls=EnhancedJsonEncoder)
-    state = State(context={}, flow_states=[], flow_configs=config)
+    state = State(flow_states=[], flow_configs=config)
     initialize_state(state)
     print("---------------------------------")
     json.dump(state.flow_configs, sys.stdout, indent=4, cls=EnhancedJsonEncoder)

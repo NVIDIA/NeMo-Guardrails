@@ -401,7 +401,7 @@ class RuntimeV1_1(Runtime):
         local_running_actions = []
 
         if state is None:
-            state = State(context={}, flow_states={}, flow_configs=self.flow_configs)
+            state = State(flow_states={}, flow_configs=self.flow_configs)
             initialize_state(state)
             input_event = InternalEvent(name="StartFlow", arguments={"flow_id": "main"})
             input_events.insert(0, input_event)

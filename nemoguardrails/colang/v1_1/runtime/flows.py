@@ -36,18 +36,17 @@ random_seed = int(time.time())
 
 
 class InternalEvents:
-    """All internal event types."""
+    """All internal event types. This event will not appear in the event stream and have priority over them."""
 
-    START_FLOW = "StartFlow"
-    FINISH_FLOW = "FinishFlow"
-    STOP_FLOW = "StopFlow"
-    FLOW_STARTED = "FlowStarted"
-    FLOW_FINISHED = "FlowFinished"
-    FLOW_FAILED = "FlowFailed"
-    START_SIBLING_FLOW = "StartSiblingFlow"
-    DISABLE_FLOW_INSTANCE_RESTART = "DisableFlowInstanceRestart"
-    UNHANDLED_EVENT = "UnhandledEvent"
-    # TODO: Check if we could convert them into just a internal list to track action/intents
+    START_FLOW = "StartFlow"  # Starts a new flow instance
+    FINISH_FLOW = "FinishFlow"  # Flow will be finished successfully
+    STOP_FLOW = "StopFlow"  # Flow will be stopped and failed
+    FLOW_STARTED = "FlowStarted"  # Flow has started (reached first official match statement or end)
+    FLOW_FINISHED = "FlowFinished"  # Flow has finished successfully
+    FLOW_FAILED = "FlowFailed"  # Flow has failed
+    UNHANDLED_EVENT = "UnhandledEvent"  # For any unhandled event in a specific interaction loop we create an unhandled event
+
+    # TODO: Check if we could convert them into just an internal list to track action/intents
     BOT_INTENT_LOG = "BotIntentLog"
     USER_INTENT_LOG = "UserIntentLog"
     BOT_ACTION_LOG = "BotActionLog"
@@ -60,8 +59,6 @@ class InternalEvents:
         FLOW_STARTED,
         FLOW_FINISHED,
         FLOW_FAILED,
-        START_SIBLING_FLOW,
-        DISABLE_FLOW_INSTANCE_RESTART,
         UNHANDLED_EVENT,
         BOT_INTENT_LOG,
         USER_INTENT_LOG,
@@ -74,25 +71,25 @@ class InternalEvents:
 class Event:
     """The base event class."""
 
-    # The unique id of the event
-    # uid: str
-
     # Name of the event
     name: str
 
     # Context that contains all relevant event arguments
     arguments: dict
 
-    # A list of matching scores from the event sequence triggered by external event
+    # A list of matching scores from the event sequence triggered by an external event
     matching_scores: List[float] = field(default_factory=list)
 
     def is_equal(self, other: Event) -> bool:
+        """Compares two events in terms of their name and arguments."""
         if isinstance(other, Event):
             return self.name == other.name and self.arguments == other.arguments
         return NotImplemented
 
-    def __eq__(self, other: Event) -> bool:
-        return self.is_equal(other)
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Event):
+            return self.is_equal(other)
+        return False
 
     def __str__(self) -> str:
         return f"[bold blue]{self.name}[/] {self.arguments}"
@@ -105,6 +102,14 @@ class Event:
             [(key, event[key]) for key in event if key not in ["type"]]
         )
         return new_event
+
+
+@dataclass
+class InternalEvent(Event):
+    """The internal event class."""
+
+    # An internal event can belong to a flow
+    flow: Optional[FlowState] = None
 
 
 @dataclass
@@ -130,26 +135,20 @@ class ActionEvent(Event):
         return new_event
 
 
-@dataclass
-class InternalEvent(Event):
-    """The internal event class."""
-
-    # An event can belong to a flow
-    flow: Optional[FlowState] = None
-
-
 class ActionStatus(Enum):
     """The status of an action."""
 
-    INITIALIZED = "initialized"
-    STARTING = "starting"
-    STARTED = "started"
-    STOPPING = "stopping"
-    FINISHED = "finished"
+    INITIALIZED = (
+        "initialized"  # Action object created but StartAction event not yet sent
+    )
+    STARTING = "starting"  # StartAction event sent, waiting for ActionStarted event
+    STARTED = "started"  # ActionStarted event received
+    STOPPING = "stopping"  # StopAction event sent, waiting for ActionFinished event
+    FINISHED = "finished"  # ActionFinished event received
 
 
 class Action:
-    """The action groups and manages the action events."""
+    """The action class groups and manages the action events."""
 
     # The action event name mapping
     _event_name_map = {
@@ -163,7 +162,8 @@ class Action:
 
     @classmethod
     def from_event(cls, event: ActionEvent) -> Optional[Action]:
-        """Returns the name of the action if event name conforms with UMIM convention."""
+        """Returns the action if event name conforms with UMIM convention."""
+        assert event.action_uid is not None
         for name in cls._event_name_map:
             if name in event.name:
                 action = Action(event.name.replace(name, ""), {})
@@ -231,7 +231,7 @@ class Action:
         return func(arguments)
 
     # Action events to send
-    def start_event(self, args: dict) -> ActionEvent:
+    def start_event(self, _args: dict) -> ActionEvent:
         """Starts the action. Takes no arguments."""
         return ActionEvent(
             name=f"Start{self.name}",
@@ -245,7 +245,7 @@ class Action:
             name=f"Change{self.name}", arguments=args["arguments"], action_uid=self.uid
         )
 
-    def stop_event(self, args: dict) -> ActionEvent:
+    def stop_event(self, _args: dict) -> ActionEvent:
         """Stops a started action. Takes no arguments."""
         return ActionEvent(name=f"Stop{self.name}", arguments={}, action_uid=self.uid)
 
@@ -313,23 +313,6 @@ class FlowConfig:
     loop_id: Optional[str] = None
     loop_type: InteractionLoopType = InteractionLoopType.PARENT
 
-    # Whether it is an extension flow or not.
-    # Extension flows can interrupt other flows on actionable steps.
-    # is_extension: bool = False
-
-    # Whether this flow can be interrupted or not
-    # TODO: Check for what this is used exactly
-    # is_interruptible: bool = True
-
-    # The events that can trigger this flow to advance.
-    # TODO: This will need to be dynamically determined based on current heads
-    # trigger_event_types = [
-    #     "UserIntent",
-    #     "BotIntent",
-    #     "StartAction",
-    #     "InternalSystemActionFinished",
-    # ]
-
     # The actual source code, if available
     source_code: Optional[str] = None
 
@@ -337,9 +320,9 @@ class FlowConfig:
 class FlowHeadStatus(Enum):
     """The status of a flow head."""
 
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    MERGING = "merging"
+    ACTIVE = "active"  # The head is active and either waiting or progressing
+    INACTIVE = "inactive"  # The head is no longer progressing (e.g. is a parent of an active child head)
+    MERGING = "merging"  # The head arrived at a head merging element and will progress only in the next iteration
 
 
 @dataclass
@@ -356,19 +339,20 @@ class FlowHead:
     matching_scores: List[float]
 
     # List of all scopes that are relevant for the head
+    # TODO: Check if scopes are really needed or if they could be replaced by the head forking/merging
     scope_uids: List[str] = field(default_factory=list)
 
     # If a flow head is forked it will create new child heads
     child_head_uids: List[str] = field(default_factory=list)
 
-    # If set a flow failure will be diverted to the label, otherwise it will abort the flow
+    # If set, a flow failure will be forwarded to the label, otherwise it will abort/fail the flow
     # Mainly used to simplify inner flow logic
     catch_pattern_failure_label: List[str] = field(default_factory=list)
 
-    # Callback that can be registered to get informed about position updates
+    # Callback that can be registered to get informed about head position updates
     position_changed_callback: Optional[Callable[[FlowHead], None]] = None
 
-    # Callback that can be registered to get informed about status updates
+    # Callback that can be registered to get informed about head status updates
     status_changed_callback: Optional[Callable[[FlowHead], None]] = None
 
     # The position of the flow element the head is pointing to
@@ -376,10 +360,12 @@ class FlowHead:
 
     @property
     def position(self) -> int:
+        """Return the current position of the head."""
         return self._position
 
     @position.setter
     def position(self, position: int) -> None:
+        """Set the position of the head."""
         if position != self._position:
             self._position = position
             if self.position_changed_callback is not None:
@@ -390,10 +376,12 @@ class FlowHead:
 
     @property
     def status(self) -> FlowHeadStatus:
+        """Return the current status of the head."""
         return self._status
 
     @status.setter
     def status(self, status: FlowHeadStatus) -> None:
+        """Set the status of the head."""
         if status != self._status:
             self._status = status
             if self.status_changed_callback is not None:
@@ -428,10 +416,10 @@ class FlowHead:
 class FlowStatus(Enum):
     """The status of a flow."""
 
-    WAITING = "waiting"  # Waiting for the flow to start (first match statement)
-    STARTING = "starting"  # Flow has been started but head is not yet at the next match statement
-    STARTED = "started"  # Flow is considered started when head arrived at second match statement
-    STOPPING = "stopping"  # Flow was stopped from inside ('abort') but did not yet stop all child flows or actions
+    WAITING = "waiting"  # Waiting for the flow to start (at first match statement)
+    STARTING = "starting"  # Flow has been started but head is not yet at the first match statement ('_match' excluded)
+    STARTED = "started"  # Flow has started when head arrived at the first match statement ('_match' excluded)
+    STOPPING = "stopping"  # Flow was stopped (e.g. by 'abort') but did not yet stop all child flows or actions
     STOPPED = "stopped"  # Flow has stopped/failed and all child flows and actions
     FINISHED = (
         "finished"  # Flow has finished and all child flows and actions were stopped
@@ -456,13 +444,14 @@ class FlowState:
     # E.g. in "0.1.0.4" each number represents the related start/activation element position in the related parent flow
     hierarchy_position: str
 
-    # All the heads that point to the positions in the sequence of elements that compose the flow.
+    # All the heads pointing to certain element positions in the flow.
     heads: Dict[str, FlowHead] = field(default_factory=dict)
 
     # All active/open scopes that contain a tuple of flow uids and action uids that were started within that scope
-    scopes: Dict[str, Tuple(List[str], List[str])] = field(default_factory=dict)
+    scopes: Dict[str, Tuple[List[str], List[str]]] = field(default_factory=dict)
 
     # Relates head_fork_uids to corresponding child heads
+    # Help structure to relate child heads to their parents by a predefined id
     head_fork_uids: Dict[str, str] = field(default_factory=dict)
 
     # All actions that were instantiated since the beginning of the flow
@@ -474,40 +463,37 @@ class FlowState:
     # The current priority of the flow instance that is used for action resolution.
     priority: float = 1.0
 
-    # Child flow ids
+    # All the arguments of a flow (e.g. flow bot say $utterance -> arguments = ["$utterance"])
     arguments: List[str] = field(default_factory=list)
 
-    # Flow variables that are defined as global
+    # Variables in the flow that are defined as global
     global_variables: Set[str] = field(default_factory=set)
 
     # Parent flow id
-    # TODO: Implement proper parenting
     parent_uid: Optional[str] = None
 
-    # Child flow ids
+    # The ids of all the child flows
     child_flow_uids: List[str] = field(default_factory=list)
 
     # The current state of the flow
     _status: FlowStatus = FlowStatus.WAITING
 
-    # The current state of the flow
+    # The datetime of the last status change of the flow
     status_updated: datetime = datetime.now()
 
     # An activated flow will restart immediately when finished
     activated: bool = False
 
     # True if a new instance was started either by restarting or
-    # a early 'start_new_flow_instance' label
+    # an early 'start_new_flow_instance' label
     new_instance_started: bool = False
-
-    # The UID of the flows that interrupted this one
-    # interrupted_by = None
 
     # The flow event name mapping
     _event_name_map: dict = field(init=False)
 
     @property
     def status(self) -> FlowStatus:
+        """The status of the flow"""
         return self._status
 
     @status.setter
@@ -517,7 +503,7 @@ class FlowState:
 
     @property
     def active_heads(self):
-        """Returns all active heads of this flow."""
+        """All active heads of this flow."""
         return {
             id: h
             for (id, h) in self.heads.items()
@@ -544,34 +530,34 @@ class FlowState:
         return func(arguments)
 
     # Flow events to send
-    def start_event(self, args: dict) -> InternalEvent:
+    def start_event(self, _args: dict) -> InternalEvent:
         """Starts the flow. Takes no arguments."""
         return InternalEvent(
             name=InternalEvents.START_FLOW, arguments={"flow_id": self.flow_id}
         )
 
-    def finish_event(self, args: dict) -> InternalEvent:
+    def finish_event(self, _args: dict) -> InternalEvent:
         """Finishes the flow. Takes no arguments."""
         return InternalEvent(
             name=InternalEvents.FINISH_FLOW,
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
         )
 
-    def stop_event(self, args: dict) -> InternalEvent:
+    def stop_event(self, _args: dict) -> InternalEvent:
         """Stops the flow. Takes no arguments."""
         return InternalEvent(
             name="StopFlow",
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
         )
 
-    def pause_event(self, args: dict) -> InternalEvent:
+    def pause_event(self, _args: dict) -> InternalEvent:
         """Pauses the flow. Takes no arguments."""
         return InternalEvent(
             name="PauseFlow",
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
         )
 
-    def resume_event(self, args: dict) -> InternalEvent:
+    def resume_event(self, _args: dict) -> InternalEvent:
         """Resumes the flow. Takes no arguments."""
         return InternalEvent(
             name="ResumeFlow",
@@ -622,12 +608,9 @@ class FlowState:
 @dataclass_json
 @dataclass
 class State:
-    """A state of a flow-driven system."""
+    """The state of a flow-driven system."""
 
-    # The current set of variables in the state.
-    context: dict
-
-    # The current set of flows in the state with their uid as key.
+    # The current set of flow instances with their uid as key.
     flow_states: Dict[str, FlowState]
 
     # The configuration of all the flows that are available.
@@ -642,57 +625,47 @@ class State:
     # The main flow state
     main_flow_state: Optional[FlowState] = None
 
-    # Global variables
+    # Variable that are defined as global in a flow with a single value
     global_variables: Dict[str, Any] = field(default_factory=dict)
 
-    # The next step of the flow-driven system
+    # The resulting events of event-driven system
     outgoing_events: List[dict] = field(default_factory=list)
 
     # The most recent N events that have been processed. Will be capped at a
-    # reasonable limit e.g. 100. The history is needed when prompting the LLM for example.
+    # reasonable limit e.g. 500. The history is needed when prompting the LLM for example.
     last_events: List[dict] = field(default_factory=list)
 
-    # The comment is extract from the source code
-    # next_steps_comment: List[str] = field(default_factory=list)
-
     # The updates to the context that should be applied before the next step
+    # TODO: This seem no longer needed
     context_updates: dict = field(default_factory=dict)
 
     ########################
     # Helper data structures
     ########################
 
-    # Dictionary that maps from flow_id (name) to all available flow states
+    # Helper dictionary that maps from flow_id (name) to all available flow states
     flow_id_states: Dict[str, List[FlowState]] = field(default_factory=dict)
 
-    # Dictionary that maps active event matchers (by event names) to relevant heads (flow_state_uid, head_uid)
+    # Helper dictionary () that maps active event matchers (by event names) to relevant heads (flow_state_uid, head_uid)
     event_matching_heads: Dict[str, List[Tuple[str, str]]] = field(default_factory=dict)
 
-    # Dictionary that maps active heads (flow_state_uid, head_uid) to event matching names
+    # Helper dictionary that maps active heads (flow_state_uid, head_uid) to event matching names
     event_matching_heads_reverse_map: Dict[Tuple[str, str], str] = field(
         default_factory=dict
     )
 
 
 class ColangSyntaxError(Exception):
-    """Raises when there is invalid Colang syntax detected"""
-
-    pass
+    """Raised when there is invalid Colang syntax detected."""
 
 
 class ColangValueError(Exception):
-    """Raises when there is an invalid value detected in a Colang expression"""
-
-    pass
+    """Raised when there is an invalid value detected in a Colang expression."""
 
 
 class ColangRuntimeError(Exception):
-    """Raises when there is a Colang related runtime exception."""
-
-    pass
+    """Raised when there is a Colang related runtime exception."""
 
 
 class LlmResponseError(Exception):
-    """Raises when there is an issue with the lmm response."""
-
-    pass
+    """Raised when there is an issue with the lmm response."""
