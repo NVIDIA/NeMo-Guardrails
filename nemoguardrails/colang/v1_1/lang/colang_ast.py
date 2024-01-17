@@ -149,7 +149,7 @@ class Spec(Element):
     var_name: Optional[str] = None
 
     # The reference that should be captured.
-    ref: Optional[str] = field(default=None)
+    ref: Optional[Union[str, dict]] = field(default=None)
 
     _type: str = "spec"
 
@@ -198,7 +198,7 @@ class SpecOp(Element):
     """
 
     op: str = ""
-    spec: SpecElementType = Spec()
+    spec: Spec = Spec()
 
     # If the return value of the spec needs to be captured. The return value only makes sense
     # for await on flows and actions.
