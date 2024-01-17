@@ -633,6 +633,7 @@ class State:
 
     # The most recent N events that have been processed. Will be capped at a
     # reasonable limit e.g. 500. The history is needed when prompting the LLM for example.
+    # TODO: Figure out the correct type for this
     last_events: List[dict] = field(default_factory=list)
 
     # The updates to the context that should be applied before the next step

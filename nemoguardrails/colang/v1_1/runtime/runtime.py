@@ -24,8 +24,6 @@ import aiohttp
 import langchain
 from langchain.chains.base import Chain
 
-langchain.debug = False
-
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
@@ -40,7 +38,9 @@ from nemoguardrails.colang.v1_1.runtime.statemachine import (
     run_to_completion,
 )
 from nemoguardrails.rails.llm.config import RailsConfig
-from nemoguardrails.utils import EnhancedJsonEncoder, new_event_dict
+from nemoguardrails.utils import new_event_dict
+
+langchain.debug = False
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class RuntimeV1_1(Runtime):
         self.disable_async_execution = False
 
     async def _add_flows_action(self, state: "State", **args):
-        log.info(f"Start AddFlowsAction! {args}")
+        log.info("Start AddFlowsAction! %s", args)
         flow_content = args["config"]
         # Parse new flow
         try:
@@ -73,16 +73,16 @@ class RuntimeV1_1(Runtime):
                 version="1.1",
                 include_source_mapping=True,
             )
-        except Exception as ex:
-            log.warning(f"FAILING-FLOW-PARSING\n{flow_content}")
+        except Exception:
+            log.warning("FAILING-FLOW-PARSING\n%s", flow_content, exc_info=True)
             return []
             # Alternatively, we could through an exceptions
-            raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
+            # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
 
         added_flows: List[str] = []
         for flow in parsed_flow["flows"]:
             if flow.name in state.flow_configs:
-                log.warning(f"Flow '{flow.name}' already exists!")
+                log.warning("Flow '%s' already exists!", flow.name)
                 break
 
             flow_config = FlowConfig(
@@ -93,9 +93,10 @@ class RuntimeV1_1(Runtime):
                 source_code=flow.source_code,
             )
 
+            # Print out expanded flow elements
             # json.dump(flow_config, sys.stdout, indent=4, cls=EnhancedJsonEncoder)
 
-            initialize_flow(self, flow_config)
+            initialize_flow(state, flow_config)
 
             # Add flow config to state.flow_configs
             state.flow_configs.update({flow.name: flow_config})
@@ -105,7 +106,7 @@ class RuntimeV1_1(Runtime):
         return added_flows
 
     async def _remove_flows_action(self, state: "State", **args):
-        log.info(f"Start RemoveFlowsAction! {args}")
+        log.info("Start RemoveFlowsAction! %s", args)
         flow_ids = args["flow_ids"]
         # Remove all related flow states
         for flow_id in flow_ids:
@@ -146,6 +147,7 @@ class RuntimeV1_1(Runtime):
                     "script": message,
                 },
                 # We also want to hide this from now from the history moving forward
+                # NOTE: This has currently no effect in v 1.1, do we need it?
                 {"type": "hide_prev_turn"},
             ]
         )
@@ -239,7 +241,6 @@ class RuntimeV1_1(Runtime):
                     kwargs["llm"] = self.registered_action_params[f"{action_name}_llm"]
 
                 log.info("Executing action :: %s", action_name)
-                # NOTE (schuellc): We need to make this non-blocking with internal events
                 result, status = await self.action_dispatcher.execute_action(
                     action_name, kwargs
                 )
@@ -252,13 +253,15 @@ class RuntimeV1_1(Runtime):
                 )
 
         return_value = result
-        return_events = []
-        context_updates = {}
+        return_events: List[dict] = []
+        context_updates: dict = {}
 
         if isinstance(result, ActionResult):
             return_value = result.return_value
-            return_events = result.events
-            context_updates.update(result.context_updates)
+            if result.events is not None:
+                return_events = result.events
+            if result.context_updates is not None:
+                context_updates.update(result.context_updates)
 
         # next_steps = []
         #
@@ -283,7 +286,9 @@ class RuntimeV1_1(Runtime):
         self, action_meta: Dict[str, Any], action_name: str, kwargs: Dict[str, Any]
     ) -> Tuple[Dict[str, Any], str]:
         """Interact with actions and get response from action-server and system actions."""
-        result, status = {}, "failed"  # default response
+        # default response
+        result: Union[str, Dict[str, Any]] = {}
+        status: str = "failed"
         try:
             # Call the Actions Server if it is available.
             # But not for system actions, those should still run locally.
@@ -312,7 +317,9 @@ class RuntimeV1_1(Runtime):
                                 "status", status
                             )
                     except Exception as e:
-                        log.info(f"Exception {e} while making request to {action_name}")
+                        log.info(
+                            "Exception %s while making request to %s", e, action_name
+                        )
                         return result, status
 
         except Exception as e:
@@ -320,7 +327,7 @@ class RuntimeV1_1(Runtime):
                 f"Failed to get response from {action_name} due to exception {e}"
             )
             log.info(error_message)
-            raise ColangRuntimeError(error_message)
+            raise ColangRuntimeError(error_message) from e
         return result, status
 
     @staticmethod
@@ -360,15 +367,16 @@ class RuntimeV1_1(Runtime):
             timeout=0,
         )
         if len(done) > 0:
-            log.info(f"{len(done)} actions finished.")
+            log.info("%s actions finished.", len(done))
 
         action_finished_events = []
         for finished_task in done:
             try:
                 result = finished_task.result()
-            except Exception as e:
+            except Exception:
                 log.warning(
-                    f"Local action finished with an exception: {e}\n{traceback.format_exc()}"
+                    "Local action finished with an exception!",
+                    exc_info=True,
                 )
 
             self.async_actions[main_flow_uid].remove(finished_task)
@@ -397,8 +405,8 @@ class RuntimeV1_1(Runtime):
         """
 
         output_events = []
-        input_events = events.copy()
-        local_running_actions = []
+        input_events: List[Union[dict, InternalEvent]] = events.copy()
+        local_running_actions: List[asyncio.Task[dict]] = []
 
         if state is None:
             state = State(flow_states={}, flow_configs=self.flow_configs)
@@ -406,9 +414,12 @@ class RuntimeV1_1(Runtime):
             input_event = InternalEvent(name="StartFlow", arguments={"flow_id": "main"})
             input_events.insert(0, input_event)
             log.info("Start of story!")
-        else:
-            if isinstance(state, dict):
-                state = State.from_dict(state)
+
+        elif isinstance(state, dict):
+            # TODO: Implement dict to State conversion
+            raise NotImplementedError()
+        #     if isinstance(state, dict):
+        #         state = State.from_dict(state)
 
         assert isinstance(state, State)
         assert state.main_flow_state is not None
@@ -419,7 +430,7 @@ class RuntimeV1_1(Runtime):
             local_action_finished_events,
             pending_local_async_action_counter,
         ) = await self._get_async_actions_finished_events(main_flow_uid)
-        input_events = input_events + local_action_finished_events
+        input_events.extend(local_action_finished_events)
         local_action_finished_events = []
         return_local_async_action_count = False
 
@@ -427,7 +438,7 @@ class RuntimeV1_1(Runtime):
         # we continue the processing.
         while input_events or local_running_actions:
             for event in input_events:
-                log.info(f"Processing event {event}")
+                log.info("Processing event %s", event)
 
                 event_name = event["type"] if isinstance(event, dict) else event.name
 
@@ -444,13 +455,13 @@ class RuntimeV1_1(Runtime):
                     try:
                         run_to_completion(state, new_event)
                         new_event = None
-                    except Exception as ex:
-                        log.warning(f"Colang error: {ex}\n{traceback.format_exc()}")
+                    except Exception as e:
+                        log.warning("Colang error!", exc_info=True)
                         new_event = Event(
                             name="ColangError",
                             arguments={
-                                "error_type": str(type(ex).__name__),
-                                "error": str(ex),
+                                "error_type": str(type(e).__name__),
+                                "error": str(e),
                             },
                         )
                     await asyncio.sleep(0.001)
@@ -521,12 +532,13 @@ class RuntimeV1_1(Runtime):
             # of them to finish.
             if local_running_actions:
                 log.info(
-                    f"Waiting for {len(local_running_actions)} local actions to finish."
+                    "Waiting for %d local actions to finish.",
+                    len(local_running_actions),
                 )
-                done, pending = await asyncio.wait(
+                done, _pending = await asyncio.wait(
                     local_running_actions, return_when=asyncio.FIRST_COMPLETED
                 )
-                log.info(f"{len(done)} actions finished.")
+                log.info("%s actions finished.", len(done))
 
                 for finished_task in done:
                     local_running_actions.remove(finished_task)
@@ -540,7 +552,7 @@ class RuntimeV1_1(Runtime):
             # If we have a "CheckLocalAsync" event, we return the number of
             # pending local async actions that have not yet finished executing
             log.debug(
-                f"Checking if there are any local async actions that have finished."
+                "Checking if there are any local async actions that have finished."
             )
             output_events.append(
                 new_event_dict(
@@ -559,7 +571,7 @@ class RuntimeV1_1(Runtime):
         self,
         action_name: str,
         start_action_event: dict,
-        events_history: List[dict],
+        events_history: List[Union[dict, InternalEvent]],
         state: "State",
     ) -> dict:
         """Runs the locally registered action.
