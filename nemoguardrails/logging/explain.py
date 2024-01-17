@@ -68,8 +68,8 @@ class ExplainInfo(BaseModel):
             total_duration = 0
             total_tokens = 0
             for llm_call in self.llm_calls:
-                total_duration += llm_call.duration
-                total_tokens += llm_call.total_tokens
+                total_duration += llm_call.duration or 0
+                total_tokens += llm_call.total_tokens or 0
 
             msg = (
                 f"Summary: {len(self.llm_calls)} LLM call(s) took {total_duration:.2f} seconds "
