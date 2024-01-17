@@ -250,6 +250,12 @@ class FactCheckingRailConfig(BaseModel):
     )
 
 
+class JailbreakDetectionConfig(BaseModel):
+    """Configuration data for jailbreak detection."""
+
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+
+
 class RailsConfigData(BaseModel):
     """Configuration data for specific rails that are supported out-of-the-box."""
 
@@ -261,6 +267,11 @@ class RailsConfigData(BaseModel):
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
         default_factory=SensitiveDataDetection,
         description="Configuration for detecting sensitive data.",
+    )
+
+    jailbreak_detection: Optional[JailbreakDetectionConfig] = Field(
+        default=JailbreakDetectionConfig,
+        description="Configuration for jailbreak detection.",
     )
 
 

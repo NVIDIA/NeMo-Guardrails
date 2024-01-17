@@ -28,7 +28,8 @@ device = os.environ.get("JAILBREAK_CHECK_DEVICE", "cpu")
 
 
 class JailbreakCheckRequest(BaseModel):
-    prompt: str
+    prompt: str  # User utterance to the model
+    lp_threshold: float  # threshold for length-perplexity metric
 
 
 @app.get("/")
@@ -43,13 +44,15 @@ def hello_world():
 
 @app.post("/jailbreak_lp_heuristic")
 def lp_heuristic_check(request: JailbreakCheckRequest):
-    return checks.check_jb_lp(request.prompt)
+    lp_threshold = request.lp_threshold if request.lp_threshold is not None else 89.79
+    return checks.check_jb_lp(request.prompt, lp_threshold)
 
 
 @app.post("/heuristics")
 def run_all_heuristics(request: JailbreakCheckRequest):
     # Will add other heuristics as they become available
-    lp_check = checks.check_jb_lp(request.prompt)
+    lp_threshold = request.lp_threshold if request.lp_threshold is not None else 89.79
+    lp_check = checks.check_jb_lp(request.prompt, lp_threshold)
     jailbreak = any([lp_check["jailbreak"]])
     heuristic_checks = {
         "jailbreak": jailbreak,

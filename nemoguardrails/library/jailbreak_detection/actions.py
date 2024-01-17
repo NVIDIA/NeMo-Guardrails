@@ -28,13 +28,14 @@ async def jailbreak_heuristic_check(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
     """Checks the facts for the bot response using an information alignment score."""
-    jailbreak_config = llm_task_manager.config.rails.config.jailbreak
+    jailbreak_config = llm_task_manager.config.rails.config.jailbreak_detection
 
     jailbreak_api_url = jailbreak_config.parameters.get("endpoint")
+    lp_threshold = jailbreak_config.parameters.get("lp_threshold")
 
     prompt = context.get("user_message")
 
-    jailbreak = await jailbreak_heuristics(prompt, jailbreak_api_url)
+    jailbreak = await jailbreak_heuristics(prompt, jailbreak_api_url, lp_threshold)
     if jailbreak is None:
         log.warning("Jailbreak endpoint not set up properly.")
         # If no result, assume not a jailbreak

@@ -15,6 +15,7 @@
 
 import logging
 import aiohttp
+from typing import Optional
 
 from nemoguardrails.actions import action
 
@@ -25,8 +26,9 @@ log = logging.getLogger(__name__)
 async def jailbreak_heuristics(
     prompt: str,
     api_url: str = "http://localhost:1337/heuristics",
+    lp_threshold: Optional[float] = None,
 ):
-    payload = {"prompt": prompt}
+    payload = {"prompt": prompt, "lp_threshold": lp_threshold}
 
     async with aiohttp.ClientSession() as session:
         async with session.post(api_url, json=payload) as resp:

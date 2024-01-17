@@ -15,10 +15,9 @@
 
 import torch
 from transformers import GPT2LMHeadModel, GPT2TokenizerFast
+import os
 
-THRESH = 89.79  # This obviously needs to be more easily configurable
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = os.environ.get("JAILBREAK_CHECK_DEVICE", "cpu")
 model_id = "gpt2-large"
 model = GPT2LMHeadModel.from_pretrained(model_id).to(device)
 tokenizer = GPT2TokenizerFast.from_pretrained(model_id)
@@ -55,8 +54,8 @@ def get_perplexity(input_string: str) -> bool:
     return perplexity.cpu().detach().numpy().item()
 
 
-def check_jb_lp(input_string: str) -> dict:
+def check_jb_lp(input_string: str, lp_threshold: float) -> dict:
     perplexity = get_perplexity(input_string)
-    jb_lp = len(input_string) / perplexity >= THRESH
+    jb_lp = len(input_string) / perplexity >= lp_threshold
     result = {"jailbreak": jb_lp}
     return result
