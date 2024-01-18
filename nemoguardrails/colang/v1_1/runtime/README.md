@@ -9,24 +9,15 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 ## Todos
 
 - Implement match failing with the `not` keyword, also for internal flow events
-- Stop actions from flows that get aborted/stopped
 - Add support to stop a flow (e.g. with `stop $flow_ref` or `send $flow_ref.Stop()`) and the same for actions
 - Implement pause/resume mechanism for activated flows
 - Add support for multiline strings using triple quotes in Colang
-- We need to make sure that local system actions are non-blocking
 - Implement support for starting actions and flows assigned to variables, e.g. `start $flow_x`
 - Implement support for system functions in expression, e.g. convert a string into a flow with `flow()`
-- Logical operators like `and` and `or` not working in if statements
-- Stop all flows that were started in the when-construct cases after one case triggered
 - Fix `send user say "how are you".Start() as $id` parsing
-- Support calling actions with positional arguments
-- Fix `flow` keyword parsing when it is used not as a keyword in e.g. a variable name or reference member
-- Add support for timer action support in the runtime
 - Find a better solution for separating the flow event arguments like `flow_id` or `activated` from the flow context variables.
 - Fix unit test helper function to work with stories that generate bot messages when started
 - Cleanup abort/stop naming convention
-- Add support for other actions than UtteranceBotAction in cli interface
-- Support raw string literals for regex expressions : `r"\bword\b"` instead `r"\\bword\\b"`
 - Implement proper bot/user intent extraction (nemoguardrails/actions/llm/generation.py line 111)
 - expression_functions don't work as IF condition
 - Support parsing for `match (bot ask confirmation question "Do you want to pay now?").Finished("confirmed")`
@@ -35,8 +26,7 @@ The core abstraction in the NeMo Guardrails toolkit is a **flow**.
 ## To Discuss
 
 - Should the action parameters be under a separate key in the event? (currently using a black list to extract the actual action parameters from the `Start...Action` event).
-- Should we add regular expressions for user utterances to match? Otherwise, the LLM needs to be involved more.
-- Do we need to the option to classify action into types that do or do not conflict? This would allow us to make a distinction between `start a, start b` and `start a and b`
+- Do we need the option to classify action into types that do or do not conflict? This would allow us to make a distinction between `start a, start b` and `start a and b`
 
 ## Events
 
