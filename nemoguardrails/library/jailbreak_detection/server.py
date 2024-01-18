@@ -20,6 +20,7 @@ import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 from heuristics import checks
+from typing import Optional
 
 app = FastAPI()
 cli_app = typer.Typer()
@@ -28,8 +29,15 @@ device = os.environ.get("JAILBREAK_CHECK_DEVICE", "cpu")
 
 
 class JailbreakCheckRequest(BaseModel):
-    prompt: str  # User utterance to the model
-    lp_threshold: float  # threshold for length-perplexity metric
+    """
+    prompt (str): User utterance to the model
+    lp_threshold (float): Threshold value for length-perplexity heuristic. Default: 89.79
+    ps_ppl_threshold (float): Threshold value for prefix/suffix perplexity heuristic. Default: 1845.65
+    """
+
+    prompt: str
+    lp_threshold: Optional[float] = 89.79
+    ps_ppl_threshold: Optional[float] = 1845.65
 
 
 @app.get("/")
@@ -44,19 +52,24 @@ def hello_world():
 
 @app.post("/jailbreak_lp_heuristic")
 def lp_heuristic_check(request: JailbreakCheckRequest):
-    lp_threshold = request.lp_threshold if request.lp_threshold is not None else 89.79
-    return checks.check_jb_lp(request.prompt, lp_threshold)
+    return checks.check_jb_lp(request.prompt, request.lp_threshold)
+
+
+@app.post("/jailbreak_ps_heuristic")
+def ps_ppl_heuristic_check(request: JailbreakCheckRequest):
+    return checks.check_jb_ps_ppl(request.prompt, request.ps_ppl_threshold)
 
 
 @app.post("/heuristics")
 def run_all_heuristics(request: JailbreakCheckRequest):
     # Will add other heuristics as they become available
-    lp_threshold = request.lp_threshold if request.lp_threshold is not None else 89.79
-    lp_check = checks.check_jb_lp(request.prompt, lp_threshold)
-    jailbreak = any([lp_check["jailbreak"]])
+    lp_check = checks.check_jb_lp(request.prompt, request.lp_threshold)
+    ps_ppl_check = checks.check_jb_ps_ppl(request.prompt, request.ps_ppl_threshold)
+    jailbreak = any([lp_check["jailbreak"], ps_ppl_check["jailbreak"]])
     heuristic_checks = {
         "jailbreak": jailbreak,
         "length_perplexity": lp_check["jailbreak"],
+        "prefix_suffix_perplexity": ps_ppl_check["jailbreak"],
     }
     return heuristic_checks
 

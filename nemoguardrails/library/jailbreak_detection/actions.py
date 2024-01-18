@@ -32,10 +32,13 @@ async def jailbreak_heuristic_check(
 
     jailbreak_api_url = jailbreak_config.parameters.get("endpoint")
     lp_threshold = jailbreak_config.parameters.get("lp_threshold")
+    ps_ppl_threshold = jailbreak_config.parameters.get("ps_ppl_threshold")
 
     prompt = context.get("user_message")
 
-    jailbreak = await jailbreak_heuristics(prompt, jailbreak_api_url, lp_threshold)
+    jailbreak = await jailbreak_heuristics(
+        prompt, jailbreak_api_url, lp_threshold, ps_ppl_threshold
+    )
     if jailbreak is None:
         log.warning("Jailbreak endpoint not set up properly.")
         # If no result, assume not a jailbreak

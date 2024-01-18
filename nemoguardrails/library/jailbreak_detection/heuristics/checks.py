@@ -59,3 +59,24 @@ def check_jb_lp(input_string: str, lp_threshold: float) -> dict:
     jb_lp = len(input_string) / perplexity >= lp_threshold
     result = {"jailbreak": jb_lp}
     return result
+
+
+def check_jb_ps_ppl(input_string: str, ps_ppl_threshold: float) -> dict:
+    split_string = input_string.strip().split()
+    # Not useful to evaluate GCG-style attacks on strings less than 20 "words"
+    if len(split_string) < 20:
+        return {"jailbreak": False}
+
+    suffix = " ".join(split_string[-20:-1])
+    prefix = " ".join(split_string[0:19])
+
+    suffix_ppl = get_perplexity(suffix)
+    prefix_ppl = get_perplexity(prefix)
+
+    if suffix_ppl >= ps_ppl_threshold or prefix_ppl >= ps_ppl_threshold:
+        jb_ps = True
+    else:
+        jb_ps = False
+
+    result = {"jailbreak": jb_ps}
+    return result

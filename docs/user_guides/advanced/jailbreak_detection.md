@@ -19,7 +19,7 @@ By default, the jailbreak detection server listens on port `1337`. You can chang
 ## Heuristic Configurations
 
 ### `checks.check_jb_lp`
-The default threshold value, `LP_THRESH`, for the `check_jb_lp` heuristic is `89.79`. 
+The default threshold value for the `check_jb_lp` heuristic is `89.79`. 
 This value represents the mean length/perplexity for a set of jailbreaks derived from a combination of datasets including [AdvBench](https://github.com/llm-attacks/llm-attacks), [ToxicChat](https://huggingface.co/datasets/lmsys/toxic-chat/blob/main/README.md), and [JailbreakChat](https://github.com/verazuo/jailbreak_llms), with non-jailbreaks taken from the same datasets and incorporating 1000 examples from [Dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k).
 
 The statistics for this metric across jailbreak and non jailbreak datasets are as follows:
@@ -39,4 +39,13 @@ Increasing this threshold will decrease the number of jailbreaks detected but wi
 **USAGE NOTES**: 
 * Manual inspection of false positives uncovered a number of mislabeled examples in the dataset and a substantial number of system-like prompts.
 If your application is intended for simple question answering or retrieval-aided generation, this should be a generally safe heuristic.
-* This heuristic in its current form is intended only for English language evaluation and will yield significantly more false positives on non-English text.
+* This heuristic in its current form is intended only for English language evaluation and will yield significantly more false positives on non-English text, including code.
+
+### `checks.check_jb_ps_ppl`
+The `check_jb_ps_ppl` heuristic examines strings of more than 20 "words" (strings separated by whitespace) to detect potential prefix/suffix attacks.
+The default threshold value for the `check_jb_ps_ppl` is `1845.65`.
+This value is the second-lowest perplexity value across 50 different prompts generated using [GCG](https://github.com/llm-attacks/llm-attacks) prefix/suffix attacks.
+Using the default value allows for detection of 49/50 GCG-style attacks with a 0.04% false positive rate on the "non-jailbreak" dataset derived above.
+
+**USAGE NOTES**:
+* This heuristic in its current form is intended only for English language evaluation and will yield significantly more false positives on non-English text, including code.

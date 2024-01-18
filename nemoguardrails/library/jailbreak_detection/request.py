@@ -27,8 +27,13 @@ async def jailbreak_heuristics(
     prompt: str,
     api_url: str = "http://localhost:1337/heuristics",
     lp_threshold: Optional[float] = None,
+    ps_ppl_threshold: Optional[float] = None,
 ):
-    payload = {"prompt": prompt, "lp_threshold": lp_threshold}
+    payload = {
+        "prompt": prompt,
+        "lp_threshold": lp_threshold,
+        "ps_ppl_threshold": ps_ppl_threshold,
+    }
 
     async with aiohttp.ClientSession() as session:
         async with session.post(api_url, json=payload) as resp:
