@@ -27,7 +27,7 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import Element, FlowParamDef, SpecOp
+from nemoguardrails.colang.v1_1.lang.colang_ast import Element, FlowParamDef
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
@@ -217,7 +217,7 @@ class Action:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.STOPPING
 
-    def get_event(self, name: str, arguments: dict) -> Callable[[], ActionEvent]:
+    def get_event(self, name: str, arguments: dict) -> ActionEvent:
         """Returns the corresponding action event."""
         if name.endswith("Updated"):
             split_name = name.rsplit("Updated", 1)
@@ -290,7 +290,7 @@ class InteractionLoopType(Enum):
     NAMED = "named"  # Every new instance of the flow will live in the loop with the given name
 
 
-ElementType = Union[Element, SpecOp, dict]
+ElementType = Union[Element, dict]
 
 
 @dataclass
@@ -523,7 +523,7 @@ class FlowState:
             "Failed": "failed_event",
         }
 
-    def get_event(self, name: str, arguments: dict) -> Callable[[], InternalEvent]:
+    def get_event(self, name: str, arguments: dict) -> InternalEvent:
         """Returns the corresponding action event."""
         assert name in self._event_name_map, f"Event '{name}' not available!"
         func = getattr(self, self._event_name_map[name])
