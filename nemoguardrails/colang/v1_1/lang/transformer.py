@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import re
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
-from lark import Token, Transformer, Tree
+from lark import Token, Transformer
 from lark.tree import Meta
 
 from nemoguardrails.colang.v1_1.lang.colang_ast import (
@@ -51,7 +51,7 @@ class ColangTransformer(Transformer):
 
     def __init__(
         self, source: str, include_source_mapping=True, expand_await: bool = False
-    ):
+    ) -> None:
         """Constructor.
 
         Args:
@@ -71,9 +71,9 @@ class ColangTransformer(Transformer):
         _type: str,
         elements: Optional[List[Any]] = None,
         meta: Optional[Meta] = None,
-    ):
+    ) -> dict:
         """Helper to create an element of the specified type."""
-        element = {"_type": _type}
+        element: dict = {"_type": _type}
         if elements is not None:
             element["elements"] = elements
 
@@ -87,7 +87,7 @@ class ColangTransformer(Transformer):
 
         return element
 
-    def __source(self, meta):
+    def __source(self, meta: Meta) -> Optional[Source]:
         """Helper to extract a simplified source information from a `meta` object.
 
         Args:
@@ -103,14 +103,14 @@ class ColangTransformer(Transformer):
             end_pos=meta.end_pos,
         )
 
-    def _name(self, children, meta):
+    def _name(self, children: List[dict], _meta: Meta) -> str:
         """Processing for `name` tree nodes.
 
-        We just copy the values from the children, which should be tokens.
+        We just copy the values from the children: list, which should be tokens.
         """
         return " ".join([child["elements"][0] for child in children])
 
-    def _flow_def(self, children, meta):
+    def _flow_def(self, children: dict, meta: Meta) -> Flow:
         """Processing for `flow` tree nodes."""
         assert children[0]["_type"] == "spec_name"
         assert children[2]["_type"] == "suite"
@@ -164,7 +164,7 @@ class ColangTransformer(Transformer):
         pattern = r"#(?! (llm:|meta:))[^\n]*"
         return re.sub(pattern, "", source)
 
-    def _spec_op(self, children, meta):
+    def _spec_op(self, children: list, meta: Meta) -> SpecOp:
         """Processing for `spec_op` tree nodes.
 
         Rule:
@@ -182,7 +182,7 @@ class ColangTransformer(Transformer):
 
         return SpecOp(op=op, spec=spec, _source=self.__source(meta))
 
-    def __parse_classical_arguments(self, arg_elements):
+    def __parse_classical_arguments(self, arg_elements: list) -> dict:
         arguments = {}
         positional_index = 0
         for arg_element in arg_elements:
@@ -204,7 +204,7 @@ class ColangTransformer(Transformer):
                     arguments[name] = expr
         return arguments
 
-    def _spec(self, children, meta):
+    def _spec(self, children: List[dict], _meta: Meta) -> Spec:
         """Processing for `spec` tree nodes.
 
         Rule:
@@ -283,19 +283,19 @@ class ColangTransformer(Transformer):
 
         return spec
 
-    def _spec_name(self, children, meta):
+    def _spec_name(self, children: List[str], meta: Meta) -> dict:
         return self.element("spec_name", [" ".join(children)], meta)
 
-    def _var_name(self, children, meta):
+    def _var_name(self, children: List[dict], _meta: Meta) -> dict:
         return self.element("var_name", [children[0]["elements"][0]])
 
-    def _expr(self, children, meta):
+    def _expr(self, _children: List[dict], meta: Meta) -> dict:
         return self.element("expr", [self.source[meta.start_pos : meta.end_pos]], meta)
 
-    def _test(self, children, meta):
+    def _test(self, _children, meta: Meta) -> dict:
         return self.element("expr", [self.source[meta.start_pos : meta.end_pos]], meta)
 
-    def _set_stmt(self, children, meta):
+    def _set_stmt(self, children: list, meta: Meta) -> Union[SpecOp, Assignment]:
         """The set statement can result in either a Set operation, or a SpecOp with a
         return value capturing."""
         assert children[0]["_type"] == "var_name"
@@ -315,8 +315,10 @@ class ColangTransformer(Transformer):
             spec_op = children[2]
             spec_op.return_var_name = var_name
             return spec_op
+        else:
+            raise Exception(f"Invalid element '{children[2]['_type']}'")
 
-    def _while_stmt(self, children, meta):
+    def _while_stmt(self, children: list, meta: Meta) -> While:
         assert len(children) == 2
         return While(
             expression=children[0]["elements"][0],
@@ -324,7 +326,7 @@ class ColangTransformer(Transformer):
             _source=self.__source(meta),
         )
 
-    def _if_stmt(self, children, meta):
+    def _if_stmt(self, children: list, _meta: Meta) -> If:
         """Processing for `spec` tree nodes.
 
         Rule:
@@ -365,11 +367,11 @@ class ColangTransformer(Transformer):
 
         return main_if_element
 
-    def _when_stmt(self, children, meta):
+    def _when_stmt(self, children: list, _meta: Meta) -> When:
         """Processing for `spec` tree nodes.
 
         Rule:
-            when_stmt: "when" spec_expr suite orwhens ["else" suite]
+            when_stmt: "when" spec_expr suite orwhen ["else" suite]
         """
         assert len(children) == 4
         when_specs = []
@@ -391,7 +393,7 @@ class ColangTransformer(Transformer):
 
         return main_when_element
 
-    def _return_stmt(self, children, meta):
+    def _return_stmt(self, children: list, meta: Meta) -> Return:
         assert len(children) == 1
         if children[0] is None or children[0]["_type"] != "expr":
             return Return(
@@ -404,54 +406,54 @@ class ColangTransformer(Transformer):
                 _source=self.__source(meta),
             )
 
-    def _abort_stmt(self, children, meta):
+    def _abort_stmt(self, children: list, meta: Meta) -> Abort:
         assert len(children) == 0
         return Abort(_source=self.__source(meta))
 
-    def _break_stmt(self, children, meta):
+    def _break_stmt(self, children: list, meta: Meta) -> Break:
         assert len(children) == 0
         return Break(
             label=None,
             _source=self.__source(meta),
         )
 
-    def _continue_stmt(self, children, meta):
+    def _continue_stmt(self, children: list, meta: Meta) -> Continue:
         assert len(children) == 0
         return Continue(
             label=None,
             _source=self.__source(meta),
         )
 
-    def _priority_stmt(self, children, meta):
+    def _priority_stmt(self, children: list, meta: Meta) -> Priority:
         assert len(children) == 1
         return Priority(
             priority_expr=children[0]["elements"][0],
             _source=self.__source(meta),
         )
 
-    def _log_stmt(self, children, meta):
+    def _log_stmt(self, children: list, meta: Meta) -> Log:
         assert len(children) == 1
         return Log(
             info=children[0]["elements"][0],
             _source=self.__source(meta),
         )
 
-    def _label_stmt(self, children, meta):
+    def _label_stmt(self, children: list, meta: Meta) -> Label:
         assert len(children) == 1
         return Label(
             name=children[0]["elements"][0],
             _source=self.__source(meta),
         )
 
-    def _global_stmt(self, children, meta):
+    def _global_stmt(self, children: list, meta: Meta) -> Global:
         assert len(children) == 1
         return Global(
             name=children[0]["elements"][0],
             _source=self.__source(meta),
         )
 
-    def _non_var_spec_or(self, children, meta):
-        val = {
+    def _non_var_spec_or(self, children: list, meta: Meta) -> dict:
+        val: Dict[str, Any] = {
             "_type": "spec_or",
             "elements": children,
         }
@@ -459,8 +461,8 @@ class ColangTransformer(Transformer):
             val["_source"] = self.__source(meta)
         return val
 
-    def _non_var_spec_and(self, children, meta):
-        val = {
+    def _non_var_spec_and(self, children: list, meta: Meta) -> dict:
+        val: Dict[str, Any] = {
             "_type": "spec_and",
             "elements": children,
         }
@@ -468,10 +470,11 @@ class ColangTransformer(Transformer):
             val["_source"] = self.__source(meta)
         return val
 
-    def __default__(self, data, children, meta):
+    def __default__(self, data, children: list, meta: Meta) -> dict:
         """Default function that is called if there is no attribute matching ``data``
 
-        Can be overridden. Defaults to creating a new copy of the tree node (i.e. ``return Tree(data, children, meta)``)
+        Can be overridden. Defaults to creating
+        a new copy of the tree node (i.e. ``return Tree(data, children: list, meta)``)
         """
         if isinstance(data, Token):
             data = data.value

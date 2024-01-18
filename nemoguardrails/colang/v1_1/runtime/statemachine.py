@@ -72,7 +72,7 @@ log = logging.getLogger(__name__)
 random_seed = int(time.time())
 
 
-def initialize_state(state) -> None:
+def initialize_state(state: State) -> None:
     """
     Initialize the state to make it ready for the story start.
     """
