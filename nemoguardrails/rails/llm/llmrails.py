@@ -20,7 +20,7 @@ import logging
 import os
 import threading
 import time
-from typing import Any, AsyncIterator, List, Optional, Type, Union
+from typing import Any, AsyncIterator, List, Optional, Tuple, Type, Union
 
 from langchain.llms.base import BaseLLM
 
@@ -28,12 +28,14 @@ from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
 from nemoguardrails.context import explain_info_var, streaming_handler_var
 from nemoguardrails.embeddings.index import EmbeddingsIndex
+from nemoguardrails.flows.flows import compute_context
 from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.explain import ExplainInfo
 from nemoguardrails.logging.stats import llm_stats
+from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.utils import get_history_cache_key
@@ -58,6 +60,9 @@ class LLMRails:
         self.config = config
         self.llm = llm
         self.verbose = verbose
+
+        if self.verbose:
+            set_verbose(True)
 
         # We allow the user to register additional embedding search providers, so we keep
         # an index of them.
@@ -190,6 +195,16 @@ class LLMRails:
         # Reference to the general ExplainInfo object.
         self.explain_info = None
 
+    def update_llm(self, llm):
+        """Replace the main LLM with the provided one.
+
+        Arguments:
+            llm: The new LLM that should be used.
+        """
+        self.llm = llm
+        self.llm_generation_actions.llm = llm
+        self.runtime.register_action_param("llm", llm)
+
     def _validate_config(self):
         """Runs additional validation checks on the config."""
         existing_flows_names = set([flow.get("id") for flow in self.config.flows])
@@ -211,6 +226,13 @@ class LLMRails:
                 raise ValueError(
                     f"The provided retrieval rail flow `{flow_name}` does not exist"
                 )
+
+        # If both passthrough mode and single call mode are specified, we raise an exception.
+        if self.config.passthrough and self.config.rails.dialog.single_call.enabled:
+            raise ValueError(
+                f"The passthrough mode and the single call dialog rails mode can't be used at the same time. "
+                f"The single call mode needs to use an altered prompt when prompting the LLM. "
+            )
 
     async def _init_kb(self):
         """Initializes the knowledge base."""
@@ -350,7 +372,8 @@ class LLMRails:
 
         # For the rest of the messages, we transform them directly into events.
         # TODO: Move this to separate function once more types of messages are supported.
-        for msg in messages[p:]:
+        for idx in range(p, len(messages)):
+            msg = messages[idx]
             if msg["role"] == "user":
                 events.append(
                     {
@@ -358,6 +381,16 @@ class LLMRails:
                         "final_transcript": msg["content"],
                     }
                 )
+
+                # If it's not the last message, we also need to add the `UserMessage` event
+                if idx != len(messages) - 1:
+                    events.append(
+                        {
+                            "type": "UserMessage",
+                            "text": msg["content"],
+                        }
+                    )
+
             elif msg["role"] == "assistant":
                 events.append(
                     {"type": "StartUtteranceBotAction", "script": msg["content"]}
@@ -374,7 +407,8 @@ class LLMRails:
         prompt: Optional[str] = None,
         messages: Optional[List[dict]] = None,
         streaming_handler: Optional[StreamingHandler] = None,
-    ) -> Union[str, dict]:
+        return_context: bool = False,
+    ) -> Union[str, dict, Tuple[dict, dict]]:
         """Generate a completion or a next message.
 
         The format for messages is the following:
@@ -394,6 +428,7 @@ class LLMRails:
             messages: The history of messages to be used to generate the next message.
             streaming_handler: If specified, and the config supports streaming, the
               provided handler will be used for streaming.
+            return_context: Whether to return the context at the end of the run.
 
         Returns:
             The completion (when a prompt is provided) or the next message.
@@ -466,7 +501,12 @@ class LLMRails:
             # print("Closing the stream handler explicitly")
             await streaming_handler.push_chunk(None)
 
-        return new_message
+        if return_context:
+            # If we need to return the context as well,
+            context = compute_context(events)
+            return new_message, context
+        else:
+            return new_message
 
     def stream_async(
         self,
@@ -487,7 +527,10 @@ class LLMRails:
         return streaming_handler
 
     def generate(
-        self, prompt: Optional[str] = None, messages: Optional[List[dict]] = None
+        self,
+        prompt: Optional[str] = None,
+        messages: Optional[List[dict]] = None,
+        return_context: bool = False,
     ):
         """Synchronous version of generate_async."""
 
@@ -497,7 +540,11 @@ class LLMRails:
                 "You should replace with `await generate_async(...)` or use `nest_asyncio.apply()`."
             )
 
-        return asyncio.run(self.generate_async(prompt=prompt, messages=messages))
+        return asyncio.run(
+            self.generate_async(
+                prompt=prompt, messages=messages, return_context=return_context
+            )
+        )
 
     async def generate_events_async(self, events: List[dict]) -> List[dict]:
         """Generate the next events based on the provided history.

@@ -70,8 +70,14 @@ class HallucinationRailsEvaluation:
     def get_extra_responses(self, prompt, num_responses=2):
         """
         Sample extra responses with temperature=1.0 from the LLM for hallucination check.
-        """
 
+        Args:
+            prompt (str): The prompt to generate extra responses for.
+            num_responses (int): Number of extra responses to generate.
+
+        Returns:
+            List[str]: The list of extra responses.
+        """
         extra_responses = []
         with llm_params(self.llm, temperature=1.0, max_tokens=100):
             for _ in range(num_responses):
@@ -84,6 +90,9 @@ class HallucinationRailsEvaluation:
         Run the hallucination rail evaluation.
         For each prompt, generate 2 extra responses from the LLM and check consistency with the bot response.
         If inconsistency is detected, flag the prompt as hallucination.
+
+        Returns:
+            Tuple[List[HallucinationPrediction], int]: Tuple containing hallucination predictions and the number flagged.
         """
 
         hallucination_check_predictions = []
@@ -152,6 +161,16 @@ def main(
     output_dir: str = typer.Option("outputs/hallucination", help="Output directory"),
     write_outputs: bool = typer.Option(True, help="Write outputs to file"),
 ):
+    """
+    Main function to run the hallucination rails evaluation.
+
+    Args:
+        config (str): The path to the config folder.
+        data_path (str): Dataset path.
+        num_samples (int): Number of samples to evaluate.
+        output_dir (str): Output directory for predictions.
+        write_outputs (bool): Whether to write the predictions to a file.
+    """
     hallucination_check = HallucinationRailsEvaluation(
         config,
         data_path,
