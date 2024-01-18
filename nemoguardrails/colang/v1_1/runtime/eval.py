@@ -20,13 +20,12 @@ from typing import Any, List
 
 from simpleeval import EvalWithCompoundTypes
 
+from nemoguardrails.colang.v1_1.runtime import system_functions
 from nemoguardrails.colang.v1_1.runtime.flows import ColangValueError
+from nemoguardrails.colang.v1_1.runtime.utils import AttributeDict
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
-
-from nemoguardrails.colang.v1_1.runtime import system_functions
-from nemoguardrails.colang.v1_1.runtime.utils import AttributeDict
 
 
 def eval_expression(expr: str, context: dict) -> Any:
@@ -40,7 +39,7 @@ def eval_expression(expr: str, context: dict) -> Any:
 
         return expr
 
-    # We search for all inner expressions and evaluate them first
+    # We search for all inner expressions ("...{{xyz}}...") and evaluate them first
     inner_expression_pattern = r"\{\{(.*?)\}\}"
     inner_expressions = re.findall(inner_expression_pattern, expr)
     if inner_expressions:
@@ -50,8 +49,8 @@ def eval_expression(expr: str, context: dict) -> Any:
                 value = eval_expression(inner_expression, context)
             except Exception as ex:
                 raise ColangValueError(
-                    f"Error evaluating inner expression: '{expr}': {str(ex)}"
-                )
+                    f"Error evaluating inner expression: '{expr}'"
+                ) from ex
             if isinstance(value, str):
                 value = value.replace('"', '\\"').replace("'", "\\'")
             inner_expression_values.append(value)
@@ -63,7 +62,7 @@ def eval_expression(expr: str, context: dict) -> Any:
 
     index_counter = 0
 
-    def replace_with_index(name, match):
+    def replace_with_index(name, _match):
         nonlocal index_counter
         replacement = f"{name}_{index_counter}"
         index_counter += 1
@@ -85,9 +84,9 @@ def eval_expression(expr: str, context: dict) -> Any:
             compiled_regex = re.compile(regex)
             expr_locals[f"regex_{idx}"] = compiled_regex
         except Exception as ex:
-            raise Exception(
-                f"Error in compiling regular expression '{expr}': {str(ex)}"
-            )
+            raise ColangValueError(
+                f"Error in compiling regular expression '{expr}'"
+            ) from ex
 
     # We search for all variable names starting with $, remove the $ and add
     # the value in the dict for eval
@@ -117,14 +116,14 @@ def eval_expression(expr: str, context: dict) -> Any:
                 "len": len,
                 "flow": system_functions.flow,
                 "action": system_functions.action,
-                "search": regex_search,
-                "findall": regex_findall,
+                "search": _regex_search,
+                "findall": _regex_findall,
                 "uid": new_uid,
-                "escape": escape_string,
-                "is_int": is_int,
-                "is_float": is_float,
-                "is_bool": is_bool,
-                "is_str": is_str,
+                "escape": _escape_string,
+                "is_int": _is_int,
+                "is_float": _is_float,
+                "is_bool": _is_bool,
+                "is_str": _is_str,
             },
             names=expr_locals,
         )
@@ -133,34 +132,34 @@ def eval_expression(expr: str, context: dict) -> Any:
         raise ColangValueError(f"Error evaluating '{expr}': {str(ex)}")
 
 
-def regex_search(pattern: str, string: str) -> bool:
+def _regex_search(pattern: str, string: str) -> bool:
     return bool(re.search(pattern, string))
 
 
-def regex_findall(pattern: str, string: str) -> List[str]:
+def _regex_findall(pattern: str, string: str) -> List[str]:
     return re.findall(pattern, string)
 
 
-def escape_string(string: str) -> str:
+def _escape_string(string: str) -> str:
     """Escape a string and inner expressions."""
     return string.replace("\\", "\\\\").replace("{{", "\\{").replace("}}", "\\}")
 
 
-def is_int(val: Any) -> bool:
+def _is_int(val: Any) -> bool:
     """Check if it is an integer."""
     return isinstance(val, int)
 
 
-def is_float(val: Any) -> bool:
+def _is_float(val: Any) -> bool:
     """Check if it is an integer."""
     return isinstance(val, float)
 
 
-def is_bool(val: Any) -> bool:
+def _is_bool(val: Any) -> bool:
     """Check if it is an integer."""
     return isinstance(val, bool)
 
 
-def is_str(val: Any) -> bool:
+def _is_str(val: Any) -> bool:
     """Check if it is an integer."""
     return isinstance(val, str)
