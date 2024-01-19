@@ -9,6 +9,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Break,
     CatchPatternFailure,
     Continue,
+    ElementType,
     EndScope,
     ForkHead,
     Goto,
@@ -24,7 +25,6 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
 )
 from nemoguardrails.colang.v1_1.runtime.flows import (
     ColangSyntaxError,
-    ElementType,
     FlowConfig,
     InternalEvents,
 )
@@ -36,34 +36,35 @@ def expand_elements(
     flow_configs: Dict[str, FlowConfig],
     continue_break_labels: Optional[Tuple[str, str]] = None,
 ) -> List[ElementType]:
+    """Iterates through all elements and expands/replaces them according to the rules."""
     elements_changed = True
     while elements_changed:
         elements_changed = False
         new_elements: List[ElementType] = []
         for element in elements:
-            expanded_elems: List[ElementType] = []
+            expanded_elements: List[ElementType] = []
             if isinstance(element, SpecOp):
                 if element.op == "send":
-                    expanded_elems = _expand_send_element(element)
+                    expanded_elements = _expand_send_element(element)
                 elif element.op == "match":
-                    expanded_elems = _expand_match_element(element)
+                    expanded_elements = _expand_match_element(element)
                 elif element.op == "start":
-                    expanded_elems = _expand_start_element(element)
+                    expanded_elements = _expand_start_element(element)
                 elif element.op == "stop":
-                    expanded_elems = _expand_stop_element(element)
+                    expanded_elements = _expand_stop_element(element)
                 elif element.op == "activate":
-                    expanded_elems = _expand_activate_element(element)
+                    expanded_elements = _expand_activate_element(element)
                 elif element.op == "await":
-                    expanded_elems = _expand_await_element(element)
+                    expanded_elements = _expand_await_element(element)
             elif isinstance(element, Assignment):
-                expanded_elems = _expand_assignment_stmt_element(element, flow_configs)
+                expanded_elements = _expand_assignment_stmt_element(element)
             elif isinstance(element, While):
-                expanded_elems = _expand_while_stmt_element(element, flow_configs)
+                expanded_elements = _expand_while_stmt_element(element, flow_configs)
             elif isinstance(element, If):
-                expanded_elems = _expand_if_element(element, flow_configs)
+                expanded_elements = _expand_if_element(element, flow_configs)
                 elements_changed = True  # Makes sure to update continue/break elements
             elif isinstance(element, When):
-                expanded_elems = _expand_when_stmt_element(element, flow_configs)
+                expanded_elements = _expand_when_stmt_element(element, flow_configs)
                 elements_changed = True  # Makes sure to update continue/break elements
             elif isinstance(element, Continue):
                 if element.label is None and continue_break_labels is not None:
@@ -72,8 +73,8 @@ def expand_elements(
                 if element.label is None and continue_break_labels is not None:
                     element.label = continue_break_labels[1]
 
-            if len(expanded_elems) > 0:
-                new_elements.extend(expanded_elems)
+            if len(expanded_elements) > 0:
+                new_elements.extend(expanded_elements)
                 elements_changed = True
             else:
                 new_elements.extend([element])
@@ -170,7 +171,7 @@ def _expand_start_element(
                     spec=Spec(
                         name=InternalEvents.FLOW_STARTED,
                         arguments=element.spec.arguments,
-                        ref=create_ref_ast_dict_helper(flow_event_ref_uid),
+                        ref=_create_ref_ast_dict_helper(flow_event_ref_uid),
                         spec_type=SpecType.EVENT,
                     ),
                     info={"internal": True},
@@ -180,7 +181,8 @@ def _expand_start_element(
             element_ref = element.spec.ref
             if element_ref is None:
                 flow_ref_uid = f"_flow_ref_{new_var_uid()}"
-                element_ref = create_ref_ast_dict_helper(flow_ref_uid)
+                element_ref = _create_ref_ast_dict_helper(flow_ref_uid)
+            assert isinstance(element_ref, dict)
             new_elements.append(
                 Assignment(
                     key=element_ref["elements"][0]["elements"][0].lstrip("$"),
@@ -192,8 +194,9 @@ def _expand_start_element(
             element_ref = element.spec.ref
             if element_ref is None:
                 action_event_ref_uid = f"_action_ref_{new_var_uid()}"
-                element_ref = create_ref_ast_dict_helper(action_event_ref_uid)
+                element_ref = _create_ref_ast_dict_helper(action_event_ref_uid)
                 element.spec.ref = element_ref
+            assert isinstance(element_ref, dict)
             new_elements.append(
                 SpecOp(
                     op="_new_action_instance",
@@ -230,25 +233,25 @@ def _expand_stop_element(
     if isinstance(element.spec, Spec):
         # Single element
         raise NotImplementedError()
-        if (
-            element.spec.spec_type == SpecType.REFERENCE
-            and element.spec.members is None
-        ):
-            # It's a reference to a flow or action
-            new_elements.append(
-                SpecOp(
-                    op="send",
-                    spec=Spec(
-                        name=InternalEvents.STOP_FLOW,
-                        arguments=element.spec.arguments,
-                        spec_type=SpecType.EVENT,
-                    ),
-                )
-            )
-        else:
-            raise ColangSyntaxError(
-                f"'stop' keyword cannot yet be used on '{element.spec.spec_type}'"
-            )
+        # if (
+        #     element.spec.spec_type == SpecType.REFERENCE
+        #     and element.spec.members is None
+        # ):
+        #     # It's a reference to a flow or action
+        #     new_elements.append(
+        #         SpecOp(
+        #             op="send",
+        #             spec=Spec(
+        #                 name=InternalEvents.STOP_FLOW,
+        #                 arguments=element.spec.arguments,
+        #                 spec_type=SpecType.EVENT,
+        #             ),
+        #         )
+        #     )
+        # else:
+        #     raise ColangSyntaxError(
+        #         f"'stop' keyword cannot yet be used on '{element.spec.spec_type}'"
+        #     )
     else:
         # Element group
         new_elements = _expand_element_group(element)
@@ -283,9 +286,10 @@ def _expand_match_element(
             # It's a flow
             element_ref = element.spec.ref
             if element_ref is None:
-                element_ref = create_ref_ast_dict_helper(
+                element_ref = _create_ref_ast_dict_helper(
                     f"_flow_event_ref_{new_var_uid()}"
                 )
+            assert isinstance(element_ref, dict)
 
             arguments = {"flow_id": f"'{element.spec.name}'"}
             for arg in element.spec.arguments:
@@ -317,9 +321,10 @@ def _expand_match_element(
             if element.return_var_name is not None:
                 element_ref = element.spec.ref
                 if element_ref is None:
-                    element_ref = create_ref_ast_dict_helper(
+                    element_ref = _create_ref_ast_dict_helper(
                         f"_event_ref_{new_var_uid()}"
                     )
+                assert isinstance(element_ref, dict)
 
                 return_var_name = element.return_var_name
 
@@ -420,7 +425,8 @@ def _expand_await_element(
             # It's a flow or an UMIM action
             element_ref = element.spec.ref
             if element_ref is None:
-                element_ref = create_ref_ast_dict_helper(f"_ref_{new_var_uid()}")
+                element_ref = _create_ref_ast_dict_helper(f"_ref_{new_var_uid()}")
+            assert isinstance(element_ref, dict)
 
             element.spec.ref = element_ref
             new_elements.append(
@@ -441,7 +447,7 @@ def _expand_await_element(
                 )
             )
         else:
-            raise ColangSyntaxError(f"Unsupported spec type '{element.spec}'")
+            raise ColangSyntaxError(f"Unsupported spec type '{type(element.spec)}'")
     else:
         # Element group
         normalized_group = normalize_element_groups(element.spec)
@@ -471,7 +477,8 @@ def _expand_await_element(
                 group_element_copy = copy.deepcopy(group_element)
                 element_ref = group_element_copy.ref
                 if element_ref is None:
-                    element_ref = create_ref_ast_dict_helper(f"_ref_{new_var_uid()}")
+                    element_ref = _create_ref_ast_dict_helper(f"_ref_{new_var_uid()}")
+                assert isinstance(element_ref, dict)
 
                 group_element_copy.ref = element_ref
                 start_elements[-1].append(
@@ -537,6 +544,8 @@ def _expand_activate_element(
                     "Activate statement cannot have a reference assignment!"
                 )
             element_copy = copy.deepcopy(element)
+            # TODO: Remove assert once SpecOp type is refactored
+            assert isinstance(element_copy.spec, Spec)
             element_copy.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
@@ -571,9 +580,7 @@ def _expand_activate_element(
     return new_elements
 
 
-def _expand_assignment_stmt_element(
-    element: Assignment, flow_configs: Dict[str, FlowConfig]
-) -> List[ElementType]:
+def _expand_assignment_stmt_element(element: Assignment) -> List[ElementType]:
     new_elements: List[ElementType] = []
 
     # Check if the expression is an NLD
@@ -617,7 +624,7 @@ def _expand_while_stmt_element(
         expression="True",
     )
     body_elements = expand_elements(
-        element.elements, flow_configs, [begin_label.name, end_label.name]
+        element.elements, flow_configs, (begin_label.name, end_label.name)
     )
 
     new_elements = [begin_label, goto_end]
@@ -683,14 +690,19 @@ def _expand_when_stmt_element(
         case_label_names.append(f"case_{case_uid}_label_{stmt_uid}")
         groups_fork_head_elements.append(ForkHead(fork_uid=new_var_uid()))
 
+        case_element_dict: dict
         if isinstance(case_element, Spec):
             # Single element
-            case_element = {
+            case_element_dict = {
                 "_type": "spec_and",
                 "elements": [case_element],
             }
+        elif isinstance(case_element, dict):
+            case_element_dict = case_element
+        else:
+            raise ColangSyntaxError(f"Unexpected type: '{type(case_element)}'")
 
-        normalized_group = normalize_element_groups(case_element)
+        normalized_group = normalize_element_groups(case_element_dict)
 
         group_label_names.append([])
         group_start_elements.append([])
@@ -715,7 +727,7 @@ def _expand_when_stmt_element(
                     # Add start element
                     ref_uid = f"_ref_{new_var_uid()}"
                     if group_element.ref is None:
-                        group_element.ref = create_ref_ast_dict_helper(ref_uid)
+                        group_element.ref = _create_ref_ast_dict_helper(ref_uid)
                     else:
                         ref_uid = group_element.ref["elements"][0]["elements"][
                             0
@@ -757,6 +769,13 @@ def _expand_when_stmt_element(
                             "elements": group_start_elements[case_idx][group_idx],
                         },
                     )
+                    # TODO: Replace above with this once refactored
+                    # SpecOp(
+                    #     op="start",
+                    #     spec=SpecAnd(
+                    #         elements=group_start_elements[case_idx][group_idx]
+                    #     ),
+                    # )
                 )
             new_elements.append(
                 SpecOp(
@@ -766,6 +785,11 @@ def _expand_when_stmt_element(
                         "elements": group_match_elements[case_idx][group_idx],
                     },
                 )
+                # TODO: Replace above with this once refactored
+                # SpecOp(
+                #     op="match",
+                #     spec=SpecAnd(elements=group_match_elements[case_idx][group_idx]),
+                # )
             )
             new_elements.append(Goto(label=case_label_names[case_idx]))
 
@@ -867,35 +891,7 @@ def flatten_or_group(group: dict):
     return {"_type": "spec_or", "elements": new_elements}
 
 
-def uniquify_element_group(group: dict) -> dict:
-    """Remove all duplicate elements from group."""
-    unique_elements: Dict[Tuple[int, Spec]] = {}
-    for element in group["elements"]:
-        unique_elements.setdefault(element.hash(), element)
-    new_group = group.copy()
-    new_group["elements"] = [e for e in unique_elements.values()]
-    return new_group
-
-
-def convert_to_single_and_element_group(group: dict) -> dict:
-    """Convert element group into a single 'and' group with unique elements."""
-    unique_elements: Dict[Tuple[int, Spec]] = {}
-    for and_group in group["elements"]:
-        for element in and_group["elements"]:
-            # Makes sure that we add the same element only once
-            unique_elements.update({element.hash(): element})
-    return {
-        "_type": "spec_or",
-        "elements": [
-            {
-                "_type": "spec_and",
-                "elements": [elem for elem in unique_elements.values()],
-            }
-        ],
-    }
-
-
-def create_ref_ast_dict_helper(ref_name: str) -> dict:
+def _create_ref_ast_dict_helper(ref_name: str) -> dict:
     return {
         "_type": "capture_ref",
         "elements": [{"_type": "var_name", "elements": [f"{ref_name}"]}],
@@ -913,3 +909,31 @@ def _create_member_ast_dict_helper(name: str, arguments: dict) -> list:
             "var_name": None,
         }
     ]
+
+
+# def uniquify_element_group(group: dict) -> dict:
+#     """Remove all duplicate elements from group."""
+#     unique_elements: Dict[Tuple[int, Spec]] = {}
+#     for element in group["elements"]:
+#         unique_elements.setdefault(element.hash(), element)
+#     new_group = group.copy()
+#     new_group["elements"] = [e for e in unique_elements.values()]
+#     return new_group
+
+
+# def convert_to_single_and_element_group(group: dict) -> dict:
+#     """Convert element group into a single 'and' group with unique elements."""
+#     unique_elements: Dict[Tuple[int, Spec]] = {}
+#     for and_group in group["elements"]:
+#         for element in and_group["elements"]:
+#             # Makes sure that we add the same element only once
+#             unique_elements.update({element.hash(): element})
+#     return {
+#         "_type": "spec_or",
+#         "elements": [
+#             {
+#                 "_type": "spec_and",
+#                 "elements": [elem for elem in unique_elements.values()],
+#             }
+#         ],
+#     }

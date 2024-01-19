@@ -27,7 +27,7 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import Element, FlowParamDef
+from nemoguardrails.colang.v1_1.lang.colang_ast import FlowParamDef
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
@@ -288,9 +288,6 @@ class InteractionLoopType(Enum):
     NEW = "new"  # Every new instance of the flow will live in its own new loop
     PARENT = "parent"  # Every new instance of the flow will live in the same loop as its the parent
     NAMED = "named"  # Every new instance of the flow will live in the loop with the given name
-
-
-ElementType = Union[Element, dict]
 
 
 @dataclass

@@ -73,6 +73,9 @@ class Element:
         return hash(_make_hashable(self))
 
 
+ElementType = Union[Element, dict]
+
+
 def _make_hashable(obj: Any) -> Any:
     """Make all subtypes of Element hashable."""
     if isinstance(obj, dict):
@@ -160,6 +163,8 @@ class SpecAnd(Element):
     """A conjunction of specs."""
 
     specs: List[Spec] = field(default_factory=list)
+    # TODO: Refactor to include this
+    # elements: List[Spec] = field(default_factory=list)
     _type: str = "spec_and"
 
 
@@ -169,6 +174,8 @@ class SpecOr(Element):
     """A disjunction of spects."""
 
     specs: List[Spec] = field(default_factory=list)
+    # TODO: Refactor to include this
+    # elements: List[Spec] = field(default_factory=list)
     _type: str = "spec_or"
 
 
@@ -198,7 +205,9 @@ class SpecOp(Element):
     """
 
     op: str = ""
-    spec: Spec = Spec()
+    # TODO: refactor this removing dict and use SpecAnd and SpecOr instead
+    spec: Union[Spec, dict] = Spec()
+    # spec: Union[Spec, SpecAnd, SpecOr] = Spec()
 
     # If the return value of the spec needs to be captured. The return value only makes sense
     # for await on flows and actions.
@@ -217,8 +226,8 @@ class SpecOp(Element):
 @dataclass
 class If(Element):
     expression: str = ""
-    then_elements: List[Element] = field(default_factory=list)
-    else_elements: Optional[List[Element]] = None
+    then_elements: List[ElementType] = field(default_factory=list)
+    else_elements: Optional[List[ElementType]] = None
     _type: str = "if"
 
 
@@ -226,8 +235,8 @@ class If(Element):
 @dataclass
 class When(Element):
     when_specs: List[SpecElementType] = field(default_factory=list)
-    then_elements: List[List[Element]] = field(default_factory=list)
-    else_elements: Optional[List[Element]] = None
+    then_elements: List[List[ElementType]] = field(default_factory=list)
+    else_elements: Optional[List[ElementType]] = None
     _type: str = "when"
 
 
@@ -235,7 +244,7 @@ class When(Element):
 @dataclass
 class While(Element):
     expression: str = ""
-    elements: List[Element] = field(default_factory=list)
+    elements: List[ElementType] = field(default_factory=list)
     _type: str = "while"
 
 
