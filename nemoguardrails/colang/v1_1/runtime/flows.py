@@ -27,7 +27,7 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import FlowParamDef
+from nemoguardrails.colang.v1_1.lang.colang_ast import ElementType, FlowParamDef
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
@@ -400,13 +400,13 @@ class FlowHead:
             return self.uid == other.uid
         return NotImplemented
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.uid)
 
     def __str__(self) -> str:
         return f"flow='{self.flow_state_uid.split(')',1)[0][1:]}' pos={self.position}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"FlowHead[uid={self.uid}, flow_state_uid={self.flow_state_uid}]"
 
 
@@ -499,7 +499,7 @@ class FlowState:
         self.status_updated = datetime.now()
 
     @property
-    def active_heads(self):
+    def active_heads(self) -> Dict[str, FlowHead]:
         """All active heads of this flow."""
         return {
             id: h
@@ -596,7 +596,7 @@ class FlowState:
         )
         return InternalEvent(event_type, arguments)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"FlowState[uid={self.uid}, flow_id={self.flow_id}, loop_id={self.loop_id}]"
         )

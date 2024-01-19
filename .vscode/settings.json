@@ -48,16 +48,29 @@
     "python.testing.unittestEnabled": false,
     //"python.envFile": "${workspaceFolder}/python_release.env",
 
+    // MYPY
+    "mypy-type-checker.args": [
+        "--ignore-missing-imports",
+        "--follow-imports=silent",
+        "--show-column-numbers",
+        "--disallow-untyped-defs",
+        "--disallow-untyped-calls"
+    ],
+
     // CSPELL
     "cSpell.words": [
+        "appendleft",
         "colang",
         "elif",
         "interruptible",
         "nemoguardrails",
+        "orwhen",
         "popleft",
+        "simpleeval",
         "subflow",
         "uids",
-        "UMIM"
+        "UMIM",
+        "uniquify"
     ],
     "cSpell.enableFiletypes": ["co", "colang"],
 

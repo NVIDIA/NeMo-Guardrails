@@ -27,6 +27,8 @@ log = logging.getLogger(__name__)
 
 
 class ColangParser:
+    """Colang 2.x parser class"""
+
     def __init__(self, include_source_mapping: bool = False):
         self.include_source_mapping = include_source_mapping
         self.grammar_path = os.path.join(
@@ -36,7 +38,7 @@ class ColangParser:
         # Initialize the Lark Parser
         self._lark_parser = load_lark_parser(self.grammar_path)
 
-    def get_parsing_tree(self, content: str):
+    def get_parsing_tree(self, content: str) -> dict:
         """Helper to get only the parsing tree.
 
         Args:
@@ -49,7 +51,10 @@ class ColangParser:
         # to avoid some issues arising from that is to append a new line at the end
         return self._lark_parser.parse(content + "\n")
 
-    def parse_content(self, content: str, print_tokens=False, print_parsing_tree=False):
+    def parse_content(
+        self, content: str, print_tokens: bool = False, print_parsing_tree: bool = False
+    ) -> dict:
+        """Parse the provided content and create element structure."""
         if print_tokens:
             tokens = list(self._lark_parser.lex(content))
             for token in tokens:
@@ -65,7 +70,7 @@ class ColangParser:
         )
         data = transformer.transform(tree)
 
-        result = {"flows": []}
+        result: dict = {"flows": []}
 
         # For the special case when we only have on flow in the colang file
         if isinstance(data, Flow):
@@ -79,7 +84,9 @@ class ColangParser:
         return result
 
 
-def parse_colang_file(filename: str, content: str, include_source_mapping: bool = True):
+def parse_colang_file(
+    _filename: str, content: str, include_source_mapping: bool = True
+) -> dict:
     """Parse the content of a .co."""
 
     colang_parser = ColangParser(include_source_mapping=include_source_mapping)
@@ -105,7 +112,7 @@ def parse_colang_file(filename: str, content: str, include_source_mapping: bool 
     return data
 
 
-def main():
+def main() -> None:
     paths = [
         "../../../../tests/colang/parser/v1_1/inputs/test6.co",
     ]

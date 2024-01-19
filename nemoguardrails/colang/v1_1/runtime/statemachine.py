@@ -182,7 +182,11 @@ def add_new_flow_instance(state: State, flow_state: FlowState) -> FlowState:
 def _create_event_reference(
     state: State, flow_state: FlowState, element: SpecOp, event: Event
 ) -> dict:
-    assert element.spec.ref and isinstance(element.spec.ref, dict)
+    assert (
+        isinstance(element.spec, Spec)
+        and element.spec.ref
+        and isinstance(element.spec.ref, dict)
+    )
     reference_name = element.spec.ref["elements"][0]["elements"][0].lstrip("$")
     new_event = get_event_from_element(state, flow_state, element)
     new_event.arguments.update(event.arguments)
@@ -553,6 +557,7 @@ def _handle_internal_event_matching(
         if (
             element is not None
             and isinstance(element, SpecOp)
+            and isinstance(element.spec, Spec)
             and element.spec.ref is not None
         ):
             flow_state.context.update(
@@ -863,6 +868,7 @@ def slide(
                 head.position += 1
 
             elif element.op == "_new_action_instance":
+                assert isinstance(element.spec, Spec)
                 assert (
                     element.spec.spec_type == SpecType.ACTION
                 ), "Only actions ca be instantiated!"
@@ -1410,9 +1416,12 @@ def _flow_head_changed(state: State, flow_state: FlowState, head: FlowHead) -> N
         _add_head_to_event_matching_structures(state, flow_state, head)
 
 
-def _add_head_to_event_matching_structures(state, flow_state, head) -> None:
+def _add_head_to_event_matching_structures(
+    state: State, flow_state: FlowState, head: FlowHead
+) -> None:
     flow_config = state.flow_configs[flow_state.flow_id]
     element = flow_config.elements[head.position]
+    assert isinstance(element, SpecOp)
     ref_event_name = get_event_name_from_element(state, flow_state, element)
     heads = state.event_matching_heads.get(ref_event_name, None)
     if heads is None:
@@ -1426,7 +1435,9 @@ def _add_head_to_event_matching_structures(state, flow_state, head) -> None:
     )
 
 
-def _remove_head_from_event_matching_structures(state, flow_state, head) -> bool:
+def _remove_head_from_event_matching_structures(
+    state: State, flow_state: FlowState, head: FlowHead
+) -> bool:
     event_name = state.event_matching_heads_reverse_map.get(
         (flow_state.uid, head.uid), None
     )
@@ -1525,6 +1536,7 @@ def is_action_op_element(element: ElementType) -> bool:
     return (
         isinstance(element, SpecOp)
         and element.op == "send"
+        and isinstance(element.spec, Spec)
         and element.spec.name not in InternalEvents.ALL
     )
 
@@ -1705,6 +1717,7 @@ def find_all_active_event_matchers(
             if head.status != FlowHeadStatus.INACTIVE:
                 element = flow_config.elements[head.position]
                 if is_match_op_element(element):
+                    element = cast(SpecOp, element)
                     if event:
                         element_event = get_event_from_element(
                             state, flow_state, element
