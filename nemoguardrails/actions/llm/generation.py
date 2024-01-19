@@ -107,6 +107,10 @@ class LLMGenerationActions:
         # We also initialize the environment for rendering bot messages
         self.env = Environment()
 
+        # If set, in passthrough mode, this function will be used instead of
+        # calling the LLM with the user input.
+        self.passthrough_fn = None
+
     async def init(self):
         # For Colang 1.1 we need to do some initial processing
         if self.config.colang_version == "1.1":
@@ -310,6 +314,7 @@ class LLMGenerationActions:
     async def generate_user_intent(
         self,
         events: List[dict],
+        context: dict,
         config: RailsConfig,
         llm: Optional[BaseLLM] = None,
         kb: Optional[KnowledgeBase] = None,
@@ -407,32 +412,71 @@ class LLMGenerationActions:
                     events=[new_event_dict("UserIntent", intent=user_intent)]
                 )
         else:
-            prompt = self.llm_task_manager.render_task_prompt(
-                task=Task.GENERAL, events=events
-            )
+            output_events = []
 
-            # Initialize the LLMCallInfo object
-            llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
+            # If we are in passthrough mode, we just use the input for prompting
+            if self.config.passthrough:
+                # We use the potentially updated $user_message. This means that even
+                # in passthrough mode, input rails can still alter the input.
+                prompt = event["text"]
 
-            # We make this call with temperature 0 to have it as deterministic as possible.
-            result = await llm_call(
-                llm,
-                prompt,
-                custom_callback_handlers=[streaming_handler_var.get()],
-                stop=["User:"],
-            )
+                if self.passthrough_fn:
+                    raw_output = await self.passthrough_fn(
+                        context=context, events=events
+                    )
 
-            text = result.strip()
-            if text.startswith('"'):
-                text = text[1:-1]
+                    # If the passthrough action returns a single value, we consider that
+                    # to be the text output
+                    if isinstance(raw_output, tuple) or isinstance(raw_output, list):
+                        text, passthrough_output = raw_output[0], raw_output[1]
+                    else:
+                        text = raw_output
+                        passthrough_output = None
+
+                    # We record the passthrough output in the context
+                    output_events.append(
+                        new_event_dict(
+                            "ContextUpdate",
+                            data={"passthrough_output": passthrough_output},
+                        )
+                    )
+                else:
+                    # Initialize the LLMCallInfo object
+                    llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
+
+                    text = await llm_call(
+                        llm,
+                        prompt,
+                        custom_callback_handlers=[streaming_handler_var.get()],
+                    )
+            else:
+                # Initialize the LLMCallInfo object
+                llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
+
+                # Otherwise, we still create an altered prompt.
+                prompt = self.llm_task_manager.render_task_prompt(
+                    task=Task.GENERAL, events=events
+                )
+
+                # We make this call with temperature 0 to have it as deterministic as possible.
+                result = await llm_call(
+                    llm,
+                    prompt,
+                    custom_callback_handlers=[streaming_handler_var.get()],
+                    stop=["User:"],
+                )
+
+                text = result.strip()
+                if text.startswith('"'):
+                    text = text[1:-1]
 
             # In streaming mode, we also push this.
             if streaming_handler:
                 await streaming_handler.push_chunk(text)
 
-            return ActionResult(
-                events=[new_event_dict("BotMessage", text=text)],
-            )
+            output_events.append(new_event_dict("BotMessage", text=text))
+
+            return ActionResult(events=output_events)
 
     async def _search_flows_index(self, text, max_results):
         """Search the index of flows."""
@@ -688,56 +732,104 @@ class LLMGenerationActions:
 
                             return ActionResult(events=[bot_message_event])
 
-            # We search for the most relevant similar bot utterance
-            examples = ""
-            # NOTE: disabling bot message index when there are no user messages
-            if self.user_messages and self.bot_message_index:
-                results = await self.bot_message_index.search(
-                    text=event["intent"], max_results=5
+            # If we are in passthrough mode, we just use the input for prompting
+            if self.config.passthrough:
+                # If we have a passthrough function, we use that.
+                if self.passthrough_fn:
+                    prompt = None
+                    raw_output = await self.passthrough_fn(
+                        context=context, events=events
+                    )
+
+                    # If the passthrough action returns a single value, we consider that
+                    # to be the text output
+                    if isinstance(raw_output, tuple) or isinstance(raw_output, list):
+                        result, passthrough_output = raw_output[0], raw_output[1]
+                    else:
+                        result = raw_output
+                        passthrough_output = None
+
+                    # We record the passthrough output in the context
+                    context_updates["passthrough_output"] = passthrough_output
+                else:
+                    # Otherwise, we call the LLM with the prompt coming from the user.
+
+                    t0 = time()
+
+                    # Initialize the LLMCallInfo object
+                    llm_call_info_var.set(
+                        LLMCallInfo(task=Task.GENERATE_BOT_MESSAGE.value)
+                    )
+
+                    # We use the potentially updated $user_message. This means that even
+                    # in passthrough mode, input rails can still alter the input.
+                    prompt = context.get("user_message")
+                    result = await llm_call(
+                        llm, prompt, custom_callback_handlers=[streaming_handler]
+                    )
+                    log.info(
+                        "--- :: LLM Bot Message Generation passthrough call took %.2f seconds",
+                        time() - t0,
+                    )
+            else:
+                # Otherwise, we go through the process of creating the altered prompt,
+                # which includes examples, relevant chunks, etc.
+
+                # We search for the most relevant similar bot utterance
+                examples = ""
+                # NOTE: disabling bot message index when there are no user messages
+                if self.config.user_messages and self.bot_message_index:
+                    results = await self.bot_message_index.search(
+                        text=event["intent"], max_results=5
+                    )
+
+                    # We add these in reverse order so the most relevant is towards the end.
+                    for result in reversed(results):
+                        examples += (
+                            f"bot {result.text}\n  \"{result.meta['text']}\"\n\n"
+                        )
+
+                # We compute the relevant chunks to be used as context
+                relevant_chunks = get_retrieved_relevant_chunks(events)
+
+                prompt_config = get_prompt(self.config, Task.GENERATE_BOT_MESSAGE)
+                prompt = self.llm_task_manager.render_task_prompt(
+                    task=Task.GENERATE_BOT_MESSAGE,
+                    events=events,
+                    context={"examples": examples, "relevant_chunks": relevant_chunks},
                 )
 
-                # We add these in reverse order so the most relevant is towards the end.
-                for result in reversed(results):
-                    examples += f"bot {result.text}\n  \"{result.meta['text']}\"\n\n"
+                t0 = time()
 
-            # We compute the relevant chunks to be used as context
-            relevant_chunks = get_retrieved_relevant_chunks(events)
+                if streaming_handler:
+                    # TODO: Figure out a more generic way to deal with this
+                    if prompt_config.output_parser == "verbose_v1":
+                        streaming_handler.set_pattern(
+                            prefix='Bot message: "', suffix='"'
+                        )
+                    else:
+                        streaming_handler.set_pattern(prefix='  "', suffix='"')
 
-            prompt_config = get_prompt(self.config, Task.GENERATE_BOT_MESSAGE)
-            prompt = self.llm_task_manager.render_task_prompt(
-                task=Task.GENERATE_BOT_MESSAGE,
-                events=events,
-                context={"examples": examples, "relevant_chunks": relevant_chunks},
-            )
+                # Initialize the LLMCallInfo object
+                llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_BOT_MESSAGE.value))
 
-            t0 = time()
+                result = await llm_call(
+                    llm, prompt, custom_callback_handlers=[streaming_handler]
+                )
+                log.info(
+                    "--- :: LLM Bot Message Generation call took %.2f seconds",
+                    time() - t0,
+                )
 
-            if streaming_handler:
-                # TODO: Figure out a more generic way to deal with this
-                if prompt_config.output_parser == "verbose_v1":
-                    streaming_handler.set_pattern(prefix='Bot message: "', suffix='"')
-                else:
-                    streaming_handler.set_pattern(prefix='  "', suffix='"')
+                # Parse the output using the associated parser
+                result = self.llm_task_manager.parse_task_output(
+                    Task.GENERATE_BOT_MESSAGE, output=result
+                )
 
-            # Initialize the LLMCallInfo object
-            llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_BOT_MESSAGE.value))
+                # TODO: catch openai.error.InvalidRequestError from exceeding max token length
 
-            result = await llm_call(
-                llm, prompt, custom_callback_handlers=[streaming_handler]
-            )
-            log.info(
-                "--- :: LLM Bot Message Generation call took %.2f seconds", time() - t0
-            )
-
-            # Parse the output using the associated parser
-            result = self.llm_task_manager.parse_task_output(
-                Task.GENERATE_BOT_MESSAGE, output=result
-            )
-
-            # TODO: catch openai.error.InvalidRequestError from exceeding max token length
-
-            result = get_multiline_response(result)
-            result = strip_quotes(result)
+                result = get_multiline_response(result)
+                result = strip_quotes(result)
 
             bot_utterance = result
 

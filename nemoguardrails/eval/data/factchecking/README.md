@@ -2,13 +2,12 @@
 
 To run the fact-checking rail, you can use the following command:
 
-```nemoguardrails evaluate fact-checking```
+```nemoguardrails evaluate fact-checking --config=path/to/guardrails/config```
 
 Here is a list of arguments that you can use to configure the fact checking rail:
 
+- `config`: The path to the guardrails configuration (this includes the LLM, the prompts and any other information).
 - `dataset-path`: Path to the dataset.
-- `llm`: The LLM provider to use. Default is openai.
-- `model-name`: The name of the model to use. Default is text-davinci-003.
 - `num-samples`: Number of samples to run the eval on. Default is 50.
 - `create-negatives`: Whether to generate synthetic negative examples or not. Default is True.
 - `output-dir`: The directory to save the output to. Default is eval_outputs/factchecking.
@@ -29,7 +28,7 @@ We require the input data to be in a json file with the following format:
 
 Usually, most datasets contain only positive entailment pairs, i.e., the answers are always grounded in the evidence passage. To reliably evaluate the fact checking rail, we need negative examples as well, i.e., examples where the answer is _not_ grounded in the evidence passage. Randomly sampling answers for other questions to be used as negatives leads to very easily identifiable negatives.
 
-To mine hard negatives, we use OpenAI text-davinci-003 to convert the positive entailment pairs to negative ones. We give the model the evidence and the answer, and ask it to subtly modify the answer to make it not grounded in the evidence. We then use the modified answer as a negative example.
+To mine hard negatives, we used OpenAI text-davinci-003 to convert the positive entailment pairs to negative ones. We give the model the evidence and the answer, and ask it to subtly modify the answer to make it not grounded in the evidence. We then use the modified answer as a negative example.
 
 Example:
 
@@ -50,7 +49,7 @@ By changing small details like the blood pressure value in the answer, the model
 
 In case you already have negative samples in your dataset, you can set the `create-negatives` flag to `False` and we will not generate synthetic negatives.
 
-```nemoguardrails evaluate fact-checking --create-negatives False```
+```nemoguardrails evaluate fact-checking --config=path/to/guardrails/config --create-negatives False```
 
 ## Using the MSMARCO Dataset
 
@@ -77,4 +76,4 @@ This will save the dataset to `msmarco.json`. An example from the dataset is sho
 
 You can then use this file to evaluate the fact checking rail.
 
-```nemoguardrails evaluate fact-checking --dataset-path msmarco.json```
+```nemoguardrails evaluate fact-checking --config=path/to/guardrails/config --dataset-path msmarco.json```

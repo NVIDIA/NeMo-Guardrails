@@ -28,6 +28,14 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 async def input_async(prompt_message: str = "") -> str:
+    """Asynchronously read user input with a prompt.
+
+    Args:
+        prompt_message (str): The message to display as a prompt. Defaults to an empty string.
+
+    Returns:
+        str: The user's input.
+    """
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, prompt, prompt_message)
 
@@ -39,6 +47,15 @@ async def _run_chat_v1_0(
     server_url: Optional[str] = None,
     config_id: Optional[str] = None,
 ):
+    """Asynchronously run a chat session in the terminal.
+
+    Args:
+        config_path (Optional[str]): The path to the configuration file. Defaults to None.
+        verbose (bool): Whether to run in verbose mode. Defaults to False.
+        streaming (bool): Whether to enable streaming mode. Defaults to False.
+        server_url (Optional[str]): The URL of the chat server. Defaults to None.
+        config_id (Optional[str]): The configuration ID. Defaults to None.
+    """
     if config_path is None and server_url is None:
         raise RuntimeError(
             "At least one of `config_path` or `server-url` must be provided."
@@ -374,7 +391,15 @@ def run_chat(
     server_url: Optional[str] = None,
     config_id: Optional[str] = None,
 ):
-    """Runs a chat session in the terminal."""
+    """Run a chat session in the terminal.
+
+    Args:
+        config_path (Optional[str]): The path to the configuration file. Defaults to None.
+        verbose (bool): Whether to run in verbose mode. Defaults to False.
+        streaming (bool): Whether to enable streaming mode. Defaults to False.
+        server_url (Optional[str]): The URL of the chat server. Defaults to None.
+        config_id (Optional[str]): The configuration ID. Defaults to None.
+    """
 
     rails_config = RailsConfig.from_path(config_path)
     rails_app = LLMRails(rails_config, verbose=verbose)

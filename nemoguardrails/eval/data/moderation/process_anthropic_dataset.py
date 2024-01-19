@@ -22,6 +22,13 @@ import typer
 def load_dataset(input_path, split="harmful"):
     """
     Loads the dataset from the given path.
+
+    Args:
+        input_path (str): The path to the dataset.
+        split (str, optional): The split of the dataset (harmful or helpful). Defaults to "harmful".
+
+    Returns:
+        dict or list: The loaded dataset.
     """
 
     if split == "harmful":
@@ -44,7 +51,7 @@ def split_messages(message):
         message (str): The message to split.
 
     Returns:
-        two lists - one for human messages and one for assistant messages.
+        tuple: Two lists - one for human messages and one for assistant messages.
     """
     messages = message.split("\n\n")[1:]
     human = [m.replace("Human: ", "") for i, m in enumerate(messages) if i % 2 == 0]
@@ -57,7 +64,13 @@ def split_messages(message):
 def process_anthropic_harmful_data(input_path: str, rating: float):
     """
     Extracts the first turn harmful prompts from the red team attempts dataset.
-    The dataset can be downloaded from Huggingface and has to be unzipped.
+
+    Args:
+        input_path (str): The path to the dataset.
+        rating (float): The harmfulness rating.
+
+    Returns:
+        None
     """
 
     dataset = load_dataset(input_path, split="harmful")
@@ -65,7 +78,8 @@ def process_anthropic_harmful_data(input_path: str, rating: float):
 
     for d in dataset:
         human_utterance, assistant_response = split_messages(d["transcript"])
-        if d["rating"] == rating:
+        # if d["rating"] == rating:
+        if d["task_descripton_harmlessness_score"] < -1:
             first_turn_data.append(human_utterance[0])
 
     with open(f"anthropic_harmful.txt", "w", encoding="utf-8") as f:
@@ -76,7 +90,12 @@ def process_anthropic_harmful_data(input_path: str, rating: float):
 def process_anthropic_helpful_data(input_path: str):
     """
     Extracts the first turn helpful prompts from the helpful-base dataset.
-    The dataset can be downloaded from Huggingface and it has to be unzipped.
+
+    Args:
+        input_path (str): The path to the dataset.
+
+    Returns:
+        None
     """
 
     dataset = load_dataset(input_path, split="helpful")
@@ -104,6 +123,14 @@ def main(
 ):
     """
     Extracts the first turn harmful or helpful prompts from the red team attempts dataset.
+
+    Args:
+        dataset_path (str): Path to the red team attempts dataset or the Anthropic Helpful-Base dataset.
+        rating (float): Rating by which to filter the Red Team Attempts dataset.
+        split (str): Whether prompts are harmful or helpful.
+
+    Returns:
+        None
     """
 
     if split == "harmful":

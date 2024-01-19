@@ -191,6 +191,8 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
             chunk = chunk.text
         elif isinstance(chunk, AIMessageChunk):
             chunk = chunk.content
+        elif isinstance(chunk, ChatGenerationChunk):
+            chunk = chunk.text
         elif isinstance(chunk, str) or chunk is None:
             pass
         else:

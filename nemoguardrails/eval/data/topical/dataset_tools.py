@@ -52,8 +52,28 @@ class IntentExample:
 class DatasetConnector:
     """A wrapper class to extract NLU specific data from a conversation dataset.
 
-    In its current form it can be used to extract intent samples and build
+    In its current form, it can be used to extract intent samples and build
     the corresponding `user.co` Colang file.
+
+    Attributes:
+        name (str): The name of the dataset connector.
+        intents (Set[Intent]): A set of unique Intent objects.
+        slot_names (Set[str]): A set of unique slot names.
+        domain_names (Set[str]): A set of unique domain names.
+        intent_examples (List[IntentExample]): A list of IntentExample objects.
+
+    Methods:
+        read_dataset(dataset_path: str) -> None:
+            Reads the dataset from the specified path, instantiating some or all of the fields of the object.
+            E.g., it can instantiate intent names, slot names, intent examples, etc.
+
+        get_intent_sample(intent_name: str, num_samples: int = 10) -> List[str]:
+            Generates a random sample of `num_samples` texts for the `intent_name`.
+            Inefficient implementation for now, as it passes through all intent samples to get the random subset.
+
+        write_colang_output(output_file_name: str = None, num_samples_per_intent: int = 20) -> None:
+            Creates an output file with pairs of turns and canonical forms.
+
     """
 
     name: str
@@ -65,12 +85,22 @@ class DatasetConnector:
     def read_dataset(self, dataset_path: str) -> None:
         """Reads the dataset from the specified path, instantiating some or all of the fields of the object.
         E.g. can instantiate intent names, slot names, intent examples etc.
+
+        Args:
+            dataset_path (str): The path to the conversation dataset.
         """
         raise NotImplemented
 
     def get_intent_sample(self, intent_name: str, num_samples: int = 10) -> List[str]:
         """Generates a random sample of `num_samples` texts for the `intent_name`.
         Inefficient implementation for now, as it passes through all intent samples to get the random subset.
+
+        Args:
+            intent_name (str): The name of the intent.
+            num_samples (int): The number of samples to generate.
+
+        Returns:
+            List[str]: A list of random samples for the specified intent.
         """
         all_samples_intent_name = []
         for intent in self.intent_examples:
@@ -86,7 +116,12 @@ class DatasetConnector:
     def write_colang_output(
         self, output_file_name: str = None, num_samples_per_intent: int = 20
     ):
-        """Creates an output file with pairs of turns and canonical forms"""
+        """Creates an output file with pairs of turns and canonical forms.
+
+        Args:
+            output_file_name (str): The name of the output file.
+            num_samples_per_intent (int): The number of samples per intent to include in the output.
+        """
         if output_file_name is None:
             return
 
@@ -131,7 +166,15 @@ class Banking77Connector(DatasetConnector):
     def _read_canonical_forms(
         canonical_path: str = BANKING77_CANONICAL_FORMS_FILE,
     ) -> Dict[str, str]:
-        """Reads the intent-canonical form mapping and returns it."""
+        """
+        Reads the intent-canonical form mapping and returns it.
+
+        Args:
+            canonical_path (str): The path to the file containing the intent-canonical form mapping.
+
+        Returns:
+            dict: A dictionary mapping intent names to canonical forms.
+        """
         intent_canonical_forms = dict()
 
         with open(canonical_path) as canonical_file:
@@ -150,8 +193,12 @@ class Banking77Connector(DatasetConnector):
         return intent_canonical_forms
 
     def read_dataset(self, dataset_path: str = BANKING77_FOLDER) -> None:
-        """Reads the dataset from the specified path, instantiating some or all of the fields of the object.
+        """
+        Reads the dataset from the specified path, instantiating some or all of the fields of the object.
         E.g. can instantiate intent names, slot names, intent examples etc.
+
+        Args:
+            dataset_path (str): The path to the Banking77 dataset.
         """
         train_path = dataset_path + "train.csv"
         test_path = dataset_path + "test.csv"
@@ -190,17 +237,34 @@ class Banking77Connector(DatasetConnector):
 
 
 class ChitChatConnector(DatasetConnector):
+    """A connector for handling ChitChat datasets.
+
+    This class extends the DatasetConnector to read ChitChat datasets, including intent canonical forms.
+    """
+
     CHITCHAT_FOLDER = "./chitchat/original_dataset/"
     CHITCHAT_CANONICAL_FORMS_FILE = "./chitchat/intent_canonical_forms.json"
 
     def __init__(self, name: str = "chitchat"):
+        """Initialize a ChitChatConnector instance.
+
+        Args:
+            name (str): The name of the connector.
+        """
         super().__init__(name=name)
 
     @staticmethod
     def _read_canonical_forms(
         canonical_path: str = CHITCHAT_CANONICAL_FORMS_FILE,
     ) -> Dict[str, str]:
-        """Reads the intent-canonical form mapping and returns it."""
+        """Reads the intent-canonical form mapping and returns it.
+
+        Args:
+            canonical_path (str): The path to the intent-canonical forms file.
+
+        Returns:
+            Dict[str, str]: A dictionary mapping intent names to canonical forms.
+        """
         intent_canonical_forms = dict()
 
         with open(canonical_path) as canonical_file:
@@ -219,8 +283,12 @@ class ChitChatConnector(DatasetConnector):
         return intent_canonical_forms
 
     def read_dataset(self, dataset_path: str = CHITCHAT_FOLDER) -> None:
-        """Reads the dataset from the specified path, instantiating some or all of the fields of the object.
-        E.g. can instantiate intent names, slot names, intent examples etc.
+        """Reads the ChitChat dataset from the specified path.
+
+        Instantiates intent names, slot names, and intent examples.
+
+        Args:
+            dataset_path (str): The path to the ChitChat dataset.
         """
         full_dataset_path = dataset_path + "nlu.md"
         path_dict = {

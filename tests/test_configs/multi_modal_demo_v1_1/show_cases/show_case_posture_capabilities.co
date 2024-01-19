@@ -1,7 +1,7 @@
 flow showcase posture capabilities
   bot ask "Now I am going to show you how my posture can be controlled based on me or you talking."
   wait 1.5
-  
+
   bot ask "I will switch between listening, talking, and an attentive posture."
   wait 1.5
 
@@ -10,10 +10,10 @@ flow showcase posture capabilities
 
   bot ask "So now observe how my posture changes when I am talking."
   wait 1.5
-  
+
   bot ask "And now it is your turn, you can say something now. Try a long sentence."
   wait 1.5
-  
+
   while True
     when user expressed done
       bot inform "That was fun."

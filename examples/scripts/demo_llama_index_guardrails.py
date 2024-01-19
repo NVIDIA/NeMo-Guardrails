@@ -50,7 +50,7 @@ YAML_CONFIG = """
 models:
   - type: main
     engine: openai
-    model: text-davinci-003
+    model: gpt-3.5-turbo-instruct
 """
 
 
@@ -71,7 +71,7 @@ def demo():
 
     def _get_llama_index_query_engine(llm: BaseLLM):
         docs = llama_index.SimpleDirectoryReader(
-            input_files=["../examples/grounding_rail/kb/report.md"]
+            input_files=["../examples/bots/abc/kb/employee-handbook.md"]
         ).load_data()
         llm_predictor = llama_index.LLMPredictor(llm=llm)
         index = llama_index.GPTVectorStoreIndex.from_documents(
@@ -101,7 +101,7 @@ def demo():
         _get_callable_query_engine(query_engine), name="llama_index_query"
     )
 
-    history = [{"role": "user", "content": "What is the current unemployment rate?"}]
+    history = [{"role": "user", "content": "How many vacation days do I get?"}]
     result = app.generate(messages=history)
     print(result)
 

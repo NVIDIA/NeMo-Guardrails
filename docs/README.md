@@ -23,9 +23,8 @@ The [`examples` folder](../examples) contains multiple examples that showcase a 
 
 * [Bots](../examples/bots): This section includes two example configurations.
   * [HelloWorldBot](../examples/bots/hello_world): This basic configuration instructs the bot to greet the user using "Hello World!" and to not talk about politics or the stock market.
-  * [InfoBot](../examples/bots/info): This more complex configuration includes topical rails, input and output moderation, retrieval augmented generation, fact-checking and hallucination detection.
+  * [ABCBot](../examples/bots/abc): This more complex configuration includes topical rails, input and output moderation and retrieval augmented generation.
 * [Configs](../examples/configs): These example configurations showcase specific NeMo Guardrails features, e.g., how to use various LLM providers, Retrieval Augmented Generation, streaming, red-teaming, authentication, etc.
-* [Notebooks](../examples/notebooks): These notebooks provide additional examples using Jupyter notebooks, e.g., creating a Pincone index that you can use with NeMo Guardrails.
 * [Scripts](../examples/scripts): These short scripts showcase various aspects of the main Python API.
 
 
@@ -54,7 +53,7 @@ The following guides explain in more details various specific topics:
 * [Embedding Search Providers](user_guides/advanced/embedding-search-providers.md): Learn about the core embedding search interface that NeMo guardrails uses for some of the core features.
 * [Event-based API](user_guides/advanced/event-based-api.md): Learn about the generic event-based interface that you can use to process additional information in your guardrails configuration.
 * [Nested AsyncIO Loop](user_guides/advanced/nested-async-loop.md): Understand some of the low level issues regarding `asyncio` and how they are handled in NeMo Guardrails.
-* [AlignScore deployment](user_guides/advanced/align_score_deployment.md): Learn how to deploy an AlignScore server either directly or using Docker.
+* [AlignScore deployment](user_guides/advanced/align-score-deployment.md): Learn how to deploy an AlignScore server either directly or using Docker.
 
 ## Evaluation Tools
 

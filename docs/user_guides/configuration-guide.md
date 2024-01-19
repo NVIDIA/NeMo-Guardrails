@@ -85,7 +85,7 @@ The meaning of the attributes is as follows:
 
 You can use any LLM provider that is supported by LangChain, e.g., `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `cohere`, `huggingface_endpoint`, `huggingface_hub`, `openai`, `self_hosted`, `self_hosted_hugging_face`. Check out the LangChain official documentation for the full list.
 
-**NOTE**: to use any of the providers, you will need to install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instruct you on what package should be installed.
+**NOTE**: to use any of the providers, you will need to install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instruct you on what packages should be installed.
 
 **IMPORTANT**: while from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g., `openai`, `nemollm`). For others, you can optimize the prompts yourself (see the [LLM Prompts](#llm-prompts) section).
 
@@ -100,12 +100,12 @@ models:
     model: gpt-43b-905
 ```
 
-You can also use customized NeMo LLM models for specific tasks, e.g., jailbreak detection and output moderation. For example:
+You can also use customized NeMo LLM models for specific tasks, e.g., self-checking the user input or the bot output. For example:
 
 ```yaml
 models:
   # ...
-  - type: check_jailbreak
+  - type: self_check_input
     engine: nemollm
     model: gpt-43b-002
     parameters:
@@ -282,10 +282,10 @@ The full list of tasks used by the NeMo Guardrails toolkit is the following:
 - `generate_next_steps`: generate the next thing the bot should do/say;
 - `generate_bot_message`: generate the next bot message;
 - `generate_value`: generate the value for a context variable (a.k.a. extract user-provided values);
-- `fact_checking`: check the facts from the bot response against the provided evidence;
-- `jailbreak_check`: check if there is an attempt to break moderation policies;
-- `output_moderation`: check if bot response is harmful, unethical or illegal;
-- `check_hallucination`: check if the bot response is a hallucination.
+- `self_check_facts`: check the facts from the bot response against the provided evidence;
+- `self_check_input`: check if the input from the user should be allowed;
+- `self_check_output`: check if bot response should be allowed;
+- `self_check_hallucination`: check if the bot response is a hallucination.
 
 You can check the default prompts in the [prompts](../../nemoguardrails/llm/prompts) folder.
 
@@ -351,8 +351,8 @@ rails:
   # Output rails are triggered after a bot message has been generated.
   output:
     flows:
-      - check facts
-      - check hallucination
+      - self check facts
+      - self check hallucination
       - check output sensitive data
       - ... # Other output rails
 
@@ -386,11 +386,11 @@ rails:
 Input rails process the message from the user. For example:
 
 ```colang
-define flow check jailbreak
-  $allowed = execute check_jailbreak
+define flow self check input
+  $allowed = execute self_check_input
 
   if not $allowed
-    bot inform cannot answer
+    bot refuse to respond
     stop
 ```
 
@@ -405,6 +405,53 @@ You can deactivate output rails temporarily for the next bot message, by setting
 ### Retrieval Rails
 
 Retrieval rails process the retrieved chunks, i.e., the `$relevant_chunks` variable.
+
+### Dialog Rails
+
+Dialog rails enforce specific predefined conversational paths. To use dialog rails, you must define canonical form forms for various user messages and use them to trigger the dialog flows. Check out the [Hello World](../../examples/bots/hello_world) bot for a quick example. For a slightly more advanced example, check out the [ABC bot](../../examples/bots/abc), where dialog rails are used to ensure the bot does not talk about specific topics.
+
+The use of dialog rails requires a three-step process:
+
+1. Generate canonical user message
+2. Decide next step(s) and execute them
+3. Generate bot utterance(s)
+
+For a detailed description, check out [The Guardrails Process](../architecture/README.md#the-guardrails-process).
+
+Each of the above steps may require an LLM call.
+
+#### Single Call Mode
+
+As of version `0.6.0`, NeMo Guardrails also supports a "single call" mode, in which all three steps are performed using a single LLM call. To enable it, you must set the `single_call.enabled` flag to `True` as shown below.
+
+```yaml
+rails:
+  dialog:
+    # Whether to try to use a single LLM call for generating the user intent, next step and bot message.
+    single_call:
+      enabled: True
+
+      # If a single call fails, whether to fall back to multiple LLM calls.
+      fallback_to_multiple_calls: True
+```
+
+On a typical RAG (Retrieval Augmented Generation) scenario, using this option brings a 3x improvement in terms of latency and uses 37% fewer tokens.
+
+**IMPORTANT**: currently, the *Single Call Mode* can only predict bot messages as next steps. This means that if you want the LLM to generalize and decide to execute an action on a dynamically generated user canonical form message, it will not work.
+
+#### Embeddings Only
+
+Another option to speed up the dialog rails is to use only the embeddings of the predefined user messages to decide the canonical form for the user input. To enable this option, you have to set the `embeddings_only` flag, as shown below:
+
+```yaml
+rails:
+  dialog:
+    user_messages:
+      # Whether to use only the embeddings when interpreting the user's message
+      embeddings_only: True
+```
+
+**IMPORTANT**: This is recommended only when enough examples are provided.
 
 ## Knowledge base Documents
 

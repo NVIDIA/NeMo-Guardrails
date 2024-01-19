@@ -86,5 +86,3 @@ POST /v1/chat/completions
     "stream": true
 }
 ```
-
-**TODO**: add explanations related to single-call vs. normal flow.

@@ -21,7 +21,19 @@ from nemoguardrails.colang.v1_0.runtime.utils import AttributeDict
 
 
 def eval_expression(expr, context):
-    """Evaluates the provided expression in the given context."""
+    """
+    Evaluates the provided expression in the given context.
+
+    Args:
+        expr (str): The expression to be evaluated.
+        context (dict): The context containing variable values.
+
+    Returns:
+        The result of evaluating the expression.
+
+    Raises:
+        Exception: If there is an error evaluating the expression.
+    """
     # If it's not a string, we should return it as such
     if expr is None:
         return None

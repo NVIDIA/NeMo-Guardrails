@@ -1,13 +1,13 @@
 # include core_flows.co
 
-flow bot ask yes no question  
+flow bot ask yes no question
   bot say $utterance
   when await user said "yes"
     return "yes"
   else when await user said "no"
     return "no"
   # Anything else than "yes" or "no" will abort the flow
-  
+
 flow main
   # Option 1
   start bot ask yes no question "Do you know me?" as $question
@@ -17,7 +17,7 @@ flow main
     bot say "No problem"
   else # In case when question flow fails (is aborted)
     bot say "Never mind"
-  
+
   # Option 2
   bot ask yes no question "Do you know me?" as $question
   if $question.Finished("yes")
@@ -25,9 +25,9 @@ flow main
   elif $question.Finished("no")
     bot say "No problem"
   # Failure of question flow cannot be handled since this flow will fail too
-  
+
   # Option 3 (Not really practical, but possible nevertheless)
-  bot ask yes no question "Do you know me?" 
+  bot ask yes no question "Do you know me?"
   when (bot ask yes no question "Do you know me?").Finished("yes")
     bot say "Great!"
   else when (bot ask yes no question "Do you know me?").Finished("no")

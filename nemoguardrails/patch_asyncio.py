@@ -40,6 +40,9 @@ def check_sync_call_from_async_loop():
     Returns
         True if a sync call is made from an async loop.
     """
+    if hasattr(asyncio, "_nest_patched"):
+        return False
+
     if nest_asyncio_patch_applied:
         return False
 

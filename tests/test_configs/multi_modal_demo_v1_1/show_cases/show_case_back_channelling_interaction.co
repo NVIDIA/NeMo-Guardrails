@@ -59,7 +59,7 @@ flow bot asks user how the day was
   start bot posture "listening"
 
   user said something with pause 3.5
-  
+
   send StopFlow(flow_id="bot reacts to nice things")
   send StopFlow(flow_id="bot reacts to bad things")
 

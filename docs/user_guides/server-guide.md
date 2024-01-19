@@ -53,9 +53,8 @@ GET /v1/rails/configs
 Sample response:
 ```json
 [
-  {"id":"topical_rails"},
-  {"id":"execution_rails"},
-  {"id":"jailbreak_check"},
+  {"id":"abc"},
+  {"id":"xyz"},
   ...
 ]
 ```
@@ -84,6 +83,45 @@ Sample response:
   "content": "I can help you with your benefits questions. What can I help you with?"
 }]
 ```
+
+### Threads
+
+The Guardrails Server has basic support for storing the conversation threads. This is useful when you can only send the latest user message(s) for a conversation rather than the entire history (e.g., from a third-party integration hook).
+
+#### Configuration
+
+To use server-side threads, you have to register a datastore. To do this, you must create a `config.py` file in the root of the configurations folder (i.e., the folder containing all the guardrails configurations the server must load). Inside `config.py` use the `register_datastore` function to register the datastore you want to use.
+
+Out-of-the-box, NeMo Guardrails has support for `MemoryStore` (useful for quick testing) and `RedisStore`. If you want to use a different backend, you can implement the [`DataStore`](../../nemoguardrails/server/datastore/datastore.py) interface and register a different instance in `config.py`.
+
+> NOTE: to use `RedisStore` you must install `aioredis >= 2.0.1`.
+
+Next, when making a call to the `/v1/chat/completions` endpoint, you must also include a `thread_id` field:
+
+```
+POST /v1/chat/completions
+```
+```json
+{
+    "config_id": "config_1",
+    "thread_id": "1234567890123456",
+    "messages": [{
+      "role":"user",
+      "content":"Hello! What can you do for me?"
+    }]
+}
+```
+
+> NOTE: for security reasons, the `thread_id` must have a minimum length of 16 characters.
+
+As an example, check out this [configuration](../../examples/configs/threads).
+
+
+#### Limitations
+
+Currently, threads are not supported when streaming mode is used (will be added in a future release).
+
+Threads are stored indefinitely; there is no cleanup mechanism.
 
 ### Chat UI
 

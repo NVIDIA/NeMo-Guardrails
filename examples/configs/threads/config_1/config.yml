@@ -1,0 +1,8 @@
+models: []
+
+# We set the embeddings only flag so that we don't need to use the LLM.
+# The test flow will use pre-defined flows and messages.
+rails:
+  dialog:
+    user_messages:
+      embeddings_only: True

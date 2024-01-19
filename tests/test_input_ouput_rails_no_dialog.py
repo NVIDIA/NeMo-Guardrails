@@ -18,14 +18,14 @@ from tests.utils import TestChat
 
 config = RailsConfig.from_content(
     """
-    define subflow example input rail
+    define flow example input rail
       if $user_message == "stupid"
-        bot inform cannot answer
+        bot refuse to respond
         stop
       else
         $user_message = $user_message + "!"
 
-    define subflow example output rail
+    define flow example output rail
       $bot_message = $bot_message + "!"
     """,
     """
@@ -47,7 +47,7 @@ def test_1():
     )
 
     chat >> "stupid"
-    chat << "I am not able to answer the question."
+    chat << "I'm sorry, I can't respond to that."
 
 
 def test_2():

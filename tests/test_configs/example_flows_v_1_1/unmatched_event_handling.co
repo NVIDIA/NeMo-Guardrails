@@ -1,7 +1,7 @@
 # include core_flows.co
 
 flow bot thinking
-  bot gesture "Thinking" 
+  bot gesture "Thinking"
 
 flow unmatched event handling
   match UnmatchedActionEventInternalEvent() as $event

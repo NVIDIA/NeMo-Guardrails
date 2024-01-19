@@ -14,17 +14,19 @@
 # limitations under the License.
 
 import json
+import logging
 import os
 from logging import log
 
 import tqdm
 import typer
 
-from nemoguardrails.eval.utils import initialize_llm, load_dataset
+from nemoguardrails import LLMRails
+from nemoguardrails.eval.utils import load_dataset
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task
 from nemoguardrails.llm.taskmanager import LLMTaskManager
-from nemoguardrails.rails.llm.config import Model, RailsConfig
+from nemoguardrails.rails.llm.config import RailsConfig
 
 
 class HallucinationRailsEvaluation:
@@ -33,15 +35,15 @@ class HallucinationRailsEvaluation:
 
     def __init__(
         self,
+        config: str,
         dataset_path: str = "data/hallucination/sample.txt",
-        llm: str = "openai",
-        model_name: str = "text-davinci-003",
         num_samples: int = 50,
         output_dir: str = "outputs/hallucination",
         write_outputs: bool = True,
     ):
         """
         A hallucination rails evaluation has the following parameters:
+        - config_path: the path to the config folder.
         - dataset_path: path to the dataset containing the prompts
         - llm: the LLM provider to use
         - model_name: the LLM model to use
@@ -50,13 +52,12 @@ class HallucinationRailsEvaluation:
         - write_outputs: whether to write the predictions to file
         """
 
+        self.config_path = config
         self.dataset_path = dataset_path
-
-        self.llm_provider = llm
-        self.model_config = Model(type="main", engine=llm, model=model_name)
-        self.rails_config = RailsConfig(models=[self.model_config])
+        self.rails_config = RailsConfig.from_path(self.config_path)
+        self.rails = LLMRails(self.rails_config)
+        self.llm = self.rails.llm
         self.llm_task_manager = LLMTaskManager(self.rails_config)
-        self.llm = initialize_llm(self.model_config)
 
         self.num_samples = num_samples
         self.dataset = load_dataset(self.dataset_path)[: self.num_samples]
@@ -69,8 +70,14 @@ class HallucinationRailsEvaluation:
     def get_extra_responses(self, prompt, num_responses=2):
         """
         Sample extra responses with temperature=1.0 from the LLM for hallucination check.
-        """
 
+        Args:
+            prompt (str): The prompt to generate extra responses for.
+            num_responses (int): Number of extra responses to generate.
+
+        Returns:
+            List[str]: The list of extra responses.
+        """
         extra_responses = []
         with llm_params(self.llm, temperature=1.0, max_tokens=100):
             for _ in range(num_responses):
@@ -83,6 +90,9 @@ class HallucinationRailsEvaluation:
         Run the hallucination rail evaluation.
         For each prompt, generate 2 extra responses from the LLM and check consistency with the bot response.
         If inconsistency is detected, flag the prompt as hallucination.
+
+        Returns:
+            Tuple[List[HallucinationPrediction], int]: Tuple containing hallucination predictions and the number flagged.
         """
 
         hallucination_check_predictions = []
@@ -95,8 +105,9 @@ class HallucinationRailsEvaluation:
             extra_responses = self.get_extra_responses(question, num_responses=2)
             if len(extra_responses) == 0:
                 # Log message and return that no hallucination was found
-                log.warning(
-                    f"No extra LLM responses were generated for '{bot_response}' hallucination check."
+                log(
+                    logging.WARNING,
+                    f"No extra LLM responses were generated for '{bot_response}' hallucination check.",
                 )
                 continue
 
@@ -135,24 +146,34 @@ class HallucinationRailsEvaluation:
 
         if self.write_outputs:
             dataset_name = os.path.basename(self.dataset_path).split(".")[0]
-            output_path = f"{self.output_dir}/{dataset_name}_{self.model_config.engine}_{self.model_config.model}_hallucination_predictions.json"
+            output_path = (
+                f"{self.output_dir}/{dataset_name}_hallucination_predictions.json"
+            )
             with open(output_path, "w") as f:
                 json.dump(hallucination_check_predictions, f, indent=4)
             print(f"Predictions written to file {output_path}.json")
 
 
 def main(
+    config: str,
     data_path: str = typer.Option("data/hallucination/sample.txt", help="Dataset path"),
-    llm: str = typer.Option("openai", help="LLM provider"),
-    model_name: str = typer.Option("text-davinci-003", help="LLM model name"),
     num_samples: int = typer.Option(50, help="Number of samples to evaluate"),
     output_dir: str = typer.Option("outputs/hallucination", help="Output directory"),
     write_outputs: bool = typer.Option(True, help="Write outputs to file"),
 ):
+    """
+    Main function to run the hallucination rails evaluation.
+
+    Args:
+        config (str): The path to the config folder.
+        data_path (str): Dataset path.
+        num_samples (int): Number of samples to evaluate.
+        output_dir (str): Output directory for predictions.
+        write_outputs (bool): Whether to write the predictions to a file.
+    """
     hallucination_check = HallucinationRailsEvaluation(
+        config,
         data_path,
-        llm,
-        model_name,
         num_samples,
         output_dir,
         write_outputs,

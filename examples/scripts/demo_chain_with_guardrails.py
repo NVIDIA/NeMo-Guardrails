@@ -51,7 +51,7 @@ YAML_CONFIG = """
 models:
   - type: main
     engine: openai
-    model: text-davinci-003
+    model: gpt-3.5-turbo-instruct
 """
 
 
@@ -64,7 +64,7 @@ def _get_qa_chain(llm):
         os.path.join(
             os.path.dirname(__file__),
             "../..",
-            "examples/grounding_rail/kb/report.md",
+            "examples/bots/abc/kb/employee-handbook.md",
         )
     )
     docs = loader.load()
@@ -97,15 +97,13 @@ def demo():
     # mode = "chat_with_guardrails"
 
     if mode == "chain":
-        query = "What is the current unemployment rate?"
+        query = "How many vacation days do I get?"
         result = qa_chain.run(query)
 
         print(result)
 
     elif mode == "chain_with_guardrails":
-        history = [
-            {"role": "user", "content": "What is the current unemployment rate?"}
-        ]
+        history = [{"role": "user", "content": "How many vacation days do I get?"}]
         result = app.generate(messages=history)
         print(result)
 

@@ -37,7 +37,7 @@ class Model(BaseModel):
     {
         "type": "main",
         "engine": "openai",
-        "model": "text-davinci-003"
+        "model": "gpt-3.5-turbo-instruct"
     }
     """
 
@@ -243,14 +243,10 @@ class DialogRails(BaseModel):
 class FactCheckingRailConfig(BaseModel):
     """Configuration data for the fact-checking rail."""
 
-    provider: str = Field(
-        default="ask_llm",
-        description="The fact-checking provider. Supported values: 'ask_llm', 'align_score'",
-    )
     parameters: Dict[str, Any] = Field(default_factory=dict)
-    fallback_to_ask_llm: bool = Field(
+    fallback_to_self_check: bool = Field(
         default=False,
-        description="Whether to fall back to asking the main LLM for fact-checkin if other providers fail.",
+        description="Whether to fall back to self-check if another method fail.",
     )
 
 
@@ -352,6 +348,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "core",
         "rails",
         "streaming",
+        "passthrough",
     ]
 
     for field in additional_fields:
@@ -426,7 +423,7 @@ class RailsConfig(BaseModel):
         description="The lowest temperature that should be used for the LLM.",
     )
 
-    # This should only be enabled for highly capable LLMs i.e. ~text-davinci-003.
+    # This should only be enabled for highly capable LLMs i.e. gpt-3.5-turbo-instruct or similar.
     enable_multi_step_generation: Optional[bool] = Field(
         default=False,
         description="Whether to enable multi-step generation for the LLM.",
@@ -458,6 +455,58 @@ class RailsConfig(BaseModel):
         default=False,
         description="Whether this configuration should use streaming mode or not.",
     )
+
+    passthrough: bool = Field(
+        default=False,
+        description="Weather the original prompt should pass through the guardrails configuration as is. "
+        "This means it will not be altered in any way. ",
+    )
+
+    @root_validator(pre=True, allow_reuse=True)
+    def check_prompt_exist_for_self_check_rails(cls, values):
+        rails = values.get("rails", {})
+
+        enabled_input_rails = rails.get("input", {}).get("flows", [])
+        enabled_output_rails = rails.get("output", {}).get("flows", [])
+        provided_task_prompts = [
+            prompt.get("task") for prompt in values.get("prompts", [])
+        ]
+
+        # Input moderation prompt verification
+        if (
+            "self check input" in enabled_input_rails
+            and "self_check_input" not in provided_task_prompts
+        ):
+            raise ValueError("You must provide a `self_check_input` prompt template.")
+        if (
+            "llama guard check input" in enabled_input_rails
+            and "llama_guard_check_input" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `llama_guard_check_input` prompt template."
+            )
+
+        # Output moderation prompt verification
+        if (
+            "self check output" in enabled_output_rails
+            and "self_check_output" not in provided_task_prompts
+        ):
+            raise ValueError("You must provide a `self_check_output` prompt template.")
+        if (
+            "llama guard check output" in enabled_output_rails
+            and "llama_guard_check_output" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `llama_guard_check_output` prompt template."
+            )
+
+        if (
+            "self check facts" in enabled_output_rails
+            and "self_check_facts" not in provided_task_prompts
+        ):
+            raise ValueError("You must provide a `self_check_facts` prompt template.")
+
+        return values
 
     @staticmethod
     def from_path(

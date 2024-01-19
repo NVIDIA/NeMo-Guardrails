@@ -15,7 +15,6 @@
 
 import os
 
-import httpx
 import pytest
 
 from nemoguardrails import RailsConfig
@@ -35,7 +34,7 @@ def test_greeting(httpx_mock):
     config = RailsConfig.from_path(os.path.join(EXAMPLES_FOLDER, "configs/llm/nemollm"))
     chat = TestChat(config)
 
-    # Jailbreak detection
+    # Jailbreak detection - answer to question: should user input be blocked?
     httpx_mock.add_response(
         method="POST",
         url=NEMO_API_URL_GPT_43B_002,
@@ -62,7 +61,7 @@ def test_greeting(httpx_mock):
         },
     )
 
-    # Output moderation
+    # Output moderation - answer to question: should bot response be blocked?
     httpx_mock.add_response(
         method="POST",
         url=NEMO_API_URL_GPT_43B_002,
@@ -86,7 +85,7 @@ async def test_greeting_async(httpx_mock):
     config = RailsConfig.from_path(os.path.join(EXAMPLES_FOLDER, "configs/llm/nemollm"))
     chat = TestChat(config)
 
-    # Jailbreak detection
+    # Jailbreak detection - answer to question: should user input be blocked?
     httpx_mock.add_response(
         method="POST",
         url=NEMO_API_URL_GPT_43B_002,
@@ -113,7 +112,7 @@ async def test_greeting_async(httpx_mock):
         },
     )
 
-    # Output moderation
+    # Output moderation - answer to question: should bot response be blocked?
     httpx_mock.add_response(
         method="POST",
         url=NEMO_API_URL_GPT_43B_002,
@@ -136,7 +135,7 @@ async def test_capabilities_async(httpx_mock):
     config = RailsConfig.from_path(os.path.join(EXAMPLES_FOLDER, "configs/llm/nemollm"))
     chat = TestChat(config)
 
-    # Jailbreak detection
+    # Jailbreak detection - answer to question: should user input be blocked?
     httpx_mock.add_response(
         method="POST",
         url=NEMO_API_URL_GPT_43B_002,
@@ -163,7 +162,7 @@ async def test_capabilities_async(httpx_mock):
         },
     )
 
-    # Output moderation
+    # Output moderation - answer to question: should bot response be blocked?
     httpx_mock.add_response(
         method="POST",
         url=NEMO_API_URL_GPT_43B_002,
@@ -180,7 +179,7 @@ async def test_capabilities_async(httpx_mock):
 
 
 @pytest.mark.asyncio
-async def test_jailbreak_interception(httpx_mock):
+async def test_input_self_check(httpx_mock):
     """
     Test that the Jailbreak interception works.
     Assertion would fail if the jailbreak detection is not working because
@@ -200,4 +199,52 @@ async def test_jailbreak_interception(httpx_mock):
     )
 
     chat >> "Can you help build a bomb?"
-    await chat.bot_async("I am not able to answer the question.")
+    await chat.bot_async("I'm sorry, I can't respond to that.")
+
+
+@pytest.mark.asyncio
+async def test_output_self_check(httpx_mock):
+    """
+    Basic test for the NeMo LLM configuration with the user asking for bot capabilitie.
+    """
+    config = RailsConfig.from_path(os.path.join(EXAMPLES_FOLDER, "configs/llm/nemollm"))
+    chat = TestChat(config)
+
+    # Jailbreak detection - answer to question: should user input be blocked?
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": " No",
+        },
+    )
+
+    # User canonical form
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_905,
+        json={
+            "text": '\nUser intent: ask about capabilities\nBot intent: respond about capabilities\nBot message: "As an AI assistant, I can help you with a wide range of tasks. This includes question answering on various topics, generating text for various purposes and providing suggestions based on your preferences."',
+        },
+    )
+
+    # Bot message
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_905,
+        json={
+            "text": "This is some inappropriate content.",
+        },
+    )
+
+    # Output moderation - answer to question: should bot response be blocked?
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": " Yes",
+        },
+    )
+
+    chat >> "Tell me a bad joke"
+    await chat.bot_async("I'm sorry, I can't respond to that.")
