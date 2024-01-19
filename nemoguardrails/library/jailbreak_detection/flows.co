@@ -1,10 +1,11 @@
-define flow jailbreak check heuristics
+define subflow jailbreak check heuristics
   """
   Heuristic checks to assess whether the user's prompt is an attempted jailbreak.
   """
-  $is_jailbreak = execute jailbreak_heuristics
+  $is_jailbreak = execute jailbreak_heuristic_check
   if $is_jailbreak
     bot inform user clarify question
+    stop
 
 define bot inform user clarify question
   "The previous request seems to violate my system prompt. Could you rephrase?"
