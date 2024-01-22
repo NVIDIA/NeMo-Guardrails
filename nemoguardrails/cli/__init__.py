@@ -76,7 +76,7 @@ def chat(
     if len(debug_level) == 1:
         root_logger = logging.getLogger()
         root_logger.addHandler(RichHandler(markup=True))
-        logging.getLogger().setLevel(debug_level[0])
+        root_logger.setLevel(debug_level[0])
 
     typer.echo("Starting the chat (Press Ctrl + C to quit) ...")
     run_chat(

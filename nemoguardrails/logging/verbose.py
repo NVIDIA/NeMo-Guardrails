@@ -177,8 +177,9 @@ def set_verbose(verbose: bool):
     if verbose:
         root_logger = logging.getLogger()
 
-        # We set the root logger to INFO so that we can see the messages from the VerboseHandler.
-        root_logger.setLevel(logging.INFO)
+        # We make sure that the root logger is at least INFO so that we can see the messages from the VerboseHandler.
+        if root_logger.level > logging.INFO:
+            root_logger.setLevel(logging.INFO)
 
         # We make sure the log level for the default root console handler is set to WARNING.
         for handler in root_logger.handlers:
