@@ -1,0 +1,15 @@
+define subflow check input gender bias
+  $result = execute call autoguard gender bias api
+  if $result == True
+     # We need to provide a warning in this case
+     bot refuse to respond gender bias
+     stop
+
+def bot refuse to respond gender bias
+  "Gender bias in prompt detected. I'm sorry, I can't respond to that."
+
+define subflow check output gender bias
+  $result = execute call autoguard gender bias api
+  if $result == True
+     # We need to provide a warning in this case
+     $bot_message = $bot_message + " Attention: Response has potential gender bias"
