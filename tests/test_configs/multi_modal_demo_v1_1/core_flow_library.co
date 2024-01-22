@@ -7,12 +7,12 @@ flow user said $text
   # meta: exclude from llm
   # meta: user action
   match UtteranceUserAction.Finished(final_transcript=$text) as $event
-  return $event.arguments.final_transcript
+  $transcript = $event.arguments.final_transcript
 
 flow user saying $text
   # meta: exclude from llm
   match UtteranceUserAction.TranscriptUpdated(interim_transcript=r"(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$") as $event
-  return $event.arguments.interim_transcript
+  $transcript = $event.arguments.interim_transcript
 
 flow user started saying something
   # meta: exclude from llm
@@ -21,31 +21,31 @@ flow user started saying something
 flow user typing $text
   # meta: exclude from llm
   match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*({{$text}})((\s*\w+\s*){0,2})\W*$"}]) as $event
-  return $event.arguments.interim_inputs
+  $inputs = $event.arguments.interim_inputs
 
 flow user said something
   # meta: exclude from llm
   match UtteranceUserAction.Finished() as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
-  return $event.arguments.final_transcript
+  $transcript = $event.arguments.final_transcript
 
 flow user said something unexpected
   # meta: exclude from llm
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=None)
-  return $event.arguments.final_transcript
+  $transcript = $event.arguments.final_transcript
 
 flow user saying something
   # meta: exclude from llm
   match UtteranceUserAction.TranscriptUpdated() as $event
   #send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
-  return $event.arguments.interim_transcript
+  $transcript = $event.arguments.final_transcript
 
 flow user selected choice $choice_id
   # meta: exclude from llm
   # meta: user action
   match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
-  return $event.arguments.current_choice
+  $choice = $event.arguments.current_choice
 
 flow user has selected choice $choice_id
   # meta: exclude from llm
@@ -56,7 +56,7 @@ flow user has selected choice $choice_id
 flow unhandled user intent
   # meta: exclude from llm
   match UnhandledEvent(event="FinishFlow", flow_id=r"^user ") as $event
-  return $event.arguments.flow_id
+  $intent = $event.arguments.flow_id
 
 flow user was silent $time_s
   """Triggers when user was silent for $time_s seconds."""
@@ -331,7 +331,7 @@ flow track visual choice selection state
     $choice_selection_state = None
 
 # ----------------------------------
-# Core mechanic flows
+# Utility flows
 # ----------------------------------
 
 flow finish all bot actions
@@ -357,20 +357,6 @@ flow wait $time_s $timer_id="wait_timer_{{uid()}}"
   # meta: exclude from llm
   # meta: loop_id=NEW
   await TimerBotAction(timer_name=$timer_id, duration=$time_s)
-
-flow llm response pooling $interval
-  # meta: exclude from llm
-  # meta: loop_id=llm_response_pooling
-  match StartGenerateUserIntentAction() as $event_ref
-    or StartGenerateFlowContinuationAction() as $event_ref
-    or StartGenerateFlowFromNameAction() as $event_ref
-    or StartGenerateValueAction() as $event_ref
-    or StartGenerateFlowFromInstructionsAction() as $event_ref
-  start repeating timer "llm_response_pooling" $interval as $pooling_timer
-  start bot posture "Thinking, idle" as $posture
-  match $event_ref.action.Finished()
-  send $pooling_timer.Stop()
-  send $posture.Stop()
 
 flow catch colang errors
   """A flow to catch any runtime Colang errors"""
@@ -404,20 +390,53 @@ flow repeating timer $timer_id $interval_s
     await wait $interval_s $timer_id
     # await TimerBotAction(timer_name=$timer_id, duration=$interval_s)
 
-flow bot respond to user said something
-  """This flow will react to anything the user said with an LLM generated answer."""
+flow await_flow_by_name $flow_name
+  $new_flow_start_uid = "{{uid()}}"
+  send StartFlow(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid)
+  match FlowStarted(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid) as $event_ref
+  match $event_ref.flow.Finished()
+
+flow interruption handling bot talking $mode="inform"
+  """Handling the bot talking interruption reaction."""
   # meta: exclude from llm
+  # meta: loop_id=bot_interruption
+  user interrupted bot talking
+  if $mode == "interrupt"
+    finish all bot actions
+    log "Bot talking stopped"
+  elif $mode == "inform"
+    start VisualInformationSceneAction(title="Please wait with talking!", support_prompts=["You should only talk after the avatar."], content=[])
+    wait 3.0
+    log "Bot informed user not to talk"
+  elif $mode == "ignore"
+    log "Bot ignored user interruption"
 
-  match UtteranceUserActionFinished() as $event
+# ----------------------------------
+# LLM mechanics
+# ----------------------------------
 
-flow fallback user said
+flow llm response pooling $interval
+  # meta: exclude from llm
+  # meta: loop_id=llm_response_pooling
+  match StartGenerateUserIntentAction() as $event_ref
+    or StartGenerateFlowContinuationAction() as $event_ref
+    or StartGenerateFlowFromNameAction() as $event_ref
+    or StartGenerateValueAction() as $event_ref
+    or StartGenerateFlowFromInstructionsAction() as $event_ref
+  start repeating timer "llm_response_pooling" $interval as $pooling_timer
+  start bot posture "Thinking, idle" as $posture
+  match $event_ref.action.Finished()
+  send $pooling_timer.Stop()
+  send $posture.Stop()
+
+flow llm trigger user intent for unhandled user utterance
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   # meta: exclude from llm
   global $bot_talking_state
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   if $bot_talking_state == False
     $transcript = $event.arguments.final_transcript
-    log "fallback user said: {{$transcript}}"
+    log "llm trigger user intent for unhandled user utterance: {{$transcript}}"
     $action = 'user said "{{$transcript}}"'
     $intent = await llm derive user intent from user action $action 10
 
@@ -434,24 +453,6 @@ flow llm derive user intent from user action $user_action $max_example_flows
   $intent = await GenerateUserIntentAction(user_action=$user_action, max_example_flows=$max_example_flows)
   return $intent
 
-flow bot response to unexpected user intent $intent
-  activate fallback user intent
-  send FinishFlow(flow_id=$intent)
-
-flow _flow_by_name $flow_name
-  $new_flow_start_uid = "{{uid()}}"
-  send StartFlow(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid)
-  match FlowStarted(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid) as $event_ref
-  match $event_ref.flow.Finished()
-
-flow fallback user intent
-  """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
-  # meta: exclude from llm
-  await unhandled user intent
-  $flow_name = await llm create interaction continuation
-  await _flow_by_name $flow_name
-  await RemoveFlowsAction(flow_ids=[$flow_name])
-
 flow llm create interaction continuation
   # Generate continuation based current interaction history
   $flow_info = await GenerateFlowContinuationAction(temperature=0.1)
@@ -466,14 +467,26 @@ flow llm create interaction continuation
 
   return $flow_info.name
 
-flow llm interaction continuation
+flow llm continue interaction
   # meta: exclude from llm
   $generated_flow_name = await llm create interaction continuation
   if $generated_flow_name != None
-    await _flow_by_name $generated_flow_name
+    await await_flow_by_name $generated_flow_name
     await RemoveFlowsAction(flow_ids=[$generated_flow_name])
 
-flow flows fallback
+# ----------------------------------
+# Experimental flows
+# ----------------------------------
+
+flow respond to unhandled user intent
+  """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
+  # meta: exclude from llm
+  await unhandled user intent
+  $flow_name = await llm create interaction continuation
+  await await_flow_by_name $flow_name
+  await RemoveFlowsAction(flow_ids=[$flow_name])
+
+flow handle undefined flow starts
   """We want to start an undefined flow."""
   # meta: exclude from llm
 
@@ -499,8 +512,9 @@ flow flows fallback
     send StartFlow(flow_id=$event.arguments.flow_id, flow_start_uid=$new_flow_start_uid)
     match FlowStarted(flow_id=$event.arguments.flow_id, flow_start_uid=$new_flow_start_uid) as $event_ref
     match $event_ref.flow.Finished()
+    await RemoveFlowsAction(flow_ids=[$event.arguments.flow_id])
 
-flow do $instructions
+flow llm execute instruction $instructions
   """This will create a new flow based on the provided instructions and start it."""
   # meta: exclude from llm
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
@@ -511,24 +525,16 @@ flow do $instructions
   send StartFlow(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid)
   match FlowStarted(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid) as $event_ref
   match $event_ref.flow.Finished()
+  await RemoveFlowsAction(flow_ids=[$flow_info.name])
+
+flow user requested a task
+  # meta: user intent
+  user said "do something"
+    or user said "can you do something"
+    or user said "please do"
 
 flow custom instructions
   # meta: exclude from llm
   user requested a task
   $instructions = await GetLastUserMessageAction()
   do $instructions
-
-flow interruption handling bot talking $mode="inform"
-  """Handling the bot talking interruption reaction."""
-  # meta: exclude from llm
-  # meta: loop_id=bot_interruption
-  user interrupted bot talking
-  if $mode == "interrupt"
-    finish all bot actions
-    log "Bot talking stopped"
-  elif $mode == "inform"
-    start VisualInformationSceneAction(title="Please wait with talking!", support_prompts=["You should only talk after the avatar."], content=[])
-    wait 3.0
-    log "Bot informed user not to talk"
-  elif $mode == "ignore"
-    log "Bot ignored user interruption"
