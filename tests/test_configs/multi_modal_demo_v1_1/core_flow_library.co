@@ -415,30 +415,30 @@ flow interruption handling bot talking $mode="inform"
 # LLM mechanics
 # ----------------------------------
 
-flow llm response pooling $interval
+flow poll llm request response $interval
   # meta: exclude from llm
-  # meta: loop_id=llm_response_pooling
+  # meta: loop_id=llm_response_polling
   match StartGenerateUserIntentAction() as $event_ref
     or StartGenerateFlowContinuationAction() as $event_ref
     or StartGenerateFlowFromNameAction() as $event_ref
     or StartGenerateValueAction() as $event_ref
     or StartGenerateFlowFromInstructionsAction() as $event_ref
-  start repeating timer "llm_response_pooling" $interval as $pooling_timer
+  start repeating timer "llm_response_polling" $interval as $polling_timer
   start bot posture "Thinking, idle" as $posture
   match $event_ref.action.Finished()
-  send $pooling_timer.Stop()
+  send $polling_timer.Stop()
   send $posture.Stop()
 
-flow llm trigger user intent for unhandled user utterance
+flow trigger user intent for unhandled user utterance
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   # meta: exclude from llm
   global $bot_talking_state
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   if $bot_talking_state == False
     $transcript = $event.arguments.final_transcript
-    log "llm trigger user intent for unhandled user utterance: {{$transcript}}"
+    log "trigger user intent for unhandled user utterance: {{$transcript}}"
     $action = 'user said "{{$transcript}}"'
-    $intent = await llm derive user intent from user action $action 10
+    $intent = await derive user intent from user action $action 10
 
   # We need to log the user action
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=$intent)
@@ -448,12 +448,12 @@ flow llm trigger user intent for unhandled user utterance
   # Generate the 'user intent' by sending out the FinishFlow event
   send FinishFlow(flow_id=$intent)
 
-flow llm derive user intent from user action $user_action $max_example_flows
+flow derive user intent from user action $user_action $max_example_flows
   # meta: exclude from llm
   $intent = await GenerateUserIntentAction(user_action=$user_action, max_example_flows=$max_example_flows)
   return $intent
 
-flow llm create interaction continuation
+flow generate interaction continuation
   # Generate continuation based current interaction history
   $flow_info = await GenerateFlowContinuationAction(temperature=0.1)
 
@@ -467,9 +467,9 @@ flow llm create interaction continuation
 
   return $flow_info.name
 
-flow llm continue interaction
+flow generate then continue interaction
   # meta: exclude from llm
-  $generated_flow_name = await llm create interaction continuation
+  $generated_flow_name = await generate interaction continuation
   if $generated_flow_name != None
     await await_flow_by_name $generated_flow_name
     await RemoveFlowsAction(flow_ids=[$generated_flow_name])
@@ -482,7 +482,7 @@ flow respond to unhandled user intent
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   # meta: exclude from llm
   await unhandled user intent
-  $flow_name = await llm create interaction continuation
+  $flow_name = await generate interaction continuation
   await await_flow_by_name $flow_name
   await RemoveFlowsAction(flow_ids=[$flow_name])
 
@@ -514,7 +514,7 @@ flow handle undefined flow starts
     match $event_ref.flow.Finished()
     await RemoveFlowsAction(flow_ids=[$event.arguments.flow_id])
 
-flow llm execute instruction $instructions
+flow execute llm instruction$instructions
   """This will create a new flow based on the provided instructions and start it."""
   # meta: exclude from llm
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
