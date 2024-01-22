@@ -96,7 +96,7 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
                 + Styles.PROMPT
                 + "\n"
                 + msg.content
-                for msg in messages[0]
+                for msg in messages[0] + Styles.RESET_ALL
             ]
         )
 

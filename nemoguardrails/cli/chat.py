@@ -21,6 +21,7 @@ from prompt_toolkit import prompt
 from prompt_toolkit.patch_stdout import patch_stdout
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.logging.verbose import Styles
 from nemoguardrails.streaming import StreamingHandler
 from nemoguardrails.utils import new_event_dict
 
@@ -94,7 +95,7 @@ async def _run_chat_v1_0(
 
             if not streaming or not rails_app.main_llm_supports_streaming:
                 # We print bot messages in green.
-                print(f"\033[92m{bot_message['content']}\033[0m")
+                print(Styles.GREEN + f"{bot_message['content']}" + Styles.RESET_ALL)
         else:
             data = {
                 "config_id": config_id,
@@ -111,7 +112,7 @@ async def _run_chat_v1_0(
                         bot_message_text = ""
                         async for chunk in response.content.iter_any():
                             chunk = chunk.decode("utf-8")
-                            print(f"\033[92m{chunk}\033[0m", end="")
+                            print(Styles.GREEN + f"{chunk}" + Styles.RESET_ALL, end="")
                             bot_message_text += chunk
                         print("")
 
@@ -121,12 +122,16 @@ async def _run_chat_v1_0(
                         bot_message = result["messages"][0]
 
                         # We print bot messages in green.
-                        print(f"\033[92m{bot_message['content']}\033[0m")
+                        print(
+                            Styles.GREEN
+                            + f"{bot_message['content']}"
+                            + Styles.RESET_ALL
+                        )
 
         history.append(bot_message)
 
         # We print bot messages in green.
-        print(f"\033[92m{bot_message['content']}\033[0m")
+        print(Styles.GREEN + f"{bot_message['content']}" + Styles.RESET_ALL)
 
 
 async def _run_chat_v1_1(rails_app: LLMRails):
@@ -140,9 +145,15 @@ async def _run_chat_v1_1(rails_app: LLMRails):
     # Start an asynchronous timer
     async def _start_timer(timer_name: str, delay_seconds: float, action_uid: str):
         nonlocal input_events
-        print(f"Timer {timer_name}/{action_uid} started.")
+        # print(
+        #     Styles.GREY + f"timer (start): {timer_name}/{action_uid}" + Styles.RESET_ALL
+        # )
         await asyncio.sleep(delay_seconds)
-        print(f"Timer {timer_name}/{action_uid} is up!")
+        # print(
+        #     Styles.GREY
+        #     + f"timer (finished): {timer_name}/{action_uid}"
+        #     + Styles.RESET_ALL
+        # )
         input_events.append(
             new_event_dict(
                 "TimerBotActionFinished",
@@ -167,7 +178,12 @@ async def _run_chat_v1_1(rails_app: LLMRails):
 
             if event["type"] == "StartUtteranceBotAction":
                 # We print bot messages in green.
-                print(f"\033[92m{event['script']}\033[0m")
+                print(
+                    Styles.BLACK
+                    + Styles.GREEN_BACKGROUND
+                    + f"bot utterance: {event['script']}"
+                    + Styles.RESET_ALL
+                )
 
                 input_events.append(
                     new_event_dict(
@@ -185,7 +201,12 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 )
             elif event["type"] == "StartGestureBotAction":
                 # We print gesture messages in green.
-                print(f"\033[92mgesture: {event['gesture']}\033[0m")
+                print(
+                    Styles.BLACK
+                    + Styles.BLUE_BACKGROUND
+                    + f"bot gesture: {event['gesture']}"
+                    + Styles.RESET_ALL
+                )
 
                 input_events.append(
                     new_event_dict(
@@ -204,7 +225,10 @@ async def _run_chat_v1_1(rails_app: LLMRails):
             elif event["type"] == "StartPostureBotAction":
                 # We print posture messages in green.
                 print(
-                    f"\033[92mstart: posture (posture={event['posture']}, action_uid={event['action_uid']}))\033[0m"
+                    Styles.BLACK
+                    + Styles.BLUE_BACKGROUND
+                    + f"bot posture (start): (posture={event['posture']}, action_uid={event['action_uid']}))"
+                    + Styles.RESET_ALL
                 )
                 input_events.append(
                     new_event_dict(
@@ -215,7 +239,10 @@ async def _run_chat_v1_1(rails_app: LLMRails):
 
             elif event["type"] == "StopPostureBotAction":
                 print(
-                    f"\033[92mstop: posture (action_uid={event['action_uid']})\033[0m"
+                    Styles.BLACK
+                    + Styles.BLUE_BACKGROUND
+                    + f"bot posture (stop): (action_uid={event['action_uid']})"
+                    + Styles.RESET_ALL
                 )
                 input_events.append(
                     new_event_dict(
@@ -228,7 +255,10 @@ async def _run_chat_v1_1(rails_app: LLMRails):
             elif event["type"] == "StartVisualInformationSceneAction":
                 # We print scene messages in green.
                 print(
-                    f"\033[92mshow: scene information (title={event['title']}, action_uid={event['action_uid']})\033[0m"
+                    Styles.BLACK
+                    + Styles.MAGENTA_BACKGROUND
+                    + f"scene information (start): (title={event['title']}, action_uid={event['action_uid']})"
+                    + Styles.RESET_ALL
                 )
                 input_events.append(
                     new_event_dict(
@@ -239,7 +269,10 @@ async def _run_chat_v1_1(rails_app: LLMRails):
 
             elif event["type"] == "StopVisualInformationSceneAction":
                 print(
-                    f"\033[92mhide: scene information (action_uid={event['action_uid']})\033[0m"
+                    Styles.BLACK
+                    + Styles.MAGENTA_BACKGROUND
+                    + f"scene information (stop): (action_uid={event['action_uid']})"
+                    + Styles.RESET_ALL
                 )
                 input_events.append(
                     new_event_dict(
@@ -252,7 +285,10 @@ async def _run_chat_v1_1(rails_app: LLMRails):
             elif event["type"] == "StartVisualChoiceSceneAction":
                 # We print scene messages in green.
                 print(
-                    f"\033[92mshow: scene choice (prompt={event['prompt']}, action_uid={event['action_uid']})\033[0m"
+                    Styles.BLACK
+                    + Styles.MAGENTA_BACKGROUND
+                    + f"scene choice (start): (prompt={event['prompt']}, action_uid={event['action_uid']})"
+                    + Styles.RESET_ALL
                 )
                 input_events.append(
                     new_event_dict(
@@ -263,7 +299,10 @@ async def _run_chat_v1_1(rails_app: LLMRails):
 
             elif event["type"] == "StopVisualChoiceSceneAction":
                 print(
-                    f"\033[92mhide: scene choice (action_uid={event['action_uid']})\033[0m"
+                    Styles.BLACK
+                    + Styles.MAGENTA_BACKGROUND
+                    + f"scene choice (stop): (action_uid={event['action_uid']})"
+                    + Styles.RESET_ALL
                 )
                 input_events.append(
                     new_event_dict(
@@ -274,7 +313,12 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 )
 
             elif event["type"] == "StartTimerBotAction":
-                # print(f"\033[92mstart timer: {event['timer_name']} {event['duration']}\033[0m")
+                print(
+                    Styles.BLACK
+                    + Styles.GREY
+                    + f"timer (start): {event['timer_name']} {event['duration']}"
+                    + Styles.RESET_ALL
+                )
                 action_uid = event["action_uid"]
                 timer = _start_timer(event["timer_name"], event["duration"], action_uid)
                 # Manage timer tasks
@@ -289,11 +333,25 @@ async def _run_chat_v1_1(rails_app: LLMRails):
                 )
 
             elif event["type"] == "StopTimerBotAction":
-                # print(f"\033[92mstart timer: {event['timer_name']} {event['duration']}\033[0m")
+                print(
+                    Styles.GREY
+                    + f"timer (stop): {event['action_uid']}"
+                    + Styles.RESET_ALL
+                )
                 action_uid = event["action_uid"]
                 if action_uid in running_timer_tasks:
                     running_timer_tasks[action_uid].cancel()
-                    print(f"Timer {action_uid} was stopped!")
+                    running_timer_tasks.pop(action_uid)
+
+            elif event["type"] == "TimerBotActionFinished":
+                print(
+                    Styles.GREY
+                    + f"timer (finished): {event['action_uid']}"
+                    + Styles.RESET_ALL
+                )
+                action_uid = event["action_uid"]
+                if action_uid in running_timer_tasks:
+                    running_timer_tasks[action_uid].cancel()
                     running_timer_tasks.pop(action_uid)
 
         # TODO: deserialize the output state

@@ -21,6 +21,7 @@ import time
 class Styles:
     """The set of standard colors."""
 
+    # Foreground colors
     BLACK = "\033[30m"
     RED = "\033[31m"
     GREEN = "\033[32m"
@@ -30,16 +31,29 @@ class Styles:
     CYAN = "\033[36m"
     WHITE = "\033[37m"
     GREY = "\033[38;5;246m"
+
+    # Background colors
+    BLACK_BACKGROUND = "\033[40m"
+    RED_BACKGROUND = "\033[41m"
+    GREEN_BACKGROUND = "\033[42m"
+    YELLOW_BACKGROUND = "\033[43m"
+    BLUE_BACKGROUND = "\033[44m"
+    MAGENTA_BACKGROUND = "\033[45m"
+    CYAN_BACKGROUND = "\033[46m"
+    WHITE_BACKGROUND = "\033[47m"
+    GREY_BACKGROUND = "\033[48;5;246m"
+
+    # Presets
     WHITE_ON_GREEN = "\033[42m\033[97m"
 
-    RESET = "\033[38m"
-    RESET_ALL = "\033[0m"
-
-    PROMPT = "\033[38;5;232m\033[48;5;254m"
-    COMPLETION = "\033[38;5;236m\033[48;5;84m"
+    PROMPT = "\033[38;5;232m\033[48;5;235m"
+    COMPLETION = "\033[38;5;236m\033[48;5;235m"
     COMPLETION_GREEN = "\033[48;5;84m"
     COMPLETION_RED = "\033[48;5;196m"
     EVENT_NAME = "\033[38;5;32m"
+
+    RESET = "\033[38m"
+    RESET_ALL = "\033[0m"
 
 
 # Mapping of colors associated with various sections
