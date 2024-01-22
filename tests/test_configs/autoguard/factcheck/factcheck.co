@@ -1,0 +1,5 @@
+define subflow check facts
+  $result = execute call autoguard factcheck api
+  if $result == True
+     # We need to provide a warning in this case
+     $bot_message = $bot_message + "Attention: the answer above is potentially inaccurate."
