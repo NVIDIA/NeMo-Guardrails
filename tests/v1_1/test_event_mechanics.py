@@ -1025,6 +1025,54 @@ def test_event_custom_regex_parameter_match():
     )
 
 
+def test_event_corner_cases_regex_parameter_match():
+    """Test corner cases for regex matches"""
+
+    content = """
+    flow main
+      while True
+        when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id" : "ter", "r": 'r"[ab]+"', "value": r"^[r'a]+$"}]) as $e
+          start UtteranceBotAction(script="Success")
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "VisualFormSceneActionInputUpdated",
+            "interim_inputs": [
+                {"id": "ter", "r": 'r"[ab]+"', "value": "rar'araaaaarr"}
+            ],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "VisualFormSceneActionInputUpdated",
+            "interim_inputs": [
+                {"id": "ter", "r": 'r"[ab]+"', "value": 'rar"araaaaarr'}
+            ],
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+
+
 def test_action_event_requeuing():
     config = RailsConfig.from_content(
         colang_content="""

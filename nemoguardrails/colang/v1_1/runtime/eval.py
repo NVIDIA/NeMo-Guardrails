@@ -64,14 +64,25 @@ def eval_expression(expr: str, context: dict) -> Any:
 
     def replace_with_index(name, _match):
         nonlocal index_counter
-        replacement = f"{name}_{index_counter}"
-        index_counter += 1
-        return replacement
+        if _match.group(1) or _match.group(3):
+            replacement = f"{name}_{index_counter}"
+            index_counter += 1
+            return replacement
+        else:
+            return _match.group(0)
 
     # If the expression contains the pattern r"(.*?)" it is considered a regular expression
     expr_locals = {}
-    regex_pattern = r"(r\"(.*?)\")|(r'(.*?)')"
-    regular_expressions = re.findall(regex_pattern, expr)
+    # This pattern first tries to match escaped quotes, then it matches any string enclosed by quotes
+    # finally it tries to match (and capture in a group) the r"" strings. At this point we know that we
+    # are not within a quote. We are doing this for both quoting styles ' and " separately
+    # Regular expressions are found if a match contains either non-empty group 1 or group 3
+    regex_pattern = (
+        r'\\"|"(?:\\"|[^"])*"|(r\"(.*?)\")|\\\'|\'(?:\\\'|[^\'])*\'|(r\'(.*?)\')'
+    )
+    regular_expressions = [
+        exp for exp in re.findall(regex_pattern, expr) if exp[1] or exp[3]
+    ]
     updated_expr = re.sub(regex_pattern, partial(replace_with_index, "regex"), expr)
 
     for idx, regular_expression in enumerate(regular_expressions):
