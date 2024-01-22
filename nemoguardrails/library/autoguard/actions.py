@@ -34,10 +34,12 @@ async def call_autoguard_gender_bias_api(context: Optional[dict] = None):
 
     user_message = context.get("user_message")
     bot_message = context.get("bot_message")
-    if user_message:
-        prompt = user_message
-    else:
+    if bot_message:
         prompt = bot_message
+    else:
+        prompt = user_message
+
+    print(prompt)
 
     model = context.get("model")
     url = "http://35.225.99.81:8888/"
@@ -64,6 +66,7 @@ async def call_autoguard_gender_bias_api(context: Optional[dict] = None):
             "text_toxicity_extraction": {"mode": "OFF"},
             "harm_detection": {"mode": "OFF"},
             "racial_bias_detection": {"mode": "OFF"},
+            "intellectual_property": {"mode": "OFF"},
             "gender_bias_detection": {"mode": "DETECT"},
         },
         "prompt": prompt,
@@ -88,6 +91,7 @@ async def call_autoguard_gender_bias_api(context: Optional[dict] = None):
                 if len(line) > 0:
                     response_json.append(json.loads(line))
             log.info(json.dumps(response_json, indent=True))
+            print(response_json)
             for i in response_json:
                 if i["guarded"]:
                     return True
@@ -103,10 +107,10 @@ async def call_autoguard_race_bias_api(context: Optional[dict] = None):
 
     user_message = context.get("user_message")
     bot_message = context.get("bot_message")
-    if user_message:
-        prompt = user_message
-    else:
+    if bot_message:
         prompt = bot_message
+    else:
+        prompt = user_message
 
     model = context.get("model")
     url = "http://35.225.99.81:8888/"
@@ -133,6 +137,7 @@ async def call_autoguard_race_bias_api(context: Optional[dict] = None):
             "jailbreak_detection": {"mode": "OFF"},
             "text_toxicity_extraction": {"mode": "OFF"},
             "harm_detection": {"mode": "OFF"},
+            "intellectual_property": {"mode": "OFF"},
             "racial_bias_detection": {"mode": "DETECT"},
         },
         "prompt": prompt,
@@ -157,6 +162,8 @@ async def call_autoguard_race_bias_api(context: Optional[dict] = None):
                 if len(line) > 0:
                     response_json.append(json.loads(line))
             log.info(json.dumps(response_json, indent=True))
+            print(prompt)
+            print(response_json)
             for i in response_json:
                 if i["guarded"]:
                     return True
@@ -172,10 +179,10 @@ async def call_autoguard_harm_detection_api(context: Optional[dict] = None):
 
     user_message = context.get("user_message")
     bot_message = context.get("bot_message")
-    if user_message:
-        prompt = user_message
-    else:
+    if bot_message:
         prompt = bot_message
+    else:
+        prompt = user_message
 
     model = context.get("model")
     url = "http://35.225.99.81:8888/"
@@ -202,6 +209,7 @@ async def call_autoguard_harm_detection_api(context: Optional[dict] = None):
             "confidential_detection": {"mode": "OFF"},
             "jailbreak_detection": {"mode": "OFF"},
             "text_toxicity_extraction": {"mode": "OFF"},
+            "intellectual_property": {"mode": "OFF"},
             "harm_detection": {"mode": "DETECT"},
         },
         "prompt": prompt,
@@ -226,6 +234,8 @@ async def call_autoguard_harm_detection_api(context: Optional[dict] = None):
                 if len(line) > 0:
                     response_json.append(json.loads(line))
             log.info(json.dumps(response_json, indent=True))
+            print(prompt)
+            print(response_json)
             for i in response_json:
                 if i["guarded"]:
                     return True
@@ -241,10 +251,10 @@ async def call_autoguard_toxicity_detection_api(context: Optional[dict] = None):
 
     user_message = context.get("user_message")
     bot_message = context.get("bot_message")
-    if user_message:
-        prompt = user_message
-    else:
+    if bot_message:
         prompt = bot_message
+    else:
+        prompt = user_message
 
     model = context.get("model")
     url = "http://35.225.99.81:8888/"
@@ -271,6 +281,7 @@ async def call_autoguard_toxicity_detection_api(context: Optional[dict] = None):
             "factcheck": {"mode": "OFF"},
             "confidential_detection": {"mode": "OFF"},
             "jailbreak_detection": {"mode": "OFF"},
+            "intellectual_property": {"mode": "OFF"},
             "text_toxicity_extraction": {"mode": "DETECT"},
         },
         "prompt": prompt,
@@ -310,10 +321,10 @@ async def call_autoguard_jailbreak_detection_api(context: Optional[dict] = None)
 
     user_message = context.get("user_message")
     bot_message = context.get("bot_message")
-    if user_message:
-        prompt = user_message
-    else:
+    if bot_message:
         prompt = bot_message
+    else:
+        prompt = user_message
 
     model = context.get("model")
     url = "http://35.225.99.81:8888/"
@@ -340,6 +351,7 @@ async def call_autoguard_jailbreak_detection_api(context: Optional[dict] = None)
             },
             "factcheck": {"mode": "OFF"},
             "confidential_detection": {"mode": "OFF"},
+            "intellectual_property": {"mode": "OFF"},
             "jailbreak_detection": {"mode": "DETECT"},
         },
         "prompt": prompt,
@@ -379,10 +391,10 @@ async def call_autoguard_confidential_detection_api(context: Optional[dict] = No
 
     user_message = context.get("user_message")
     bot_message = context.get("bot_message")
-    if user_message:
-        prompt = user_message
-    else:
+    if bot_message:
         prompt = bot_message
+    else:
+        prompt = user_message
 
     model = context.get("model")
     url = "http://35.225.99.81:8888/"
@@ -409,6 +421,7 @@ async def call_autoguard_confidential_detection_api(context: Optional[dict] = No
                 "coreference": False,
             },
             "factcheck": {"mode": "OFF"},
+            "intellectual_property": {"mode": "OFF"},
             "confidential_detection": {"mode": "DETECT"},
         },
         "prompt": prompt,
