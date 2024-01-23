@@ -120,7 +120,7 @@ flow user picked backchanneling showcase
     or user said "backchanneling"
     or user said "showcase C"
     or user said "Third showcase"
-    or user said r"(?i)channeling"
+    or user said r"(?i)channeling|back channel"
 
 flow user picked posture showcase
   """User picked the posture showcase (D)."""
@@ -150,6 +150,13 @@ flow user wanted to end conversation
     or user said "Let's finish this conversation"
     or user said "I want to go back"
 
+flow user confirmed limitations
+  """User confirmed to have understood the limitations of the demo"""
+  user said "I understand the limitations"
+    or user said "I am OK with the limitations"
+    or user said "Understood. Let's continue"
+    or user said r"(?i)confirm|ok|go|understand|limitation|start|understood|clear|okay"
+
 flow bot start the number guessing game
   """Bot starts the number guessing game"""
   showcase number guessing game
@@ -176,6 +183,19 @@ flow faq
 # Main story
 # -----------------------------------
 
+flow check limitations with user
+  start VisualInformationSceneAction(title="Limitations", support_prompts=["Please confirm by saying 'I understand the limitations'"], content=[{"text":"This demo has some limitations:"},{"text":"- Ensure you test in a quiet environment. Background noise (e.g., office chatter) will ruin the experience of the demo for you."},{"text":"- Only Chrome browsers are supported"},{"text":"- This demo highlights various Colang features and is not meant to provide a flawless user experience."}]) as $info_screen
+  start bot inform "Before we start, make sure that you understand the limitations of this demo. Confirm by saying 'I understand the limitations'."
+  while True
+    when user was silent 20.0
+      start bot say "Please confirm by saying 'I understand the limitations'."
+    orwhen user confirmed limitations
+      bot say "Great! With that out of the way, let's start the demo"
+      break
+    orwhen user said something
+      bot say "Sorry, I am not sure if this was a confirmation. Can you rephrase?."
+    
+
 flow showcase selector
   activate track visual choice selection state
 
@@ -187,7 +207,7 @@ flow showcase selector
     if $showcase_selection_ui == None
       activate trigger user intent for unhandled user utterance
       activate interruption handling bot talking "inform"
-      start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}]) as $showcase_selection_ui
+      start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the guessing game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Guessing Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}]) as $showcase_selection_ui
       start bot inform "Please pick one of the showcases."
 
     when user was silent 15.0
@@ -270,6 +290,8 @@ flow main
   bot say "Welcome to a demo of Colang 2.0 and some of it's upcoming features!"
     and bot gesture "Welcome user, wave hands"
   send $welcome_ui.Stop()
+
+  check limitations with user
   activate showcase selector
 
   #showcase number guessing game
@@ -282,19 +304,19 @@ flow main
 flow ignored_utterance_action_bugfix
   # meta: exclude from llm
   # meta: loop_id=ignored_action_bugfix
-  global $number_of_fails
-  if $number_of_fails == None
-    $number_of_fails = 0
+  global $number_of_failed_utterance_actions
+  if $number_of_failed_utterance_actions == None
+    $number_of_failed_utterance_actions = 0
   match StartUtteranceBotAction() as $event
   log "Event StartUtteranceBotAction {{$event.action_uid}}"
   start_new_flow_instance:
   start wait 3.0 as $timer_ref
   when $timer_ref.Finished()
     # After 3 consecutive fails we will no longer send a Finished event to let the process become idle and terminated
-    if $number_of_fails < 3
+    if $number_of_failed_utterance_actions < 3
       send UtteranceBotActionFinished(action_uid=$event.action_uid, final_script="", is_success=False, failure_reason="ActionStarted event timeout")
-    $number_of_fails = $number_of_fails + 1
+    $number_of_failed_utterance_actions = $number_of_failed_utterance_actions + 1
     log "action_started_timer triggered {{$event.action_uid}}"
   orwhen UtteranceBotActionStarted(action_uid=$event.action_uid)
-    $number_of_fails = 0
+    $number_of_failed_utterance_actions = 0
     log "Event UtteranceBotActionStarted {{$event.action_uid}}"

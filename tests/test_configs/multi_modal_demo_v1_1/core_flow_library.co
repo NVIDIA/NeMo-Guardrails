@@ -107,7 +107,7 @@ flow user interrupted bot talking $sentence_length=15
         $transcript = $user_saying_ref.context.event.arguments.interim_transcript
         log "User saying something: {{$transcript}}"
       orwhen user said something as $user_said_ref
-        $transcript = $user_said_ref.context.event.arguments.final_transcript
+        $transcript = $user_said_ref.context.transcript
         log "User said something: {{$transcript}}"
       orwhen bot said something
         log "Bot finished talking without interruption"
