@@ -12,21 +12,20 @@ prompts:
     # Prompt for detecting the user message canonical form.
     - task: generate_user_intent
       content: |-
-          """
-          {{ general_instructions }}
-          """
+        """
+        {{ general_instructions }}
+        """
 
-          # This is how a conversation between a user and the bot can go:
-          {{ sample_conversation }}
+        # This is how a conversation between a user and the bot can go:
+        {{ sample_conversation }}
 
-          # These are the most likely user intents:
-          {{ examples }}
+        # This is how the user talks:
+        {{ examples }}
 
-          # This is the current conversation between the user and the bot:
-          {{ history | colang }}
-
-          user action: {{ user_action }}
-          user intent:
+        # This is the current conversation between the user and the bot:
+        # Choose intent from this list: {{ potential_user_intents }}
+        {{ sample_conversation | first_turns(2) }}
+        {{ history | colang }}
 
     # Prompt for generating the next steps.
     - task: generate_next_steps
@@ -110,6 +109,25 @@ prompts:
           Answer with yes/no. "evidence": {{ evidence }} "hypothesis": {{ response }} "entails":
 
     # Colang 1.1 prompts below.
+
+    # Prompt for detecting the user message canonical form.
+    - task: generate_user_intent_from_user_action
+      content: |-
+          """
+          {{ general_instructions }}
+          """
+
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
+
+          # These are the most likely user intents:
+          {{ examples }}
+
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
+
+          user action: {{ user_action }}
+          user intent:
 
     # Prompt for generating a flow from instructions.
     - task: generate_flow_from_instructions

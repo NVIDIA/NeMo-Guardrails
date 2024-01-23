@@ -192,7 +192,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         examples = examples.strip("\n")
 
         prompt = self.llm_task_manager.render_task_prompt(
-            task=Task.GENERATE_USER_INTENT,
+            task=Task.GENERATE_USER_INTENT_FROM_USER_ACTION,
             events=events,
             context={
                 "examples": examples,
@@ -207,7 +207,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(
-            Task.GENERATE_USER_INTENT, output=result
+            Task.GENERATE_USER_INTENT_FROM_USER_ACTION, output=result
         )
 
         user_intent = get_first_nonempty_line(result)
