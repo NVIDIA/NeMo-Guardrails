@@ -12,7 +12,8 @@ huggingface-cli login
 3. Here, we use vLLM to host a Llama Guard inference endpoint in the OpenAI-compatible mode.
 ```
 pip install vllm
-python -m vllm.entrypoints.openai.api_server --host 0.0.0.0 --port 5123 --model meta-llama/LlamaGuard-7b
+python -m vllm.entrypoints.openai.api_server --port 5123 --model meta-llama/LlamaGuard-7b
 ```
+This will serve up the vLLM inference server on `http://localhost:5123/`.
 
-Once the server is successfully started, see [these example YAML configuration files](../../../examples/configs/llama_guard) for the bot configuration. The host and port need to match the values used above in step 3 to host the inference endpoint.
+4. Set the host and port in your bot's YAML configuration files ([example config](../../../examples/configs/llama_guard)). If you're running the `nemoguardrails` app on another server, remember to replace `localhost` with your vLLM server's public IP address.
