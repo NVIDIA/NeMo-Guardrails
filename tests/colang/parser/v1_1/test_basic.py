@@ -100,6 +100,7 @@ def test_1():
             "name": "test",
             "parameters": [],
             "source_code": None,
+            "file_info": {"exclude_from_llm": False},
         }
     ]
 
@@ -202,6 +203,7 @@ def test_2():
             "name": "test",
             "parameters": [],
             "source_code": None,
+            "file_info": {"exclude_from_llm": False},
         }
     ]
 
@@ -324,6 +326,7 @@ def test_3():
             "name": "test",
             "parameters": [],
             "source_code": None,
+            "file_info": {"exclude_from_llm": False},
         }
     ]
 
@@ -346,6 +349,7 @@ def test_4():
             "name": "test",
             "parameters": [],
             "source_code": None,
+            "file_info": {"exclude_from_llm": False},
             "elements": [
                 {
                     "_type": "spec_op",

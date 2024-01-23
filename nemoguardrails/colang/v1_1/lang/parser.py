@@ -15,6 +15,7 @@
 
 import logging
 import os
+import re
 
 import yaml
 
@@ -65,6 +66,8 @@ class ColangParser:
         if print_parsing_tree:
             print(tree.pretty())
 
+        exclude_flows_from_llm = self._contains_exclude_from_llm_tag(content)
+
         transformer = ColangTransformer(
             source=content, include_source_mapping=self.include_source_mapping
         )
@@ -72,16 +75,22 @@ class ColangParser:
 
         result: dict = {"flows": []}
 
-        # For the special case when we only have on flow in the colang file
+        # For the special case when we only have one flow in the colang file
         if isinstance(data, Flow):
+            data.file_info["exclude_from_llm"] = exclude_flows_from_llm
             result["flows"].append(data)
         else:
             # Otherwise, it's a sequence and we take all the flow elements and return them
             for element in data["elements"]:
                 if element["_type"] == "flow":
+                    element.file_info["exclude_from_llm"] = exclude_flows_from_llm
                     result["flows"].append(element)
 
         return result
+
+    def _contains_exclude_from_llm_tag(self, content: str) -> bool:
+        pattern = r"^# meta: exclude from llm"
+        return bool(re.search(pattern, content, re.MULTILINE))
 
 
 def parse_colang_file(

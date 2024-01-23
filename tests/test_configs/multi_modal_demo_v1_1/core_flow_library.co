@@ -1,66 +1,57 @@
+# meta: exclude from llm
+
 # -----------------------------------
 # User UMIM event wrapper flows
 # DON'T CHANGE! Currently, hard-wired with LLM prompt generation
 # -----------------------------------
 
 flow user said $text
-  # meta: exclude from llm
   # meta: user action
   match UtteranceUserAction.Finished(final_transcript=$text) as $event
   $transcript = $event.arguments.final_transcript
 
 flow user saying $text
-  # meta: exclude from llm
   match UtteranceUserAction.TranscriptUpdated(interim_transcript=r"(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$") as $event
   $transcript = $event.arguments.interim_transcript
 
 flow user started saying something
-  # meta: exclude from llm
   match UtteranceUserAction.Started() as $event
 
 flow user typing $text
-  # meta: exclude from llm
   match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*({{$text}})((\s*\w+\s*){0,2})\W*$"}]) as $event
   $inputs = $event.arguments.interim_inputs
 
 flow user said something
-  # meta: exclude from llm
   match UtteranceUserAction.Finished() as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
   $transcript = $event.arguments.final_transcript
 
 flow user said something unexpected
-  # meta: exclude from llm
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=None)
   $transcript = $event.arguments.final_transcript
 
 flow user saying something
-  # meta: exclude from llm
   match UtteranceUserAction.TranscriptUpdated() as $event
   #send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
   $transcript = $event.arguments.final_transcript
 
 flow user selected choice $choice_id
-  # meta: exclude from llm
   # meta: user action
   match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
   $choice = $event.arguments.current_choice
 
 flow user has selected choice $choice_id
-  # meta: exclude from llm
   global $choice_selection_state
   if $choice_selection_state == None or $choice_selection_state != $choice_id
     match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
 
 flow unhandled user intent
-  # meta: exclude from llm
   match UnhandledEvent(event="FinishFlow", flow_id=r"^user ") as $event
   $intent = $event.arguments.flow_id
 
 flow user was silent $time_s
   """Triggers when user was silent for $time_s seconds."""
-  # meta: exclude from llm
   # meta: loop_id=user_was_silent
   # meta: user intent
   while True
@@ -75,7 +66,6 @@ flow user was silent $time_s
 
 flow user didnt respond $time_s
   """Triggers when user was silent for $time_s seconds while bot was silent."""
-  # meta: exclude from llm
   # meta: loop_id=user_did_not_respond
   # meta: user intent
   while True
@@ -93,7 +83,6 @@ flow user didnt respond $time_s
 
 flow user interrupted bot talking $sentence_length=15
   """Triggers when the user talked while bot is speaking."""
-  # meta: exclude from llm
   # meta: user intent
   global $bot_talking_state
   while True
@@ -123,70 +112,54 @@ flow user interrupted bot talking $sentence_length=15
 # ----------------------------------
 
 flow bot started saying $text
-  # meta: exclude from llm
   match FlowStarted(flow_id="_bot_say", script=$text) as $event
 
 flow bot started saying something
-  # meta: exclude from llm
   match FlowStarted(flow_id="_bot_say") as $event
 
 flow bot said $text
-  # meta: exclude from llm
   match FlowFinished(flow_id="_bot_say", script=$text) as $event
 
 flow bot said something
-  # meta: exclude from llm
   match FlowFinished(flow_id="_bot_say") as $event
 
 flow bot informed something
-  # meta: exclude from llm
   match FlowFinished(flow_id="bot inform") as $event
 
 flow bot asked something
-  # meta: exclude from llm
   match FlowFinished(flow_id="bot ask") as $event
 
 flow bot expressed something
-  # meta: exclude from llm
   match FlowFinished(flow_id="bot express") as $event
 
 flow bot responded something
-  # meta: exclude from llm
   match FlowFinished(flow_id="bot respond") as $event
 
 flow bot clarified something
-  # meta: exclude from llm
   match FlowFinished(flow_id="bot clarify") as $event
 
 flow bot suggested something
-  # meta: exclude from llm
   match FlowFinished(flow_id="bot suggest") as $event
 
 flow bot started gesture $gesture
-  # meta: exclude from llm
   match FlowStarted(flow_id="bot gesture", gesture=$gesture) as $event
 
 flow bot started a gesture
-  # meta: exclude from llm
   match FlowStarted(flow_id="bot gesture") as $event
 
 flow bot started posture $posture
-  # meta: exclude from llm
   match FlowStarted(flow_id="bot posture", posture=$posture) as $event
 
 flow bot started a posture
-  # meta: exclude from llm
   match FlowStarted(flow_id="bot posture") as $event
 
 flow bot started an action
-  # meta: exclude from llm
   # meta: bot action
   match bot started saying something
     or bot started a gesture
     or bot started a posture
 
 flow bot was silent $time_s
-  # meta: exclude from llm
   # meta: loop_id=bot_was_silent
   # meta: bot intent
   while True
@@ -206,36 +179,29 @@ flow bot was silent $time_s
 
 flow _bot_say $text
   """It's an internal helper for higher semantic level flows"""
-  # meta: exclude from llm
   await UtteranceBotAction(script=$text) as $action
 
 flow bot gesture $gesture
-  # meta: exclude from llm
   # meta: bot action
   await GestureBotAction(gesture=$gesture) as $action
 
 flow bot posture $posture
-  # meta: exclude from llm
   # meta: bot action
   await PostureBotAction(posture=$posture) as $action
 
 flow scene show choice $prompt
-  # meta: exclude from llm
   # meta: bot action
   await VisualChoiceSceneAction(prompt=$prompt,choice_type="selection", allow_multiple_choices=False) as $action
 
 flow scene show textual information $title $text $header_image
-  # meta: exclude from llm
   # meta: bot action
   await VisualInformationSceneAction(title=$title, support_prompts=[], content=[{"image":$header_image},{"text":$text}]) as $action
 
 flow scene show short information $info
-  # meta: exclude from llm
   # meta: bot action
   await VisualInformationSceneAction(title=$info, support_prompts=[], content=[]) as $action
 
 flow scene show form $prompt
-  # meta: exclude from llm
   # meta: bot action
   await VisualInformationSceneAction(prompt=$prompt) as $action
 
@@ -245,42 +211,34 @@ flow scene show form $prompt
 # -----------------------------------
 
 flow bot say $text
-  # meta: exclude from llm
   # meta: bot action
   await _bot_say $text
 
 flow bot say something like $text
-  # meta: exclude from llm
   $variation = """Create a new variation of: {{$text}}"""
   await bot say $variation
 
 flow bot inform $text
-  # meta: exclude from llm
   # meta: bot action
   await _bot_say $text
 
 flow bot ask $text
-  # meta: exclude from llm
   # meta: bot action
   await _bot_say $text
 
 flow bot express $text
-  # meta: exclude from llm
   # meta: bot action
   await _bot_say $text
 
 flow bot respond $text
-  # meta: exclude from llm
   # meta: bot action
   await _bot_say $text
 
 flow bot clarify $text
-  # meta: exclude from llm
   # meta: bot action
   await _bot_say $text
 
 flow bot suggest $text
-  # meta: exclude from llm
   # meta: bot action
   await _bot_say $text
 
@@ -290,7 +248,6 @@ flow bot suggest $text
 # -----------------------------------
 
 flow track bot talking state
-  # meta: exclude from llm
   # meta: loop_id=state_tracking
   global $bot_talking_state
   await bot started saying something
@@ -299,7 +256,6 @@ flow track bot talking state
   $bot_talking_state = False
 
 flow track user talking state
-  # meta: exclude from llm
   # meta: loop_id=state_tracking
   global $user_talking_state
   await user started saying something
@@ -308,7 +264,6 @@ flow track user talking state
   $user_talking_state = False
 
 flow track unhandled user intent state
-  # meta: exclude from llm
   # meta: loop_id=state_tracking
   global $user_intent_state
   when unhandled user intent as $flow
@@ -317,7 +272,6 @@ flow track unhandled user intent state
     $unhandled_user_intent_state = None
 
 flow track visual choice selection state
-  # meta: exclude from llm
   # meta: loop_id=state_tracking
   global $choice_selection_state
   when VisualChoiceSceneAction.Started()
@@ -349,18 +303,15 @@ flow finish all scene actions
 
 flow wait indefinitely
   """Little helper flow to wait indefinitely."""
-  # meta: exclude from llm
   match NeverComingEvent()
 
 flow wait $time_s $timer_id="wait_timer_{{uid()}}"
   """Wait the specified number of seconds before continuing."""
-  # meta: exclude from llm
   # meta: loop_id=NEW
   await TimerBotAction(timer_name=$timer_id, duration=$time_s)
 
 flow catch colang errors
   """A flow to catch any runtime Colang errors"""
-  # meta: exclude from llm
   # meta: loop_id=catch_colang_errors
   match ColangError() as $event
   log "Colang error: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
@@ -368,7 +319,6 @@ flow catch colang errors
 
 flow catch undefined flows
   """A flow to catch the start of undefined flows."""
-  # meta: exclude from llm
   priority 0.1
   match UnhandledEvent(event="StartFlow") as $event
   log "Undefined flow: '{{$event.arguments.flow_id}}' {{$event.arguments.loop_ids}}"
@@ -378,14 +328,12 @@ flow catch undefined flows
 
 flow catch unexpected user utterance
   """A flow to catch unhandled user utterances."""
-  # meta: exclude from llm
   priority 0.1
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
   bot say "Warning: Unexpected user utterance '{{$event.arguments.final_transcript}}'"
 
 flow repeating timer $timer_id $interval_s
   """Repeating timer."""
-  # meta: exclude from llm
   while True
     await wait $interval_s $timer_id
     # await TimerBotAction(timer_name=$timer_id, duration=$interval_s)
@@ -398,7 +346,6 @@ flow await_flow_by_name $flow_name
 
 flow interruption handling bot talking $mode="inform"
   """Handling the bot talking interruption reaction."""
-  # meta: exclude from llm
   # meta: loop_id=bot_interruption
   user interrupted bot talking
   if $mode == "interrupt"
@@ -416,7 +363,6 @@ flow interruption handling bot talking $mode="inform"
 # ----------------------------------
 
 flow poll llm request response $interval
-  # meta: exclude from llm
   # meta: loop_id=llm_response_polling
   match StartGenerateUserIntentAction() as $event_ref
     or StartGenerateFlowContinuationAction() as $event_ref
@@ -431,7 +377,6 @@ flow poll llm request response $interval
 
 flow trigger user intent for unhandled user utterance
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
-  # meta: exclude from llm
   global $bot_talking_state
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   if $bot_talking_state == False
@@ -449,7 +394,6 @@ flow trigger user intent for unhandled user utterance
   send FinishFlow(flow_id=$intent)
 
 flow derive user intent from user action $user_action $max_example_flows
-  # meta: exclude from llm
   $intent = await GenerateUserIntentAction(user_action=$user_action, max_example_flows=$max_example_flows)
   return $intent
 
@@ -468,7 +412,6 @@ flow generate interaction continuation
   return $flow_info.name
 
 flow generate then continue interaction
-  # meta: exclude from llm
   $generated_flow_name = await generate interaction continuation
   if $generated_flow_name != None
     await await_flow_by_name $generated_flow_name
@@ -480,7 +423,6 @@ flow generate then continue interaction
 
 flow respond to unhandled user intent
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
-  # meta: exclude from llm
   await unhandled user intent
   $flow_name = await generate interaction continuation
   await await_flow_by_name $flow_name
@@ -488,7 +430,6 @@ flow respond to unhandled user intent
 
 flow handle undefined flow starts
   """We want to start an undefined flow."""
-  # meta: exclude from llm
 
   match UnhandledEvent(event="StartFlow") as $event
 
@@ -516,7 +457,6 @@ flow handle undefined flow starts
 
 flow execute llm instruction$instructions
   """This will create a new flow based on the provided instructions and start it."""
-  # meta: exclude from llm
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
 
   await AddFlowsAction(config=$flow_info.body)
@@ -534,7 +474,6 @@ flow user requested a task
     or user said "please do"
 
 flow custom instructions
-  # meta: exclude from llm
   user requested a task
   $instructions = await GetLastUserMessageAction()
   do $instructions

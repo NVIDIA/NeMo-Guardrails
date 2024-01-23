@@ -17,7 +17,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 from dataclasses_json import dataclass_json
 
@@ -117,6 +117,7 @@ class Flow(Element):
     parameters: List[FlowParamDef] = field(default_factory=list)
     elements: List[Element] = field(default_factory=list)
     source_code: Optional[str] = None
+    file_info: Dict[str, Any] = field(default_factory=dict)
     _type: str = "flow"
 
 

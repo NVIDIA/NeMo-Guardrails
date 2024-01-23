@@ -114,19 +114,24 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         for flow in self.config.flows:
             colang_flow = flow.get("source_code")
+            if colang_flow:
+                assert isinstance(flow, Flow)
+                # Check if we need to exclude this flow.
+                # TODO: Implement this better, e.g. as a flow declarator
+                if "# meta: exclude from llm" in colang_flow or (
+                    "exclude_from_llm" not in flow.file_info
+                    or flow.file_info["exclude_from_llm"]
+                ):
+                    continue
 
-            # Check if we need to exclude this flow.
-            if "# meta: exclude from llm" in colang_flow:
-                continue
+                all_flows.append(colang_flow)
 
-            all_flows.append(colang_flow)
-
-            # If the first line is a comment, we consider it to be an instruction
-            lines = colang_flow.split("\n")
-            if len(lines) > 1:
-                first_line = lines[1].strip()
-                if first_line.startswith("#") or first_line.startswith('"""'):
-                    instruction_flows.append(colang_flow)
+                # If the first line is a comment, we consider it to be an instruction
+                lines = colang_flow.split("\n")
+                if len(lines) > 1:
+                    first_line = lines[1].strip()
+                    if first_line.startswith("#") or first_line.startswith('"""'):
+                        instruction_flows.append(colang_flow)
 
         self.flows_index = await self._init_colang_flows_index(all_flows)
         self.instruction_flows_index = await self._init_colang_flows_index(
