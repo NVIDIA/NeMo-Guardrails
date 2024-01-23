@@ -763,7 +763,8 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
                 for temp_head in flow_state.active_heads.values():
                     element = flow_config.elements[temp_head.position]
                     if not isinstance(element, WaitForHeads) and (
-                        not is_match_op_element(element) or "internal" in element.info
+                        not is_match_op_element(element)
+                        or (isinstance(element, SpecOp) and "internal" in element.info)
                     ):
                         all_heads_are_waiting = False
                         break
@@ -1060,10 +1061,11 @@ def slide(
                 if h.position == head.position
             ]
             if len(waiting_heads) >= element.number:
+                # TODO: Refactoring the merging/waiting for heads so that the clean up is clean
                 # Remove all waiting head except for the current
-                for key in waiting_heads:
-                    if key != head.uid:
-                        flow_state.heads.pop(key, None)
+                # for waiting_head in waiting_heads:
+                #     if waiting_head.uid != head.uid:
+                #         del flow_state.heads[waiting_head.uid]
 
                 head.position += 1
             else:

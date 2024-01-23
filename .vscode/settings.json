@@ -37,7 +37,7 @@
     // PYTHON
     "[python]": {
         "editor.codeActionsOnSave": {
-            "source.organizeImports": true
+            "source.organizeImports": "explicit"
         },
         "editor.defaultFormatter": "ms-python.black-formatter"
     },
@@ -63,10 +63,12 @@
         "colang",
         "elif",
         "interruptible",
+        "langchain",
         "nemoguardrails",
         "orwhen",
         "popleft",
         "simpleeval",
+        "statemachine",
         "subflow",
         "uids",
         "UMIM",

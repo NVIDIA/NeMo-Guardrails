@@ -81,7 +81,7 @@ def get_colang_history(
     events: List[dict],
     include_texts: bool = True,
     remove_retrieval_events: bool = False,
-):
+) -> str:
     """Creates a history of user messages and bot responses in colang format.
     user "Hi, how are you today?"
       express greeting
@@ -197,7 +197,7 @@ def get_colang_history(
                     if event.name == InternalEvents.BOT_INTENT_LOG:
                         new_history.append(events_to_dialog_history([event]))
                         new_history.append(events_to_dialog_history(action_group))
-                    elif event.arguments["flow_id"] != None:
+                    elif event.arguments["flow_id"] is not None:
                         new_history.append(events_to_dialog_history(action_group))
                         new_history.append(events_to_dialog_history([event]))
                     new_history.append("")
@@ -221,6 +221,7 @@ def get_colang_history(
 
 
 def events_to_dialog_history(events: List[InternalEvent]) -> str:
+    """Create the dialog history based on provided events."""
     result = ""
     for idx, event in enumerate(events):
         identifier = from_log_event_to_identifier(event.name)
@@ -241,6 +242,7 @@ def events_to_dialog_history(events: List[InternalEvent]) -> str:
 
 
 def from_log_event_to_identifier(event_name: str) -> str:
+    """convert log message to prompt interaction identifier."""
     if event_name == InternalEvents.BOT_INTENT_LOG:
         return "bot intent"
     elif event_name == InternalEvents.BOT_ACTION_LOG:
@@ -252,7 +254,7 @@ def from_log_event_to_identifier(event_name: str) -> str:
     return ""
 
 
-def flow_to_colang(flow: Union[dict, Flow]):
+def flow_to_colang(flow: Union[dict, Flow]) -> str:
     """Converts a flow to colang format.
 
     Example flow:
@@ -288,7 +290,7 @@ def flow_to_colang(flow: Union[dict, Flow]):
     return colang_flow
 
 
-def get_last_user_utterance(events: List[dict]):
+def get_last_user_utterance(events: List[dict]) -> Optional[str]:
     """Returns the last user utterance from the events."""
     for event in reversed(events):
         if event["type"] == "UserMessage":
@@ -297,7 +299,7 @@ def get_last_user_utterance(events: List[dict]):
     return None
 
 
-def get_retrieved_relevant_chunks(events: List[dict]):
+def get_retrieved_relevant_chunks(events: List[dict]) -> Optional[dict]:
     """Returns the retrieved chunks for current user utterance from the events."""
     for event in reversed(events):
         if event["type"] == "UserMessage":
@@ -310,7 +312,7 @@ def get_retrieved_relevant_chunks(events: List[dict]):
     return None
 
 
-def get_last_user_utterance_event(events: List[dict]):
+def get_last_user_utterance_event(events: List[dict]) -> Optional[dict]:
     """Returns the last user utterance from the events."""
     for event in reversed(events):
         if isinstance(event, dict) and event["type"] == "UserMessage":
@@ -319,7 +321,7 @@ def get_last_user_utterance_event(events: List[dict]):
     return None
 
 
-def get_last_user_utterance_event_v1_1(events: List[dict]):
+def get_last_user_utterance_event_v1_1(events: List[dict]) -> Optional[dict]:
     """Returns the last user utterance from the events."""
     for event in reversed(events):
         if isinstance(event, dict) and event["type"] == "UtteranceUserActionFinished":
@@ -328,7 +330,7 @@ def get_last_user_utterance_event_v1_1(events: List[dict]):
     return None
 
 
-def get_last_user_intent_event(events: List[dict]):
+def get_last_user_intent_event(events: List[dict]) -> Optional[dict]:
     """Returns the last user intent from the events."""
     for event in reversed(events):
         if event["type"] == "UserIntent":
@@ -337,7 +339,7 @@ def get_last_user_intent_event(events: List[dict]):
     return None
 
 
-def get_last_bot_intent_event(events: List[dict]):
+def get_last_bot_intent_event(events: List[dict]) -> Optional[dict]:
     """Returns the last user intent from the events."""
     for event in reversed(events):
         if event["type"] == "BotIntent":
@@ -346,7 +348,7 @@ def get_last_bot_intent_event(events: List[dict]):
     return None
 
 
-def get_last_bot_utterance_event(events: List[dict]):
+def get_last_bot_utterance_event(events: List[dict]) -> Optional[dict]:
     """Returns the last bot utterance from the events."""
     for event in reversed(events):
         if event["type"] == "StartUtteranceBotAction":
@@ -355,16 +357,7 @@ def get_last_bot_utterance_event(events: List[dict]):
     return None
 
 
-def get_last_bot_intent_event(events: List[dict]):
-    """Returns the last bot intent from the events."""
-    for event in reversed(events):
-        if event["type"] == "BotIntent":
-            return event
-
-    return None
-
-
-def remove_text_messages_from_history(history: str):
+def remove_text_messages_from_history(history: str) -> str:
     """Helper that given a history in colang format, removes all texts."""
 
     # Get rid of messages from the user
@@ -379,7 +372,7 @@ def remove_text_messages_from_history(history: str):
     return history
 
 
-def get_first_nonempty_line(s: str):
+def get_first_nonempty_line(s: str) -> Optional[str]:
     """Helper that returns the first non-empty line from a string"""
     if not s:
         return None
@@ -394,7 +387,7 @@ def get_first_nonempty_line(s: str):
     return first_nonempty_line
 
 
-def get_top_k_nonempty_lines(s: str, k: int = 1):
+def get_top_k_nonempty_lines(s: str, k: int = 1) -> Optional[List[str]]:
     """Helper that returns a list with the top k non-empty lines from a string.
 
     If there are less than k non-empty lines, it returns a smaller number of lines."""
@@ -408,7 +401,7 @@ def get_top_k_nonempty_lines(s: str, k: int = 1):
     return lines[:k]
 
 
-def strip_quotes(s: str):
+def strip_quotes(s: str) -> str:
     """Helper that removes quotes from a string if the entire string is between quotes"""
     if s and s[0] == '"':
         if s[-1] == '"':
@@ -418,7 +411,7 @@ def strip_quotes(s: str):
     return s
 
 
-def get_multiline_response(s: str):
+def get_multiline_response(s: str) -> str:
     """Helper that extracts multi-line responses from the LLM.
     Stopping conditions: when a non-empty line ends with a quote or when the token "user" appears after a newline.
     Empty lines at the begging of the string are skipped."""
@@ -455,7 +448,8 @@ def remove_action_intent_identifiers(lines: List[str]) -> List[str]:
     ]
 
 
-def get_initial_actions(strings):
+def get_initial_actions(strings: List[str]) -> List[str]:
+    """Returns the first action before an empty line."""
     previous_strings = []
     for string in strings:
         if string == "":
@@ -465,6 +459,7 @@ def get_initial_actions(strings):
 
 
 def escape_flow_name(name: str) -> str:
+    """Escape invalid keywords in flow names."""
     # TODO: We need to figure out how we can distinguish from valid flow parameters
     result = (
         name.replace(" and ", "_and_")

@@ -15,7 +15,7 @@
 
 import logging
 from abc import abstractmethod
-from typing import List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from nemoguardrails.actions.action_dispatcher import ActionDispatcher
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -35,7 +35,7 @@ class Runtime:
         self.action_dispatcher = ActionDispatcher(config_path=config.config_path)
 
         # The list of additional parameters that can be passed to the actions.
-        self.registered_action_params = {}
+        self.registered_action_params: dict = {}
 
         self._init_flow_configs()
 
@@ -43,12 +43,12 @@ class Runtime:
         self.llm_task_manager = LLMTaskManager(config)
 
     @abstractmethod
-    def _init_flow_configs(self):
+    def _init_flow_configs(self) -> None:
         pass
 
     def register_action(
-        self, action: callable, name: Optional[str] = None, override: bool = True
-    ):
+        self, action: Callable, name: Optional[str] = None, override: bool = True
+    ) -> None:
         """Registers an action with the given name.
 
         :param name: The name of the action.
@@ -57,15 +57,16 @@ class Runtime:
         """
         self.action_dispatcher.register_action(action, name, override=override)
 
-    def register_actions(self, actions_obj: any, override: bool = True):
+    def register_actions(self, actions_obj: Any, override: bool = True) -> None:
         """Registers all the actions from the given object."""
         self.action_dispatcher.register_actions(actions_obj, override=override)
 
     @property
-    def registered_actions(self):
+    def registered_actions(self) -> dict:
+        """Return registered actions."""
         return self.action_dispatcher.registered_actions
 
-    def register_action_param(self, name: str, value: any):
+    def register_action_param(self, name: str, value: Any) -> None:
         """Registers an additional parameter that can be passed to the actions.
 
         :param name: The name of the parameter.
@@ -85,7 +86,7 @@ class Runtime:
 
     async def process_events(
         self, events: List[dict], state: Optional[dict] = None
-    ) -> Tuple[List[dict], dict]:
+    ) -> Tuple[List[dict], Any]:
         """Process a sequence of events in a given state.
 
         The events will be processed one by one, in the input order.

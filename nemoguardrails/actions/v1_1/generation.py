@@ -31,6 +31,7 @@ from nemoguardrails.actions.llm.utils import (
     llm_call,
     remove_action_intent_identifiers,
 )
+from nemoguardrails.colang.v1_1.lang.colang_ast import Flow
 from nemoguardrails.colang.v1_1.lang.utils import new_uuid
 from nemoguardrails.colang.v1_1.runtime.flows import (
     ActionEvent,
@@ -53,7 +54,7 @@ from nemoguardrails.llm.types import Task
 log = logging.getLogger(__name__)
 
 
-def _remove_leading_empty_lines(s: str):
+def _remove_leading_empty_lines(s: str) -> str:
     """Remove the leading empty lines if they exist.
 
     A line is considered empty if it has only white spaces.
@@ -99,7 +100,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         return flows_index
 
-    async def _init_flows_index(self):
+    async def _init_flows_index(self) -> None:
         """Initializes the index of flows."""
 
         if not self.config.flows:
@@ -135,9 +136,9 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
     @action(name="GetLastUserMessageAction", is_system_action=True)
     async def get_last_user_message(
         self, events: List[dict], llm: Optional[BaseLLM] = None
-    ):
+    ) -> str:
         event = get_last_user_utterance_event_v1_1(events)
-        assert event["type"] == "UtteranceUserActionFinished"
+        assert event and event["type"] == "UtteranceUserActionFinished"
         return event["final_transcript"]
 
     @action(name="GenerateUserIntentAction", is_system_action=True, execute_async=True)
@@ -148,7 +149,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         user_action: str,
         max_example_flows: int = 5,
         llm: Optional[BaseLLM] = None,
-    ):
+    ) -> str:
         """Generate the canonical form for what the user said i.e. user intent."""
 
         # Use action specific llm if registered else fallback to main llm
@@ -217,27 +218,28 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         user_intent = escape_flow_name(user_intent.strip(" "))
 
         log.info(
-            "Canonical form for user intent: "
-            + (user_intent if user_intent else "None")
+            "Canonical form for user intent: %s", user_intent if user_intent else "None"
         )
 
         return f"{user_intent}" or "user unknown intent"
 
     @action(name="CheckValidFlowExistsAction", is_system_action=True)
-    async def check_if_flow_exists(self, state: "State", flow_id: str):
+    async def check_if_flow_exists(self, state: "State", flow_id: str) -> bool:
+        """Return True if a flow with the provided flow_id exists."""
         return flow_id in state.flow_id_states
 
     @action(name="CheckForActiveEventMatchAction", is_system_action=True)
     async def check_for_active_flow_finished_match(
-        self, state: "State", name: str, **arguments: Any
-    ):
+        self, state: "State", event_name: str, **arguments: Any
+    ) -> bool:
+        """Return True if there is a flow waiting for the provided event name and parameters."""
         event: Event
-        if name in InternalEvents.ALL:
-            event = InternalEvent(name=name, arguments=arguments)
-        elif "Action" in name:
-            event = ActionEvent(name=name, arguments=arguments)
+        if event_name in InternalEvents.ALL:
+            event = InternalEvent(name=event_name, arguments=arguments)
+        elif "Action" in event_name:
+            event = ActionEvent(name=event_name, arguments=arguments)
         else:
-            event = Event(name=name, arguments=arguments)
+            event = Event(name=event_name, arguments=arguments)
         heads = find_all_active_event_matchers(state, event)
         return len(heads) > 0
 
@@ -251,7 +253,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         instructions: str,
         events: List[dict],
         llm: Optional[BaseLLM] = None,
-    ):
+    ) -> dict:
         """Generate a flow from the provided instructions."""
 
         if self.instruction_flows_index is None:
@@ -260,7 +262,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
 
-        log.info(f"Generating flow for instructions: {instructions}")
+        log.info("Generating flow for instructions: %s", instructions)
 
         results = await self.instruction_flows_index.search(
             text=instructions, max_results=5
@@ -298,7 +300,9 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         else:
             response = "\n".join(lines)
             log.warning(
-                f"GenerateFlowFromInstructionsAction\nFAILING-PROMPT ::\n{prompt}\n FAILING-RESPONSE: {response}\n"
+                "GenerateFlowFromInstructionsAction\nFAILING-PROMPT ::\n%s\n FAILING-RESPONSE: %s\n",
+                prompt,
+                response,
             )
             return {
                 "name": "bot inform LLM issue",
@@ -313,7 +317,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         name: str,
         events: List[dict],
         llm: Optional[BaseLLM] = None,
-    ):
+    ) -> str:
         """Generate a flow from the provided NAME."""
 
         if self.flows_index is None:
@@ -322,7 +326,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
 
-        log.info(f"Generating flow for name: {name}")
+        log.info("Generating flow for name: {name}")
 
         results = await self.instruction_flows_index.search(
             text=f"flow {name}", max_results=5
@@ -353,7 +357,9 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         else:
             response = "\n".join(lines)
             log.warning(
-                f"GenerateFlowFromNameAction\nFAILING-PROMPT ::\n{prompt}\n FAILING-RESPONSE: {response}\n"
+                "GenerateFlowFromNameAction\nFAILING-PROMPT ::\n%s\n FAILING-RESPONSE: %s\n",
+                prompt,
+                response,
             )
             return "flow bot express unsure\n  bot say 'I don't know how to do that.'"
 
@@ -365,7 +371,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         events: List[dict],
         temperature: Optional[float] = None,
         llm: Optional[BaseLLM] = None,
-    ):
+    ) -> dict:
         """Generate a continuation for the flow representing the current conversation."""
 
         if temperature is None:
@@ -377,7 +383,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
 
-        log.info(f"Generating flow continuation.")
+        log.info("Generating flow continuation.")
 
         colang_history = colang(events)
 
@@ -411,7 +417,9 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         if len(lines) == 0 or (len(lines) == 1 and lines[0] == ""):
             response = "\n".join(lines)
             log.warning(
-                f"GenerateFlowContinuationAction\nFAILING-PROMPT ::\n{prompt}\n FAILING-RESPONSE: {response}\n"
+                "GenerateFlowContinuationAction\nFAILING-PROMPT ::\n%s\n FAILING-RESPONSE: %s\n",
+                prompt,
+                response,
             )
             return {
                 "name": "bot inform LLM issue",
@@ -443,17 +451,16 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
     @action(name="GenerateValueAction", is_system_action=True, execute_async=True)
     async def generate_value(
         self,
-        var_name: str,
         instructions: str,
         events: List[dict],
+        var_name: Optional[str] = None,
         llm: Optional[BaseLLM] = None,
-    ):
+    ) -> Any:
         """Generate a value in the context of the conversation.
 
         :param instructions: The instructions to generate the value.
         :param events: The full stream of events so far.
-        :param var_name: The name of the variable to generate. If not specified, it will use
-          the `action_result_key` as the name of the variable.
+        :param var_name: The name of the variable to generate.
         :param llm: Custom llm model to generate_value
         """
         # Use action specific llm if registered else fallback to main llm
@@ -462,9 +469,10 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         # We search for the most relevant flows.
         examples = ""
         if self.flows_index:
-            results = await self.flows_index.search(
-                text=f"${var_name} = ", max_results=5
-            )
+            if var_name:
+                results = await self.flows_index.search(
+                    text=f"${var_name} = ", max_results=5
+                )
 
             # We add these in reverse order so the most relevant is towards the end.
             for result in reversed(results):
@@ -479,7 +487,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
             context={
                 "examples": examples,
                 "instructions": instructions,
-                "var_name": var_name,
+                "var_name": var_name if var_name else "result",
             },
         )
 
@@ -500,6 +508,6 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
         if value.endswith(";"):
             value = value[:-1]
 
-        log.info(f"Generated value for ${var_name}: {value}")
+        log.info("Generated value for $%s: %s", var_name, value)
 
         return literal_eval(value)

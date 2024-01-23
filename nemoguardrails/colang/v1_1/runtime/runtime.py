@@ -16,7 +16,6 @@ import asyncio
 import inspect
 import logging
 import re
-import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urljoin
 
@@ -27,6 +26,7 @@ from langchain.chains.base import Chain
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
+from nemoguardrails.colang.v1_1.lang.colang_ast import Flow
 from nemoguardrails.colang.v1_1.runtime.flows import ColangRuntimeError, Event
 from nemoguardrails.colang.v1_1.runtime.statemachine import (
     FlowConfig,
@@ -62,9 +62,10 @@ class RuntimeV1_1(Runtime):
         # A way to disable async function execution. Useful for testing.
         self.disable_async_execution = False
 
-    async def _add_flows_action(self, state: "State", **args):
+    async def _add_flows_action(self, state: "State", **args: dict) -> List[str]:
         log.info("Start AddFlowsAction! %s", args)
         flow_content = args["config"]
+        assert isinstance(flow_content, str)
         # Parse new flow
         try:
             parsed_flow = parse_colang_file(
@@ -105,7 +106,7 @@ class RuntimeV1_1(Runtime):
 
         return added_flows
 
-    async def _remove_flows_action(self, state: "State", **args):
+    async def _remove_flows_action(self, state: "State", **args: dict) -> None:
         log.info("Start RemoveFlowsAction! %s", args)
         flow_ids = args["flow_ids"]
         # Remove all related flow states
@@ -117,11 +118,12 @@ class RuntimeV1_1(Runtime):
             if flow_id in state.flow_configs:
                 del state.flow_configs[flow_id]
 
-    def _init_flow_configs(self):
+    def _init_flow_configs(self) -> None:
         """Initializes the flow configs based on the config."""
         self.flow_configs = {}
 
         for flow in self.config.flows:
+            assert isinstance(flow, Flow)
             flow_id = flow.name
             self.flow_configs[flow_id] = FlowConfig(
                 id=flow_id,
@@ -131,10 +133,10 @@ class RuntimeV1_1(Runtime):
             )
 
     async def generate_events(self, events: List[dict]) -> List[dict]:
-        raise Exception("Stateless API not supported for Colang 1.1, yet.")
+        raise NotImplementedError("Stateless API not supported for Colang 1.1, yet.")
 
     @staticmethod
-    def _internal_error_action_result(message: str):
+    def _internal_error_action_result(message: str) -> ActionResult:
         """Helper to construct an action result for an internal error."""
         return ActionResult(
             events=[
@@ -284,7 +286,7 @@ class RuntimeV1_1(Runtime):
 
     async def _get_action_resp(
         self, action_meta: Dict[str, Any], action_name: str, kwargs: Dict[str, Any]
-    ) -> Tuple[Dict[str, Any], str]:
+    ) -> Tuple[Union[str, Dict[str, Any]], str]:
         """Interact with actions and get response from action-server and system actions."""
         # default response
         result: Union[str, Dict[str, Any]] = {}
@@ -331,7 +333,7 @@ class RuntimeV1_1(Runtime):
         return result, status
 
     @staticmethod
-    def _get_action_finished_event(result):
+    def _get_action_finished_event(result: dict) -> Dict[str, Any]:
         """Helper to return the ActionFinished event from the result of running a local action."""
         return new_event_dict(
             f"{result['action_name']}Finished",
@@ -389,7 +391,7 @@ class RuntimeV1_1(Runtime):
 
     async def process_events(
         self, events: List[dict], state: Union[Optional[dict], State] = None
-    ) -> Tuple[List[dict], dict]:
+    ) -> Tuple[List[Dict[str, Any]], State]:
         """Process a sequence of events in a given state.
 
         The events will be processed one by one, in the input order.
@@ -571,7 +573,7 @@ class RuntimeV1_1(Runtime):
         self,
         action_name: str,
         start_action_event: dict,
-        events_history: List[Union[dict, InternalEvent]],
+        events_history: List[Union[dict, Event]],
         state: "State",
     ) -> dict:
         """Runs the locally registered action.
