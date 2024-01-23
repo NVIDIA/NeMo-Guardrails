@@ -474,7 +474,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
                     examples += f"{result.text}\n\n"
 
         prompt = self.llm_task_manager.render_task_prompt(
-            task=Task.GENERATE_VALUE,
+            task=Task.GENERATE_VALUE_FROM_INSTRUCTION,
             events=events,
             context={
                 "examples": examples,
@@ -488,7 +488,7 @@ class LLMGenerationActionsV1dot1(LLMGenerationActions):
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(
-            Task.GENERATE_VALUE, output=result
+            Task.GENERATE_VALUE_FROM_INSTRUCTION, output=result
         )
 
         # We only use the first line for now

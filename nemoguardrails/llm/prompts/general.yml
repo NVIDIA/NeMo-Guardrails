@@ -12,20 +12,20 @@ prompts:
     # Prompt for detecting the user message canonical form.
     - task: generate_user_intent
       content: |-
-        """
-        {{ general_instructions }}
-        """
+          """
+          {{ general_instructions }}
+          """
 
-        # This is how a conversation between a user and the bot can go:
-        {{ sample_conversation }}
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
-        # This is how the user talks:
-        {{ examples }}
+          # This is how the user talks:
+          {{ examples }}
 
-        # This is the current conversation between the user and the bot:
-        # Choose intent from this list: {{ potential_user_intents }}
-        {{ sample_conversation | first_turns(2) }}
-        {{ history | colang }}
+          # This is the current conversation between the user and the bot:
+          # Choose intent from this list: {{ potential_user_intents }}
+          {{ sample_conversation | first_turns(2) }}
+          {{ history | colang }}
 
     # Prompt for generating the next steps.
     - task: generate_next_steps
@@ -96,9 +96,12 @@ prompts:
           # This is how a conversation between a user and the bot can go:
           {{ sample_conversation }}
 
-          # This is the current conversation between the user and the bot:
-          {{ history | colang }}
+          # This is how the bot thinks:
+          {{ examples }}
 
+          # This is the current conversation between the user and the bot:
+          {{ sample_conversation | first_turns(2) }}
+          {{ history | colang }}
           # {{ instructions }}
           ${{ var_name }} =
 
@@ -128,6 +131,22 @@ prompts:
 
           user action: {{ user_action }}
           user intent:
+
+    # Prompt for generating the value of a context variable.
+    - task: generate_value_from_instruction
+      content: |-
+          """
+          {{ general_instructions }}
+          """
+
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
+
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
+
+          # {{ instructions }}
+          ${{ var_name }} =
 
     # Prompt for generating a flow from instructions.
     - task: generate_flow_from_instructions
