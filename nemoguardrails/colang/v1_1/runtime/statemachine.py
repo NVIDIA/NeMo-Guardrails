@@ -259,11 +259,18 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> State
                     if _is_listening_flow(flow_state):
                         active_interaction_loops.add(flow_state.loop_id)
 
+                # TODO: Check if we should rather should do this after the event matching step
+                # or even skip the event processing
+                if event.name == "ContextUpdate":
+                    # Update the context
+                    if "data" in event.arguments and isinstance(event.arguments, dict):
+                        state.context.update(event.arguments["data"])
+
                 handled_event_loops = _process_internal_events_without_default_matchers(
                     state, event
                 )
 
-                head_candidates = _get_head_all_head_candidates(state, event)
+                head_candidates = _get_all_head_candidates(state, event)
 
                 heads_matching: List[FlowHead] = []
                 heads_not_matching: List[FlowHead] = []
@@ -512,7 +519,7 @@ def _process_internal_events_without_default_matchers(
     return handled_event_loops
 
 
-def _get_head_all_head_candidates(state: State, event: Event) -> List[Tuple[str, str]]:
+def _get_all_head_candidates(state: State, event: Event) -> List[Tuple[str, str]]:
     """
     Find all heads that are on a potential match with the event.
     Returns those heads in a flow hierarchical order.
@@ -1077,7 +1084,7 @@ def slide(
                 element.expression, _get_eval_context(state, flow_state)
             )
             if element.key in flow_state.global_variables:
-                state.global_variables.update({element.key: expr_val})
+                state.context.update({element.key: expr_val})
             else:
                 flow_state.context.update({element.key: expr_val})
             head.position += 1
@@ -1114,7 +1121,9 @@ def slide(
             head.position += 1
 
         elif isinstance(element, Priority):
-            priority = eval_expression(element.priority_expr, flow_state.context)
+            priority = eval_expression(
+                element.priority_expr, _get_eval_context(state, flow_state)
+            )
             if not isinstance(priority, float) or priority < 0.0 or priority > 1.0:
                 raise ColangValueError(
                     "priority must be a float number between 0.0 and 1.0!"
@@ -2139,9 +2148,10 @@ def create_umim_event(event: Event, event_args: Dict[str, Any]) -> Dict[str, Any
 
 def _get_eval_context(state: State, flow_state: FlowState) -> dict:
     context = flow_state.context.copy()
+    # Link global variables
     for var in flow_state.global_variables:
-        if var in state.global_variables:
-            context.update({var: state.global_variables[var]})
+        if var in state.context:
+            context.update({var: state.context[var]})
         else:
             context.update({var: None})
     return context

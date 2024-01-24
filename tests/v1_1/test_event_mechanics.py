@@ -1048,5 +1048,83 @@ def test_action_event_requeuing():
     chat << "started\nsuccess"
 
 
+def test_update_context():
+    """Test to update the context."""
+
+    content = """
+    flow main
+      global $test
+      match UtteranceUserAction.Finished(final_transcript="step1")
+      start UtteranceBotAction(script="{{$test}}")
+      match UtteranceUserAction.Finished(final_transcript="step2")
+      start UtteranceBotAction(script="{{$test}}")
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "ContextUpdate",
+            "data": {
+                "test": 13,
+            },
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "step1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "13",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "ContextUpdate",
+            "data": {
+                "test": 5,
+            },
+        },
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "step2",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "5",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_event_list_parameter_match()
+    test_update_context()

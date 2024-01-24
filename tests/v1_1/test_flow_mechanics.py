@@ -15,6 +15,7 @@
 
 """Test the core flow mechanics"""
 import logging
+import os
 
 from rich.logging import RichHandler
 
@@ -22,7 +23,8 @@ from nemoguardrails.colang.v1_1.runtime.statemachine import (
     InternalEvent,
     run_to_completion,
 )
-from tests.utils import _init_state, is_data_in_events
+from nemoguardrails.rails.llm.config import RailsConfig
+from tests.utils import TestChat, _init_state, is_data_in_events
 
 FORMAT = "%(message)s"
 logging.basicConfig(
@@ -1048,5 +1050,22 @@ def test_implicit_flow_deactivation():
     )
 
 
+CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "../test_configs")
+
+
+def test_action_event_requeuing():
+    config = RailsConfig.from_path(
+        os.path.join(CONFIGS_FOLDER, "with_custom_action_v1_1")
+    )
+
+    chat = TestChat(
+        config,
+        llm_completions=[],
+    )
+
+    chat >> "start"
+    chat << "8"
+
+
 if __name__ == "__main__":
-    test_flow_deactivation()
+    test_action_event_requeuing()

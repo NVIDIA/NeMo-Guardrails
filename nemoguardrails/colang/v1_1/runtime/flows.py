@@ -622,8 +622,8 @@ class State:
     # The main flow state
     main_flow_state: Optional[FlowState] = None
 
-    # Variable that are defined as global in a flow with a single value
-    global_variables: Dict[str, Any] = field(default_factory=dict)
+    # The global context that contains all flow variables defined as global
+    context: Dict[str, Any] = field(default_factory=dict)
 
     # The resulting events of event-driven system
     outgoing_events: List[dict] = field(default_factory=list)
@@ -634,8 +634,8 @@ class State:
     last_events: List[Union[dict, Event]] = field(default_factory=list)
 
     # The updates to the context that should be applied before the next step
-    # TODO: This seem no longer needed
-    context_updates: dict = field(default_factory=dict)
+    # TODO: This would be needed if we decide to implement assignments of global variables via context updates
+    # context_updates: dict = field(default_factory=dict)
 
     ########################
     # Helper data structures

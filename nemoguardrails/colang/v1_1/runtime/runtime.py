@@ -469,10 +469,11 @@ class RuntimeV1_1(Runtime):
                     await asyncio.sleep(0.001)
 
                 # If we have context updates after this event, we first add that.
-                if state.context_updates:
-                    output_events.append(
-                        new_event_dict("ContextUpdate", data=state.context_updates)
-                    )
+                # TODO: Check if this is still needed for e.g. stateless implementation
+                # if state.context_updates:
+                #     output_events.append(
+                #         new_event_dict("ContextUpdate", data=state.context_updates)
+                #     )
 
                 for out_event in state.outgoing_events:
                     # We also record the out events in the recent history.
@@ -594,7 +595,7 @@ class RuntimeV1_1(Runtime):
         return_value, new_events, context_updates = await self._process_start_action(
             action_name,
             action_params=action_params,
-            context={},
+            context=state.context,
             events=events_history,
             state=state,
         )
