@@ -1,4 +1,4 @@
-# LangChain Integration
+# RunnableRails
 
 This guide will teach you how to integrate guardrail configurations built with NeMo Guardrails into your LangChain applications. The examples in this guide will focus on using the [LangChain Expression Language](https://python.langchain.com/docs/expression_language/) (LCEL).
 
@@ -69,7 +69,6 @@ chain = runnable_1 | runnable_2 | runnable_3 | runnable_4 | ...
 chain_with_guardrails = runnable_1 | (guardrails | (runnable_2 | runnable_3)) | runnable_4 | ...
 ```
 
-
 ## Input/Output Formats
 
 The supported input/output formats when wrapping an LLM model are:
@@ -90,7 +89,7 @@ The supported input/output formats when wrapping a chain (or a `Runnable`) are:
 
 ## Prompt Passthrough
 
-The role of a guardrail configuration is to validate the user input, check the LLM output, guide the LLM model on how to respond, etc. (see [Configuration Guide](./configuration-guide.md#guardrails-definitions) for more details on the different types of rails). To achieve this, the guardrail configuration might make additional calls to the LLM or other models/APIs (e.g., for fact-checking and content moderation).
+The role of a guardrail configuration is to validate the user input, check the LLM output, guide the LLM model on how to respond, etc. (see [Configuration Guide](../configuration-guide.md#guardrails-definitions) for more details on the different types of rails). To achieve this, the guardrail configuration might make additional calls to the LLM or other models/APIs (e.g., for fact-checking and content moderation).
 
 By default, when the guardrail configuration decides that it is safe to prompt the LLM, **it will use the exact prompt that was provided as the input** (i.e., string, `StringPromptValue` or `ChatPromptValue`). However, to enforce specific rails (e.g., dialog rails, general instructions), the guardrails configuration needs to alter the prompt used to generate the response. To enable this behavior, which provides more robust rails, you must set the `passthrough` parameter to `False` when creating the `RunnableRails` instance:
 
@@ -161,19 +160,6 @@ chain = prompt | (guardrails | model)
 
 print(chain.invoke({"question": "What is 5+5*5/5?"}))
 ```
-
-## LangSmith Integration
-
-NeMo Guardrails integrates out-of-the-box with [LangSmith](https://www.langchain.com/langsmith). To start sending trace information to LangSmith, you have to configure the following environment variables:
-
-```bash
-export LANGCHAIN_TRACING_V2=true
-export LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
-export LANGCHAIN_API_KEY=<your-api-key>
-export LANGCHAIN_PROJECT=<your-project>  # if not specified, defaults to "default"
-```
-
-For more details on configuring LangSmith check out the [LangSmith documentation](https://docs.smith.langchain.com/).
 
 ## Limitations
 
