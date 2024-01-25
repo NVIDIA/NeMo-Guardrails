@@ -286,6 +286,173 @@ def test_await_or_grouping():
     )
 
 
+def test_when_or_cases_with_same_references():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction().Finished(final_transcript=$transcript) as $ref
+      $transcript = $ref.arguments.final_transcript
+
+    flow main
+      while True
+        when user said "A" as $ref
+          start UtteranceBotAction(script="case A:{{$ref.context.transcript}}")
+        orwhen user said "B" as $ref
+          start UtteranceBotAction(script="case B:{{$ref.context.transcript}}")
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "A",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "case A:A",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "case B:B",
+            }
+        ],
+    )
+
+
+def test_await_actions_with_same_references():
+    """"""
+
+    content = """
+    flow main
+      await UtteranceBotAction(script="A") as $ref and GestureBotAction(gesture="B") as $ref
+      start UtteranceBotAction(script="match")
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "B",
+            },
+        ],
+    )
+    utterance_action_uid = state.outgoing_events[0]["action_uid"]
+    gesture_action_uid = state.outgoing_events[1]["action_uid"]
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceBotActionFinished",
+            "script": "A",
+            "action_uid": utterance_action_uid,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "GestureBotActionFinished",
+            "gesture": "B",
+            "action_uid": gesture_action_uid,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "match",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+
+def test_await_flows_with_same_references():
+    """"""
+
+    content = """
+    flow user said $transcript
+      match UtteranceUserAction().Finished(final_transcript=$transcript) as $ref
+      $transcript = $ref.arguments.final_transcript
+
+    flow main
+      while True
+        await user said "A" as $ref or user said "B" as $ref
+        start UtteranceBotAction(script=$ref.context.transcript)
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "A",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "B",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            }
+        ],
+    )
+
+
 def test_await_or_group_finish():
     """"""
 
@@ -511,4 +678,4 @@ def test_await_and_group_immediate_end():
 
 
 if __name__ == "__main__":
-    test_await_and_group_immediate_end()
+    test_when_or_cases_with_same_references()

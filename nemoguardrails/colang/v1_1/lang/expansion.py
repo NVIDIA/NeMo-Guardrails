@@ -475,6 +475,7 @@ def _expand_await_element(
         end_scope_element = EndScope(name=scope_name)
         start_elements: List[List[SpecOp]] = []
         match_elements: List[List[Spec]] = []
+        assignment_elements: List[List[Assignment]] = []
         failure_label_name = f"failure_label_{new_var_uid()}"
         failure_label_element = Label(name=failure_label_name)
         end_label_name = f"end_label_{new_var_uid()}"
@@ -488,14 +489,12 @@ def _expand_await_element(
             fork_element.labels.append(group_label_name)
             start_elements.append([])
             match_elements.append([])
+            assignment_elements.append([])
             for group_element in and_group["elements"]:
                 group_element_copy = copy.deepcopy(group_element)
-                element_ref = group_element_copy.ref
-                if element_ref is None:
-                    element_ref = _create_ref_ast_dict_helper(f"_ref_{new_var_uid()}")
-                assert isinstance(element_ref, dict)
+                temp_element_ref = f"_ref_{new_var_uid()}"
 
-                group_element_copy.ref = element_ref
+                group_element_copy.ref = _create_ref_ast_dict_helper(temp_element_ref)
                 start_elements[-1].append(
                     SpecOp(
                         op="start",
@@ -504,11 +503,20 @@ def _expand_await_element(
                 )
                 match_elements[-1].append(
                     Spec(
-                        var_name=element_ref["elements"][0]["elements"][0].lstrip("$"),
+                        var_name=temp_element_ref,
                         members=_create_member_ast_dict_helper("Finished", {}),
                         spec_type=SpecType.REFERENCE,
                     )
                 )
+                if group_element.ref:
+                    assignment_elements[-1].append(
+                        Assignment(
+                            key=group_element.ref["elements"][0]["elements"][0].lstrip(
+                                "$"
+                            ),
+                            expression=f"${temp_element_ref}",
+                        )
+                    )
 
         # Generate new element sequence
         if len(normalized_group["elements"]) == 1:
@@ -518,6 +526,9 @@ def _expand_await_element(
                 new_elements.append(start_elements[0][idx])
             match_group = {"_type": "spec_and", "elements": match_elements[0]}
             new_elements.append(SpecOp(op="match", spec=match_group))
+            for assignment_element in assignment_elements[0]:
+                new_elements.append(assignment_element)
+
         else:
             # Multiple and-groups
             new_elements.append(begin_scope_element)
@@ -532,6 +543,8 @@ def _expand_await_element(
                     "elements": match_elements[group_idx],
                 }
                 new_elements.append(SpecOp(op="match", spec=match_group))
+                for assignment_element in assignment_elements[group_idx]:
+                    new_elements.append(assignment_element)
                 new_elements.append(goto_end_element)
             new_elements.append(failure_label_element)
             new_elements.append(WaitForHeads(number=len(normalized_group["elements"])))
@@ -692,6 +705,7 @@ def _expand_when_stmt_element(
     group_label_names: List[List[str]] = []
     group_start_elements: List[List[List[Spec]]] = []
     group_match_elements: List[List[List[Spec]]] = []
+    group_assignment_elements: List[List[List[Assignment]]] = []
     case_label_names: List[str] = []
     else_label_name = f"when_else_label_{stmt_uid}"
     else_statement_label_name = f"when_else_statement_label_{stmt_uid}"
@@ -722,6 +736,7 @@ def _expand_when_stmt_element(
         group_label_names.append([])
         group_start_elements.append([])
         group_match_elements.append([])
+        group_assignment_elements.append([])
         for group_idx, and_group in enumerate(normalized_group["elements"]):
             group_label_names[case_idx].append(
                 f"group_{case_uid}_{group_idx}_label_{stmt_uid}"
@@ -732,32 +747,43 @@ def _expand_when_stmt_element(
 
             group_start_elements[case_idx].append([])
             group_match_elements[case_idx].append([])
+            group_assignment_elements[case_idx].append([])
             for group_element in and_group["elements"]:
                 match_element = copy.deepcopy(group_element)
                 ref_uid = None
+                temp_ref_uid: str
                 if (
                     group_element.spec_type == SpecType.FLOW
                     or group_element.spec_type == SpecType.ACTION
                 ) and group_element.members is None:
                     # Add start element
-                    ref_uid = f"_ref_{new_var_uid()}"
-                    if group_element.ref is None:
-                        group_element.ref = _create_ref_ast_dict_helper(ref_uid)
-                    else:
+                    temp_ref_uid = f"_ref_{new_var_uid()}"
+                    if group_element.ref is not None:
                         ref_uid = group_element.ref["elements"][0]["elements"][
                             0
                         ].lstrip("$")
+                    group_element.ref = _create_ref_ast_dict_helper(temp_ref_uid)
                     group_start_elements[case_idx][group_idx].append(group_element)
 
-                # Add match element
-                if ref_uid:
                     match_element.name = None
-                    match_element.var_name = ref_uid
+                    match_element.var_name = temp_ref_uid
                     match_element.members = _create_member_ast_dict_helper(
                         "Finished", {}
                     )
                     match_element.ref = None
                     match_element.spec_type = SpecType.REFERENCE
+
+                    # Add assignment element
+                    if ref_uid:
+                        assignment_element = Assignment(
+                            key=ref_uid,
+                            expression=f"${temp_ref_uid}",
+                        )
+                        group_assignment_elements[case_idx][group_idx].append(
+                            assignment_element
+                        )
+
+                # Add match element
                 group_match_elements[case_idx][group_idx].append(match_element)
 
     new_elements: List[ElementType] = []
@@ -806,6 +832,13 @@ def _expand_when_stmt_element(
                 #     spec=SpecAnd(elements=group_match_elements[case_idx][group_idx]),
                 # )
             )
+
+            if group_start_elements[case_idx][group_idx]:
+                for assignment_element in group_assignment_elements[case_idx][
+                    group_idx
+                ]:
+                    new_elements.append(assignment_element)
+
             new_elements.append(Goto(label=case_label_names[case_idx]))
 
             # Case groups
