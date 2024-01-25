@@ -138,7 +138,7 @@ You can register a Langchain chain as an action using the [LLMRails.register_act
 app.register_action(some_chain, name="some_chain")
 ```
 
-When a chain is invoked as an action, the parameters of the action correspond to the input keys of the chain. For the return value, if the output of the chain has a single key, the value will be returned. If the chain has multiple output keys, the dictionary of output keys and their values is returned. See [demo_chain_with_guardrails](../../examples/scripts/demo_chain_with_guardrails.py) and [demo_chain_as_action](../../examples/scripts/demo_chain_as_action.py) as examples.
+When a chain is invoked as an action, the parameters of the action correspond to the input keys of the chain. For the return value, if the output of the chain has a single key, the value will be returned. If the chain has multiple output keys, the dictionary of output keys and their values is returned. See the [LangChain Integration Guide](./langchain/langchain-integration.md) for more details.
 
 ### Custom Actions
 

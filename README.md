@@ -256,6 +256,10 @@ Sample output:
 
 To start a guardrails server, you can also use a Docker container. NeMo Guardrails provides a [Dockerfile](./Dockerfile) that you can use to build a `nemoguardrails` image. For more details, check out the guide for [using Docker](docs/user_guides/advanced/using-docker.md).
 
+## Integration with LangChain
+
+NeMo Guardrails integrates seamlessly with LangChain. You can easily wrap a guardrails configuration around a LangChain chain (or any `Runnable`). You can also call a LangChain chain from within a guardrails configuration. For more details, check out the [LangChain Integration Documentation](./docs/user_guides/langchain/langchain-integration.md)
+
 ## Evaluation
 
 Evaluating the safety of a LLM-based conversational application is a complex task and still an open research question. To support proper evaluation, NeMo Guardrails provides the following:
