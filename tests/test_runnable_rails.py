@@ -281,7 +281,7 @@ def test_string_passthrough_mode_with_chain():
     config = RailsConfig.from_content(config={"models": []})
 
     runnable_with_rails = RunnableRails(
-        config, passthrough=True, passthrough_runnable=MockRunnable()
+        config, passthrough=True, runnable=MockRunnable()
     )
 
     chain = {"input": RunnablePassthrough()} | runnable_with_rails
@@ -307,7 +307,7 @@ def test_string_passthrough_mode_with_chain_and_dialog_rails():
             """,
     )
     runnable_with_rails = RunnableRails(
-        config, llm=llm, passthrough=True, passthrough_runnable=MockRunnable()
+        config, llm=llm, passthrough=True, runnable=MockRunnable()
     )
 
     chain = {"input": RunnablePassthrough()} | runnable_with_rails
@@ -345,7 +345,7 @@ def test_string_passthrough_mode_with_chain_and_dialog_rails_2():
     )
 
     runnable_with_rails = RunnableRails(
-        config, llm=llm, passthrough=True, passthrough_runnable=MockRunnable()
+        config, llm=llm, passthrough=True, runnable=MockRunnable()
     )
 
     chain = {"input": RunnablePassthrough()} | runnable_with_rails
@@ -404,7 +404,7 @@ class MockRunnable2(Runnable):
 def test_string_passthrough_mode_with_chain_and_string_output():
     config = RailsConfig.from_content(config={"models": []})
     runnable_with_rails = RunnableRails(
-        config, passthrough=True, passthrough_runnable=MockRunnable2()
+        config, passthrough=True, runnable=MockRunnable2()
     )
 
     chain = {"input": RunnablePassthrough()} | runnable_with_rails
@@ -419,7 +419,7 @@ def test_string_passthrough_mode_with_chain_and_string_output():
 def test_string_passthrough_mode_with_chain_and_string_input_and_output():
     config = RailsConfig.from_content(config={"models": []})
     runnable_with_rails = RunnableRails(
-        config, passthrough=True, passthrough_runnable=MockRunnable2()
+        config, passthrough=True, runnable=MockRunnable2()
     )
 
     chain = runnable_with_rails
