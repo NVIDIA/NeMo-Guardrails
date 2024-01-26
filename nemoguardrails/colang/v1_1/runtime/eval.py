@@ -39,7 +39,7 @@ def eval_expression(expr: str, context: dict) -> Any:
 
         return expr
 
-    # We search for all inner expressions ("...{{xyz}}...") and evaluate them first
+    # We search for all inner expressions marked by double curly brackets and evaluate them first
     inner_expression_pattern = r"\{\{(.*?)\}\}"
     inner_expressions = re.findall(inner_expression_pattern, expr)
     if inner_expressions:
@@ -51,12 +51,11 @@ def eval_expression(expr: str, context: dict) -> Any:
                 raise ColangValueError(
                     f"Error evaluating inner expression: '{expr}'"
                 ) from ex
-            if isinstance(value, str):
-                value = value.replace('"', '\\"').replace("'", "\\'")
+            value = str(value).replace('"', '\\"').replace("'", "\\'")
             inner_expression_values.append(value)
         expr = re.sub(
             inner_expression_pattern,
-            lambda x: str(inner_expression_values.pop(0)),
+            lambda x: inner_expression_values.pop(0),
             expr,
         )
 
