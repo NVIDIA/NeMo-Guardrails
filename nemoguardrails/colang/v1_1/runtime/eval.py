@@ -130,6 +130,7 @@ def eval_expression(expr: str, context: dict) -> Any:
                 "search": _regex_search,
                 "findall": _regex_findall,
                 "uid": new_uid,
+                "str": _to_str,
                 "escape": _escape_string,
                 "is_int": _is_int,
                 "is_float": _is_float,
@@ -149,6 +150,10 @@ def _regex_search(pattern: str, string: str) -> bool:
 
 def _regex_findall(pattern: str, string: str) -> List[str]:
     return re.findall(pattern, string)
+
+
+def _to_str(data: Any) -> str:
+    return str(data)
 
 
 def _escape_string(string: str) -> str:

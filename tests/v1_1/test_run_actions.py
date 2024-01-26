@@ -13,8 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
+from rich.logging import RichHandler
+
 from nemoguardrails import RailsConfig
 from tests.utils import TestChat
+
+FORMAT = "%(message)s"
+logging.basicConfig(
+    level=logging.DEBUG,
+    format=FORMAT,
+    datefmt="[%X,%f]",
+    handlers=[RichHandler(markup=True)],
+)
 
 
 def test_1():
@@ -81,3 +93,41 @@ def test_2():
 
     chat >> "hi"
     chat << "John"
+
+
+def test_3():
+    config = RailsConfig.from_content(
+        colang_content="""
+        flow bot say $text
+          await UtteranceBotAction(script=$text)
+
+        flow main
+          match UtteranceUserActionFinished(final_transcript="hi")
+          $information = FetchDictionaryAction()
+          $response_to_user = '''Summarize the result from the AddItemAction call to the user: {{str($information)}}'''
+          bot say $response_to_user
+        """,
+        yaml_content="""
+        colang_version: "1.1"
+        """,
+    )
+
+    chat = TestChat(
+        config,
+        llm_completions=['"I couldn\'t find any items matching your request!"'],
+    )
+
+    async def fetch_dictionary():
+        return {
+            "isSuccess": False,
+            "response": "I couldn't find any items matching your request. Would you like to try again, or browse the available options?",
+        }
+
+    chat.app.register_action(fetch_dictionary, "FetchDictionaryAction")
+
+    chat >> "hi"
+    chat << "I couldn't find any items matching your request!"
+
+
+if __name__ == "__main__":
+    test_3()
