@@ -99,6 +99,7 @@ def test_1():
             ],
             "name": "test",
             "parameters": [],
+            "return_members": [],
             "source_code": None,
             "file_info": {"exclude_from_llm": False},
         }
@@ -202,6 +203,7 @@ def test_2():
             ],
             "name": "test",
             "parameters": [],
+            "return_members": [],
             "source_code": None,
             "file_info": {"exclude_from_llm": False},
         }
@@ -325,6 +327,7 @@ def test_3():
             ],
             "name": "test",
             "parameters": [],
+            "return_members": [],
             "source_code": None,
             "file_info": {"exclude_from_llm": False},
         }
@@ -348,6 +351,7 @@ def test_4():
             "_source": None,
             "name": "test",
             "parameters": [],
+            "return_members": [],
             "source_code": None,
             "file_info": {"exclude_from_llm": False},
             "elements": [
@@ -830,7 +834,7 @@ def test_flow_if_2():
     )
 
 
-def test_flow_assignment_1():
+def test_flow_assignment_3():
     assert (
         _flows(
             """
@@ -864,3 +868,144 @@ flow main
             },
         ]
     )
+
+
+def test_flow_return_values():
+    """Test the different ways of defining public flow members."""
+    flow = _flows(
+        """
+            flow a $param -> $val
+              pass
+            flow b -> $val = 1
+              pass
+            flow c -> $ret_1 = "test", $ret_2
+              pass
+            flow c -> $ret_1 = "test", $ret_2 = 13
+              pass
+            """
+    )
+
+    assert flow == [
+        {
+            "_type": "flow",
+            "_source": None,
+            "name": "a",
+            "parameters": [{"name": "param", "default_value_expr": None}],
+            "return_members": [{"name": "val", "default_value_expr": None}],
+            "elements": [
+                {
+                    "_type": "spec_op",
+                    "_source": None,
+                    "op": "match",
+                    "spec": {
+                        "_type": "spec",
+                        "_source": None,
+                        "name": "StartFlow",
+                        "spec_type": SpecType.EVENT,
+                        "arguments": {"flow_id": '"a"'},
+                        "members": None,
+                        "var_name": None,
+                        "ref": None,
+                    },
+                    "return_var_name": None,
+                    "info": {},
+                },
+                {"_type": "pass_stmt", "elements": []},
+            ],
+            "source_code": None,
+            "file_info": {"exclude_from_llm": False},
+        },
+        {
+            "_type": "flow",
+            "_source": None,
+            "name": "b",
+            "parameters": [],
+            "return_members": [{"name": "val", "default_value_expr": "1"}],
+            "elements": [
+                {
+                    "_type": "spec_op",
+                    "_source": None,
+                    "op": "match",
+                    "spec": {
+                        "_type": "spec",
+                        "_source": None,
+                        "name": "StartFlow",
+                        "spec_type": SpecType.EVENT,
+                        "arguments": {"flow_id": '"b"'},
+                        "members": None,
+                        "var_name": None,
+                        "ref": None,
+                    },
+                    "return_var_name": None,
+                    "info": {},
+                },
+                {"_type": "pass_stmt", "elements": []},
+            ],
+            "source_code": None,
+            "file_info": {"exclude_from_llm": False},
+        },
+        {
+            "_type": "flow",
+            "_source": None,
+            "name": "c",
+            "parameters": [],
+            "return_members": [
+                {"name": "ret_1", "default_value_expr": '"test"'},
+                {"name": "ret_2", "default_value_expr": None},
+            ],
+            "elements": [
+                {
+                    "_type": "spec_op",
+                    "_source": None,
+                    "op": "match",
+                    "spec": {
+                        "_type": "spec",
+                        "_source": None,
+                        "name": "StartFlow",
+                        "spec_type": SpecType.EVENT,
+                        "arguments": {"flow_id": '"c"'},
+                        "members": None,
+                        "var_name": None,
+                        "ref": None,
+                    },
+                    "return_var_name": None,
+                    "info": {},
+                },
+                {"_type": "pass_stmt", "elements": []},
+            ],
+            "source_code": None,
+            "file_info": {"exclude_from_llm": False},
+        },
+        {
+            "_type": "flow",
+            "_source": None,
+            "name": "c",
+            "parameters": [],
+            "return_members": [
+                {"name": "ret_1", "default_value_expr": '"test"'},
+                {"name": "ret_2", "default_value_expr": "13"},
+            ],
+            "elements": [
+                {
+                    "_type": "spec_op",
+                    "_source": None,
+                    "op": "match",
+                    "spec": {
+                        "_type": "spec",
+                        "_source": None,
+                        "name": "StartFlow",
+                        "spec_type": SpecType.EVENT,
+                        "arguments": {"flow_id": '"c"'},
+                        "members": None,
+                        "var_name": None,
+                        "ref": None,
+                    },
+                    "return_var_name": None,
+                    "info": {},
+                },
+                {"_type": "pass_stmt", "elements": []},
+            ],
+            "source_code": None,
+            "file_info": {"exclude_from_llm": False},
+        },
+    ]

@@ -159,6 +159,16 @@ def create_flow_instance(
     for idx, param in enumerate(flow_config.parameters):
         flow_state.arguments.append(f"${idx}")
 
+    # Add all flow return members
+    for idx, member in enumerate(flow_config.return_members):
+        flow_state.context.update(
+            {
+                member.name: eval_expression(member.default_value_expr, {})
+                if member.default_value_expr
+                else None,
+            }
+        )
+
     return flow_state
 
 

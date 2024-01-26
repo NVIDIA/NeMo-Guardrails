@@ -26,6 +26,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Continue,
     Flow,
     FlowParamDef,
+    FlowReturnMemberDef,
     Global,
     If,
     Label,
@@ -113,29 +114,48 @@ class ColangTransformer(Transformer):
     def _flow_def(self, children: dict, meta: Meta) -> Flow:
         """Processing for `flow` tree nodes."""
         assert children[0]["_type"] == "spec_name"
-        assert children[2]["_type"] == "suite"
+        assert children[3]["_type"] == "suite"
 
         name = children[0]["elements"][0]
         parameters = children[1]
-        elements = children[2]["elements"]
+        return_members = children[2]
+        elements = children[3]["elements"]
 
         param_defs = []
         if parameters:
-            for flow_param_def in parameters["elements"]:
-                assert flow_param_def["_type"] == "flow_param_def"
-                param_name_el = flow_param_def["elements"][0]
+            for return_member_def in parameters["elements"]:
+                assert return_member_def["_type"] == "flow_param_def"
+                member_name_el = return_member_def["elements"][0]
 
-                assert param_name_el["_type"] == "var_name"
-                param_name = param_name_el["elements"][0][1:]
-                param_def = FlowParamDef(name=param_name)
+                assert member_name_el["_type"] == "var_name"
+                member_name = member_name_el["elements"][0][1:]
+                member_def = FlowParamDef(name=member_name)
 
                 # If we have a default value, we also use that
-                if len(flow_param_def["elements"]) == 2:
-                    default_value_el = flow_param_def["elements"][1]
+                if len(return_member_def["elements"]) == 2:
+                    default_value_el = return_member_def["elements"][1]
                     assert default_value_el["_type"] == "expr"
-                    param_def.default_value_expr = default_value_el["elements"][0]
+                    member_def.default_value_expr = default_value_el["elements"][0]
 
-                param_defs.append(param_def)
+                param_defs.append(member_def)
+
+        return_member_defs = []
+        if return_members:
+            for return_member_def in return_members["elements"]:
+                assert return_member_def["_type"] == "return_member_def"
+                member_name_el = return_member_def["elements"][0]
+
+                assert member_name_el["_type"] == "var_name"
+                member_name = member_name_el["elements"][0][1:]
+                member_def = FlowReturnMemberDef(name=member_name)
+
+                # If we have a default value, we also use that
+                if len(return_member_def["elements"]) == 2:
+                    default_value_el = return_member_def["elements"][1]
+                    assert default_value_el["_type"] == "expr"
+                    member_def.default_value_expr = default_value_el["elements"][0]
+
+                return_member_defs.append(member_def)
 
         elements[0:0] = [
             SpecOp(
@@ -156,6 +176,7 @@ class ColangTransformer(Transformer):
             name=name,
             elements=elements,
             parameters=param_defs,
+            return_members=return_member_defs,
             _source=self.__source(meta),
             source_code=source if self.include_source_mapping else None,
         )

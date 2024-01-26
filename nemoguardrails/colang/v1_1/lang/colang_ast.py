@@ -47,6 +47,18 @@ class FlowParamDef:
 
 @dataclass_json
 @dataclass
+class FlowReturnMemberDef:
+    """The definition for a flow return member.
+
+    Explicit typing is not yet supported.
+    """
+
+    name: str
+    default_value_expr: Optional[str] = None
+
+
+@dataclass_json
+@dataclass
 class Element:
     """Base class for all elements in the AST."""
 
@@ -115,6 +127,7 @@ class Flow(Element):
 
     name: str = ""
     parameters: List[FlowParamDef] = field(default_factory=list)
+    return_members: List[FlowReturnMemberDef] = field(default_factory=list)
     elements: List[Element] = field(default_factory=list)
     source_code: Optional[str] = None
     file_info: Dict[str, Any] = field(default_factory=dict)

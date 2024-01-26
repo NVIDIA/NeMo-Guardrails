@@ -27,7 +27,11 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import ElementType, FlowParamDef
+from nemoguardrails.colang.v1_1.lang.colang_ast import (
+    ElementType,
+    FlowParamDef,
+    FlowReturnMemberDef,
+)
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
@@ -302,6 +306,9 @@ class FlowConfig:
 
     # The flow parameters
     parameters: List[FlowParamDef]
+
+    # The flow return member variables
+    return_members: List[FlowReturnMemberDef] = field(default_factory=list)
 
     # All the label element positions in the flow
     element_labels: Dict[str, int] = field(default_factory=dict)

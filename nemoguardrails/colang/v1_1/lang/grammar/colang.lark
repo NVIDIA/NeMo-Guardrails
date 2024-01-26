@@ -8,12 +8,15 @@ suite: _NEWLINE _INDENT (stmt+) _DEDENT
 
 // Flow definition and calling
 ?def_stmt: flow_def
-flow_def: _FLOW spec_name [flow_params_def] suite
+flow_def: _FLOW spec_name [flow_params_def] ["->" return_members_def] suite
 ?flow_params_def: flow_params_def_classic | flow_params_def_simple
 flow_params_def_classic: "(" (flow_param_def ("," flow_param_def)*) ")"
 flow_params_def_simple: (flow_param_def)+
 flow_param_def: var_name ("=" test)?
 ?flow_stmt: simple_stmt | spec_op_stmt | compound_stmt | doc_string_stmt
+return_members_def: return_member_def ("," return_member_def)*
+return_member_def: var_name ("=" test)?
+
 
 // Simple statements
 ?simple_stmt: set_stmt | return_stmt | abort_stmt | break_stmt | continue_stmt | pass_stmt | log_stmt | priority_stmt | label_stmt | global_stmt

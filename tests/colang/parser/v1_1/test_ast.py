@@ -96,6 +96,7 @@ def test_basic():
         ],
         "name": "test",
         "parameters": [],
+        "return_members": [],
         "source_code": None,
         "file_info": {},
     }

@@ -129,6 +129,7 @@ class RuntimeV1_1(Runtime):
                 id=flow_id,
                 elements=flow.elements,
                 parameters=flow.parameters,
+                return_members=flow.return_members,
                 source_code=flow.source_code,
             )
 
