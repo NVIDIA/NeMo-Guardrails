@@ -14,9 +14,10 @@
 # limitations under the License.
 
 """Module for the configuration of rails."""
+import logging
 import os
 import random
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 import yaml
 from pydantic import BaseModel, ValidationError, root_validator
@@ -24,6 +25,8 @@ from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v1_1.lang.colang_ast import Flow
+
+log = logging.getLogger(__name__)
 
 # Load the default config values from the file
 with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
@@ -291,6 +294,22 @@ with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
     _default_config = yaml.safe_load(_fc)
 
 
+def merge_two_dicts(dict_1: dict, dict_2: dict, ignore_keys: Set[str]) -> None:
+    """Merges the fields of two dictionaries recursively."""
+    for key, value in dict_2.items():
+        if key not in ignore_keys:
+            if key in dict_1:
+                if isinstance(dict_1[key], dict) and isinstance(value, dict):
+                    merge_two_dicts(dict_1[key], value, set())
+                elif dict_1[key] != value:
+                    log.warning(
+                        "Conflicting fields with same name '%s' in yaml config files detected!",
+                        key,
+                    )
+            else:
+                dict_1[key] = value
+
+
 def _join_config(dest_config: dict, additional_config: dict):
     """Helper to join two configuration."""
 
@@ -354,6 +373,27 @@ def _join_config(dest_config: dict, additional_config: dict):
     for field in additional_fields:
         if additional_config.get(field):
             dest_config[field] = additional_config[field]
+
+    # TODO: Rethink the best way to parse and load yaml config files
+    ignore_fields = set(additional_fields).union(
+        {
+            "user_messages",
+            "bot_messages",
+            "instructions",
+            "flows",
+            "models",
+            "prompts",
+            "docs",
+            "actions_server_url",
+            "sensitive_data_detection",
+            "embedding_search_provider",
+        }
+    )
+
+    # Reads all the other fields and merges them with the custom_data field
+    merge_two_dicts(
+        dest_config.get("custom_data", {}), additional_config, ignore_fields
+    )
 
 
 class RailsConfig(BaseModel):
