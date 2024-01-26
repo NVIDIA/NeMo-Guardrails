@@ -5,38 +5,38 @@
 # DON'T CHANGE! Currently, hard-wired with LLM prompt generation
 # -----------------------------------
 
-flow user said $text
+flow user said $text -> $transcript
   # meta: user action
   match UtteranceUserAction.Finished(final_transcript=$text) as $event
   $transcript = $event.arguments.final_transcript
 
-flow user saying $text
+flow user saying $text -> $transcript
   match UtteranceUserAction.TranscriptUpdated(interim_transcript=r"(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$") as $event
   $transcript = $event.arguments.interim_transcript
 
 flow user started saying something
   match UtteranceUserAction.Started() as $event
 
-flow user typing $text
+flow user typing $text -> $inputs
   match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*({{$text}})((\s*\w+\s*){0,2})\W*$"}]) as $event
   $inputs = $event.arguments.interim_inputs
 
-flow user said something
+flow user said something -> $transcript
   match UtteranceUserAction.Finished() as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
   $transcript = $event.arguments.final_transcript
 
-flow user said something unexpected
+flow user said something unexpected -> $transcript
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=None)
   $transcript = $event.arguments.final_transcript
 
-flow user saying something
+flow user saying something -> $transcript
   match UtteranceUserAction.TranscriptUpdated() as $event
   #send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
   $transcript = $event.arguments.final_transcript
 
-flow user selected choice $choice_id
+flow user selected choice $choice_id -> $choice
   # meta: user action
   match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
   $choice = $event.arguments.current_choice
@@ -46,7 +46,7 @@ flow user has selected choice $choice_id
   if $choice_selection_state == None or $choice_selection_state != $choice_id
     match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
 
-flow unhandled user intent
+flow unhandled user intent -> $intent
   match UnhandledEvent(event="FinishFlow", flow_id=r"^user ") as $event
   $intent = $event.arguments.flow_id
 
@@ -393,11 +393,11 @@ flow trigger user intent for unhandled user utterance
   # Generate the 'user intent' by sending out the FinishFlow event
   send FinishFlow(flow_id=$intent)
 
-flow derive user intent from user action $user_action $max_example_flows
+flow derive user intent from user action $user_action $max_example_flows -> $intent
   $intent = await GenerateUserIntentAction(user_action=$user_action, max_example_flows=$max_example_flows)
   return $intent
 
-flow generate interaction continuation
+flow generate interaction continuation -> $flow_name
   # Generate continuation based current interaction history
   $flow_info = await GenerateFlowContinuationAction(temperature=0.1)
 
@@ -409,6 +409,7 @@ flow generate interaction continuation
       bot say "Sorry, what did you say?"
       return None
 
+  $flow_name = $flow_info.name
   return $flow_info.name
 
 flow generate then continue interaction
