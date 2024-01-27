@@ -64,7 +64,7 @@ async def self_check_input(
         check = check.lower().strip()
         log.info(f"Input self-checking result is: `{check}`.")
 
-        if "yes" in check:
+        if "no" in check:
             return ActionResult(
                 return_value=False,
                 events=[
