@@ -62,7 +62,7 @@ setup(
         "aiohttp==3.8.5",
         "langchain==0.0.352",
         "requests>=2.31.0",
-        "typer==0.7.0",
+        "typer>=0.7.0,<=0.9.0",
         "PyYAML~=6.0",
         "setuptools~=65.5.1",
         "annoy==1.17.3",
