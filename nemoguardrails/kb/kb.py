@@ -77,12 +77,14 @@ class KnowledgeBase:
         get_embedding_search_provider_instance: Callable[
             [Optional[EmbeddingSearchProvider]], EmbeddingsIndex
         ],
+        index_line_by_line: bool = False,
     ):
         self.documents = documents
         self.chunks = []
         self.index = None
         self.config = config
         self._get_embeddings_search_instance = get_embedding_search_provider_instance
+        self.index_line_by_line = index_line_by_line
 
     def init(self):
         """Initialize the knowledge base.
@@ -108,7 +110,13 @@ class KnowledgeBase:
             text = f"# {chunk['title']}\n\n{chunk['body'].strip()}"
             all_text_items.append(text)
 
-            index_items.append(IndexItem(text=text, meta=chunk))
+            if not self.index_line_by_line:
+                index_items.append(IndexItem(text=text, meta=chunk))
+            else:
+                lines = text.split("\n")
+                for line in lines:
+                    if line.strip():
+                        index_items.append(IndexItem(text=line, meta=chunk))
 
         # Stop if there are no items
         if not index_items:
@@ -174,7 +182,25 @@ class KnowledgeBase:
         if self.index is None:
             return []
 
-        results = await self.index.search(text, max_results=max_results)
+        results = await self.index.search(
+            text,
+            max_results=(
+                max_results if not self.index_line_by_line else max_results * 3
+            ),
+        )
+
+        chunks = [result.meta for result in results]
 
         # Return the chunks directly
-        return [result.meta for result in results]
+        if not self.index_line_by_line:
+            return chunks
+        else:
+            body_index = {}
+            unique_chunks = []
+
+            for chunk in chunks:
+                if chunk["body"] not in body_index:
+                    body_index[chunk["body"]] = True
+                    unique_chunks.append(chunk)
+
+            return unique_chunks[0:max_results]
