@@ -55,8 +55,10 @@ async def retrieve_relevant_chunks(
     context_updates = {}
 
     if user_message and kb:
+        # Are these needed two needed?
         context_updates["relevant_chunks"] = ""
         context_updates["relevant_chunks_sep"] = []
+
         context_updates["retrieved_for"] = user_message
 
         chunks = [chunk["body"] for chunk in await kb.search_relevant_chunks(user_message)]
@@ -68,8 +70,7 @@ async def retrieve_relevant_chunks(
         # No KB is set up, we keep the existing relevant_chunks if we have them.
         context_updates["relevant_chunks"] = context.get("relevant_chunks", "") + "\n"
         context_updates["relevant_chunks_sep"] = context.get("relevant_chunks_sep", [])
-        # Intentionally not set retrieved_for so we know these are old chunks
-        # from an earlier retrieval.
+        context_updates["retrieved_for"] = None
 
     return ActionResult(
         return_value=context_updates["relevant_chunks"],
