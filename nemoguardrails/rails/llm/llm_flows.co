@@ -15,7 +15,24 @@ define parallel flow process user input
 define flow generate user intent
   """Generate the user's intent based on the text."""
   event UserMessage(text="...")
-  execute generate_user_intent
+
+  if $config.rails.dialog.single_call.enabled
+    # First, we generate the potential user intents, as this might influence the
+    # retrieval part.
+    $potential_user_intents = execute generate_potential_user_intents
+
+    # Because we're making a single call, we need to run the retrieval before the generation.
+    $retrieval_query = execute generate_retrieval_query
+    execute retrieve_relevant_chunks
+
+    # If we have any retrieval rails, we run them.
+    if $config.rails.retrieval.flows
+      do run retrieval rails
+
+    # Finally, generate the intent, next steps and the message
+    execute generate_intent_steps_message
+  else
+    execute generate_user_intent
 
 
 define subflow run input rails
@@ -47,6 +64,8 @@ define parallel extension flow generate bot message
   priority 100
 
   bot ...
+
+  $retrieval_query = execute generate_retrieval_query
   execute retrieve_relevant_chunks
 
   # If we have any retrieval rails, we run them.

@@ -235,6 +235,42 @@ class LLMGenerationActions:
         return sample_conversation
 
     @action(is_system_action=True)
+    async def generate_retrieval_query(
+        self,
+        events: List[dict],
+    ):
+        """Generate the query that should be used for retrieval.
+
+        The default implementation returns just the last user message.
+        """
+        event = get_last_user_utterance_event(events)
+        assert event["type"] == "UserMessage"
+
+        return event["text"]
+
+    @action(is_system_action=True)
+    async def generate_potential_user_intents(
+        self,
+        events: List[dict],
+    ):
+        """Generate the top 5 potential user intents.
+
+        After generation, they are stored in $potential_user_intents.
+        """
+        event = get_last_user_utterance_event(events)
+        assert event["type"] == "UserMessage"
+
+        potential_user_intents = []
+
+        if self.config.user_messages and self.user_message_index:
+            results = await self.user_message_index.search(
+                text=event["text"], max_results=5
+            )
+            potential_user_intents = [result.meta["intent"] for result in results]
+
+        return potential_user_intents
+
+    @action(is_system_action=True)
     async def generate_user_intent(
         self,
         events: List[dict],
@@ -859,6 +895,7 @@ class LLMGenerationActions:
     async def generate_intent_steps_message(
         self,
         events: List[dict],
+        context: dict,
         llm: Optional[BaseLLM] = None,
         kb: Optional[KnowledgeBase] = None,
     ):
@@ -974,11 +1011,15 @@ class LLMGenerationActions:
                 example += "\n"
                 examples.append(example)
 
-            if kb:
-                chunks = await kb.search_relevant_chunks(event["text"])
-                relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
-            else:
-                relevant_chunks = ""
+            # In single call mode, the retrieval has been performed before
+            # invoking the `generate_intent_steps_message` action.
+            relevant_chunks = context.get("relevant_chunks", "")
+
+            # if kb:
+            #     chunks = await kb.search_relevant_chunks(event["text"])
+            #     relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
+            # else:
+            #     relevant_chunks = ""
 
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERATE_INTENT_STEPS_MESSAGE,
