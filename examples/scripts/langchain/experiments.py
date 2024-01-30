@@ -16,9 +16,9 @@
 import os
 
 from langchain.chains import LLMMathChain
-from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.tools import Tool
+from langchain_openai.chat_models import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from nemoguardrails import LLMRails, RailsConfig

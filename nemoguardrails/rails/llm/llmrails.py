@@ -272,7 +272,11 @@ class LLMRails:
                 pass
             else:
                 if llm_config.engine not in get_llm_provider_names():
-                    raise Exception(f"Unknown LLM engine: {llm_config.engine}")
+                    msg = f"Unknown LLM engine: {llm_config.engine}."
+                    if llm_config.engine == "openai":
+                        msg += " Please install langchain-openai using `pip install langchain-openai`."
+
+                    raise Exception(msg)
 
                 provider_cls = get_llm_provider(llm_config)
                 # We need to compute the kwargs for initializing the LLM
