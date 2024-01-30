@@ -511,6 +511,7 @@ class RailsConfig(BaseModel):
         test_set_percentage: Optional[float] = 0.0,
         test_set: Optional[Dict[str, List]] = {},
         max_samples_per_intent: Optional[int] = 0,
+        random_seed: Optional[int] = None,
     ):
         """Loads a configuration from a given path.
 
@@ -523,7 +524,8 @@ class RailsConfig(BaseModel):
         If we want to limit the number of samples for an intent, set the
         max_samples_per_intent to a positive number. It is useful for testing apps, but
         also for limiting the number of samples for an intent in some scenarios.
-        The chosen samples are selected randomly for each intent.
+        The chosen samples are selected randomly for each intent. Fixing the random_seed
+        guarantees having the same evaluation set for different runs.
         """
         # If the config path is a file, we load the YAML content.
         # Otherwise, if it's a folder, we iterate through all files.
@@ -566,7 +568,10 @@ class RailsConfig(BaseModel):
                         for intent, samples in _raw_config["user_messages"].items():
                             # We need at least 2 samples to create a test split
                             if len(samples) > 1:
-                                random.shuffle(samples)
+                                if random_seed:
+                                    random.Random(random_seed).shuffle(samples)
+                                else:
+                                    random.shuffle(samples)
                                 num_test_elements = int(
                                     len(samples) * test_set_percentage
                                 )
