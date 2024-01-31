@@ -54,12 +54,13 @@ async def self_check_input(
                 "user_input": user_input,
             },
         )
+        stop = llm_task_manager.task_stop(task=Task.SELF_CHECK_INPUT)
 
         # Initialize the LLMCallInfo object
         llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_INPUT.value))
 
         with llm_params(llm, temperature=0.0):
-            check = await llm_call(llm, prompt)
+            check = await llm_call(llm, prompt, stop=stop)
 
         check = check.lower().strip()
         log.info(f"Input self-checking result is: `{check}`.")

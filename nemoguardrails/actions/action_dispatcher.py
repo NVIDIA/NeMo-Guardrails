@@ -198,8 +198,8 @@ class ActionDispatcher:
                             # if the async is not available
                             result = fn.run(**params)
                     elif isinstance(fn, Runnable):
-                        # If it's a Runnable, we invoke it as well
                         runnable = fn
+                        # If it's a Runnable, we invoke it as well
 
                         result = await runnable.ainvoke(input=params)
                     else:

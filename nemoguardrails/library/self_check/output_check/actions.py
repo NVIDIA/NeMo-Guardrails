@@ -57,12 +57,13 @@ async def self_check_output(
                 "bot_response": bot_response,
             },
         )
+        stop = llm_task_manager.task_stop(task=Task.SELF_CHECK_OUTPUT)
 
         # Initialize the LLMCallInfo object
         llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_OUTPUT.value))
 
         with llm_params(llm, temperature=0.0):
-            response = await llm_call(llm, prompt)
+            response = await llm_call(llm, prompt, stop=stop)
 
         response = response.lower().strip()
         log.info(f"Output self-checking result is: `{response}`.")
