@@ -30,5 +30,8 @@ class Task(Enum):
     # Tasks for various rails
     SELF_CHECK_INPUT = "self_check_input"
     SELF_CHECK_OUTPUT = "self_check_output"
+    LLAMA_GUARD_CHECK_INPUT = "llama_guard_check_input"
+    LLAMA_GUARD_CHECK_OUTPUT = "llama_guard_check_output"
+
     SELF_CHECK_FACTS = "fact_checking"
     CHECK_HALLUCINATION = "check_hallucination"

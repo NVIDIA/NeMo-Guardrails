@@ -19,8 +19,6 @@ import os
 from time import time
 from typing import Callable, List, Optional, cast
 
-from annoy import AnnoyIndex
-
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.kb.utils import split_markdown_in_topic_chunks
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, KnowledgeBaseConfig
@@ -31,7 +29,46 @@ CACHE_FOLDER = os.path.join(os.getcwd(), ".cache")
 
 
 class KnowledgeBase:
-    """Basic implementation of a knowledge base."""
+    """
+    Basic implementation of a knowledge base.
+
+    This class represents a knowledge base that can store and index documents for efficient retrieval.
+    It utilizes an embedding search provider to build and search an index for relevant information.
+
+    Parameters:
+    - documents (List[str]): A list of documents to initialize the knowledge base.
+    - config (KnowledgeBaseConfig): Configuration for the knowledge base.
+    - get_embedding_search_provider_instance (Callable[[Optional[EmbeddingSearchProvider]], EmbeddingsIndex]):
+      A callable function to get an instance of the embedding search provider.
+
+    Methods:
+    - init(): Initializes the knowledge base by splitting documents into topic chunks.
+    - build(): Builds the knowledge base index, utilizing the configured embedding search provider.
+    - search_relevant_chunks(text: str, max_results: int = 3): Searches the index for the most relevant chunks.
+
+    Attributes:
+    - documents (List[str]): The list of documents provided during initialization.
+    - chunks (List[dict]): A list of topic chunks extracted from the documents.
+    - index (EmbeddingsIndex): The knowledge base index used for searching.
+    - config (KnowledgeBaseConfig): Configuration for the knowledge base.
+
+    Example:
+    ```python
+    # Creating a KnowledgeBase instance
+    kb = KnowledgeBase(documents=["Document 1", "Document 2"], config=my_config, get_embedding_search_provider_instance=my_provider)
+
+    # Initializing and building the knowledge base
+    kb.init()
+    await kb.build()
+
+    # Searching for relevant chunks
+    results = await kb.search_relevant_chunks("query text", max_results=5)
+    ```
+
+    Note:
+    - The knowledge base supports markdown format documents.
+    - The index is built using an embedding search provider, and the result is cached for future use.
+    """
 
     def __init__(
         self,
@@ -88,6 +125,8 @@ class KnowledgeBase:
             and os.path.exists(cache_file)
             and os.path.exists(embedding_size_file)
         ):
+            from annoy import AnnoyIndex
+
             from nemoguardrails.embeddings.basic import BasicEmbeddingsIndex
 
             log.info(cache_file)

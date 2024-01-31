@@ -80,7 +80,7 @@ And make sure that you have the `OPENAI_API_KEY` environment variable set.
  > export OPENAI_API_KEY=...
  ```
 
-Some NeMo Guardrails LLMs and features have specific installation requirements, including a more complex set of steps (e.g. [AlignScore](../user_guides/advanced/align_score_deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md)).
+Some NeMo Guardrails LLMs and features have specific installation requirements, including a more complex set of steps (e.g. [AlignScore](../user_guides/advanced/align-score-deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md)).
 For each feature or LLM example, check the readme files associated with it.
 
 ## Extra dependencies

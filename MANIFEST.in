@@ -1,7 +1,0 @@
-# Include the README, CHANGELOG, and LICENSE files
-include README.md
-include CHANGELOG.md
-include LICENSE.md
-
-recursive-include chat-ui *
-recursive-include examples *

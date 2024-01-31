@@ -19,13 +19,12 @@ from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
-from langchain.llms.base import LLM, BaseLLM
-from pydantic import BaseModel
+from langchain.llms.base import LLM
 
 from nemoguardrails import LLMRails, RailsConfig
 
 
-class FakeLLM(LLM, BaseModel):
+class FakeLLM(LLM):
     """Fake LLM wrapper for testing purposes."""
 
     responses: List

@@ -205,6 +205,9 @@ async def test_streaming_single_llm_call_with_message_override():
 
     assert chunks == ["Hey! Welcome back!"]
 
+    # Wait for proper cleanup, otherwise we get a Runtime Error
+    await asyncio.sleep(1)
+
 
 @pytest.mark.asyncio
 async def test_streaming_single_llm_call_with_next_step_override_and_dynamic_message():
@@ -240,3 +243,6 @@ async def test_streaming_single_llm_call_with_next_step_override_and_dynamic_mes
         chunks.append(chunk)
 
     assert chunks == ["This ", "is ", "a ", "funny ", "joke."]
+
+    # Wait for proper cleanup, otherwise we get a Runtime Error
+    await asyncio.sleep(1)

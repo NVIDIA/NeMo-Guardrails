@@ -126,7 +126,12 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
         self.buffer = ""
 
     async def __anext__(self):
-        element = await self.queue.get()
+        element = None
+        try:
+            element = await self.queue.get()
+        except RuntimeError as ex:
+            if "Event loop is closed" not in str(ex):
+                raise ex
         if element is None or element == "":
             raise StopAsyncIteration
         else:

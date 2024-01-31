@@ -93,6 +93,22 @@ def test_self_check_output_prompt_exception():
     assert "You must provide a `self_check_output` prompt" in str(exc_info.value)
 
 
+def test_passthrough_and_single_call_incompatibility():
+    with pytest.raises(ValueError) as exc_info:
+        config = RailsConfig.from_content(
+            yaml_content="""
+            rails:
+                dialog:
+                    single_call:
+                        enabled: True
+            passthrough: True
+            """,
+        )
+        LLMRails(config=config)
+
+    assert "The passthrough mode and the single call dialog" in str(exc_info.value)
+
+
 # def test_self_check_facts_prompt_exception():
 #     with pytest.raises(ValueError) as exc_info:
 #         config = RailsConfig.from_content(
