@@ -42,7 +42,7 @@ dependencies = [
   "langchain>=0.1.0,<0.2.0",
   "langchain-community>=0.0.16,<0.1.0",
   "nest-asyncio>=1.5.6",
-  "pydantic>=1.10,<2.0",
+  "pydantic>=1.10",
   "pyyaml>=6.0",
   "sentence-transformers==2.2.2",
   "simpleeval>=0.9.13",
