@@ -16,8 +16,6 @@ pip install .
 
 2. Install Pytorch version `2.0.1`.
 
-**NOTE**: AlignScore has a dependency on an older version of PyTorch, i.e., `torch==1.12.1`, while NeMo Guardrails has an indirect dependency on `torch==2.0.0` through `sentencetransformers==2.2.2`. After installing AlignScore, you have to manually install `torch==2.0.1`.
-
 ```bash
 pip install torch==2.0.1
 ```

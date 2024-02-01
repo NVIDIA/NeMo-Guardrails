@@ -2,7 +2,7 @@
 
 NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../../architecture/README.md#the-guardrails-process) and for the [knowledge base](../configuration-guide.md#knowledge-base-documents) functionality.
 
-The default embedding search uses SentenceTransformers for computing the embeddings (the `all-MiniLM-L6-v2` model) and Annoy for performing the search.
+The default embedding search uses FastEmbed for computing the embeddings (the `all-MiniLM-L6-v2` model) and Annoy for performing the search.
 
 The default configuration is the following:
 
@@ -11,14 +11,14 @@ core:
   embedding_search_provider:
     name: default
     parameters:
-      embedding_engine: SentenceTransformers
+      embedding_engine: FastEmbed
       embedding_model: all-MiniLM-L6-v2
 
 knowledge_base:
   embedding_search_provider:
     name: default
     parameters:
-      embedding_engine: SentenceTransformers
+      embedding_engine: FastEmbed
       embedding_model: all-MiniLM-L6-v2
 ```
 
