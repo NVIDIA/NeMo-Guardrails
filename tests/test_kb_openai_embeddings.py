@@ -18,7 +18,7 @@ import os
 import pytest
 
 from nemoguardrails import LLMRails, RailsConfig
-from nemoguardrails.embeddings.basic import SentenceTransformerEmbeddingModel
+from nemoguardrails.embeddings.basic import FastEmbedEmbeddingModel
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
 
@@ -37,7 +37,7 @@ def app():
 @pytest.mark.skipif(not LIVE_TEST_MODE, reason="Not in live mode.")
 def test_custom_llm_registration(app):
     assert isinstance(
-        app.llm_generation_actions.flows_index._model, SentenceTransformerEmbeddingModel
+        app.llm_generation_actions.flows_index._model, FastEmbedEmbeddingModel
     )
 
     assert app.kb.index.embedding_engine == "openai"
