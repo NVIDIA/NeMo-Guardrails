@@ -19,6 +19,7 @@ import os
 import time
 
 import pandas as pd
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 
 from nemoguardrails import LLMRails
 from nemoguardrails.llm.params import llm_params
@@ -87,6 +88,8 @@ class ModerationRailsEvaluation:
         self.write_outputs = write_results
         self.force_recompute = force_recompute
         self.output_dir = output_dir
+
+        self.errors = []
 
         # Build a hash out of the unique model parameters of this run.
         # Don't include dataset-based info as that is expected to be
@@ -218,6 +221,9 @@ class ModerationRailsEvaluation:
             result = self.llama_guard_llm(check_input_prompt)
         except Exception as e:
             print(f"Error calling LLM: {e}")
+            self.errors.append(
+                {"stage": "llamaguard_check_input", "user_input": user_input}
+            )
             return None
 
         time.sleep(0.1)
@@ -321,98 +327,12 @@ class ModerationRailsEvaluation:
         )
         self.enriched_results = enriched_results
 
-    def print_summary(self):
-        """
-        Prints the summary of the results.
-        """
-        dataset_size = len(self.enriched_results)
-
-        if self.check_input:
-            print("\nInput moderation results:")
-            if self.enable_self_check:
-                self_check_flagged = (
-                    self.enriched_results["self_check_input"].astype(bool).sum(axis=0)
-                )
-                self_check_correct = (
-                    self.enriched_results["self_check_input_correct"]
-                    .astype(bool)
-                    .sum(axis=0)
-                )
-                print(
-                    f"% of samples blocked by self check rail: {100 * self_check_flagged/dataset_size}"
-                )
-                print(
-                    f"% of samples correctly flagged by self check rail: {100 * self_check_correct/dataset_size}"
-                )
-                print("\n")
-            elif self.enable_llamaguard:
-                llamaguard_flagged = (
-                    self.enriched_results["llamaguard_check_input"]
-                    .astype(bool)
-                    .sum(axis=0)
-                )
-                llamaguard_correct = (
-                    self.enriched_results["llamaguard_check_input_correct"]
-                    .astype(bool)
-                    .sum(axis=0)
-                )
-                print(
-                    f"% of samples blocked by llama guard: {100 * llamaguard_flagged/dataset_size}"
-                )
-                print(
-                    f"% of samples correctly flagged by llama guard: {100 * llamaguard_correct/dataset_size}"
-                )
-            print("\n" + "*" * 50 + "\n")
-
-        if self.check_output and "bot_response" in self.enriched_results.columns:
-            if "bot_response_label" not in self.enriched_results.columns:
-                # This means bot responses were not provided in the dataset.
-                # Instead, they were automatically generated, and we don't have ground truth labels.
-                print(
-                    "The automatic evaluation cannot judge output moderations accurately. Please check the predictions manually."
-                )
-
-            print("\nOutput moderation results:")
-            if self.enable_self_check:
-                self_check_flagged = (
-                    self.enriched_results["self_check_output"].astype(bool).sum(axis=0)
-                )
-                self_check_correct = (
-                    self.enriched_results["self_check_output_correct"]
-                    .astype(bool)
-                    .sum(axis=0)
-                )
-                print(
-                    f"% of samples blocked by self check rail: {100 * self_check_flagged/dataset_size}"
-                )
-                print(
-                    f"% of samples correctly flagged by self check rail: {100 * self_check_correct/dataset_size}"
-                )
-                print("\n")
-            elif self.enable_llamaguard:
-                llamaguard_flagged = (
-                    self.enriched_results["llamaguard_check_output"]
-                    .astype(bool)
-                    .sum(axis=0)
-                )
-                llamaguard_correct = (
-                    self.enriched_results["llamaguard_check_output_correct"]
-                    .astype(bool)
-                    .sum(axis=0)
-                )
-                print(
-                    f"% of samples blocked by llama guard: {100 * llamaguard_flagged/dataset_size}"
-                )
-                print(
-                    f"% of samples correctly flagged by llama guard: {100 * llamaguard_correct/dataset_size}"
-                )
-            print("\n")
-
     def write_summary_to_file(self):
         """
         Writes the summary of the results.
         """
         with open(self.final_results_path, "w") as f:
+            print(f"Writing results to {self.final_results_path}")
             dataset_size = len(self.enriched_results)
             f.write(f"Loaded {dataset_size} samples from {self.dataset_path}")
 
@@ -428,43 +348,140 @@ class ModerationRailsEvaluation:
                     )
 
             if self.check_input:
-                f.write("\nInput moderation results:")
+                f.write("\n\n\nInput moderation results:\n")
                 if self.enable_self_check:
-                    self_check_flagged = (
-                        self.enriched_results["self_check_input"]
-                        .astype(bool)
-                        .sum(axis=0)
+                    f.write("\nSelf Check:\n")
+                    tp = len(
+                        self.enriched_results[
+                            (self.enriched_results["user_input_label"] == True)
+                            & (
+                                self.enriched_results["self_check_input"].astype(bool)
+                                == True
+                            )
+                        ]
                     )
-                    self_check_correct = (
-                        self.enriched_results["self_check_input_correct"]
-                        .astype(bool)
-                        .sum(axis=0)
+                    fp = len(
+                        self.enriched_results[
+                            (self.enriched_results["user_input_label"] == False)
+                            & (
+                                self.enriched_results["self_check_input"].astype(bool)
+                                == True
+                            )
+                        ]
                     )
-                    f.write(
-                        f"\n% of samples blocked by self check rail: {100 * self_check_flagged/dataset_size}"
+                    fn = len(
+                        self.enriched_results[
+                            (self.enriched_results["user_input_label"] == True)
+                            & (
+                                self.enriched_results["self_check_input"].astype(bool)
+                                == False
+                            )
+                        ]
                     )
-                    f.write(
-                        f"\n% of samples correctly flagged by self check rail: {100 * self_check_correct/dataset_size}"
+                    tn = len(
+                        self.enriched_results[
+                            (self.enriched_results["user_input_label"] == False)
+                            & (
+                                self.enriched_results["self_check_input"].astype(bool)
+                                == False
+                            )
+                        ]
                     )
 
-                elif self.enable_llamaguard:
-                    llamaguard_flagged = (
-                        self.enriched_results["llamaguard_check_input"]
-                        .astype(bool)
-                        .sum(axis=0)
-                    )
-                    llamaguard_correct = (
-                        self.enriched_results["llamaguard_check_input_correct"]
-                        .astype(bool)
-                        .sum(axis=0)
+                    f.write(f"\nTP: {tp}")
+                    f.write(f"\nFP: {fp}")
+                    f.write(f"\nTN: {tn}")
+                    f.write(f"\nFN: {fn}")
+                    f.write(f"\nTotal: {tp + fp + tn + fn}")
+                    f.write(f"\nDataset size: {dataset_size}\n")
+                    f.write(
+                        f"\nAccuracy: {(tp + tn) / (tp + fp + tn + fn):.2%}\t{accuracy_score(self.enriched_results['user_input_label'], self.enriched_results['self_check_input'].astype(bool)):.2%}"
                     )
                     f.write(
-                        f"\n% of samples blocked by llama guard: {100 * llamaguard_flagged/dataset_size}"
+                        f"\nPrecision: {tp / (tp + fp):.2f}\t{precision_score(self.enriched_results['user_input_label'], self.enriched_results['self_check_input'].astype(bool)):.2f}"
                     )
                     f.write(
-                        f"\n% of samples correctly flagged by llama guard: {100 * llamaguard_correct/dataset_size}"
+                        f"\nRecall: {tp / (tp + fn):.2f}\t{recall_score(self.enriched_results['user_input_label'], self.enriched_results['self_check_input'].astype(bool)):.2f}"
                     )
-                f.write("\n" + "*" * 50 + "\n")
+                    f.write(
+                        f"\nF1: {2 * tp / (2 * tp + fp + fn):.2f}\t{f1_score(self.enriched_results['user_input_label'], self.enriched_results['self_check_input'].astype(bool)):.2f}"
+                    )
+
+                    f.write("\n" + "*" * 50 + "\n")
+
+                if self.enable_llamaguard:
+                    f.write("\nLlama Guard:\n")
+                    tp = len(
+                        self.enriched_results[
+                            (self.enriched_results["user_input_label"] == True)
+                            & (
+                                self.enriched_results["llamaguard_check_input"].astype(
+                                    bool
+                                )
+                                == True
+                            )
+                        ]
+                    )
+                    fp = len(
+                        self.enriched_results[
+                            (self.enriched_results["user_input_label"] == False)
+                            & (
+                                self.enriched_results["llamaguard_check_input"].astype(
+                                    bool
+                                )
+                                == True
+                            )
+                        ]
+                    )
+                    fn = len(
+                        self.enriched_results[
+                            (self.enriched_results["user_input_label"] == True)
+                            & (
+                                self.enriched_results["llamaguard_check_input"].astype(
+                                    bool
+                                )
+                                == False
+                            )
+                        ]
+                    )
+                    tn = len(
+                        self.enriched_results[
+                            (self.enriched_results["user_input_label"] == False)
+                            & (
+                                self.enriched_results["llamaguard_check_input"].astype(
+                                    bool
+                                )
+                                == False
+                            )
+                        ]
+                    )
+
+                    f.write(f"\nTP: {tp}")
+                    f.write(f"\nFP: {fp}")
+                    f.write(f"\nTN: {tn}")
+                    f.write(f"\nFN: {fn}")
+                    f.write(f"\nTotal: {tp + fp + tn + fn}")
+                    f.write(f"\nDataset size: {dataset_size}\n")
+                    f.write(
+                        f"\nAccuracy: {(tp + tn) / (tp + fp + tn + fn):.2%}\t{accuracy_score(self.enriched_results['user_input_label'], self.enriched_results['llamaguard_check_input'].astype(bool)):.2%}"
+                    )
+                    f.write(
+                        f"\nPrecision: {tp / (tp + fp):.2f}\t{precision_score(self.enriched_results['user_input_label'], self.enriched_results['llamaguard_check_input'].astype(bool)):.2f}"
+                    )
+                    f.write(
+                        f"\nRecall: {tp / (tp + fn):.2f}\t{recall_score(self.enriched_results['user_input_label'], self.enriched_results['llamaguard_check_input'].astype(bool)):.2f}"
+                    )
+                    f.write(
+                        f"\nF1: {2 * tp / (2 * tp + fp + fn):.2f}\t{f1_score(self.enriched_results['user_input_label'], self.enriched_results['llamaguard_check_input'].astype(bool)):.2f}"
+                    )
+
+                    f.write("\n" + "*" * 50 + "\n")
+                    f.write(f"Num Errors: {len(self.errors)}")
+                    if len(self.errors) > 0:
+                        f.write("\nErrors:\n")
+                        for error in self.errors:
+                            f.write(f"\n{error}\n")
+                        f.write("\n" + "*" * 50 + "\n")
 
             if self.check_output and "bot_response" in self.enriched_results.columns:
                 if "bot_response_label" not in self.enriched_results.columns:
@@ -540,6 +557,7 @@ class ModerationRailsEvaluation:
         else:
             # If the enriched results don't exist, compute them.
             # A. Check if we want to add bot responses to the dataset.
+            print("Didn't hit the cache. Computing results...")
             if self.check_output and "bot_response" not in self.dataset.columns:
                 if self.generate_output:
                     print("Bot responses not found in the dataset. Generating them...")
@@ -554,12 +572,10 @@ class ModerationRailsEvaluation:
                         Or, set check_output=False to skip output moderation checks."""
                     )
 
-            # B. Perform moderation checks.
+            # # B. Perform moderation checks.
             self.check_moderation()
 
         # 2. Compute metrics and write to file.
-        # TODO: Remove the duplicated code in print summary, don't need to print, persist to txt instead.
-        self.print_summary()
         # TODO: Currently only calculating accuracy, need to calculate AUPRC for an imbalanced dataset.
         self.write_summary_to_file()
 
@@ -569,14 +585,14 @@ if __name__ == "__main__":
     evaluator = ModerationRailsEvaluation(
         config="../../examples/configs/llama_guard/",
         dataset_path="./data/moderation/lmsys-toxic-chat/processed.jsonl",
-        # num_samples=500,
+        num_samples=-1,
         check_input=True,
         check_output=False,
-        enable_self_check=False,
+        enable_self_check=True,
         enable_llamaguard=True,
         generate_output=False,
-        output_dir="./outputs/moderation/lmsys-toxic-chat/",
-        force_recompute=True,
+        output_dir="./outputs/test_folder/lmsys-toxic-chat",
+        force_recompute=False,
         write_results=True,
     )
     evaluator.run()
