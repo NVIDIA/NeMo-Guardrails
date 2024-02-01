@@ -67,7 +67,9 @@ class ActionDispatcher:
             # Last, but not least, if there was a config path, we try to load actions
             # from there as well.
             if config_path:
-                self.load_actions_from_path(config_path)
+                config_path = config_path.split(",")
+                for path in config_path:
+                    self.load_actions_from_path(path)
 
         log.info(f"Registered Actions: {self._registered_actions}")
         log.info("Action dispatcher initialized")

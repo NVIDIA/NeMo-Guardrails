@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Module for the configuration of rails."""
+import copy
 import os
 import random
 from typing import Any, Dict, List, Optional, Union
@@ -393,7 +394,7 @@ class RailsConfig(BaseModel):
     actions_server_url: Optional[str] = Field(
         default=None,
         description="The URL of the actions server that should be used for the rails.",
-    )
+    )  # consider as conflict
 
     sample_conversation: Optional[str] = Field(
         default=_default_config["sample_conversation"],
@@ -643,3 +644,149 @@ class RailsConfig(BaseModel):
             return False
 
         return True
+
+    def __add__(self, other):
+        """Adds two RailsConfig objects."""
+        return _join_rails_configs(self, other)
+
+
+def _update_rails(rails_config_old, rails_config_new):
+    for rails_key, rails_val in vars(rails_config_new.rails).items():
+        # For config, we need to check each attribute individually
+        if rails_key == "config":
+            config_attributes = getattr(rails_config_old.rails, rails_key)
+            for config_key, config_val in vars(config_attributes).items():
+                print(f"Checking {config_key}")
+
+                # Skip if the value is empty
+                skip = any(not sub_value for sub_value in vars(config_val).values())
+
+                if (
+                    not skip
+                    and hasattr(config_attributes, config_key)
+                    and getattr(config_attributes, config_key) != config_val
+                ):
+                    print(
+                        f"Updating {config_key} from {getattr(config_attributes, config_key)} to {config_val}"
+                    )
+                    setattr(config_attributes, config_key, config_val)
+        else:
+            if (
+                hasattr(rails_config_old.rails, rails_key)
+                and getattr(rails_config_old.rails, rails_key) != rails_val
+            ):
+                print(
+                    f"Updating {rails_key} from {getattr(rails_config_old.rails, rails_key)} to {rails_val}"
+                )
+
+                # For flows, we need to append the new flows to the old flows
+                if (
+                    rails_key == "input"
+                    or rails_key == "output"
+                    or rails_key == "retrieval"
+                ):
+                    existing_flows = getattr(rails_config_old.rails, rails_key).flows
+                    if existing_flows:
+                        rails_val.flows = rails_val.flows + existing_flows
+                setattr(rails_config_old.rails, rails_key, rails_val)
+    return rails_config_old.rails
+
+
+def _join_rails_configs(
+    base_rails_config: RailsConfig, updated_rails_config: RailsConfig
+):
+    """Helper to join two rails configuration."""
+    combined_rails_config = copy.deepcopy(base_rails_config)
+    combined_rails_config.user_messages = {
+        **updated_rails_config.user_messages,
+        **base_rails_config.user_messages,
+    }
+
+    combined_rails_config.bot_messages = {
+        **updated_rails_config.bot_messages,
+        **base_rails_config.bot_messages,
+    }
+
+    combined_rails_config.instructions = (
+        updated_rails_config.instructions + base_rails_config.instructions
+    )
+
+    combined_rails_config.flows = updated_rails_config.flows + base_rails_config.flows
+
+    combined_rails_config.models = base_rails_config.models
+    config_old_types = {}
+    for model_old in base_rails_config.models:
+        config_old_types[model_old.type] = model_old
+
+    for model_new in updated_rails_config.models:
+        if model_new.type in config_old_types:
+            if model_new.engine != config_old_types[model_new.type].engine:
+                raise ValueError(
+                    "Both config files should have the same engine for the same model type"
+                )
+            if model_new.model != config_old_types[model_new.type].model:
+                raise ValueError(
+                    "Both config files should have the same model for the same model type"
+                )
+        else:
+            combined_rails_config.models.append(model_new)
+
+    combined_rails_config.prompts = (
+        updated_rails_config.prompts + base_rails_config.prompts
+    )
+
+    combined_rails_config.docs = updated_rails_config.docs + base_rails_config.docs
+
+    # check if both actions_server_url are the same
+    if base_rails_config.actions_server_url != updated_rails_config.actions_server_url:
+        raise ValueError("Both config files should have the same actions_server_url")
+
+    # check if embedding_search_provider is there in either of the config files
+    if "embedding_search_provider" in dir(updated_rails_config):
+        combined_rails_config.embedding_search_provider = (
+            updated_rails_config.embedding_search_provider
+        )
+
+    combined_rails_config.config_path = ",".join(
+        [base_rails_config.config_path, updated_rails_config.config_path]
+    )
+
+    if "sample_conversation" in dir(updated_rails_config):
+        combined_rails_config.sample_conversation = (
+            updated_rails_config.sample_conversation
+        )
+
+    if "lowest_temperature" in dir(updated_rails_config):
+        combined_rails_config.lowest_temperature = (
+            updated_rails_config.lowest_temperature
+        )
+
+    if "enable_multi_step_generation" in dir(updated_rails_config):
+        combined_rails_config.enable_multi_step_generation = (
+            updated_rails_config.enable_multi_step_generation
+        )
+
+    if "custom_data" in dir(updated_rails_config):
+        combined_rails_config.custom_data = updated_rails_config.custom_data
+
+    if "prompting_mode" in dir(updated_rails_config):
+        combined_rails_config.prompting_mode = updated_rails_config.prompting_mode
+
+    if "knowledge_base" in dir(updated_rails_config):
+        combined_rails_config.knowledge_base = updated_rails_config.knowledge_base
+
+    if "core" in dir(updated_rails_config):
+        combined_rails_config.core = updated_rails_config.core
+
+    if "rails" in dir(updated_rails_config):
+        combined_rails_config.rails = _update_rails(
+            base_rails_config, updated_rails_config
+        )
+
+    if "streaming" in dir(updated_rails_config):
+        combined_rails_config.streaming = updated_rails_config.streaming
+
+    if "passthrough" in dir(updated_rails_config):
+        combined_rails_config.passthrough = updated_rails_config.passthrough
+
+    return combined_rails_config
