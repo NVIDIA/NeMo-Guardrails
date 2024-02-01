@@ -1,0 +1,15 @@
+define bot allow
+  "ALLOW"
+
+define bot deny
+  "DENY"
+
+define subflow dummy input rail
+  """A dummy input rail which checks if the word "dummy" is included in the text."""
+  if "dummy" in $user_message
+    bot deny
+    stop
+
+define subflow allow input
+  bot allow
+  stop
