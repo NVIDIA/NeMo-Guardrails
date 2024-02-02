@@ -57,7 +57,7 @@ async def self_check_output(
                 "bot_response": bot_response,
             },
         )
-        stop = llm_task_manager.task_stop(task=Task.SELF_CHECK_OUTPUT)
+        stop = llm_task_manager.get_stop_tokens(task=Task.SELF_CHECK_OUTPUT)
 
         # Initialize the LLMCallInfo object
         llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_OUTPUT.value))

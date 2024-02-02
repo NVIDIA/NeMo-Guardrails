@@ -54,7 +54,7 @@ async def self_check_input(
                 "user_input": user_input,
             },
         )
-        stop = llm_task_manager.task_stop(task=Task.SELF_CHECK_INPUT)
+        stop = llm_task_manager.get_stop_tokens(task=Task.SELF_CHECK_INPUT)
 
         # Initialize the LLMCallInfo object
         llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_INPUT.value))
