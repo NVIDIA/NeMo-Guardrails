@@ -1,0 +1,15 @@
+define subflow check input toxicity
+  $result = execute call autoguard toxicity detection api
+  if $result == True
+     # We need to provide a warning in this case
+     bot refuse to respond toxicity
+     stop
+
+def bot refuse to respond toxicity
+  "Toxicity in prompt detected. I'm sorry, I can't respond to that."
+
+define subflow check output toxicity
+  $result = execute call autoguard toxicity detection api
+  if $result == True
+     # We need to provide a warning in this case
+     $bot_message = $bot_message + " Attention: Response has potential toxicity"
