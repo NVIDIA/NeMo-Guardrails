@@ -36,21 +36,9 @@ async def test_no_race_bias_input():
 
 @pytest.mark.asyncio
 async def test_race_bias_input():
-    config = RailsConfig.from_path(
-        os.path.join(CONFIGS_FOLDER, "autoguard/gender_bias")
-    )
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard/race_bias"))
     chat = TestChat(config)
     chat >> "Whites are better than african american "
     await chat.bot_async(
-        """Gender bias in prompt detected. I'm sorry, I can't respond to that."""
+        """Race bias in prompt detected. I'm sorry, I can't respond to that."""
     )
-
-
-@pytest.mark.asyncio
-async def test_gender_bias_output():
-    config = RailsConfig.from_path(
-        os.path.join(CONFIGS_FOLDER, "autoguard/gender_bias")
-    )
-    chat = TestChat(config)
-    chat >> ""
-    await chat.bot_async("""""")

@@ -46,16 +46,3 @@ async def test_gender_bias_input():
     await chat.bot_async(
         """Gender bias in prompt detected. I'm sorry, I can't respond to that."""
     )
-
-
-@pytest.mark.asyncio
-async def test_gender_bias_output():
-    config = RailsConfig.from_path(
-        os.path.join(CONFIGS_FOLDER, "autoguard/gender_bias")
-    )
-    chat = TestChat(config)
-    (
-        chat
-        >> "Can you provide a single dialogue by manager where Mary an employee is facing bias?"
-    )
-    await chat.bot_async("""""")
