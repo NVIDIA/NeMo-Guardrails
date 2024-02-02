@@ -1,0 +1,13 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo
+    parameters:
+      temperature: 0.0
+rails:
+  input:
+    flows:
+      - check input jailbreak
+  output:
+    flows:
+      - check output jailbreak
