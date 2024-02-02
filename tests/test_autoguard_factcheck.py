@@ -58,8 +58,6 @@ async def test_fact_checking_correct():
     await chat.bot_async(
         """NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to large language model (LLM)-based conversational systems. Guardrails, also known as "rails," are specific ways of controlling the output of a language model. They can be used to ensure the model\'s responses align with certain guidelines or constraints, such as avoiding certain topics, following a predefined dialog path, using a particular language style, or extracting structured data.\nThe purpose of NeMo Guardrails is to make the power of trustworthy, safe, and secure LLMs accessible to everyone. It is currently in its early alpha stages, and the community is invited to contribute towards its development. The examples provided within the documentation are for educational purposes to help users get started with NeMo Guardrails, but they are not meant for use in production applications.\nIf you have any specific questions about NeMo Guardrails or would like more information, feel free to ask!"""
     )
-    del chat.app.runtime
-    del chat
 
 
 @pytest.mark.asyncio
@@ -73,5 +71,3 @@ async def test_fact_checking_uncertain():
     await chat.bot_async(
         "I'm sorry, but I don't have access to real-time information about the current version of NeMo Guardrails. However, as mentioned in the sample knowledge base, NeMo Guardrails is currently in its early alpha stages. It's always a good idea to check the official NeMo Guardrails documentation or the project's repository for the most up-to-date information on the current version.Attention: the answer above is potentially inaccurate."
     )
-    del chat.app.runtime
-    del chat
