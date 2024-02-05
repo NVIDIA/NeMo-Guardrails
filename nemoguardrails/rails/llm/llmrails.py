@@ -26,12 +26,12 @@ from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
-from nemoguardrails.actions.v1_1.generation import LLMGenerationActionsV1dot1
+from nemoguardrails.actions.v2_x.generation import LLMGenerationActionsV2dotx
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.flows import compute_context
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
-from nemoguardrails.colang.v1_1.lang.utils import new_uuid
-from nemoguardrails.colang.v1_1.runtime.runtime import RuntimeV1_1
+from nemoguardrails.colang.v2_x.lang.utils import new_uuid
+from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.context import explain_info_var, streaming_handler_var
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.kb.kb import KnowledgeBase
@@ -92,7 +92,7 @@ class LLMRails:
 
         # We also load the default flows from the `default_flows.yml` file in the current folder.
         # But only for version 1.0.
-        # TODO: decide on the default flows for 1.1.
+        # TODO: decide on the default flows for 2.x.
         if config.colang_version == "1.0":
             # We also load the default flows from the `llm_flows.co` file in the current folder.
             current_folder = os.path.dirname(__file__)
@@ -164,8 +164,8 @@ class LLMRails:
         # First, we initialize the runtime.
         if config.colang_version == "1.0":
             self.runtime = RuntimeV1_0(config=config, verbose=verbose)
-        elif config.colang_version == "1.1":
-            self.runtime = RuntimeV1_1(config=config, verbose=verbose)
+        elif config.colang_version == "2.x":
+            self.runtime = RuntimeV2_x(config=config, verbose=verbose)
         else:
             raise ValueError(f"Unsupported colang version: {config.colang_version}.")
 
@@ -192,7 +192,7 @@ class LLMRails:
         llm_generation_actions_class = (
             LLMGenerationActions
             if config.colang_version == "1.0"
-            else LLMGenerationActionsV1dot1
+            else LLMGenerationActionsV2dotx
         )
         self.llm_generation_actions = llm_generation_actions_class(
             config=config,

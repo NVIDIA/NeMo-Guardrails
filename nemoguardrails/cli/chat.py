@@ -134,8 +134,8 @@ async def _run_chat_v1_0(
         print(Styles.GREEN + f"{bot_message['content']}" + Styles.RESET_ALL)
 
 
-async def _run_chat_v1_1(rails_app: LLMRails):
-    """Simple chat loop for v1.1 using the stateful events API."""
+async def _run_chat_v2_x(rails_app: LLMRails):
+    """Simple chat loop for v2.x using the stateful events API."""
     state = None
     waiting_user_input = False
     running_timer_tasks = {}
@@ -472,7 +472,7 @@ def run_chat(
                 config_id=config_id,
             )
         )
-    elif rails_config.colang_version == "1.1":
-        asyncio.run(_run_chat_v1_1(rails_app))
+    elif rails_config.colang_version == "2.x":
+        asyncio.run(_run_chat_v2_x(rails_app))
     else:
         raise Exception(f"Invalid colang version: {rails_config.colang_version}")

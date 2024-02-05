@@ -43,7 +43,7 @@ from nemoguardrails.actions.llm.utils import (
     strip_quotes,
 )
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.lang.colang_ast import Flow, Spec, SpecOp
+from nemoguardrails.colang.v2_x.lang.colang_ast import Flow, Spec, SpecOp
 from nemoguardrails.context import llm_call_info_var, streaming_handler_var
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase
@@ -112,8 +112,8 @@ class LLMGenerationActions:
         self.passthrough_fn = None
 
     async def init(self):
-        # For Colang 1.1 we need to do some initial processing
-        if self.config.colang_version == "1.1":
+        # For Colang 2.x we need to do some initial processing
+        if self.config.colang_version == "2.x":
             self._process_flows()
 
         await asyncio.gather(

@@ -28,8 +28,8 @@ from pydantic import BaseModel
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v1_1.runtime.flows import FlowConfig, State
-from nemoguardrails.colang.v1_1.runtime.statemachine import initialize_state
+from nemoguardrails.colang.v2_x.runtime.flows import FlowConfig, State
+from nemoguardrails.colang.v2_x.runtime.statemachine import initialize_state
 from nemoguardrails.utils import EnhancedJsonEncoder, new_event_dict
 
 
@@ -133,12 +133,12 @@ class TestChat:
         self.history = []
         self.streaming = streaming
 
-        # Track the conversation for v1.1
+        # Track the conversation for v2.x
         self.input_events = []
         self.state = None
 
-        # For 1.1, we start the main flow when initializing by providing a empty state
-        if self.config.colang_version == "1.1":
+        # For 2.x, we start the main flow when initializing by providing a empty state
+        if self.config.colang_version == "2.x":
             self.app.runtime.disable_async_execution = True
             _, self.state = self.app.process_events(
                 [],
@@ -148,7 +148,7 @@ class TestChat:
     def user(self, msg: str):
         if self.config.colang_version == "1.0":
             self.history.append({"role": "user", "content": msg})
-        elif self.config.colang_version == "1.1":
+        elif self.config.colang_version == "2.x":
             self.input_events.append(
                 {
                     "type": "UtteranceUserActionFinished",
@@ -167,7 +167,7 @@ class TestChat:
             ), f"Expected `{msg}` and received `{result['content']}`"
             self.history.append(result)
 
-        elif self.config.colang_version == "1.1":
+        elif self.config.colang_version == "2.x":
             output_msgs = []
             while self.input_events:
                 output_events, output_state = self.app.process_events(
@@ -322,7 +322,7 @@ def _init_state(colang_content) -> State:
             filename="",
             content=colang_content,
             include_source_mapping=True,
-            version="1.1",
+            version="2.x",
         )
     )
 

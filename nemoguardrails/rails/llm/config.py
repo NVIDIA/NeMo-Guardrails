@@ -24,7 +24,7 @@ from pydantic import BaseModel, ValidationError, root_validator
 from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
-from nemoguardrails.colang.v1_1.lang.colang_ast import Flow
+from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
 
 log = logging.getLogger(__name__)
 

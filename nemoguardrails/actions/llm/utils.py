@@ -22,8 +22,8 @@ from langchain.prompts.base import StringPromptValue
 from langchain.prompts.chat import ChatPromptValue
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
 
-from nemoguardrails.colang.v1_1.lang.colang_ast import Flow
-from nemoguardrails.colang.v1_1.runtime.flows import InternalEvent, InternalEvents
+from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
+from nemoguardrails.colang.v2_x.runtime.flows import InternalEvent, InternalEvents
 from nemoguardrails.context import llm_call_info_var
 from nemoguardrails.logging.callbacks import logging_callbacks
 from nemoguardrails.logging.explain import LLMCallInfo
@@ -99,7 +99,7 @@ def get_colang_history(
     if not events:
         return history
 
-    # We try to automatically detect if we have a Colang 1.0 or a 1.1 history
+    # We try to automatically detect if we have a Colang 1.0 or a 2.x history
     # TODO: Think about more robust approach?
     colang_version = "1.0"
     for event in events:
@@ -107,7 +107,7 @@ def get_colang_history(
             event = {"type": event.name, **event.arguments}
 
         if event["type"] in InternalEvents.ALL:
-            colang_version = "1.1"
+            colang_version = "2.x"
 
     if colang_version == "1.0":
         # We compute the index of the last bot message. We need it so that we include
@@ -163,7 +163,7 @@ def get_colang_history(
                 placeholder_text = "<<<This text is hidden because the assistant should not talk about this.>>>"
                 history = placeholder_text.join(split_history)
 
-    elif colang_version == "1.1":
+    elif colang_version == "2.x":
         new_history: List[str] = []
 
         # Structure the user/bot intent/action events
@@ -321,7 +321,7 @@ def get_last_user_utterance_event(events: List[dict]) -> Optional[dict]:
     return None
 
 
-def get_last_user_utterance_event_v1_1(events: List[dict]) -> Optional[dict]:
+def get_last_user_utterance_event_v2_x(events: List[dict]) -> Optional[dict]:
     """Returns the last user utterance from the events."""
     for event in reversed(events):
         if isinstance(event, dict) and event["type"] == "UtteranceUserActionFinished":

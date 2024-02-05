@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from .v1_0.lang import parser as parser_v1_0
-from .v1_1.lang import parser as parser_v1_1
+from .v2_x.lang import parser as parser_v2_x
 
 
 def parse_colang_file(
@@ -25,8 +25,8 @@ def parse_colang_file(
     """Parse the content of a .co file into the CoYML format."""
     if version == "1.0":
         return parser_v1_0.parse_colang_file(filename, content, include_source_mapping)
-    elif version == "1.1":
-        return parser_v1_1.parse_colang_file(filename, content, include_source_mapping)
+    elif version == "2.x":
+        return parser_v2_x.parse_colang_file(filename, content, include_source_mapping)
     else:
         raise Exception(f"Unsupported colang version {version}")
 
@@ -35,7 +35,7 @@ def parse_flow_elements(items, version: str = "1.0"):
     """Parse the flow elements from CoYML format to CIL."""
     if version == "1.0":
         return parser_v1_0.parse_flow_elements(items)
-    elif version == "1.1":
+    elif version == "2.x":
         raise Exception(
             f"Parsing flow elements not supported for colang version {version}"
         )

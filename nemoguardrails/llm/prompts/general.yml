@@ -111,7 +111,7 @@ prompts:
           You will only use the contents of the evidence and not rely on external knowledge.
           Answer with yes/no. "evidence": {{ evidence }} "hypothesis": {{ response }} "entails":
 
-    # Colang 1.1 prompts below.
+    # Colang 2.x prompts below.
 
     # Prompt for detecting the user message canonical form.
     - task: generate_user_intent_from_user_action
