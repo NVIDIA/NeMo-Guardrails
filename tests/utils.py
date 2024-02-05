@@ -307,6 +307,7 @@ def convert_parsed_colang_to_flow_config(
                     loop_id=None,
                     elements=flow["elements"],
                     parameters=flow["parameters"],
+                    return_members=flow["return_members"],
                     source_code=flow["source_code"],
                 ),
             )

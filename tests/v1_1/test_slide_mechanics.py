@@ -1054,5 +1054,31 @@ def test_global_statement():
     )
 
 
+def test_public_flow_attributes():
+    """"""
+
+    content = """
+    flow a -> $result_1 = 1, $result_2 = 2
+      match WaitEvent()
+
+    flow main
+      start a as $ref
+      start UtteranceBotAction(script="{{$ref.result_1}} {{$ref.result_2}}")
+      match WaitEvent()
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "1 2",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_inside_when_failure_handling()
+    test_public_flow_attributes()

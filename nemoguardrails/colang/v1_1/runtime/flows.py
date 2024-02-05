@@ -608,6 +608,14 @@ class FlowState:
             f"FlowState[uid={self.uid}, flow_id={self.flow_id}, loop_id={self.loop_id}]"
         )
 
+    # Expose all flow variables as attributes of the flow
+    # TODO: Hide non public flow variables
+    def __getattr__(self, name):
+        if "context" in self.__dict__ and name in self.__dict__["context"]:
+            return self.__dict__["context"][name]
+        else:
+            return object.__getattribute__(self, "params")[name]
+
 
 @dataclass_json
 @dataclass

@@ -34,7 +34,7 @@ flow user said something unexpected -> $transcript
 flow user saying something -> $transcript
   match UtteranceUserAction.TranscriptUpdated() as $event
   #send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
-  $transcript = $event.arguments.final_transcript
+  $transcript = $event.arguments.interim_transcript
 
 flow user selected choice $choice_id -> $choice
   # meta: user action
@@ -47,7 +47,7 @@ flow user has selected choice $choice_id
     match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
 
 flow unhandled user intent -> $intent
-  match UnhandledEvent(event="FinishFlow", flow_id=r"^user ") as $event
+  match UnhandledEvent(event="FinishFlow", flow_id=r"^user ", loop_ids={$loop_id}) as $event
   $intent = $event.arguments.flow_id
 
 flow user was silent $time_s
@@ -126,8 +126,9 @@ flow bot said something
 flow bot informed something
   match FlowFinished(flow_id="bot inform") as $event
 
-flow bot asked something
+flow bot asked something -> $text
   match FlowFinished(flow_id="bot ask") as $event
+  $text = $event.arguments.text
 
 flow bot expressed something
   match FlowFinished(flow_id="bot express") as $event
@@ -215,7 +216,7 @@ flow bot say $text
   await _bot_say $text
 
 flow bot say something like $text
-  $variation = """Create a new variation of: {{$text}}"""
+  $variation = """Return a single string that is a new variation of: {{$text}}"""
   await bot say $variation
 
 flow bot inform $text
@@ -477,4 +478,4 @@ flow user requested a task
 flow custom instructions
   user requested a task
   $instructions = await GetLastUserMessageAction()
-  do $instructions
+  execute llm instruction $instructions

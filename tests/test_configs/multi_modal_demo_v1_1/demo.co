@@ -16,7 +16,7 @@ flow reaction bot question repetition for user silence $time_s $max_repetitions=
   $repetition = 0
   while $repetition < $max_repetitions
     when user was silent $time_s
-      $question = $ref.context.event.arguments.text
+      $question = $ref.text
 
       start GenerateValueAction(var_name="new_question_variation", instructions="Make a different variation of the following question: '{{$question}}'. Never repeat the same question (see the logs above) and respond only with the question text and nothing else.") as $llm_request
       when $llm_request.Finished() as $llm_request_result
@@ -194,7 +194,7 @@ flow check limitations with user
       break
     orwhen user said something
       bot say "Sorry, I am not sure if this was a confirmation. Can you rephrase?."
-    
+
 
 flow showcase selector
   activate track visual choice selection state
@@ -222,7 +222,7 @@ flow showcase selector
           log "user said something during bot thinking (user silent llm response generation)"
 
     orwhen unhandled user intent as $intent_ref
-      log "unhandled user intent: '{{$intent_ref.context.event.arguments.flow_id}}'"
+      log "unhandled user intent: '{{$intent_ref.intent}}'"
       generate then continue interaction
       log "unhandled user intent response done"
 
