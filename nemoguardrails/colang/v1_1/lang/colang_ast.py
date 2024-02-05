@@ -391,6 +391,15 @@ class Log(Element):
 
 @dataclass_json
 @dataclass
+class Print(Element):
+    """Print a message."""
+
+    info: str = ""
+    _type: str = "_print"
+
+
+@dataclass_json
+@dataclass
 class CatchPatternFailure(Element):
     """Set the pattern failure catcher to catch a failing pattern and forward it to the specified label.
     If the label is not set the failure will be propagated to the parent flow.

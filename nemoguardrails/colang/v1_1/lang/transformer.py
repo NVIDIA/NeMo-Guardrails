@@ -31,6 +31,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     If,
     Label,
     Log,
+    Print,
     Priority,
     Return,
     Source,
@@ -455,6 +456,13 @@ class ColangTransformer(Transformer):
     def _log_stmt(self, children: list, meta: Meta) -> Log:
         assert len(children) == 1
         return Log(
+            info=children[0]["elements"][0],
+            _source=self.__source(meta),
+        )
+
+    def _print_stmt(self, children: list, meta: Meta) -> Print:
+        assert len(children) == 1
+        return Print(
             info=children[0]["elements"][0],
             _source=self.__source(meta),
         )

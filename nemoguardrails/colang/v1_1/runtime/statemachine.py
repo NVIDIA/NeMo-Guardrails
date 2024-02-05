@@ -38,6 +38,7 @@ from nemoguardrails.colang.v1_1.lang.colang_ast import (
     Label,
     Log,
     MergeHeads,
+    Print,
     Priority,
     Return,
     Spec,
@@ -1128,6 +1129,10 @@ def slide(
                 "Colang debug info: %s",
                 eval_expression(element.info, _get_eval_context(state, flow_state)),
             )
+            head.position += 1
+
+        elif isinstance(element, Print):
+            print(eval_expression(element.info, _get_eval_context(state, flow_state)))
             head.position += 1
 
         elif isinstance(element, Priority):
