@@ -297,12 +297,25 @@ This toolkit is licensed under the [Apache License, Version 2.0](http://www.apac
 
 ## Hot to cite
 
-If you use this work, please cite [the paper](https://arxiv.org/abs/2310.10501) that introduces it.
+If you use this work, please cite the [EMNLP 2023 paper](https://aclanthology.org/2023.emnlp-demo.40) that introduces it.
+
 ```bibtex
-@article{2023nemoguardrails,
-  title={NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications with Programmable Rails},
-  author={Rebedea, Traian and Dinu, Razvan and Sreedhar, Makesh and Parisien, Christopher and Cohen, Jonathan},
-  journal={arXiv preprint arXiv:2310.10501},
-  year={2023}
+@inproceedings{rebedea-etal-2023-nemo,
+    title = "{N}e{M}o Guardrails: A Toolkit for Controllable and Safe {LLM} Applications with Programmable Rails",
+    author = "Rebedea, Traian  and
+      Dinu, Razvan  and
+      Sreedhar, Makesh Narsimhan  and
+      Parisien, Christopher  and
+      Cohen, Jonathan",
+    editor = "Feng, Yansong  and
+      Lefever, Els",
+    booktitle = "Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing: System Demonstrations",
+    month = dec,
+    year = "2023",
+    address = "Singapore",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.emnlp-demo.40",
+    doi = "10.18653/v1/2023.emnlp-demo.40",
+    pages = "431--445",
 }
 ```
