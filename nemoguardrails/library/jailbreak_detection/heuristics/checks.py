@@ -24,6 +24,12 @@ tokenizer = GPT2TokenizerFast.from_pretrained(model_id)
 
 
 def get_perplexity(input_string: str) -> bool:
+    """
+    Function to compute sliding window perplexity of `input_string`
+
+    Args
+        input_string: The prompt to be sent to the model
+    """
     encodings = tokenizer(input_string, return_tensors="pt")
 
     max_length = model.config.n_positions
@@ -55,6 +61,13 @@ def get_perplexity(input_string: str) -> bool:
 
 
 def check_jb_lp(input_string: str, lp_threshold: float) -> dict:
+    """
+    Check whether the input string has length/perplexity greater than the threshold
+
+    Args
+        input_string: The prompt to be sent to the model
+        lp_threshold: Threshold for determining whether `input_string` is a jailbreak (Default: 89.79)
+    """
     perplexity = get_perplexity(input_string)
     jb_lp = len(input_string) / perplexity >= lp_threshold
     result = {"jailbreak": jb_lp}
@@ -62,6 +75,13 @@ def check_jb_lp(input_string: str, lp_threshold: float) -> dict:
 
 
 def check_jb_ps_ppl(input_string: str, ps_ppl_threshold: float) -> dict:
+    """
+    Check whether the input string has prefix or suffix perplexity greater than the threshold
+
+    Args
+        input_string: The prompt to be sent to the model
+        ps_ppl_threshold: Threshold for determining whether `input_string` is a jailbreak (Default: 1845.65)
+    """
     split_string = input_string.strip().split()
     # Not useful to evaluate GCG-style attacks on strings less than 20 "words"
     if len(split_string) < 20:

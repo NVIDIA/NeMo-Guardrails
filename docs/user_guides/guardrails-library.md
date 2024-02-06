@@ -653,3 +653,48 @@ define flow activefence input moderation detailed
 define bot inform cannot engage in abusive or harmful behavior
   "I will not engage in any abusive or harmful behavior."
 ```
+
+## Other
+
+### Heuristic Jailbreak Detection
+NeMo Guardrails supports heuristic jailbreak detections as an input rail.
+At this time, the jailbreak detection heuristics support only non-code English language models.
+```colang
+rails:
+  input:
+    flows:
+      - jailbreak detect heuristics
+```
+
+#### Customizing Heuristics Parameters
+The `jailbreak detect heuristics` flow, by default, listens on localhost port `1337` and uses the default value of `89.79` for `lp_threshold` and `1845.65` for `ps_ppl_threshold`. 
+Rationales for these values can be found in the [configuration guide](./advanced/jailbreak-detection-heuristics-deployment.md).
+To customize thresholds for the jailbreak detection heuristics, you can modify the parameters in the flow config:
+
+**NOTE**: If the `server_endpoint` parameter is not set, the checks will run in-process.
+This is useful for TESTING PURPOSES ONLY and **IS NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS**.
+
+```colang
+rails:
+  config:
+    jailbreak_detection:
+      server_endpoint: "http://0.0.0.0:1337/heuristics"
+      lp_threshold: 89.79
+      ps_ppl_threshold: 1845.65
+```
+
+By default, the flow asks the user to clarify their question. 
+You can override this behavior by adding a flow like the one below to your config.
+```colang
+define subflow jailbreak check heuristics
+  """
+  Heuristic checks to assess whether the user's prompt is an attempted jailbreak.
+  """
+  $is_jailbreak = execute jailbreak_heuristic_check
+  if $is_jailbreak
+    bot inform user attempted jailbreak
+    stop
+
+define bot inform user attempted jailbreak
+  "I'm sorry, your prompt appears to be an attempt to get me to perform an unauthorized function."
+```

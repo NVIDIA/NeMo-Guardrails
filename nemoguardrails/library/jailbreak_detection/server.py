@@ -79,8 +79,11 @@ def start(
     port: int = typer.Option(
         default=1337, help="The port that the server should listen on."
     ),
+    host: str = typer.Option(
+        default="0.0.0.0", help="IP address of the host"
+    )
 ):
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host=host, port=port)
 
 
 if __name__ == "__main__":

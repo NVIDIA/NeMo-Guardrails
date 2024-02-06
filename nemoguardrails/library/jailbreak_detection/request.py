@@ -22,7 +22,7 @@ from nemoguardrails.actions import action
 log = logging.getLogger(__name__)
 
 
-@action(name="jailbreak heuristics")
+@action()
 async def jailbreak_heuristics(
     prompt: str,
     api_url: str = "http://localhost:1337/heuristics",
@@ -48,6 +48,7 @@ async def jailbreak_heuristics(
             log.info(f"Prompt jailbreak check: {result}.")
             try:
                 result = result["jailbreak"]
-            except Exception:
+            except KeyError:
+                log.exception("No jailbreak field in result.")
                 result = None
             return result

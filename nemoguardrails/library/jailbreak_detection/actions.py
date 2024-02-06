@@ -19,22 +19,30 @@ from typing import Optional
 from nemoguardrails.actions import action
 from request import jailbreak_heuristics
 from nemoguardrails.llm.taskmanager import LLMTaskManager
+from heuristics.checks import check_jb_lp, check_jb_ps_ppl
 
 log = logging.getLogger(__name__)
 
 
-@action()
+@action(name="jailbreak heuristics")
 async def jailbreak_heuristic_check(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
-    """Checks the facts for the bot response using an information alignment score."""
+    """Checks the user's prompt to determine if it is attempt to jailbreak the model."""
     jailbreak_config = llm_task_manager.config.rails.config.jailbreak_detection
 
-    jailbreak_api_url = jailbreak_config.parameters.get("endpoint")
+    jailbreak_api_url = jailbreak_config.parameters.get("server_endpoint")
     lp_threshold = jailbreak_config.parameters.get("lp_threshold")
     ps_ppl_threshold = jailbreak_config.parameters.get("ps_ppl_threshold")
 
     prompt = context.get("user_message")
+
+    if not jailbreak_api_url:
+        log.warning("No jailbreak heuristics endpoint set. Running in-process, NOT RECOMMENDED FOR PRODUCTION.")
+        lp_check = check_jb_lp(prompt, lp_threshold)
+        ps_ppl_check = check_jb_ps_ppl(prompt, ps_ppl_threshold)
+        jailbreak = any([lp_check["jailbreak"], ps_ppl_check["jailbreak"]])
+        return jailbreak
 
     jailbreak = await jailbreak_heuristics(
         prompt, jailbreak_api_url, lp_threshold, ps_ppl_threshold
