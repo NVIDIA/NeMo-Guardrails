@@ -49,7 +49,7 @@ def chat(
     ),
     verbose_llm_calls: bool = typer.Option(
         default=False,
-        help="If the chat should be verbose and include the prompts and responses for the LLM calls",
+        help="If the chat should be verbose and include the prompts and responses for the LLM calls.",
     ),
     debug_level: List[str] = typer.Option(
         default=[],
