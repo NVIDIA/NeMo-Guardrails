@@ -220,7 +220,7 @@ class SpecOp(Element):
 
     op: str = ""
     # TODO: refactor this removing dict and use SpecAnd and SpecOr instead
-    spec: Union[Spec, dict] = Spec()
+    spec: Union[Spec, dict] = field(default_factory=Spec)
     # spec: Union[Spec, SpecAnd, SpecOr] = Spec()
 
     # If the return value of the spec needs to be captured. The return value only makes sense
