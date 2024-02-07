@@ -2,7 +2,7 @@ define subflow jailbreak check heuristics
   """
   Heuristic checks to assess whether the user's prompt is an attempted jailbreak.
   """
-  $is_jailbreak = execute jailbreak_heuristic_check
+  $is_jailbreak = execute jailbreak heuristics
   if $is_jailbreak
     bot inform user clarify question
     stop

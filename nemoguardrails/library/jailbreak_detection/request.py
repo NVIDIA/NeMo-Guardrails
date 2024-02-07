@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 
 
 @action()
-async def jailbreak_heuristics(
+async def jailbreak_heuristic_check(
     prompt: str,
     api_url: str = "http://localhost:1337/heuristics",
     lp_threshold: Optional[float] = None,

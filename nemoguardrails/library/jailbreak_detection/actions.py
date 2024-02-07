@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 @action(name="jailbreak heuristics")
-async def jailbreak_heuristic_check(
+async def jailbreak_heuristics(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
     """Checks the user's prompt to determine if it is attempt to jailbreak the model."""
@@ -44,7 +44,7 @@ async def jailbreak_heuristic_check(
         jailbreak = any([lp_check["jailbreak"], ps_ppl_check["jailbreak"]])
         return jailbreak
 
-    jailbreak = await jailbreak_heuristics(
+    jailbreak = await jailbreak_heuristic_check(
         prompt, jailbreak_api_url, lp_threshold, ps_ppl_threshold
     )
     if jailbreak is None:
