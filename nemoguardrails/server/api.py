@@ -76,8 +76,8 @@ if ENABLE_CORS:
     )
 
 # By default, we use the rails in the examples folder
-app.rails_config_path = os.path.join(
-    os.path.dirname(__file__), "..", "..", "examples", "bots"
+app.rails_config_path = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "examples", "bots")
 )
 
 # Weather the chat UI is enabled or not.
@@ -152,7 +152,13 @@ def _get_rails(config_id: str) -> LLMRails:
     if config_id in llm_rails_instances:
         return llm_rails_instances[config_id]
 
-    rails_config = RailsConfig.from_path(os.path.join(app.rails_config_path, config_id))
+    # Construct the full path and make sure that it is relative to the server
+    # config path. Otherwise, reject.
+    full_path = os.path.normpath(os.path.join(app.rails_config_path, config_id))
+    if not full_path.startswith(app.rails_config_path):
+        raise Exception("Not allowed.")
+
+    rails_config = RailsConfig.from_path(full_path)
     llm_rails = LLMRails(config=rails_config, verbose=True)
     llm_rails_instances[config_id] = llm_rails
 
@@ -184,11 +190,13 @@ async def chat_completion(body: RequestBody, request: Request):
     try:
         llm_rails = _get_rails(config_id)
     except ValueError as ex:
+        log.exception(ex)
         return {
             "messages": [
                 {
                     "role": "assistant",
-                    "content": f"Could not load the {config_id} guardrails configuration: {str(ex)}",
+                    "content": f"Could not load the {config_id} guardrails configuration. "
+                    f"An internal error has occurred.",
                 }
             ]
         }

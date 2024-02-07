@@ -22,31 +22,26 @@ RUN apt-get update && apt-get install -y git
 # Install gcc/g++ for annoy
 RUN apt-get install -y gcc g++
 
-# We install this separately to speed up the rebuilding of images when dependencies change.
-# This installs pytorch and co.
-RUN pip install sentence-transformers==2.2.2
-
 # Copy and install NeMo Guardrails
 WORKDIR /nemoguardrails
 COPY . /nemoguardrails
 RUN pip install -e .[all]
 
-# https://stackoverflow.com/questions/77290003/segmentation-fault-when-using-sentencetransformer-inside-docker-container
-# Workaround for a bug when running on Apple M1/M2
-RUN pip install torch==2.0.*
+# Remove the PIP cache
+RUN rm -rf /root/.cache/pip
 
-# Make port 800 available to the world outside this container
+# Make port 8000 available to the world outside this container
 EXPOSE 8000
 
-# We copy the topical/moderation/etc. examples
+# We copy the example bot configurations
 WORKDIR /config
 COPY ./examples/bots /config
 
 # Run app.py when the container launches
 WORKDIR /nemoguardrails
 
-# Download the transformer model
-RUN python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('all-MiniLM-L6-v2')"
+# Download the `all-MiniLM-L6-v2` model
+RUN python -c "from fastembed.embedding import FlagEmbedding; FlagEmbedding('sentence-transformers/all-MiniLM-L6-v2');"
 
 # Run this so that everything is initialized
 RUN nemoguardrails --help

@@ -289,11 +289,6 @@ class Rails(BaseModel):
     )
 
 
-# Load the default config values from the file
-with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
-    _default_config = yaml.safe_load(_fc)
-
-
 def merge_two_dicts(dict_1: dict, dict_2: dict, ignore_keys: Set[str]) -> None:
     """Merges the fields of two dictionaries recursively."""
     for key, value in dict_2.items():

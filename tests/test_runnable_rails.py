@@ -281,7 +281,7 @@ def test_string_passthrough_mode_with_chain():
     config = RailsConfig.from_content(config={"models": []})
 
     runnable_with_rails = RunnableRails(
-        config, passthrough=True, passthrough_runnable=MockRunnable()
+        config, passthrough=True, runnable=MockRunnable()
     )
 
     chain = {"input": RunnablePassthrough()} | runnable_with_rails
@@ -307,7 +307,7 @@ def test_string_passthrough_mode_with_chain_and_dialog_rails():
             """,
     )
     runnable_with_rails = RunnableRails(
-        config, llm=llm, passthrough=True, passthrough_runnable=MockRunnable()
+        config, llm=llm, passthrough=True, runnable=MockRunnable()
     )
 
     chain = {"input": RunnablePassthrough()} | runnable_with_rails
@@ -345,7 +345,7 @@ def test_string_passthrough_mode_with_chain_and_dialog_rails_2():
     )
 
     runnable_with_rails = RunnableRails(
-        config, llm=llm, passthrough=True, passthrough_runnable=MockRunnable()
+        config, llm=llm, passthrough=True, runnable=MockRunnable()
     )
 
     chain = {"input": RunnablePassthrough()} | runnable_with_rails
@@ -404,7 +404,7 @@ class MockRunnable2(Runnable):
 def test_string_passthrough_mode_with_chain_and_string_output():
     config = RailsConfig.from_content(config={"models": []})
     runnable_with_rails = RunnableRails(
-        config, passthrough=True, passthrough_runnable=MockRunnable2()
+        config, passthrough=True, runnable=MockRunnable2()
     )
 
     chain = {"input": RunnablePassthrough()} | runnable_with_rails
@@ -419,7 +419,7 @@ def test_string_passthrough_mode_with_chain_and_string_output():
 def test_string_passthrough_mode_with_chain_and_string_input_and_output():
     config = RailsConfig.from_content(config={"models": []})
     runnable_with_rails = RunnableRails(
-        config, passthrough=True, passthrough_runnable=MockRunnable2()
+        config, passthrough=True, runnable=MockRunnable2()
     )
 
     chain = runnable_with_rails
@@ -498,13 +498,13 @@ def test_mocked_rag_with_fact_checking():
 def test_live_rag():
     import bs4
     from langchain import hub
-    from langchain.chat_models import ChatOpenAI
     from langchain.document_loaders import WebBaseLoader
-    from langchain.embeddings import OpenAIEmbeddings
     from langchain.schema import StrOutputParser
     from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain.vectorstores import Chroma
     from langchain_core.runnables import RunnablePassthrough
+    from langchain_openai.chat_models import ChatOpenAI
+    from langchain_openai.embeddings import OpenAIEmbeddings
 
     loader = WebBaseLoader(
         web_paths=("https://lilianweng.github.io/posts/2023-06-23-agent/",),

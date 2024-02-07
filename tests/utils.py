@@ -23,8 +23,7 @@ from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
-from langchain.llms.base import LLM, BaseLLM
-from pydantic import BaseModel
+from langchain.llms.base import LLM
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.colang import parse_colang_file
@@ -33,7 +32,7 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import initialize_state
 from nemoguardrails.utils import EnhancedJsonEncoder, new_event_dict
 
 
-class FakeLLM(LLM, BaseModel):
+class FakeLLM(LLM):
     """Fake LLM wrapper for testing purposes."""
 
     responses: List

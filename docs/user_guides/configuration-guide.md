@@ -188,11 +188,11 @@ To configure the embeddings model that is used for the various steps in the [gua
 models:
   - ...
   - type: embeddings
-    engine: SentenceTransformers
+    engine: FastEmbed
     model: all-MiniLM-L6-v2
 ```
 
-The `SentenceTransformers` engine is the default one and uses the `all-MiniLM-L6-v2` model. NeMo Guardrails also supports using OpenAI models for computing the embeddings, e.g.:
+The `FastEmbed` engine is the default one and uses the `all-MiniLM-L6-v2` model. NeMo Guardrails also supports using OpenAI models for computing the embeddings, e.g.:
 
 ```yaml
 models:
@@ -204,7 +204,7 @@ models:
 
 ### Embedding Search Provider
 
-NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../../architecture/README.md#the-guardrails-process) and for the [knowledge base](../configuration-guide.md#knowledge-base-documents) functionality. The default embedding search uses SentenceTransformers for computing the embeddings (the `all-MiniLM-L6-v2` model) and [Annoy](https://github.com/spotify/annoy) for performing the search. As shown in the previous section, the embeddings model supports both SentenceTransformers and OpenAI.
+NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../architecture/README.md#the-guardrails-process) and for the [knowledge base](#knowledge-base-documents) functionality. The default embedding search uses FastEmbed for computing the embeddings (the `all-MiniLM-L6-v2` model) and [Annoy](https://github.com/spotify/annoy) for performing the search. As shown in the previous section, the embeddings model supports both FastEmbed and OpenAI. SentenceTransformers is also supported.
 
 For advanced use cases or integrations with existing knowledge bases, you can [provide a custom embedding search provider](./advanced/embedding-search-providers.md).
 
