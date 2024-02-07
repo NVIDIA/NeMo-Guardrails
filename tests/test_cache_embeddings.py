@@ -15,13 +15,14 @@
 
 import tempfile
 import unittest
+from typing import List
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
 from nemoguardrails.embeddings.cache import (
-    CacheEmbeddings,
     CacheStore,
+    EmbeddingsCache,
     FilesystemCacheStore,
     HashKeyGenerator,
     InMemoryCacheStore,
@@ -30,6 +31,7 @@ from nemoguardrails.embeddings.cache import (
     RedisCacheStore,
     cache_embeddings,
 )
+from nemoguardrails.rails.llm.config import EmbeddingsCacheConfig
 
 
 def test_key_generator_abstract_class():
@@ -45,7 +47,7 @@ def test_cache_store_abstract_class():
 def test_hash_key_generator():
     key_gen = HashKeyGenerator()
     key = key_gen.generate_key("test")
-    assert isinstance(key, int)
+    assert isinstance(key, str)
 
 
 def test_md5_key_generator():
@@ -85,9 +87,9 @@ def test_redis_cache_store():
     mock_redis.flushall.assert_called_once()
 
 
-class TestCacheEmbeddings(unittest.TestCase):
+class TestEmbeddingsCache(unittest.TestCase):
     def setUp(self):
-        self.cache_embeddings = CacheEmbeddings(
+        self.cache_embeddings = EmbeddingsCache(
             key_generator=MD5KeyGenerator(), cache_store=FilesystemCacheStore()
         )
 
@@ -109,26 +111,69 @@ class TestCacheEmbeddings(unittest.TestCase):
         mock_set.assert_not_called()
 
 
-class TestCacheEmbeddingsDecorator(unittest.TestCase):
-    def setUp(self):
-        self.mock_func = Mock(return_value=[[0.1, 0.2, 0.3]])
-        self.decorated_func = cache_embeddings(self.mock_func)
+class MyClass:
+    @property
+    def cache_config(self):
+        return EmbeddingsCacheConfig()
 
-    @patch.object(FilesystemCacheStore, "get", return_value=None)
-    @patch.object(FilesystemCacheStore, "set")
-    @patch.object(MD5KeyGenerator, "generate_key", return_value="key")
-    def test_cache_miss(self, mock_generate_key, mock_set, mock_get):
-        self.decorated_func(self, ["text"])
-        mock_generate_key.assert_called_with("text")
-        self.mock_func.assert_called_once_with(self, ["text"])
-        mock_set.assert_called_once_with("key", [0.1, 0.2, 0.3])
+    @cache_embeddings
+    def get_embeddings(self, texts: List[str]) -> List[List[float]]:
+        return [[float(ord(c)) for c in text] for text in texts]
 
-    @patch.object(FilesystemCacheStore, "get", return_value=[[0.1, 0.2, 0.3]])
-    @patch.object(FilesystemCacheStore, "set")
-    @patch.object(MD5KeyGenerator, "generate_key", return_value="key")
-    def test_cache_hit(self, mock_generate_key, mock_set, mock_get):
-        self.decorated_func(self, ["text"])
-        mock_generate_key.assert_called_with("text")
-        mock_get.assert_called_once_with("key")
-        self.mock_func.assert_not_called()
-        mock_set.assert_not_called()
+
+async def test_cache_embeddings():
+    with patch(
+        "nemoguardrails.rails.llm.config.EmbeddingsCacheConfig"
+    ) as MockConfig, patch(
+        "nemoguardrails.embeddings.cache.EmbeddingsCache"
+    ) as MockCache:
+        mock_config = MockConfig.return_value
+        mock_cache = MockCache.return_value
+        my_class = MyClass()
+
+        # Test when cache is not enabled
+        mock_config.enabled = False
+        texts = ["hello", "world"]
+        assert await my_class.get_embeddings(texts) == [
+            [104.0, 101.0, 108.0, 108.0, 111.0],
+            [119.0, 111.0, 114.0, 108.0, 100.0],
+        ]
+        mock_cache.get.assert_not_called()
+        mock_cache.set.assert_not_called()
+
+        # Test when cache is enabled and all texts are cached
+        mock_config.enabled = True
+        mock_cache.get.return_value = {
+            "hello": [104.0, 101.0, 108.0, 108.0, 111.0],
+            "world": [119.0, 111.0, 114.0, 108.0, 100.0],
+        }
+        assert await my_class.get_embeddings(texts) == [
+            [104.0, 101.0, 108.0, 108.0, 111.0],
+            [119.0, 111.0, 114.0, 108.0, 100.0],
+        ]
+        mock_cache.get.assert_called_once_with(texts)
+        mock_cache.set.assert_not_called()
+
+        # Test when cache is enabled and some texts are not cached
+        mock_cache.reset_mock()
+        mock_cache.get.return_value = {"hello": [104.0, 101.0, 108.0, 108.0, 111.0]}
+        assert await my_class.get_embeddings(texts) == [
+            [104.0, 101.0, 108.0, 108.0, 111.0],
+            [119.0, 111.0, 114.0, 108.0, 100.0],
+        ]
+        mock_cache.get.assert_called_once_with(texts)
+        mock_cache.set.assert_called_once_with(
+            ["world"], [[119.0, 111.0, 114.0, 108.0, 100.0]]
+        )
+
+        # Test when cache is enabled and no texts are cached
+        mock_cache.reset_mock()
+        mock_cache.get.return_value = {}
+        assert my_class.get_embeddings(texts) == [
+            [104.0, 101.0, 108.0, 108.0, 111.0],
+            [119.0, 111.0, 114.0, 108.0, 100.0],
+        ]
+        mock_cache.set.assert_called_once_with(
+            texts,
+            [[104.0, 101.0, 108.0, 108.0, 111.0], [119.0, 111.0, 114.0, 108.0, 100.0]],
+        )
