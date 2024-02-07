@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import Any, Dict, List
 
 from annoy import AnnoyIndex
 
-from nemoguardrails.embeddings.cache import CacheEmbeddings, cache_embeddings
+from nemoguardrails.embeddings.cache import cache_embeddings
 from nemoguardrails.embeddings.index import EmbeddingModel, EmbeddingsIndex, IndexItem
+from nemoguardrails.rails.llm.config import EmbeddingsCacheConfig
 
 
 class BasicEmbeddingsIndex(EmbeddingsIndex):
@@ -32,6 +33,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embedding_engine (str): The engine for computing embeddings.
         embeddings_index (AnnoyIndex): The current embedding index.
         embedding_size (int): The size of the embeddings.
+        cache_config (EmbeddingsCacheConfig): The cache configuration.
         embeddings (List[List[float]]): The computed embeddings.
     """
 
@@ -40,24 +42,37 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embedding_model=None,
         embedding_engine=None,
         index=None,
-        use_cache: bool = True,
-        cache_embeddings: CacheEmbeddings = None,
+        cache_config: EmbeddingsCacheConfig | Dict[str, Any] = None,
     ):
+        """Initialize the BasicEmbeddingsIndex.
+
+        Args:
+            embedding_model (str, optional): The model for computing embeddings. Defaults to None.
+            embedding_engine (str, optional): The engine for computing embeddings. Defaults to None.
+            index (AnnoyIndex, optional): The pre-existing index. Defaults to None.
+            cache_config (EmbeddingsCacheConfig | Dict[str, Any], optional): The cache configuration. Defaults to None.
+        """
         self._model = None
         self._items = []
         self._embeddings = []
         self.embedding_model = embedding_model
         self.embedding_engine = embedding_engine
         self._embedding_size = 0
-        self.use_cache = use_cache
-        self.cache_embeddings = cache_embeddings
-        # When the index is provided, it means it's from the cache.
+        if isinstance(cache_config, Dict):
+            self._cache_config = EmbeddingsCacheConfig(**cache_config)
+        else:
+            self._cache_config = cache_config or EmbeddingsCacheConfig()
         self._index = index
 
     @property
     def embeddings_index(self):
         """Get the current embedding index"""
         return self._index
+
+    @property
+    def cache_config(self):
+        """Get the cache configuration."""
+        return self._cache_config
 
     @property
     def embedding_size(self):
@@ -81,7 +96,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         )
 
     @cache_embeddings
-    def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
+    async def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Compute embeddings for a list of texts.
 
         Args:
@@ -184,7 +199,7 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
         Returns:
             List[List[float]]: The list of sentence embeddings, where each embedding is a list of floats.
         """
-        
+
         return self.model.encode(documents).tolist()
 
 
