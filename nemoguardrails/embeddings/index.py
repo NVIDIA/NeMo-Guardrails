@@ -28,6 +28,7 @@ class EmbeddingsIndex:
 
     Attributes:
         embedding_size (int): The size of the embeddings.
+        cache_config (EmbeddingsCacheConfig): The cache configuration for the index.
 
     Methods:
         add_item(item: IndexItem) -> None: Adds a new item to the index.
@@ -40,7 +41,11 @@ class EmbeddingsIndex:
     def embedding_size(self):
         raise NotImplementedError
 
-    def _get_embeddings(self, texts: List[str]):
+    @property
+    def cache_config(self):
+        raise NotImplementedError
+
+    async def _get_embeddings(self, texts: List[str]):
         raise NotImplementedError
 
     async def add_item(self, item: IndexItem):
