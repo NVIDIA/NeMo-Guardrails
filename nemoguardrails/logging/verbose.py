@@ -17,6 +17,12 @@ import logging
 import threading
 import time
 
+# Global state variable to track if the verbose mode has already been enabled
+verbose_mode_enabled = False
+
+# Whether to log the LLM calls verbosely.
+verbose_llm_calls = False
+
 
 class Styles:
     """The set of standard colors."""
@@ -46,8 +52,8 @@ class Styles:
     # Presets
     WHITE_ON_GREEN = "\033[42m\033[97m"
 
-    PROMPT = "\033[38;5;232m\033[48;5;235m"
-    COMPLETION = "\033[38;5;236m\033[48;5;235m"
+    PROMPT = "\033[38;5;232m\033[48;5;254m"
+    COMPLETION = "\033[38;5;236m\033[48;5;84m"
     COMPLETION_GREEN = "\033[48;5;84m"
     COMPLETION_RED = "\033[48;5;196m"
     EVENT_NAME = "\033[38;5;32m"
@@ -137,22 +143,24 @@ class VerboseHandler(logging.StreamHandler):
 
             # We remove the title for completion messages and stop the blinking cursor.
             if title == "Completion":
-                self.blinking_cursor.stop()
-                print(body_style + body + Styles.RESET_ALL)
+                if verbose_llm_calls:
+                    self.blinking_cursor.stop()
+                    print(body_style + body + Styles.RESET_ALL)
 
             # For prompts, we also start the blinking cursor.
             elif title == "Prompt":
-                msg = (
-                    title_style
-                    + title
-                    + Styles.RESET_ALL
-                    + "\n"
-                    + body_style
-                    + body
-                    + Styles.RESET_ALL
-                )
-                print(msg, end="")
-                self.blinking_cursor.start()
+                if verbose_llm_calls:
+                    msg = (
+                        title_style
+                        + title
+                        + Styles.RESET_ALL
+                        + "\n"
+                        + body_style
+                        + body
+                        + Styles.RESET_ALL
+                    )
+                    print(msg, end="")
+                    self.blinking_cursor.start()
 
             elif title == "Event":
                 # For events, we also color differently the type of event.
@@ -173,8 +181,9 @@ class VerboseHandler(logging.StreamHandler):
 
 def set_verbose(verbose: bool):
     """Configure the verbose mode."""
+    global verbose_mode_enabled
 
-    if verbose:
+    if verbose and not verbose_mode_enabled:
         root_logger = logging.getLogger()
 
         # We make sure that the root logger is at least INFO so that we can see the messages from the VerboseHandler.
@@ -194,4 +203,12 @@ def set_verbose(verbose: bool):
         # Also, we make sure the sentence_transformers log level is set to WARNING.
         logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
 
+        verbose_mode_enabled = True
         print("Entered verbose mode.")
+
+
+def set_verbose_llm_calls(verbose: bool):
+    """Configure the verbose LLM calls mode."""
+    global verbose_llm_calls
+
+    verbose_llm_calls = verbose

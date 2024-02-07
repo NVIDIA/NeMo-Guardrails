@@ -344,7 +344,7 @@ class LLMGenerationActions:
             #  or use the LLM to detect the canonical form. The below implementation
             #  is for the latter.
 
-            log.info("Phase 1: Generating user intent")
+            log.info("Phase 1 :: Generating user intent")
 
             # We search for the most relevant similar user utterance
             examples = ""

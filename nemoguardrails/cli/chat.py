@@ -21,7 +21,7 @@ from prompt_toolkit import prompt
 from prompt_toolkit.patch_stdout import patch_stdout
 
 from nemoguardrails import LLMRails, RailsConfig
-from nemoguardrails.logging.verbose import Styles
+from nemoguardrails.logging.verbose import Styles, set_verbose_llm_calls
 from nemoguardrails.streaming import StreamingHandler
 from nemoguardrails.utils import new_event_dict
 
@@ -129,9 +129,6 @@ async def _run_chat_v1_0(
                         )
 
         history.append(bot_message)
-
-        # We print bot messages in green.
-        print(Styles.GREEN + f"{bot_message['content']}" + Styles.RESET_ALL)
 
 
 async def _run_chat_v2_x(rails_app: LLMRails):
@@ -445,6 +442,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 def run_chat(
     config_path: Optional[str] = None,
     verbose: bool = False,
+    verbose_llm_calls: bool = False,
     streaming: bool = False,
     server_url: Optional[str] = None,
     config_id: Optional[str] = None,
@@ -454,13 +452,27 @@ def run_chat(
     Args:
         config_path (Optional[str]): The path to the configuration file. Defaults to None.
         verbose (bool): Whether to run in verbose mode. Defaults to False.
+        verbose_llm_calls (bool): Whether to print the prompts and the completions. Defaults to False.
         streaming (bool): Whether to enable streaming mode. Defaults to False.
         server_url (Optional[str]): The URL of the chat server. Defaults to None.
         config_id (Optional[str]): The configuration ID. Defaults to None.
     """
+    # If the `--verbose-llm-calls` mode is used, we activate the verbose mode.
+    # This means that the user doesn't have to use both options at the same time.
+    verbose = verbose or verbose_llm_calls
 
     rails_config = RailsConfig.from_path(config_path)
     rails_app = LLMRails(rails_config, verbose=verbose)
+
+    set_verbose_llm_calls(verbose_llm_calls)
+
+    if verbose and not verbose_llm_calls:
+        print(
+            "NOTE: use the `--verbose-llm-calls` option to include the LLM prompts "
+            "and completions in the log.\n"
+        )
+
+    print("Starting the chat (Press Ctrl + C twice to quit) ...")
 
     if rails_config.colang_version == "1.0":
         asyncio.run(

@@ -45,7 +45,11 @@ def chat(
     ),
     verbose: bool = typer.Option(
         default=False,
-        help="If the chat should be verbose and output the prompts",
+        help="If the chat should be verbose and output detailed logging information.",
+    ),
+    verbose_llm_calls: bool = typer.Option(
+        default=False,
+        help="If the chat should be verbose and include the prompts and responses for the LLM calls",
     ),
     debug_level: List[str] = typer.Option(
         default=[],
@@ -78,10 +82,10 @@ def chat(
         root_logger.addHandler(RichHandler(markup=True))
         root_logger.setLevel(debug_level[0])
 
-    typer.echo("Starting the chat (Press Ctrl + C to quit) ...")
     run_chat(
         config_path=config[0],
         verbose=verbose,
+        verbose_llm_calls=verbose_llm_calls,
         streaming=streaming,
         server_url=server_url,
         config_id=config_id,

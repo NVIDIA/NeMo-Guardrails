@@ -160,7 +160,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
 
-        log.info("Phase 1: Generating user intent")
+        log.info("Phase 1 :: Generating user intent")
 
         # We search for the most relevant similar user intents
         examples = ""
