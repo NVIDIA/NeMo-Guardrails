@@ -258,6 +258,9 @@ class OpenAIEmbeddingModel(EmbeddingModel):
         return embeddings
 
 
+_embedding_model_cache = {}
+
+
 def init_embedding_model(embedding_model: str, embedding_engine: str) -> EmbeddingModel:
     """Initialize the embedding model.
 
@@ -271,11 +274,18 @@ def init_embedding_model(embedding_model: str, embedding_engine: str) -> Embeddi
     Raises:
         ValueError: If the embedding engine is invalid.
     """
-    if embedding_engine == "SentenceTransformers":
-        return SentenceTransformerEmbeddingModel(embedding_model)
-    if embedding_engine == "FastEmbed":
-        return FastEmbedEmbeddingModel(embedding_model)
-    elif embedding_engine == "openai":
-        return OpenAIEmbeddingModel(embedding_model)
-    else:
-        raise ValueError(f"Invalid embedding engine: {embedding_engine}")
+    model_key = f"{embedding_engine}-{embedding_model}"
+
+    if model_key not in _embedding_model_cache:
+        if embedding_engine == "SentenceTransformers":
+            model = SentenceTransformerEmbeddingModel(embedding_model)
+        elif embedding_engine == "FastEmbed":
+            model = FastEmbedEmbeddingModel(embedding_model)
+        elif embedding_engine == "openai":
+            model = OpenAIEmbeddingModel(embedding_model)
+        else:
+            raise ValueError(f"Invalid embedding engine: {embedding_engine}")
+
+        _embedding_model_cache[model_key] = model
+
+    return _embedding_model_cache[model_key]
