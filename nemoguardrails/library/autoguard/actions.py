@@ -46,7 +46,7 @@ async def infer(text, tasks, task_config=None):
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
 
     request_url = URL + "guardrail"
-    headers = {"x-api-key": api_key, "content_type": "application/json"}
+    headers = {"x-api-key": api_key}
     # shutting all guardrails off by default
     config = {
         "pii_fast": {
@@ -89,9 +89,7 @@ async def infer(text, tasks, task_config=None):
         config[task] = {"mode": "DETECT"}
         if task_config:
             config[task].update(task_config)
-
     request_body = {"prompt": text, "config": config}
-
     aggregated_responses = []
 
     async with aiohttp.ClientSession() as session:
@@ -105,12 +103,14 @@ async def infer(text, tasks, task_config=None):
                     f"AutoGuard call failed with status code {response.status}.\n"
                     f"Details: {await response.text()}"
                 )
-            async for line in response.content:
-                line_text = line.decode("utf-8").strip()
+            content = await response.text()
+            for line in content.split("\n"):
+                line_text = line.strip()
                 if len(line_text) > 0:
                     resp = json.loads(line_text)
-                    aggregated_responses.append(resp)
-    return aggregated_responses
+                    if resp["guarded"]:
+                        return True, GUARDRAIL_TRIGGER_TEXT[resp["task"]]
+    return False, None
 
 
 async def infer_factcheck(text, documents):
@@ -149,25 +149,17 @@ async def call_autoguard_api(context: Optional[dict] = None):
 
     user_message = context.get("user_message")
     bot_message = context.get("bot_message")
-    tasks = context.get("task", "")
-
-    if tasks:
+    tasks = context.get("tasks", "")
+    if not tasks:
         raise ValueError("Provide the task name in the request")
 
     tasks = tasks.split(",")
-
     if bot_message:
         prompt = bot_message
     else:
         prompt = user_message
 
-    output = await infer(prompt, tasks)
-    print("output", output)
-    for resp in output:
-        print("resp", resp)
-        if resp["guarded"]:
-            return True, resp["task"]
-    return False, None
+    return await infer(prompt, tasks)
 
 
 @action(name="call autoguard factcheck api", is_system_action=True)
