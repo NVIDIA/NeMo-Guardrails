@@ -205,7 +205,17 @@ class FastEmbedEmbeddingModel(EmbeddingModel):
         if embedding_model == "all-MiniLM-L6-v2":
             embedding_model = "sentence-transformers/all-MiniLM-L6-v2"
 
-        self.model = Embedding(embedding_model)
+        try:
+            self.model = Embedding(embedding_model)
+        except ValueError as ex:
+            # Sometimes the cached model in the temporary folder gets removed,
+            # but the folder still exists, which causes an error. In this case,
+            # we fall back to an explicit cache directory.
+            if "Could not find model.onnx in" in str(ex):
+                self.model = Embedding(embedding_model, cache_dir=".cache")
+            else:
+                raise ex
+
         # Get the embedding dimension of the model
         self.embedding_size = len(list(self.model.embed("test"))[0].tolist())
 
