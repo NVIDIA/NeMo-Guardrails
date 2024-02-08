@@ -189,9 +189,12 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             ):
                 flow_id = event.arguments["flow_id"]
                 flow_config = state.flow_configs.get(flow_id, None)
-                if flow_config is None or (
-                    "# meta: user intent" in flow_config.source_code
-                    and flow_id not in potential_user_intents
+                if isinstance(flow_id, str) and (
+                    flow_config is None
+                    or (
+                        "# meta: user intent" in flow_config.source_code
+                        and flow_id not in potential_user_intents
+                    )
                 ):
                     examples += f"user intent: {flow_id}\n\n"
                     potential_user_intents.append(flow_id)
