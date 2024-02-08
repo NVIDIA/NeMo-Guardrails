@@ -442,6 +442,10 @@ class LLMRails:
             The completion (when a prompt is provided) or the next message.
 
         System messages are not yet supported."""
+        # We allow options to be specified both as a dict and as an object.
+        if options and isinstance(options, dict):
+            options = GenerationOptions(**options)
+
         if return_context:
             warnings.warn(
                 "The `return_context` argument is deprecated and will be removed in 0.9.0. "
