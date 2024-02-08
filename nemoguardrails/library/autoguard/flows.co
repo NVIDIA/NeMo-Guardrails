@@ -1,98 +1,23 @@
-define bot refuse to respond gender bias
-    "Gender bias detected. I'm sorry, I can't respond to that."
-
-define subflow input gender bias autoguard
-    $result = execute call autoguard gender bias api
-    if $result == True
-        bot refuse to respond gender bias
+define subflow input autoguard
+    $result = execute call autoguard api
+    if $result[0] == True
+        bot refuse to respond autoguard
         stop
 
-define subflow output gender bias autoguard
-    $result = execute call autoguard gender bias api
-    if $result == True
-        bot refuse to respond gender bias
+define subflow output autoguard
+    $result = execute call autoguard api
+    if $result[0] == True
+        bot refuse to respond autoguard
         stop
-
-define bot refuse to respond race bias
-    "Race bias detected. I'm sorry, I can't respond to that."
-
-define subflow input race bias autoguard
-    $result = execute call autoguard race bias api
-    if $result == True
-        bot refuse to respond race bias
-        stop
-
-define subflow output race bias autoguard
-    $result = execute call autoguard race bias api
-    if $result == True
-        bot refuse to respond race bias
-        stop
-
-define bot refuse to respond harm detection
-    "Harm to human detected. I'm sorry, I can't respond to that."
-
-define subflow input harm detection autoguard
-    $result = execute call autoguard harm detection api
-    if $result == True
-        bot refuse to respond harm detection
-        stop
-
-define subflow output harm detection autoguard
-    $result = execute call autoguard harm detection api
-    if $result == True
-        bot refuse to respond harm detection
-        stop
-
-define bot refuse to respond toxicity detection
-    "Toxic phrases detected. I'm sorry, I can't respond to that."
-
-define subflow input toxicity detection autoguard
-    $result = execute call autoguard toxicity detection api
-    if $result == True
-        bot refuse to respond toxicity detection
-        stop
-
-define subflow output toxicity detection autoguard
-    $result = execute call autoguard toxicity detection api
-    if $result == True
-        bot refuse to respond toxicity detection
-        stop
-
-define bot refuse to respond jailbreak detection
-    "Jailbreak attempt detected. I'm sorry, I can't respond to that."
-
-define subflow input jailbreak detection autoguard
-    $result = execute call autoguard jailbreak detection api
-    if $result == True
-        bot refuse to respond jailbreak detection
-        stop
-
-define subflow output jailbreak detection autoguard
-    $result = execute call autoguard jailbreak detection api
-    if $result == True
-        bot refuse to respond jailbreak detection
-        stop
-
-define bot refuse to respond confidential detection
-    "Confidential information detected. I'm sorry, I can't respond to that."
-
-define subflow input confidential detection autoguard
-    $result = execute call autoguard confidential detection api
-    if $result == True
-        bot refuse to respond confidential detection
-        stop
-
-define subflow output confidential detection autoguard
-    $result = execute call autoguard confidential detection api
-    if $result == True
-        bot refuse to respond confidential detection
-        stop
-
-define bot refuse to respond factcheck
-    "Factcheck violation detected. I'm sorry, I can't respond to that."
 
 define subflow output factcheck
     $result = execute call autoguard factcheck api
-    if $result == True
-        bot refuse to respond factcheck
+    if $result[0] == True
+        bot refuse to respond autoguard factcheck
         stop
+
+define bot refuse to respond autoguard
+    "$result[1] has been detected by AutoGuard; Sorry, can't process."
+
+define bot refuse to respond autoguard factcheck
+    "$result[1] has been detected by AutoGuard; Sorry, can't process."
