@@ -185,7 +185,10 @@ class GenerationLog(BaseModel):
 
 
 class GenerationResponse(BaseModel):
-    messages: List[dict] = Field(description="The list of the generated messages.")
+    # TODO: add typing for the list of messages
+    response: Union[str, List[dict]] = Field(
+        description="The list of the generated messages."
+    )
     output_data: Optional[dict] = Field(
         default=None,
         description="The output data, i.e. a dict with the values corresponding to the `output_vars`.",

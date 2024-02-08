@@ -20,6 +20,7 @@ import logging
 import os
 import threading
 import time
+import warnings
 from typing import Any, AsyncIterator, List, Optional, Tuple, Type, Union
 
 from langchain.llms.base import BaseLLM
@@ -414,7 +415,7 @@ class LLMRails:
         options: Optional[Union[dict, GenerationOptions]] = None,
         streaming_handler: Optional[StreamingHandler] = None,
         return_context: bool = False,
-    ) -> Union[str, dict, GenerationResponse]:
+    ) -> Union[str, dict, GenerationResponse, Tuple[dict, dict]]:
         """Generate a completion or a next message.
 
         The format for messages is the following:
@@ -441,6 +442,19 @@ class LLMRails:
             The completion (when a prompt is provided) or the next message.
 
         System messages are not yet supported."""
+        if return_context:
+            warnings.warn(
+                "The `return_context` argument is deprecated and will be removed in 0.9.0. "
+                "Use `GenerationOptions.output_vars = True` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+            # And we use the generation options mechanism instead.
+            if options is None:
+                options = GenerationOptions()
+            options.output_vars = True
+
         if streaming_handler:
             streaming_handler_var.set(streaming_handler)
 
@@ -457,12 +471,7 @@ class LLMRails:
 
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
-            new_message = await self.generate_async(
-                messages=[{"role": "user", "content": prompt}]
-            )
-
-            assert new_message["role"] == "assistant"
-            return new_message["content"]
+            messages = [{"role": "user", "content": prompt}]
 
         # TODO: Add support to load back history of events, next to history of messages
         #   This is important as without it, the LLM prediction is not as good.
@@ -508,12 +517,37 @@ class LLMRails:
             # print("Closing the stream handler explicitly")
             await streaming_handler.push_chunk(None)
 
-        if return_context:
-            # If we need to return the context as well,
-            context = compute_context(events)
-            return new_message, context
+        # If we have generation options, we prepare a GenerationResponse instance.
+        if options:
+            # If a prompt was used, we only need to return the content of the message.
+            if prompt:
+                res = GenerationResponse(response=new_message["content"])
+            else:
+                res = GenerationResponse(response=[new_message])
+
+            # If output variables are specified, we extract their values
+            if options.output_vars:
+                context = compute_context(events)
+                if isinstance(options.output_vars, list):
+                    # If we have only a selection of keys, we filter to only that.
+                    res.output_data = {k: context.get(k) for k in options.output_vars}
+                else:
+                    # Otherwise, we return the full context
+                    res.output_data = context
+
+                # If the `return_context` is used, then we return a tuple to keep
+                # the interface compatible.
+                # TODO: remove this in 0.10.0.
+                if return_context:
+                    return new_message, context
+
+            return res
         else:
-            return new_message
+            # If a prompt is used, we only return the content of the message.
+            if prompt:
+                return new_message["content"]
+            else:
+                return new_message
 
     def stream_async(
         self,
