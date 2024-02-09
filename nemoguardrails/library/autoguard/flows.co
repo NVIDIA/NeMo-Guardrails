@@ -1,16 +1,16 @@
 define subflow input autoguard
-    $result = execute call autoguard api
+    $result = execute autoguard_api
     if $result[0] == True
         bot refuse to respond autoguard
         stop
 
 define subflow output autoguard
-    $result = execute call autoguard api
+    $result = execute autoguard_api
     if $result[0] == True
         bot refuse to respond autoguard
         stop
 
-define subflow output factcheck
+define subflow output autoguard factcheck
     $result = execute call autoguard factcheck api
     if $result[0] == True
         bot refuse to respond autoguard factcheck

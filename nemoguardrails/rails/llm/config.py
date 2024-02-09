@@ -331,12 +331,36 @@ class JailbreakDetectionConfig(BaseModel):
     )
 
 
+class AutoGuardOptions(BaseModel):
+    guardrails: List[str] = Field(
+        default_factory=list,
+        description="",
+    )
+
+
+class AutoGuardRailConfig(BaseModel):
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    input: AutoGuardOptions = Field(
+        default_factory=AutoGuardOptions,
+        description="",
+    )
+    output: AutoGuardOptions = Field(
+        default_factory=AutoGuardOptions,
+        description="",
+    )
+
+
 class RailsConfigData(BaseModel):
     """Configuration data for specific rails that are supported out-of-the-box."""
 
     fact_checking: FactCheckingRailConfig = Field(
         default_factory=FactCheckingRailConfig,
         description="Configuration data for the fact-checking rail.",
+    )
+
+    autoguard: AutoGuardRailConfig = Field(
+        default_factory=AutoGuardRailConfig,
+        description="",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
