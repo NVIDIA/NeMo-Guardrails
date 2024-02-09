@@ -650,70 +650,47 @@ class RailsConfig(BaseModel):
         return _join_rails_configs(self, other)
 
 
-def _update_rails(rails_config_old, rails_config_new):
-    for rails_key, rails_val in vars(rails_config_new.rails).items():
-        # For config, we need to check each attribute individually
-        if rails_key == "config":
-            config_attributes = getattr(rails_config_old.rails, rails_key)
-            for config_key, config_val in vars(config_attributes).items():
-                print(f"Checking {config_key}")
+def _join_dict(dict1, dict2):
+    """
+    Joins two dictionaries recursively.
+    - If values are dictionaries, it applies _join_dict recursively.
+    - If values are lists, it concatenates them, ensuring unique elements.
+    - For other types, values from dict2 overwrite dict1.
+    """
+    result = dict(dict1)  # Create a copy of dict1 to avoid modifying the original
 
-                # Skip if the value is empty
-                skip = any(not sub_value for sub_value in vars(config_val).values())
-
-                if (
-                    not skip
-                    and hasattr(config_attributes, config_key)
-                    and getattr(config_attributes, config_key) != config_val
-                ):
-                    print(
-                        f"Updating {config_key} from {getattr(config_attributes, config_key)} to {config_val}"
-                    )
-                    setattr(config_attributes, config_key, config_val)
+    for key, value in dict2.items():
+        # If key is in both dictionaries and both values are dictionaries, apply _join_dict recursively
+        if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
+            result[key] = _join_dict(dict1[key], value)
+        # If key is in both dictionaries and both values are lists, concatenate unique elements
+        elif key in dict1 and isinstance(dict1[key], list) and isinstance(value, list):
+            # Since we want values from dict2 to take precedence, we concatenate dict2 first
+            result[key] = _unique_list_concat(value, dict1[key])
+        # Otherwise, simply overwrite the value from dict2
         else:
-            if (
-                hasattr(rails_config_old.rails, rails_key)
-                and getattr(rails_config_old.rails, rails_key) != rails_val
-            ):
-                print(
-                    f"Updating {rails_key} from {getattr(rails_config_old.rails, rails_key)} to {rails_val}"
-                )
+            result[key] = value
 
-                # For flows, we need to append the new flows to the old flows
-                if (
-                    rails_key == "input"
-                    or rails_key == "output"
-                    or rails_key == "retrieval"
-                ):
-                    existing_flows = getattr(rails_config_old.rails, rails_key).flows
-                    if existing_flows:
-                        rails_val.flows = rails_val.flows + existing_flows
-                setattr(rails_config_old.rails, rails_key, rails_val)
-    return rails_config_old.rails
+    return result
+
+
+def _unique_list_concat(list1, list2):
+    """
+    Concatenates two lists ensuring all elements are unique.
+    Handles unhashable types like dictionaries.
+    """
+    result = list(list1)
+    for item in list2:
+        if item not in result:
+            result.append(item)
+    return result
 
 
 def _join_rails_configs(
     base_rails_config: RailsConfig, updated_rails_config: RailsConfig
 ):
     """Helper to join two rails configuration."""
-    combined_rails_config = copy.deepcopy(base_rails_config)
-    combined_rails_config.user_messages = {
-        **updated_rails_config.user_messages,
-        **base_rails_config.user_messages,
-    }
 
-    combined_rails_config.bot_messages = {
-        **updated_rails_config.bot_messages,
-        **base_rails_config.bot_messages,
-    }
-
-    combined_rails_config.instructions = (
-        updated_rails_config.instructions + base_rails_config.instructions
-    )
-
-    combined_rails_config.flows = updated_rails_config.flows + base_rails_config.flows
-
-    combined_rails_config.models = base_rails_config.models
     config_old_types = {}
     for model_old in base_rails_config.models:
         config_old_types[model_old.type] = model_old
@@ -728,65 +705,19 @@ def _join_rails_configs(
                 raise ValueError(
                     "Both config files should have the same model for the same model type"
                 )
-        else:
-            combined_rails_config.models.append(model_new)
 
-    combined_rails_config.prompts = (
-        updated_rails_config.prompts + base_rails_config.prompts
-    )
-
-    combined_rails_config.docs = updated_rails_config.docs + base_rails_config.docs
-
-    # check if both actions_server_url are the same
     if base_rails_config.actions_server_url != updated_rails_config.actions_server_url:
         raise ValueError("Both config files should have the same actions_server_url")
 
-    # check if embedding_search_provider is there in either of the config files
-    if "embedding_search_provider" in dir(updated_rails_config):
-        combined_rails_config.embedding_search_provider = (
-            updated_rails_config.embedding_search_provider
-        )
-
-    combined_rails_config.config_path = ",".join(
-        [base_rails_config.config_path, updated_rails_config.config_path]
+    combined_rails_config_dict = _join_dict(
+        base_rails_config.dict(), updated_rails_config.dict()
+    )
+    combined_rails_config_dict["config_path"] = ",".join(
+        [
+            base_rails_config.dict()["config_path"],
+            updated_rails_config.dict()["config_path"],
+        ]
     )
 
-    if "sample_conversation" in dir(updated_rails_config):
-        combined_rails_config.sample_conversation = (
-            updated_rails_config.sample_conversation
-        )
-
-    if "lowest_temperature" in dir(updated_rails_config):
-        combined_rails_config.lowest_temperature = (
-            updated_rails_config.lowest_temperature
-        )
-
-    if "enable_multi_step_generation" in dir(updated_rails_config):
-        combined_rails_config.enable_multi_step_generation = (
-            updated_rails_config.enable_multi_step_generation
-        )
-
-    if "custom_data" in dir(updated_rails_config):
-        combined_rails_config.custom_data = updated_rails_config.custom_data
-
-    if "prompting_mode" in dir(updated_rails_config):
-        combined_rails_config.prompting_mode = updated_rails_config.prompting_mode
-
-    if "knowledge_base" in dir(updated_rails_config):
-        combined_rails_config.knowledge_base = updated_rails_config.knowledge_base
-
-    if "core" in dir(updated_rails_config):
-        combined_rails_config.core = updated_rails_config.core
-
-    if "rails" in dir(updated_rails_config):
-        combined_rails_config.rails = _update_rails(
-            base_rails_config, updated_rails_config
-        )
-
-    if "streaming" in dir(updated_rails_config):
-        combined_rails_config.streaming = updated_rails_config.streaming
-
-    if "passthrough" in dir(updated_rails_config):
-        combined_rails_config.passthrough = updated_rails_config.passthrough
-
+    combined_rails_config = RailsConfig(**combined_rails_config_dict)
     return combined_rails_config

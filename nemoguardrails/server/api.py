@@ -24,7 +24,7 @@ from typing import List, Optional
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from starlette import status
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
@@ -91,11 +91,13 @@ app.stop_signal = False
 
 
 class RequestBody(BaseModel):
-    config_id: str = Field(description="The id of the configuration to be used.")
+    config_id: Optional[str] = Field(
+        description="The id of the configuration to be used."
+    )
     config_ids: Optional[List[str]] = Field(
         default=None,
         description="The list of configuration ids to be used. "
-        "If specified, the `config_id` field is ignored.",
+        "If set, the configurations will be combined.",
     )
     thread_id: Optional[str] = Field(
         default=None,
@@ -114,6 +116,14 @@ class RequestBody(BaseModel):
         "Tokens will be sent as data-only server-sent events as they become "
         "available, with the stream terminated by a data: [DONE] message.",
     )
+
+    @validator("config_ids", always=True)
+    def check_if_set(cls, v, values, **kwargs):
+        if v is not None and values["config_id"] is not None:
+            raise ValueError("Only one of config_id or config_ids should be specified")
+        if v is None and values["config_id"] is None:
+            raise ValueError("Either config_id or config_ids must be specified")
+        return v
 
 
 class ResponseBody(BaseModel):
