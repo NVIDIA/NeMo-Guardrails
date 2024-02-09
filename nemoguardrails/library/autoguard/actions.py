@@ -21,11 +21,11 @@ from typing import Optional
 
 import aiohttp
 
+from nemoguardrails import RailsConfig
 from nemoguardrails.actions import action
+from nemoguardrails.llm.taskmanager import LLMTaskManager
 
 log = logging.getLogger(__name__)
-
-URL = "http://35.225.99.81:8888/"
 
 GUARDRAIL_TRIGGER_TEXT = {
     "pii_fast": "PII",
@@ -40,12 +40,11 @@ GUARDRAIL_TRIGGER_TEXT = {
 }
 
 
-async def infer(text, tasks, task_config=None):
+async def autoguard_infer(request_url, text, tasks, task_config=None):
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
 
-    request_url = URL + "guardrail"
     headers = {"x-api-key": api_key}
     # shutting all guardrails off by default
     config = {
@@ -103,8 +102,7 @@ async def infer(text, tasks, task_config=None):
                     f"AutoGuard call failed with status code {response.status}.\n"
                     f"Details: {await response.text()}"
                 )
-            content = await response.text()
-            for line in content.split("\n"):
+            async for line in response.content:
                 line_text = line.strip()
                 if len(line_text) > 0:
                     resp = json.loads(line_text)
@@ -113,13 +111,12 @@ async def infer(text, tasks, task_config=None):
     return False, None
 
 
-async def infer_factcheck(text, documents):
+async def infer_factcheck(request_url, text, documents):
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
 
     headers = {"x-api-key": api_key}
-    request_url = URL + "factcheck"
     request_body = {"prompt": text, "documents": documents}
     json_data = json.dumps(request_body).encode("utf8")
     async with aiohttp.ClientSession() as session:
@@ -140,30 +137,47 @@ async def infer_factcheck(text, documents):
     return False
 
 
-@action(name="call autoguard api", is_system_action=True)
-async def call_autoguard_api(context: Optional[dict] = None):
-    api_key = os.environ.get("AUTOGUARD_API_KEY")
-
-    if api_key is None:
-        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
-
+@action()
+async def autoguard_input_api(
+    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+):
     user_message = context.get("user_message")
-    bot_message = context.get("bot_message")
-    tasks = context.get("tasks", "")
+    autoguard_config = llm_task_manager.config.rails.config.autoguard
+
+    autoguard_api_url = autoguard_config.parameters.get("endpoint")
+    if not autoguard_api_url:
+        raise ValueError("Provide the autoguard endpoint in the config")
+    tasks = getattr(autoguard_config.input, "guardrails")
     if not tasks:
-        raise ValueError("Provide the task name in the request")
+        raise ValueError("Provide the guardrails in the config")
 
-    tasks = tasks.split(",")
-    if bot_message:
-        prompt = bot_message
-    else:
-        prompt = user_message
+    prompt = user_message
 
-    return await infer(prompt, tasks)
+    return await autoguard_infer(autoguard_api_url, prompt, tasks)
+
+
+@action()
+async def autoguard_output_api(
+    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+):
+    bot_message = context.get("bot_message")
+    autoguard_config = llm_task_manager.config.rails.config.autoguard
+    autoguard_api_url = autoguard_config.parameters.get("endpoint")
+    if not autoguard_api_url:
+        raise ValueError("Provide the autoguard endpoint in the config")
+    tasks = getattr(autoguard_config.input, "guardrails")
+    if not tasks:
+        raise ValueError("Provide the guardrails in the config")
+
+    prompt = bot_message
+
+    return await autoguard_infer(autoguard_api_url, prompt, tasks)
 
 
 @action(name="call autoguard factcheck api", is_system_action=True)
-async def call_autoguard_factcheck_api(context: Optional[dict] = None):
+async def call_autoguard_factcheck_api(
+    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+):
     api_key = os.environ.get("AUTOGUARD_API_KEY")
 
     if api_key is None:
@@ -171,13 +185,17 @@ async def call_autoguard_factcheck_api(context: Optional[dict] = None):
 
     bot_message = context.get("bot_message")
     documents = context.get("relevant_chunks", [])
+    autoguard_config = llm_task_manager.config.rails.config.autoguard
+    autoguard_api_url = autoguard_config.parameters.get("fact_check_endpoint")
+    if not autoguard_api_url:
+        raise ValueError("Provide the autoguard factcheck endpoint in the config")
     if isinstance(documents, str):
         documents = documents.split("\n")
     prompt = bot_message
 
     if isinstance(documents, list) and len(documents) > 0:
         return (
-            await infer_factcheck(prompt, documents),
+            await infer_factcheck(autoguard_api_url, prompt, documents),
             GUARDRAIL_TRIGGER_TEXT["factcheck"],
         )
     else:
