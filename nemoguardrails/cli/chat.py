@@ -432,9 +432,9 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                     print(Styles.GREY + f"Event: {event}" + Styles.RESET_ALL)
             else:
                 if not verbose.verbose_mode_enabled:
-                    print(Styles.GREEN + f"{event['type']}" + Styles.RESET_ALL)
+                    print(f"Event: {event['type']}")
                 else:
-                    print(Styles.GREEN + f"{event['type']}: {event}" + Styles.RESET_ALL)
+                    print(f"Event: {event['type']}: {event}")
 
         # TODO: deserialize the output state
         # state = State.from_dict(output_state)
