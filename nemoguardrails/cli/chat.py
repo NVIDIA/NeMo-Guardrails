@@ -14,32 +14,20 @@
 # limitations under the License.
 import asyncio
 import os
-from typing import Optional
+from typing import Dict, List, Optional
 
 import aiohttp
-from prompt_toolkit import prompt
+from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
 from nemoguardrails.logging import verbose
 from nemoguardrails.logging.verbose import Styles, set_verbose_llm_calls
 from nemoguardrails.streaming import StreamingHandler
 from nemoguardrails.utils import new_event_dict
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-
-async def input_async(prompt_message: str = "") -> str:
-    """Asynchronously read user input with a prompt.
-
-    Args:
-        prompt_message (str): The message to display as a prompt. Defaults to an empty string.
-
-    Returns:
-        str: The user's input.
-    """
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, prompt, prompt_message)
 
 
 async def _run_chat_v1_0(
@@ -136,9 +124,12 @@ async def _run_chat_v2_x(rails_app: LLMRails):
     """Simple chat loop for v2.x using the stateful events API."""
     state = None
     waiting_user_input = False
-    running_timer_tasks = {}
-    output_events = []
+    running_timer_tasks: Dict[str, asyncio.Task] = {}
+    input_events: List[dict] = []
+    output_events: List[dict] = []
     output_state = None
+
+    session: PromptSession = PromptSession()
 
     # Start an asynchronous timer
     async def _start_timer(timer_name: str, delay_seconds: float, action_uid: str):
@@ -274,17 +265,18 @@ async def _run_chat_v2_x(rails_app: LLMRails):
             elif event["type"] == "StartVisualInformationSceneAction":
                 # We print scene messages in green.
                 if not verbose.verbose_mode_enabled:
+                    options = extract_scene_text_content(event["content"])
                     print(
                         Styles.BLACK
                         + Styles.MAGENTA_BACKGROUND
-                        + f"Scene information: {event['title']}."
+                        + f"Scene information: {event['title']}{options}"
                         + Styles.RESET_ALL
                     )
                 else:
                     print(
                         Styles.BLACK
                         + Styles.MAGENTA_BACKGROUND
-                        + f"scene information (start): (title={event['title']}, action_uid={event['action_uid']})"
+                        + f"scene information (start): (title={event['title']}, action_uid={event['action_uid']}, content={event['content']})"
                         + Styles.RESET_ALL
                     )
 
@@ -312,20 +304,60 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                     )
                 )
 
-            elif event["type"] == "StartVisualChoiceSceneAction":
+            elif event["type"] == "StartVisualFormSceneAction":
                 # We print scene messages in green.
                 if not verbose.verbose_mode_enabled:
                     print(
                         Styles.BLACK
                         + Styles.MAGENTA_BACKGROUND
-                        + f"Scene choice: {event['prompt']}."
+                        + f"Scene form: {event['prompt']}"
                         + Styles.RESET_ALL
                     )
                 else:
                     print(
                         Styles.BLACK
                         + Styles.MAGENTA_BACKGROUND
-                        + f"scene choice (start): (prompt={event['prompt']}, action_uid={event['action_uid']})"
+                        + f"scene form (start): (prompt={event['prompt']}, action_uid={event['action_uid']}, inputs={event['inputs']})"
+                        + Styles.RESET_ALL
+                    )
+                input_events.append(
+                    new_event_dict(
+                        "VisualFormSceneActionStarted",
+                        action_uid=event["action_uid"],
+                    )
+                )
+
+            elif event["type"] == "StopVisualFormSceneAction":
+                if verbose.verbose_mode_enabled:
+                    print(
+                        Styles.BLACK
+                        + Styles.MAGENTA_BACKGROUND
+                        + f"scene form (stop): (action_uid={event['action_uid']})"
+                        + Styles.RESET_ALL
+                    )
+                input_events.append(
+                    new_event_dict(
+                        "VisualFormSceneActionFinished",
+                        action_uid=event["action_uid"],
+                        is_success=True,
+                    )
+                )
+
+            elif event["type"] == "StartVisualChoiceSceneAction":
+                # We print scene messages in green.
+                if not verbose.verbose_mode_enabled:
+                    options = extract_scene_text_content(event["options"])
+                    print(
+                        Styles.BLACK
+                        + Styles.MAGENTA_BACKGROUND
+                        + f"Scene choice: {event['prompt']}{options}"
+                        + Styles.RESET_ALL
+                    )
+                else:
+                    print(
+                        Styles.BLACK
+                        + Styles.MAGENTA_BACKGROUND
+                        + f"scene choice (start): (prompt={event['prompt']}, action_uid={event['action_uid']}, options={event['options']})"
                         + Styles.RESET_ALL
                     )
                 input_events.append(
@@ -395,6 +427,14 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 if action_uid in running_timer_tasks:
                     running_timer_tasks[action_uid].cancel()
                     running_timer_tasks.pop(action_uid)
+            elif event["type"] == "LocalAsyncCounter":
+                if verbose.verbose_mode_enabled:
+                    print(Styles.GREY + f"Event: {event}" + Styles.RESET_ALL)
+            else:
+                if not verbose.verbose_mode_enabled:
+                    print(Styles.GREEN + f"{event['type']}" + Styles.RESET_ALL)
+                else:
+                    print(Styles.GREEN + f"{event['type']}: {event}" + Styles.RESET_ALL)
 
         # TODO: deserialize the output state
         # state = State.from_dict(output_state)
@@ -462,7 +502,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 input_events = []
             else:
                 waiting_user_input = True
-                user_message = await input_async("> ")
+                user_message: str = await session.prompt_async("> ")
                 waiting_user_input = False
                 if user_message == "":
                     input_events = [
@@ -472,7 +512,16 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                     ]
                 elif user_message.startswith("/"):
                     # Non-UtteranceBotAction actions
-                    pass
+                    event_input = user_message.lstrip("/")
+                    event = parse_events_inputs(event_input)
+                    if event is None:
+                        print(
+                            Styles.RED
+                            + f"Invalid event: {event_input}"
+                            + Styles.RESET_ALL
+                        )
+                    else:
+                        input_events = [event]
                 else:
                     input_events = [
                         {
@@ -482,6 +531,76 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                     ]
 
             await _process_input_events()
+
+
+def extract_scene_text_content(content_list: List[dict]) -> str:
+    """Extract the text content of a scene event as a string."""
+    content = ""
+    content = "\n".join([item["text"] for item in content_list if "text" in item])
+    if content:
+        content = "\n" + content
+    return content
+
+
+def parse_events_inputs(input_str: str) -> Optional[dict]:
+    """Parses a event string and creates an event dictionary."""
+    # Split the string to extract the event type and the parameters
+    event_parts = input_str.split("(", 1)
+    if len(event_parts) == 1:
+        event_type = event_parts[0]
+        params_str = None
+    elif len(event_parts) >= 2:
+        event_type, params_str = event_parts
+        params_str = params_str.rstrip(")")
+    else:
+        return None
+
+    adjusted_type = event_type
+    parts = event_type.split(".")
+    if len(parts) == 1:
+        adjusted_type = parts[-1]
+    elif len(parts) == 2:
+        action = parts[-1]
+        rest = parts[:-1]
+        adjusted_type = action + "".join(rest)
+    else:
+        return None
+
+    # Prepare the dictionary with the event type
+    event_dict = {"type": adjusted_type}
+
+    # If there are parameters to process
+    if params_str:
+        # Parse the parameters string
+        params_dict = {}
+        # Split parameters by commas not enclosed in brackets (to handle nested structures)
+        params = []
+        bracket_level = 0
+        current_param: List[str] = []
+        for char in params_str:
+            if char in ("{", "[", "("):
+                bracket_level += 1
+            elif char in ("}", "]", ")"):
+                bracket_level -= 1
+            if char == "," and bracket_level == 0:
+                params.append("".join(current_param).strip())
+                current_param = []
+            else:
+                current_param.append(char)
+        if current_param:
+            params.append("".join(current_param).strip())
+
+        # Process each parameter
+        for param in params:
+            param_parts = param.split("=", 1)
+            if len(param_parts) == 1:
+                return None
+            key, value = param_parts
+            params_dict[key.strip()] = eval_expression(value.strip(), {})
+
+        event_dict.update(params_dict)
+
+    return event_dict
 
 
 def run_chat(
