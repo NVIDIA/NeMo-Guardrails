@@ -253,7 +253,16 @@ class FactCheckingRailConfig(BaseModel):
 class JailbreakDetectionConfig(BaseModel):
     """Configuration data for jailbreak detection."""
 
-    parameters: Dict[str, Any] = Field(default_factory=dict)
+    server_endpoint: Optional[str] = Field(
+        default=None,
+        description="The endpoint for the jailbreak detection heuristics server.",
+    )
+    lp_threshold: float = Field(
+        default=89.79, description="The length/perplexity threshold."
+    )
+    ps_ppl_threshold: float = Field(
+        default=1845.65, description="The prefix/suffix perplexity threshold."
+    )
 
 
 class RailsConfigData(BaseModel):

@@ -6,3 +6,6 @@ define user express greeting
 define flow
   user express greeting
   bot express greeting
+
+define bot express greeting
+  "Hello!"

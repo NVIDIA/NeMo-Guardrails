@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import torch
 from transformers import GPT2LMHeadModel, GPT2TokenizerFast
-import os
 
 device = os.environ.get("JAILBREAK_CHECK_DEVICE", "cpu")
 model_id = "gpt2-large"
@@ -62,7 +63,7 @@ def get_perplexity(input_string: str) -> bool:
 
 def check_jb_lp(input_string: str, lp_threshold: float) -> dict:
     """
-    Check whether the input string has length/perplexity greater than the threshold
+    Check whether the input string has length/perplexity greater than the threshold.
 
     Args
         input_string: The prompt to be sent to the model
@@ -76,7 +77,7 @@ def check_jb_lp(input_string: str, lp_threshold: float) -> dict:
 
 def check_jb_ps_ppl(input_string: str, ps_ppl_threshold: float) -> dict:
     """
-    Check whether the input string has prefix or suffix perplexity greater than the threshold
+    Check whether the input string has prefix or suffix perplexity greater than the threshold.
 
     Args
         input_string: The prompt to be sent to the model

@@ -1,4 +1,4 @@
-define subflow jailbreak check heuristics
+define subflow jailbreak heuristics
   """
   Heuristic checks to assess whether the user's prompt is an attempted jailbreak.
   """

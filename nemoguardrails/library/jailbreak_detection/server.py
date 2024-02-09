@@ -14,13 +14,13 @@
 # limitations under the License.
 
 import os
+from typing import Optional
 
 import typer
 import uvicorn
 from fastapi import FastAPI
-from pydantic import BaseModel
 from heuristics import checks
-from typing import Optional
+from pydantic import BaseModel
 
 app = FastAPI()
 cli_app = typer.Typer()
@@ -79,9 +79,7 @@ def start(
     port: int = typer.Option(
         default=1337, help="The port that the server should listen on."
     ),
-    host: str = typer.Option(
-        default="0.0.0.0", help="IP address of the host"
-    )
+    host: str = typer.Option(default="0.0.0.0", help="IP address of the host"),
 ):
     uvicorn.run(app, host=host, port=port)
 
