@@ -17,19 +17,58 @@ import os
 
 import pytest
 from aioresponses import aioresponses
+from pytest_httpx import IteratorStream
 
 from nemoguardrails import RailsConfig
 from nemoguardrails.actions.actions import ActionResult, action
 from tests.constants import NEMO_API_URL_GPT_43B_002
 from tests.utils import TestChat
 
-CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs/autoguard")
+CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
+
+
+@pytest.mark.asyncio
+async def test_racially_biased_input(httpx_mock):
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
+    chat = TestChat(config)
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={"text": "  ask racially biased question"},
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url=NEMO_API_URL_GPT_43B_002,
+        json={
+            "text": "Racial bias in text has been detected by AutoGuard; Sorry, can't process."
+        },
+    )
+
+    httpx_mock.add_response(
+        method="POST",
+        url="http://35.225.99.81:8888/guardrail",
+        stream=IteratorStream(
+            [
+                b'{"response": "Mock No Gender Bias", "guarded": false, "task": '
+                b'"gender_bias_detection"}\n',
+                b'{"response": "Mock Racial Bias", "guarded": true, "task": "racial_bias_detection"}\n',
+            ]
+        ),
+    )
+
+    chat >> "Are whites better than blacks"
+
+    await chat.bot_async(
+        "Racial bias in text has been detected by AutoGuard; Sorry, can't process."
+    )
 
 
 @pytest.mark.asyncio
 async def test_fact_checking_greeting(httpx_mock):
     # Test 1 - Greeting - No fact-checking invocation should happen
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
     chat = TestChat(config)
 
     httpx_mock.add_response(
@@ -46,185 +85,3 @@ async def test_fact_checking_greeting(httpx_mock):
 
     chat >> "hi"
     await chat.bot_async("Hi! How can I assist today?")
-
-
-@pytest.mark.asyncio
-async def test_fact_checking_correct(httpx_mock):
-    # Test 2 - Factual statement - high alignscore
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
-    chat = TestChat(config)
-    chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "  ask about guardrails"},
-    )
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
-        },
-    )
-
-    with aioresponses() as m:
-        # Fact-checking using AlignScore
-        m.post(
-            "http://localhost:5000/alignscore_base",
-            payload={"alignscore": 0.82},
-        )
-
-        # Succeeded, no more generations needed
-        chat >> "What is NeMo Guardrails?"
-
-        await chat.bot_async(
-            "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
-        )
-
-
-@pytest.mark.asyncio
-async def test_fact_checking_wrong(httpx_mock):
-    # Test 3 - Very low alignscore - Not factual
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
-    chat = TestChat(config)
-    chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "  ask about guardrails"},
-    )
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia."
-        },
-    )
-
-    with aioresponses() as m:
-        # Fact-checking using AlignScore
-        m.post(
-            "http://localhost:5000/alignscore_base",
-            payload={"alignscore": 0.01},
-        )
-
-        chat >> "What is NeMo Guardrails?"
-
-        await chat.bot_async("I don't know the answer that.")
-
-
-@pytest.mark.asyncio
-async def test_fact_checking_uncertain(httpx_mock):
-    # Test 4 - Factual statement - AlignScore not very confident in its prediction
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
-    chat = TestChat(config)
-    chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "  ask about guardrails"},
-    )
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia."
-        },
-    )
-
-    with aioresponses() as m:
-        ## Fact-checking using AlignScore
-        m.post(
-            "http://localhost:5000/alignscore_base",
-            payload={"alignscore": 0.58},
-        )
-
-        chat >> "What is NeMo Guardrails?"
-        await chat.bot_async(
-            "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia.\n"
-            + "Attention: the answer above is potentially inaccurate."
-        )
-
-
-@pytest.mark.asyncio
-async def test_fact_checking_fallback_to_self_check_correct(httpx_mock):
-    # Test 4 - Factual statement - AlignScore endpoint not set up properly, use ask llm for fact-checking
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
-    chat = TestChat(config)
-    chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "  ask about guardrails"},
-    )
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
-        },
-    )
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "yes"},
-    )
-
-    with aioresponses() as m:
-        # Fact-checking using AlignScore
-        m.post(
-            "http://localhost:5000/alignscore_base",
-            payload="API error 404",
-        )
-        chat >> "What is NeMo Guardrails?"
-
-        await chat.bot_async(
-            "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
-        )
-
-
-@pytest.mark.asyncio
-async def test_fact_checking_fallback_self_check_wrong(httpx_mock):
-    # Test 5 - Factual statement - AlignScore endpoint not set up properly, use ask llm for fact-checking
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
-    chat = TestChat(config)
-    chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "  ask about guardrails"},
-    )
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": "NeMo Guardrails is an closed-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
-        },
-    )
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "no"},
-    )
-
-    with aioresponses() as m:
-        # Fact-checking using AlignScore
-        m.post(
-            "http://localhost:5000/alignscore_base",
-            payload="API error 404",
-        )
-
-        chat >> "What is NeMo Guardrails?"
-        await chat.bot_async("I don't know the answer that.")
