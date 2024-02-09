@@ -11,8 +11,8 @@ define subflow output autoguard
         stop
 
 define subflow output autoguard factcheck
-    $result = execute call autoguard factcheck api
-    if $result[0] == True
+    $result = execute autoguard_factcheck_api
+    if $result < 0.5
         bot refuse to respond autoguard factcheck
         stop
 
@@ -20,4 +20,4 @@ define bot refuse to respond autoguard
     "$result[1] has been detected by AutoGuard; Sorry, can't process."
 
 define bot refuse to respond autoguard factcheck
-    "$result[1] has been detected by AutoGuard; Sorry, can't process."
+    "Factcheck violation has been detected by AutoGuard."
