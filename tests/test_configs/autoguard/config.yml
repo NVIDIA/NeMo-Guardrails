@@ -1,0 +1,24 @@
+models:
+  - type: main
+    engine: nemollm
+    model: gpt-43b-002
+
+rails:
+  config:
+    autoguard:
+      parameters:
+        endpoint: "http://35.225.99.81:8888/guardrail"
+      input:
+        guardrails:
+          - racial_bias_detection
+          - gender_bias_detection
+      output:
+        guardrails:
+          - racial_bias_detection
+          - gender_bias_detection
+  input:
+    flows:
+      - call autoguard input
+  output:
+    flows:
+      - call autoguard output
