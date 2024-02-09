@@ -20,25 +20,25 @@ To get started quickly, follow the steps below.
 
 1. Ensure you have Python 3.8+ and [Git](https://git-scm.com/) installed on your system. You can check your Python version by running:
 
-   ```
+   ```bash
    python --version
    ```
 
 2. Clone the project repository:
 
-   ```
+   ```bash
    git clone https://github.com/NVIDIA/NeMo-Guardrails.git
    ```
 
 3. Navigate to the project directory:
 
-   ```
+   ```bash
    cd nemoguardrails
    ```
 
 4. Create a virtual environment to isolate your project's dependencies:
 
-   ```
+   ```bash
    python3 -m venv venv
    ```
 
@@ -48,34 +48,28 @@ To get started quickly, follow the steps below.
 
    - On Windows:
 
-     ```
+     ```powershell
      venv\Scripts\activate
      ```
 
    - On macOS and Linux:
 
-     ```
+     ```bash
      source venv/bin/activate
      ```
 
-6. Install the main dependencies from `requirements.txt`:
+6. Install the main dependencies:
 
-   ```
-   pip install -r requirements.txt
-   ```
-
-7. Install the development dependencies from `requirements-dev.txt`:
-
-   ```
-   pip install -r requirements-dev.txt
+   ```bash
+   python -m pip install ".[dev]"
    ```
 
-   This will install pre-commit, pytest, and other development tools specified in the `requirements-dev.txt` file.
+   This will install pre-commit, pytest, and other development tools, as well as all optional dependencies.
 
-8. Set up pre-commit hooks:
+7. Set up pre-commit hooks:
 
    ```
-   pre-commit install
+   python -m pre-commit install
    ```
 
    This will ensure that the pre-commit checks, including Black, are run before each commit.

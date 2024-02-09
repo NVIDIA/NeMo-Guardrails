@@ -68,9 +68,9 @@ class LLMRails:
         # an index of them.
         self.embedding_search_providers = {}
 
-        # The default embeddings model is using SentenceTransformers
+        # The default embeddings model is using FastEmbed
         self.default_embedding_model = "all-MiniLM-L6-v2"
-        self.default_embedding_engine = "SentenceTransformers"
+        self.default_embedding_engine = "FastEmbed"
 
         # We keep a cache of the events history associated with a sequence of user messages.
         # TODO: when we update the interface to allow to return a "state object", this
@@ -272,7 +272,11 @@ class LLMRails:
                 pass
             else:
                 if llm_config.engine not in get_llm_provider_names():
-                    raise Exception(f"Unknown LLM engine: {llm_config.engine}")
+                    msg = f"Unknown LLM engine: {llm_config.engine}."
+                    if llm_config.engine == "openai":
+                        msg += " Please install langchain-openai using `pip install langchain-openai`."
+
+                    raise Exception(msg)
 
                 provider_cls = get_llm_provider(llm_config)
                 # We need to compute the kwargs for initializing the LLM

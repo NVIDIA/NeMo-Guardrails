@@ -297,11 +297,6 @@ class Rails(BaseModel):
     )
 
 
-# Load the default config values from the file
-with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
-    _default_config = yaml.safe_load(_fc)
-
-
 def _join_config(dest_config: dict, additional_config: dict):
     """Helper to join two configuration."""
 

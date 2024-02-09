@@ -21,7 +21,6 @@ import textwrap
 from typing import Optional
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.actions.llm.utils import (
@@ -72,6 +71,14 @@ class TopicalRailsEvaluation:
 
     def _initialize_embeddings_model(self):
         """Instantiate a sentence transformer if we use a similarity check for canonical forms."""
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError:
+            raise ImportError(
+                "Could not import sentence_transformers, please install it with "
+                "`pip install sentence-transformers`."
+            )
+
         self._model = None
         if self.similarity_threshold > 0:
             self._model = SentenceTransformer("all-MiniLM-L6-v2")

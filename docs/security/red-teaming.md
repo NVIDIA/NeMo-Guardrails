@@ -40,18 +40,18 @@ A challenge has an id, a name, and a description. The id must be unique. The nam
 
 You can configure as many challenges as you want. The set of challenges is unique per server instance. When the user starts a new chat, they can choose a specific challenge that will be associated with the conversation.
 
-![img.png](../../_assets/images/choose-challenge-example.png)
+![img.png](../_assets/images/choose-challenge-example.png)
 
 ## Rating
 
 At any point in the conversation, the user can choose to rate the conversation using the "Rate Conversation" button:
 
-![img.png](../../_assets/images/rating-button.png)
+![img.png](../_assets/images/rating-button.png)
 
 The UI enables the user to rate the attack's success (No Success, Some Success, Successful, Very Successful) and the effort involved (No effort, Some Effort, Significant Effort).
 
-![img.png](../../_assets/images/rating-widget.png)
+![img.png](../_assets/images/rating-widget.png)
 
 ## Recording the results
 
-The sample configuration [here](../../../examples/configs/red-teaming) includes an example of how to use a "custom logger" to save the ratings, including the complete history of the conversation, in a CSV file.
+The sample configuration [here](../../examples/configs/red-teaming) includes an example of how to use a "custom logger" to save the ratings, including the complete history of the conversation, in a CSV file.

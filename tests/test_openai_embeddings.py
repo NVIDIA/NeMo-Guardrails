@@ -27,7 +27,7 @@ LIVE_TEST_MODE = os.environ.get("LIVE_TEST")
 
 @pytest.fixture
 def app():
-    """Load the configuration where we replace SentenceTransformers with OpenAI."""
+    """Load the configuration where we replace FastEmbed with OpenAI."""
     config = RailsConfig.from_path(
         os.path.join(CONFIGS_FOLDER, "with_openai_embeddings")
     )

@@ -35,13 +35,13 @@ class RunnableRails(Runnable[Input, Output]):
         llm: Optional[BaseLanguageModel] = None,
         tools: Optional[List[Tool]] = None,
         passthrough: bool = True,
-        passthrough_runnable: Optional[Runnable] = None,
+        runnable: Optional[Runnable] = None,
         input_key: str = "input",
         output_key: str = "output",
     ) -> None:
         self.llm = llm
         self.passthrough = passthrough
-        self.passthrough_runnable = passthrough_runnable
+        self.passthrough_runnable = runnable
         self.passthrough_user_input_key = input_key
         self.passthrough_bot_output_key = output_key
 

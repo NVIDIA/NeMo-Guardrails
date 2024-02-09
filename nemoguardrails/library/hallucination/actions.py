@@ -18,8 +18,8 @@ from typing import Optional
 
 from langchain.chains import LLMChain
 from langchain.llms.base import BaseLLM
-from langchain.llms.openai import OpenAI
 from langchain.prompts import PromptTemplate
+from langchain_openai import OpenAI
 
 from nemoguardrails.actions import action
 from nemoguardrails.actions.llm.utils import (

@@ -9,6 +9,7 @@ The interaction with the LLM is designed in a task-oriented way, i.e., each time
 1. `generate_user_intent`: generate the canonical user message from the raw utterance (e.g., "Hello there" -> `express greeting`);
 2. `generate_next_steps`: decide what the bot should say or what action should be executed (e.g., `bot express greeting`, `bot respond to question`);
 3. `generate_bot_message`: decide the exact bot message that should be returned.
+4. `general`: generate the next bot message based on the history of user and bot messages; this task is used when there are no dialog rails defined (i.e., no user message canonical forms).
 
 Check out the [Task type](../../../nemoguardrails/llm/types.py) for the complete list of tasks.
 
