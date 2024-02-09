@@ -111,19 +111,18 @@ async def autoguard_infer(request_url, text, tasks, task_config=None):
     return False, None
 
 
-async def infer_factcheck(request_url, text, documents):
+async def autoguard_factcheck_infer(request_url, text, documents):
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
 
     headers = {"x-api-key": api_key}
     request_body = {"prompt": text, "documents": documents}
-    json_data = json.dumps(request_body).encode("utf8")
     async with aiohttp.ClientSession() as session:
         async with session.post(
             url=request_url,
             headers=headers,
-            json=json_data,
+            json=request_body,
         ) as response:
             if response.status != 200:
                 raise ValueError(
@@ -133,8 +132,8 @@ async def infer_factcheck(request_url, text, documents):
             async for line in response.content:
                 response = json.loads(line)
                 if response["task"] == "factcheck":
-                    return response["guarded"]
-    return False
+                    return float(response["response"][17:])
+    return 1.0
 
 
 @action()
@@ -174,15 +173,10 @@ async def autoguard_output_api(
     return await autoguard_infer(autoguard_api_url, prompt, tasks)
 
 
-@action(name="call autoguard factcheck api", is_system_action=True)
-async def call_autoguard_factcheck_api(
+@action()
+async def autoguard_factcheck_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
-    api_key = os.environ.get("AUTOGUARD_API_KEY")
-
-    if api_key is None:
-        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
-
     bot_message = context.get("bot_message")
     documents = context.get("relevant_chunks", [])
     autoguard_config = llm_task_manager.config.rails.config.autoguard
@@ -194,9 +188,6 @@ async def call_autoguard_factcheck_api(
     prompt = bot_message
 
     if isinstance(documents, list) and len(documents) > 0:
-        return (
-            await infer_factcheck(autoguard_api_url, prompt, documents),
-            GUARDRAIL_TRIGGER_TEXT["factcheck"],
-        )
+        return await autoguard_factcheck_infer(autoguard_api_url, prompt, documents)
     else:
         raise ValueError("Provide relevant documents in proper format")
