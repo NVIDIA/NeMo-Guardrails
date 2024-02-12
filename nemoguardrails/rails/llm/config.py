@@ -280,7 +280,7 @@ class RailsConfigData(BaseModel):
     )
 
     jailbreak_detection: Optional[JailbreakDetectionConfig] = Field(
-        default=JailbreakDetectionConfig,
+        default_factory=JailbreakDetectionConfig,
         description="Configuration for jailbreak detection.",
     )
 
@@ -733,6 +733,5 @@ def _join_rails_configs(
             updated_rails_config.dict()["config_path"],
         ]
     )
-
     combined_rails_config = RailsConfig(**combined_rails_config_dict)
     return combined_rails_config
