@@ -698,3 +698,23 @@ define subflow jailbreak check heuristics
 define bot inform user attempted jailbreak
   "I'm sorry, your prompt appears to be an attempt to get me to perform an unauthorized function."
 ```
+
+#### Running on GPU
+To run on GPU, ensure you have the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed.
+If you are building a container from the provided dockerfiles, make sure that you specify the correct [Dockerfile](../../nemoguardrails/library/jailbreak_detection/Dockerfile-GPU) and include the `-f` parameter with `docker build`.
+When running docker, ensure you pass the `-e NVIDIA_DRIVER_CAPABILITIES=compute,utility`, `-e NVIDIA_VISIBLE_DEVICES=all` and the `--runtime=nvidia` argument to `docker run`.
+
+```shell
+docker run -ti --runtime=nvidia -e NVIDIA_DRIVER_CAPABILITIES=compute,utility -e NVIDIA_VISIBLE_DEVICES=all <image_name>
+```
+
+#### Latency
+Latency was tested in-process and via local Docker for both CPU and GPU configurations.
+For each configuration, we tested the response time for 10 prompts ranging in length from 5 to 2048 tokens.
+Inference times for sequences longer than the model's maximum input length (1024 tokens for GPT-2) necessarily take longer. 
+Times reported below in are **averages** and are reported in milliseconds.
+
+|            | CPU  | GPU |
+|------------|------|-----|
+| Docker     | 2057 | 115 |
+| In-Process | 3227 | 157 |
