@@ -339,6 +339,10 @@ class AutoGuardOptions(BaseModel):
 
 class AutoGuardRailConfig(BaseModel):
     parameters: Dict[str, Any] = Field(default_factory=dict)
+    entities: List[str] = Field(
+        default_factory=list,
+        description="",
+    )
     input: AutoGuardOptions = Field(
         default_factory=AutoGuardOptions,
         description="",
