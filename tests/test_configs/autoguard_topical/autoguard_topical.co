@@ -1,0 +1,8 @@
+define subflow call autoguard topical
+  $result = execute autoguard_topical_api
+  if $result == True
+        bot refuse to respond autoguard topical
+        stop
+
+define bot refuse to respond autoguard topical
+    "Topical violation has been detected by AutoGuard."
