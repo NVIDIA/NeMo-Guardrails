@@ -27,14 +27,13 @@ from nemoguardrails.llm.taskmanager import LLMTaskManager
 
 log = logging.getLogger(__name__)
 
-GUARDRAIL_TRIGGER_TEXT = {
+GUARDRAIL_RESPONSE_TEXT = {
     "confidential_detection": "Confidential Information violation",
     "gender_bias_detection": "Gender bias in text",
     "harm_detection": "Harm to human violation",
     "text_toxicity_extraction": "Toxicity in text",
     "racial_bias_detection": "Racial bias in text",
     "jailbreak_detection": "Jailbreak attempt",
-    "intellectual_property": "Intellectual property information in text",
     "factcheck": "Factcheck violation in text",
 }
 
@@ -106,7 +105,7 @@ async def autoguard_infer(request_url, text, tasks, task_config=None):
                 if len(line_text) > 0:
                     resp = json.loads(line_text)
                     if resp["guarded"]:
-                        return True, GUARDRAIL_TRIGGER_TEXT[resp["task"]]
+                        return True, GUARDRAIL_RESPONSE_TEXT[resp["task"]]
     return False, None
 
 
@@ -171,32 +170,6 @@ async def autoguard_factcheck_infer(request_url, text, documents):
     return 1.0
 
 
-async def autoguard_topical_infer(request_url, text, completion):
-    api_key = os.environ.get("AUTOGUARD_API_KEY")
-    if api_key is None:
-        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
-
-    headers = {"x-api-key": api_key}
-    request_body = {"prompt": text, "completion": completion}
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            url=request_url,
-            headers=headers,
-            json=request_body,
-        ) as response:
-            if response.status != 200:
-                raise ValueError(
-                    f"AutoGuard call failed with status code {response.status}.\n"
-                    f"Details: {await response.text()}"
-                )
-            async for line in response.content:
-                resp = json.loads(line)
-                print(resp)
-                if resp["task"] == "topical_detection":
-                    return resp["guarded"]
-    return False
-
-
 @action()
 async def autoguard_input_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
@@ -246,23 +219,3 @@ async def autoguard_output_api(
     prompt = bot_message
 
     return await autoguard_infer(autoguard_api_url, prompt, tasks)
-
-
-@action()
-async def autoguard_topical_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
-):
-    user_message = context.get("user_message")
-    bot_message = context.get("bot_message")
-    print(user_message)
-    print(bot_message)
-    autoguard_config = llm_task_manager.config.rails.config.autoguard
-    autoguard_topical_api_url = autoguard_config.parameters.get(
-        "autoguard_topical_endpoint"
-    )
-    if not autoguard_topical_api_url:
-        raise ValueError("Provide the autoguard topical endpoint in the config")
-
-    return await autoguard_topical_infer(
-        autoguard_topical_api_url, user_message, bot_message
-    )

@@ -12,10 +12,18 @@ rails:
         guardrails:
           - racial_bias_detection
           - gender_bias_detection
+          - confidential_detection
+          - harm_detection
+          - text_toxicity_extraction
+          - jailbreak_detection
       output:
         guardrails:
           - racial_bias_detection
           - gender_bias_detection
+          - confidential_detection
+          - harm_detection
+          - text_toxicity_extraction
+          - jailbreak_detection
   input:
     flows:
       - call autoguard input
