@@ -68,9 +68,9 @@ class LLMRails:
         # an index of them.
         self.embedding_search_providers = {}
 
-        # The default embeddings model is using SentenceTransformers
+        # The default embeddings model is using FastEmbed
         self.default_embedding_model = "all-MiniLM-L6-v2"
-        self.default_embedding_engine = "SentenceTransformers"
+        self.default_embedding_engine = "FastEmbed"
 
         # We keep a cache of the events history associated with a sequence of user messages.
         # TODO: when we update the interface to allow to return a "state object", this

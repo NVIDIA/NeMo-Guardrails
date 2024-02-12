@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-
 
 def are_strings_semantically_same(string1, string2):
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+
     vectorizer = TfidfVectorizer().fit_transform([string1, string2])
     similarity = cosine_similarity(vectorizer)
     # Determine if the similarity exceeds a threshold (e.g., 0.5)

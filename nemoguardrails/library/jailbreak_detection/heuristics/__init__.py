@@ -12,18 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""NeMo Guardrails Toolkit."""
-import warnings
-
-from . import patch_asyncio
-from .rails import LLMRails, RailsConfig
-
-patch_asyncio.apply()
-
-# Ignore a warning message from torch.
-warnings.filterwarnings(
-    "ignore", category=UserWarning, message="TypedStorage is deprecated"
-)
-
-__version__ = "0.7.1"

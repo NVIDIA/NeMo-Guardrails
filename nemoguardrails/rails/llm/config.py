@@ -251,6 +251,21 @@ class FactCheckingRailConfig(BaseModel):
     )
 
 
+class JailbreakDetectionConfig(BaseModel):
+    """Configuration data for jailbreak detection."""
+
+    server_endpoint: Optional[str] = Field(
+        default=None,
+        description="The endpoint for the jailbreak detection heuristics server.",
+    )
+    length_per_perplexity_threshold: float = Field(
+        default=89.79, description="The length/perplexity threshold."
+    )
+    prefix_suffix_perplexity_threshold: float = Field(
+        default=1845.65, description="The prefix/suffix perplexity threshold."
+    )
+
+
 class RailsConfigData(BaseModel):
     """Configuration data for specific rails that are supported out-of-the-box."""
 
@@ -262,6 +277,11 @@ class RailsConfigData(BaseModel):
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
         default_factory=SensitiveDataDetection,
         description="Configuration for detecting sensitive data.",
+    )
+
+    jailbreak_detection: Optional[JailbreakDetectionConfig] = Field(
+        default=JailbreakDetectionConfig,
+        description="Configuration for jailbreak detection.",
     )
 
 
@@ -285,11 +305,6 @@ class Rails(BaseModel):
     dialog: DialogRails = Field(
         default_factory=DialogRails, description="Configuration of the dialog rails."
     )
-
-
-# Load the default config values from the file
-with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
-    _default_config = yaml.safe_load(_fc)
 
 
 def _join_config(dest_config: dict, additional_config: dict):

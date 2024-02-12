@@ -1,4 +1,4 @@
-# Config where only the KB uses OpenAI embeddings and the core uses SentenceTransformers
+# Config where only the KB uses OpenAI embeddings and the core uses FastEmbed
 models:
   - type: main
     engine: openai
