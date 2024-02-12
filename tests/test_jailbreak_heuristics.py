@@ -19,16 +19,17 @@ from time import time
 import pytest
 
 from nemoguardrails import RailsConfig
-from nemoguardrails.library.jailbreak_detection.heuristics.checks import (
-    check_jailbreak_length_per_perplexity,
-    check_jailbreak_prefix_suffix_perplexity,
-    get_perplexity,
-)
 from tests.utils import TestChat
 
 try:
     import torch
     import transformers
+
+    from nemoguardrails.library.jailbreak_detection.heuristics.checks import (
+        check_jailbreak_length_per_perplexity,
+        check_jailbreak_prefix_suffix_perplexity,
+        get_perplexity,
+    )
 
     torch_available = True
 except ImportError:
