@@ -1,0 +1,37 @@
+models:
+  - type: main
+    engine: nemollm
+    model: gpt-43b-002
+
+rails:
+  config:
+    autoguard:
+      parameters:
+        endpoint: "http://35.225.99.81:8888/guardrail"
+      entities:
+        - "[PERSON NAME]"
+        - "[LOCATION]"
+        - "[DATE OF BIRTH]"
+        - "[DATE]"
+        - "[PHONE NUMBER]"
+        - "[EMAIL ADDRESS]"
+        - "[CREDIT CARD NUMBER]"
+        - "[BANK ACCOUNT NUMBER]"
+        - "[SOCIAL SECURITY NUMBER]"
+        - "[MONEY]"
+        - "[INSURANCE POLICY NUMBER]"
+        - "[PROFESSION]"
+        - "[ORGANIZATION]"
+        - "[USERNAME]"
+        - "[PASSWORD]"
+        - "[IP ADDRESS]"
+        - "[PASSPORT NUMBER]"
+        - "[DRIVER LICENSE NUMBER]"
+        - "[API_KEY]"
+        - "[TRANSACTION_ID]"
+  input:
+    flows:
+      - call autoguard pii
+  output:
+    flows:
+      - autoguard pii output

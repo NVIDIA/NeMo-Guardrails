@@ -1,0 +1,6 @@
+define subflow call autoguard pii
+    $pii_result = execute autoguard_pii_api
+
+define subflow autoguard pii output
+    if $pii_result[0] == True
+      $bot_message = $pii_result[1]
