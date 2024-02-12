@@ -23,17 +23,8 @@ define subflow autoguard pii output
     if $pii_result[0] == True
       $bot_message = $pii_result[1]
 
-define subflow output autoguard topical
-    $result = execute autoguard_topical_api
-    if $result == True
-        bot refuse to respond autoguard topical
-        stop
-
 define bot refuse to respond autoguard
     "$result[1] has been detected by AutoGuard; Sorry, can't process."
 
 define bot refuse to respond autoguard factcheck
     "Factcheck violation has been detected by AutoGuard."
-
-define bot refuse to respond autoguard topical
-    "Topical violation has been detected by AutoGuard."
