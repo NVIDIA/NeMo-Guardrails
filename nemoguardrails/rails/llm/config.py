@@ -257,10 +257,10 @@ class JailbreakDetectionConfig(BaseModel):
         default=None,
         description="The endpoint for the jailbreak detection heuristics server.",
     )
-    lp_threshold: float = Field(
+    length_per_perplexity_threshold: float = Field(
         default=89.79, description="The length/perplexity threshold."
     )
-    ps_ppl_threshold: float = Field(
+    prefix_suffix_perplexity_threshold: float = Field(
         default=1845.65, description="The prefix/suffix perplexity threshold."
     )
 

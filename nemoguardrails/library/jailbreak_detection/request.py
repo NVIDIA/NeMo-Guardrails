@@ -14,16 +14,14 @@
 # limitations under the License.
 
 import logging
-import aiohttp
 from typing import Optional
 
-from nemoguardrails.actions import action
+import aiohttp
 
 log = logging.getLogger(__name__)
 
 
-@action()
-async def jailbreak_heuristic_check(
+async def jailbreak_detection_heuristics_request(
     prompt: str,
     api_url: str = "http://localhost:1337/heuristics",
     lp_threshold: Optional[float] = None,

@@ -18,6 +18,9 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
    - [ActiveFence Moderation](#activefence)
    - OpenAI Moderation API - *[COMING SOON]*
 
+4. Other
+   - [Jailbreak Detection Heuristics](#jailbreak-detection-heuristics)
+
 
 ## LLM Self-Checking
 
@@ -656,65 +659,99 @@ define bot inform cannot engage in abusive or harmful behavior
 
 ## Other
 
-### Heuristic Jailbreak Detection
-NeMo Guardrails supports heuristic jailbreak detections as an input rail.
-At this time, the jailbreak detection heuristics support only non-code English language models.
+### Jailbreak Detection Heuristics
+
+NeMo Guardrails supports jailbreak detection using a set of heuristics. Currently, two heuristics are supported:
+
+1. [Length per Perplexity](#length-per-perplexity)
+2. [Prefix and Suffix Perplexity](#prefix-and-suffix-perplexity)
+
+To activate the jailbreak detection heuristics, you first need include the `jailbreak detection heuristics` flow as an input rail:
+
 ```colang
 rails:
   input:
     flows:
-      - jailbreak detect heuristics
+      - jailbreak detection heuristics
 ```
 
-#### Customizing Heuristics Parameters
-The `jailbreak detect heuristics` flow, by default, listens on localhost port `1337` and uses the default value of `89.79` for `lp_threshold` and `1845.65` for `ps_ppl_threshold`. 
-Rationales for these values can be found in the [configuration guide](./advanced/jailbreak-detection-heuristics-deployment.md).
-To customize thresholds for the jailbreak detection heuristics, you can modify the parameters in the flow config:
-
-**NOTE**: If the `server_endpoint` parameter is not set, the checks will run in-process.
-This is useful for TESTING PURPOSES ONLY and **IS NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS**.
+Also, you need to configure the desired thresholds in your `config.yml`:
 
 ```colang
 rails:
   config:
     jailbreak_detection:
       server_endpoint: "http://0.0.0.0:1337/heuristics"
-      lp_threshold: 89.79
-      ps_ppl_threshold: 1845.65
+      length_per_perplexity_threshold: 89.79
+      prefix_suffix_perplexity_threshold: 1845.65
 ```
 
-By default, the flow asks the user to clarify their question. 
-You can override this behavior by adding a flow like the one below to your config.
-```colang
-define subflow jailbreak check heuristics
-  """
-  Heuristic checks to assess whether the user's prompt is an attempted jailbreak.
-  """
-  $is_jailbreak = execute jailbreak_heuristic_check
-  if $is_jailbreak
-    bot inform user attempted jailbreak
-    stop
+**NOTE**: If the `server_endpoint` parameter is not set, the checks will run in-process. This is useful for TESTING PURPOSES ONLY and **IS NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS**.
 
-define bot inform user attempted jailbreak
-  "I'm sorry, your prompt appears to be an attempt to get me to perform an unauthorized function."
-```
+#### Heuristics
 
-#### Running on GPU
-To run on GPU, ensure you have the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed.
-If you are building a container from the provided dockerfiles, make sure that you specify the correct [Dockerfile](../../nemoguardrails/library/jailbreak_detection/Dockerfile-GPU) and include the `-f` parameter with `docker build`.
-When running docker, ensure you pass the `-e NVIDIA_DRIVER_CAPABILITIES=compute,utility`, `-e NVIDIA_VISIBLE_DEVICES=all` and the `--runtime=nvidia` argument to `docker run`.
+##### Length per Perplexity
 
-```shell
-docker run -ti --runtime=nvidia -e NVIDIA_DRIVER_CAPABILITIES=compute,utility -e NVIDIA_VISIBLE_DEVICES=all <image_name>
+The *length per perplexity* heuristic computes the length of the input divided by the perplexity of the input. If the value is above the specified threshold (default `89.79`) then the input is considered a jailbreak attempt.
+
+The default value represents the mean length/perplexity for a set of jailbreaks derived from a combination of datasets including [AdvBench](https://github.com/llm-attacks/llm-attacks), [ToxicChat](https://huggingface.co/datasets/lmsys/toxic-chat/blob/main/README.md), and [JailbreakChat](https://github.com/verazuo/jailbreak_llms), with non-jailbreaks taken from the same datasets and incorporating 1000 examples from [Dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k).
+
+The statistics for this metric across jailbreak and non jailbreak datasets are as follows:
+
+|      | Jailbreaks | Non-Jailbreaks |
+|------|------------|----------------|
+| mean | 89.79      | 27.11          |
+| min  | 0.03       | 0.00           |
+| 25%  | 12.90      | 0.46           |
+| 50%  | 47.32      | 2.40           |
+| 75%  | 116.94     | 18.78          |
+| max  | 1380.55    | 3418.62        |
+
+Using the mean value of `89.79` yields 31.19% of jailbreaks being detected with a false positive rate of 7.44% on the dataset.
+Increasing this threshold will decrease the number of jailbreaks detected but will yield fewer false positives.
+
+**USAGE NOTES**:
+
+* Manual inspection of false positives uncovered a number of mislabeled examples in the dataset and a substantial number of system-like prompts. If your application is intended for simple question answering or retrieval-aided generation, this should be a generally safe heuristic.
+* This heuristic in its current form is intended only for English language evaluation and will yield significantly more false positives on non-English text, including code.
+
+##### Prefix and Suffix Perplexity
+
+The *prefix and suffix perplexity* heuristic takes the input and computes the perplexity for the prefix and suffix. If any of the is above the specified threshold (default `1845.65`), then the input is considered a jailbreak attempt.
+
+This heuristic examines strings of more than 20 "words" (strings separated by whitespace) to detect potential prefix/suffix attacks.
+
+The default threshold value of `1845.65` is the second-lowest perplexity value across 50 different prompts generated using [GCG](https://github.com/llm-attacks/llm-attacks) prefix/suffix attacks.
+Using the default value allows for detection of 49/50 GCG-style attacks with a 0.04% false positive rate on the "non-jailbreak" dataset derived above.
+
+**USAGE NOTES**:
+
+* This heuristic in its current form is intended only for English language evaluation and will yield significantly more false positives on non-English text, including code.
+
+#### Perplexity Computation
+
+To compute the perplexity of a string, the current implementation uses the `gpt2-large` model.
+
+**NOTE**: in future versions, multiple options will be supported.
+
+#### Setup
+
+The recommended way for using the jailbreak detection heuristics is to [deploy the jailbreak detection heuristics server](../user_guides/advanced/jailbreak-detection-heuristics-deployment.md) separately.
+
+For quick testing, you can use the jailbreak detection heuristics rail locally by first installing `transformers` and `tourch`.
+
+```bash
+pip install transformers torch
 ```
 
 #### Latency
+
 Latency was tested in-process and via local Docker for both CPU and GPU configurations.
 For each configuration, we tested the response time for 10 prompts ranging in length from 5 to 2048 tokens.
-Inference times for sequences longer than the model's maximum input length (1024 tokens for GPT-2) necessarily take longer. 
+Inference times for sequences longer than the model's maximum input length (1024 tokens for GPT-2) necessarily take longer.
 Times reported below in are **averages** and are reported in milliseconds.
 
-|            | CPU  | GPU |
-|------------|------|-----|
-| Docker     | 2057 | 115 |
-| In-Process | 3227 | 157 |
+|            | CPU   | GPU |
+|------------|-------|-----|
+| Docker     | 2057  | 115 |
+| In-Process | 3227  | 157 |

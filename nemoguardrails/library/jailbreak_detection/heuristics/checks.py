@@ -61,7 +61,7 @@ def get_perplexity(input_string: str) -> bool:
     return perplexity.cpu().detach().numpy().item()
 
 
-def check_jb_lp(input_string: str, lp_threshold: float) -> dict:
+def check_jailbreak_length_per_perplexity(input_string: str, threshold: float) -> dict:
     """
     Check whether the input string has length/perplexity greater than the threshold.
 
@@ -70,12 +70,14 @@ def check_jb_lp(input_string: str, lp_threshold: float) -> dict:
         lp_threshold: Threshold for determining whether `input_string` is a jailbreak (Default: 89.79)
     """
     perplexity = get_perplexity(input_string)
-    jb_lp = len(input_string) / perplexity >= lp_threshold
-    result = {"jailbreak": jb_lp}
+    score = len(input_string) / perplexity
+    result = {"jailbreak": score >= threshold}
     return result
 
 
-def check_jb_ps_ppl(input_string: str, ps_ppl_threshold: float) -> dict:
+def check_jailbreak_prefix_suffix_perplexity(
+    input_string: str, threshold: float
+) -> dict:
     """
     Check whether the input string has prefix or suffix perplexity greater than the threshold.
 
@@ -94,7 +96,7 @@ def check_jb_ps_ppl(input_string: str, ps_ppl_threshold: float) -> dict:
     suffix_ppl = get_perplexity(suffix)
     prefix_ppl = get_perplexity(prefix)
 
-    if suffix_ppl >= ps_ppl_threshold or prefix_ppl >= ps_ppl_threshold:
+    if suffix_ppl >= threshold or prefix_ppl >= threshold:
         jb_ps = True
     else:
         jb_ps = False

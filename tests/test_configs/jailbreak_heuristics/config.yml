@@ -2,9 +2,9 @@ rails:
   config:
     jailbreak_detection:
       server_endpoint: ""
-      lp_threshold: 89.79
-      ps_ppl_threshold: 1845.65
+      length_per_perplexity_threshold: 89.79
+      prefix_suffix_perplexity_threshold: 1845.65
 
   input:
     flows:
-      - jailbreak heuristics
+      - jailbreak detection heuristics

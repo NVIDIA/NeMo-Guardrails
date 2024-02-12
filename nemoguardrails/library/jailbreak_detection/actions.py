@@ -18,25 +18,27 @@ from typing import Optional
 
 from nemoguardrails.actions import action
 from nemoguardrails.library.jailbreak_detection.heuristics.checks import (
-    check_jb_lp,
-    check_jb_ps_ppl,
+    check_jailbreak_length_per_perplexity,
+    check_jailbreak_prefix_suffix_perplexity,
 )
-from nemoguardrails.library.jailbreak_detection.request import jailbreak_heuristic_check
+from nemoguardrails.library.jailbreak_detection.request import (
+    jailbreak_detection_heuristics_request,
+)
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 
 log = logging.getLogger(__name__)
 
 
-@action(name="jailbreak heuristics")
-async def jailbreak_heuristics(
+@action()
+async def jailbreak_detection_heuristics(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
     """Checks the user's prompt to determine if it is attempt to jailbreak the model."""
     jailbreak_config = llm_task_manager.config.rails.config.jailbreak_detection
 
     jailbreak_api_url = jailbreak_config.server_endpoint
-    lp_threshold = jailbreak_config.lp_threshold
-    ps_ppl_threshold = jailbreak_config.ps_ppl_threshold
+    lp_threshold = jailbreak_config.length_per_perplexity_threshold
+    ps_ppl_threshold = jailbreak_config.prefix_suffix_perplexity_threshold
 
     prompt = context.get("user_message")
 
@@ -44,12 +46,14 @@ async def jailbreak_heuristics(
         log.warning(
             "No jailbreak heuristics endpoint set. Running in-process, NOT RECOMMENDED FOR PRODUCTION."
         )
-        lp_check = check_jb_lp(prompt, lp_threshold)
-        ps_ppl_check = check_jb_ps_ppl(prompt, ps_ppl_threshold)
+        lp_check = check_jailbreak_length_per_perplexity(prompt, lp_threshold)
+        ps_ppl_check = check_jailbreak_prefix_suffix_perplexity(
+            prompt, ps_ppl_threshold
+        )
         jailbreak = any([lp_check["jailbreak"], ps_ppl_check["jailbreak"]])
         return jailbreak
 
-    jailbreak = await jailbreak_heuristic_check(
+    jailbreak = await jailbreak_detection_heuristics_request(
         prompt, jailbreak_api_url, lp_threshold, ps_ppl_threshold
     )
     if jailbreak is None:
