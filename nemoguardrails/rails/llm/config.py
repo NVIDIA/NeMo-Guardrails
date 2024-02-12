@@ -331,25 +331,29 @@ class JailbreakDetectionConfig(BaseModel):
     )
 
 class AutoGuardOptions(BaseModel):
+    """List of guardrails that are activated"""
+
     guardrails: List[str] = Field(
         default_factory=list,
-        description="",
+        description="The guardrails that are activated",
     )
 
 
 class AutoGuardRailConfig(BaseModel):
+    """Configuration data for the AutoGuard API"""
+
     parameters: Dict[str, Any] = Field(default_factory=dict)
     entities: List[str] = Field(
         default_factory=list,
-        description="",
+        description="The list of entities that should be redacted",
     )
     input: AutoGuardOptions = Field(
         default_factory=AutoGuardOptions,
-        description="",
+        description="Input configuration for Autoguard",
     )
     output: AutoGuardOptions = Field(
         default_factory=AutoGuardOptions,
-        description="",
+        description="Output configuration for Autoguard",
     )
 
 
@@ -363,7 +367,7 @@ class RailsConfigData(BaseModel):
 
     autoguard: AutoGuardRailConfig = Field(
         default_factory=AutoGuardRailConfig,
-        description="",
+        description="Configuration data for the Autoguard API.",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
