@@ -27,7 +27,11 @@ from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
-from nemoguardrails.colang.v2_x.runtime.flows import ColangRuntimeError, Event
+from nemoguardrails.colang.v2_x.runtime.flows import (
+    ColangRuntimeError,
+    Event,
+    FlowStatus,
+)
 from nemoguardrails.colang.v2_x.runtime.statemachine import (
     FlowConfig,
     InternalEvent,
@@ -414,10 +418,6 @@ class RuntimeV2_x(Runtime):
         if state is None:
             state = State(flow_states={}, flow_configs=self.flow_configs)
             initialize_state(state)
-            input_event = InternalEvent(name="StartFlow", arguments={"flow_id": "main"})
-            input_events.insert(0, input_event)
-            log.info("Start of story!")
-
         elif isinstance(state, dict):
             # TODO: Implement dict to State conversion
             raise NotImplementedError()
@@ -427,6 +427,10 @@ class RuntimeV2_x(Runtime):
         assert isinstance(state, State)
         assert state.main_flow_state is not None
         main_flow_uid = state.main_flow_state.uid
+        if state.main_flow_state.status == FlowStatus.WAITING:
+            input_event = InternalEvent(name="StartFlow", arguments={"flow_id": "main"})
+            input_events.insert(0, input_event)
+            log.info("Start of story!")
 
         # Check if we have new finished async local action events to add
         (
