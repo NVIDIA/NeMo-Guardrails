@@ -151,9 +151,11 @@ def create_flow_instance(
         flow_state.arguments.append(param.name)
         flow_state.context.update(
             {
-                param.name: eval_expression(param.default_value_expr, {})
-                if param.default_value_expr
-                else None,
+                param.name: (
+                    eval_expression(param.default_value_expr, {})
+                    if param.default_value_expr
+                    else None
+                ),
             }
         )
     # Add the positional flow parameter identifiers
@@ -164,9 +166,11 @@ def create_flow_instance(
     for idx, member in enumerate(flow_config.return_members):
         flow_state.context.update(
             {
-                member.name: eval_expression(member.default_value_expr, {})
-                if member.default_value_expr
-                else None,
+                member.name: (
+                    eval_expression(member.default_value_expr, {})
+                    if member.default_value_expr
+                    else None
+                ),
             }
         )
 
@@ -694,9 +698,9 @@ def _resolve_action_conflicts(
                         index = competing_flow_state.action_uids.index(
                             competing_event.action_uid
                         )
-                        competing_flow_state.action_uids[
-                            index
-                        ] = winning_event.action_uid
+                        competing_flow_state.action_uids[index] = (
+                            winning_event.action_uid
+                        )
                         del state.actions[competing_event.action_uid]
 
                     advancing_heads.append(head)
@@ -1335,6 +1339,28 @@ def _finish_flow(
     for head in flow_state.heads.values():
         _remove_head_from_event_matching_structures(state, flow_state, head)
     flow_state.heads.clear()
+
+    # If it is the main flow restart it
+    # TODO: Refactor this to use event based mechanics (START_FLOW)
+    if flow_state.flow_id == "main":
+        # Find an active head
+        head_uid = new_uid()
+        new_head = FlowHead(
+            uid=head_uid,
+            flow_state_uid=flow_state.uid,
+            matching_scores=[],
+        )
+        new_head.position_changed_callback = partial(
+            _flow_head_changed, state, flow_state
+        )
+        new_head.status_changed_callback = partial(
+            _flow_head_changed, state, flow_state
+        )
+        _flow_head_changed(state, flow_state, new_head)
+        flow_state.heads = {head_uid: new_head}
+        flow_state.status = FlowStatus.WAITING
+        log.info("Main flow finished and restarting...")
+        return
 
     flow_state.status = FlowStatus.FINISHED
 
