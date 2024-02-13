@@ -23,10 +23,10 @@ from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackManager
 from langchain.callbacks.manager import AsyncCallbackManagerForChainRun
 from langchain.schema import AgentAction, AgentFinish, BaseMessage, LLMResult
 
-from nemoguardrails.context import explain_info_var, llm_call_info_var
+from nemoguardrails.context import explain_info_var, llm_call_info_var, llm_stats_var
 from nemoguardrails.logging.explain import LLMCallInfo
 from nemoguardrails.logging.processing_log import processing_log_var
-from nemoguardrails.logging.stats import llm_stats
+from nemoguardrails.logging.stats import LLMStats
 from nemoguardrails.logging.verbose import Styles
 
 log = logging.getLogger(__name__)
@@ -34,9 +34,6 @@ log = logging.getLogger(__name__)
 
 class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
     """Async callback handler that can be used to handle callbacks from langchain."""
-
-    # The timestamp when the last prompt was sent to the LLM.
-    last_prompt_timestamp: Optional[float] = 0
 
     async def on_llm_start(
         self,
@@ -64,7 +61,13 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
         log.info("Prompt :: %s", prompts[0])
         llm_call_info.prompt = prompts[0]
 
-        self.last_prompt_timestamp = time()
+        llm_call_info.started_at = time()
+
+        llm_stats = llm_stats_var.get()
+        if llm_stats is None:
+            llm_stats = LLMStats()
+            llm_stats_var.set(llm_stats)
+
         llm_stats.inc("total_calls")
 
     async def on_chat_model_start(
@@ -104,7 +107,13 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
         log.info("Invocation Params :: %s", kwargs.get("invocation_params", {}))
         log.info("Prompt Messages :: %s", prompt)
         llm_call_info.prompt = prompt
-        self.last_prompt_timestamp = time()
+        llm_call_info.started_at = time()
+
+        llm_stats = llm_stats_var.get()
+        if llm_stats is None:
+            llm_stats = LLMStats()
+            llm_stats_var.set(llm_stats)
+
         llm_stats.inc("total_calls")
 
     async def on_llm(self, *args, **kwargs) -> Any:
@@ -135,6 +144,12 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
         if llm_call_info is None:
             llm_call_info = LLMCallInfo()
         llm_call_info.completion = response.generations[0][0].text
+        llm_call_info.finished_at = time()
+
+        llm_stats = llm_stats_var.get()
+        if llm_stats is None:
+            llm_stats = LLMStats()
+            llm_stats_var.set(llm_stats)
 
         # If there are additional completions, we show them as well
         if len(response.generations[0]) > 1:
@@ -143,7 +158,7 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
                 log.info("Completion :: %s", generation.text)
 
         log.info("Output Stats :: %s", response.llm_output)
-        took = time() - self.last_prompt_timestamp
+        took = llm_call_info.finished_at - llm_call_info.started_at
         log.info("--- :: LLM call took %.2f seconds", took)
         llm_stats.inc("total_time", took)
         llm_call_info.duration = took

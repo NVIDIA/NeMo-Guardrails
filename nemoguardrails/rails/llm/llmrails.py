@@ -35,6 +35,7 @@ from nemoguardrails.colang.v2_x.lang.utils import new_uuid
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.context import (
     explain_info_var,
+    llm_stats_var,
     generation_options_var,
     streaming_handler_var,
 )
@@ -43,7 +44,7 @@ from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.explain import ExplainInfo
 from nemoguardrails.logging.processing_log import compute_generation_log
-from nemoguardrails.logging.stats import llm_stats
+from nemoguardrails.logging.stats import LLMStats
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
@@ -563,7 +564,10 @@ class LLMRails:
         #   This is important as without it, the LLM prediction is not as good.
 
         t0 = time.time()
-        llm_stats.reset()
+
+        # Initialize the LLM stats
+        llm_stats = LLMStats()
+        llm_stats_var.set(llm_stats)
 
         # The array of events corresponding to the provided sequence of messages.
         events = self._get_events_for_messages(messages)
@@ -610,8 +614,11 @@ class LLMRails:
         if self.verbose:
             log.info(f"Conversation history so far: \n{explain_info.colang_history}")
 
-        log.info("--- :: Total processing took %.2f seconds." % (time.time() - t0))
-        log.info("--- :: Stats: %s" % llm_stats)
+        total_time = time.time() - t0
+        log.info(
+            "--- :: Total processing took %.2f seconds. LLM Stats: %s"
+            % (total_time, llm_stats)
+        )
 
         # If there is a streaming handler, we make sure we close it now
         streaming_handler = streaming_handler_var.get()
@@ -759,7 +766,10 @@ class LLMRails:
 
         """
         t0 = time.time()
-        llm_stats.reset()
+
+        # Initialize the LLM stats
+        llm_stats = LLMStats()
+        llm_stats_var.set(llm_stats)
 
         # Compute the new events.
         processing_log = []
@@ -810,7 +820,8 @@ class LLMRails:
               state.
         """
         t0 = time.time()
-        llm_stats.reset()
+        llm_stats = LLMStats()
+        llm_stats_var.set(llm_stats)
 
         # Compute the new events.
         # We need to protect 'process_events' to be called only once at a time
