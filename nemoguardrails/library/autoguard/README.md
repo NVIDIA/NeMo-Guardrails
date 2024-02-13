@@ -59,30 +59,29 @@ define bot refuse to respond autoguard
 
 ### Confidential detection
 
-The goal of the confidential detection rail is to determine if the text has any kind of confidential information. This rail can be applied at both input and output. This guardrail can be added by adding `confidential_detection` in `autoguard` section in config.yml
+The goal of the confidential detection rail is to determine if the text has any kind of confidential information. This rail can be applied at both input and output. This guardrail can be added by adding `confidential_detection` in `autoguard` section in `config.yml`
 
 ### Gender bias detection
 
-The goal of the gender bias detection rail is to determine if the text has any kind of gender biased content. This rail can be applied at both input and output. This guardrail can be added by adding `gender_bias_detection` in `autoguard` section in config.yml
+The goal of the gender bias detection rail is to determine if the text has any kind of gender biased content. This rail can be applied at both input and output. This guardrail can be added by adding `gender_bias_detection` in `autoguard` section in `config.yml`
 
 ### Harm detection
 
-The goal of the harm detection rail is to determine if the text has any kind of harm to human content. This rail can be applied at both input and output. This guardrail can be added by adding `harm_detection` in `autoguard` section in config.yml
+The goal of the harm detection rail is to determine if the text has any kind of harm to human content. This rail can be applied at both input and output. This guardrail can be added by adding `harm_detection` in `autoguard` section in `config.yml`
 
 ### Toxicity detection
 
-The goal of the toxicity detection rail is to determine if the text has any kind of toxic content. This rail can be applied at both input and output.This guardrail can be added by adding `text_toxicity_extraction` in `autoguard` section in config.yml
-
+The goal of the toxicity detection rail is to determine if the text has any kind of toxic content. This rail can be applied at both input and output.This guardrail can be added by adding `text_toxicity_extraction` in `autoguard` section in `config.yml`
 
 ### Racial bias detection
 
 The goal of the racial bias detection rail is to determine if the text has any kind of racially biased content. This rail can be applied at both input and output.
-This guardrail can be added by adding `racial_bias_detection` in `autoguard` section in config.yml
+This guardrail can be added by adding `racial_bias_detection` in `autoguard` section in `config.yml`
 
 ### Jailbreak detection
 
 The goal of the jailbreak detection rail is to determine if the text has any kind of jailbreak attempt.
-This rail caThis guardrail can be added by adding `jailbreak_detection` in `autoguard` section in config.ymln be applied at both input and output.
+This rail can be applied at both input and output.This guardrail can be added by adding `jailbreak_detection` in `autoguard` section in `config.yml`
 
 ## Usage (AutoGuard PII)
 
