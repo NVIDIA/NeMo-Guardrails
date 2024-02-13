@@ -562,7 +562,7 @@ def parse_events_inputs(input_str: str) -> Optional[dict]:
     elif len(parts) == 2:
         action = parts[-1]
         rest = parts[:-1]
-        adjusted_type = action + "".join(rest)
+        adjusted_type = "".join(rest) + action
     else:
         return None
 
