@@ -151,15 +151,17 @@ class LLMRails:
                 # We also mark them as subflows by default, to simplify the syntax
                 flow_config["is_subflow"] = True
 
-        # We check if the configuration has a config.py module associated with it.
-        config_module = None
-        if self.config.config_path:
-            filepath = os.path.join(self.config.config_path, "config.py")
-            if os.path.exists(filepath):
-                filename = os.path.basename(filepath)
-                spec = importlib.util.spec_from_file_location(filename, filepath)
-                config_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(config_module)
+        # We check if the configuration or any of the imported ones have config.py modules.
+        config_modules = []
+        for _path in self.config.import_paths + [self.config.config_path]:
+            if _path:
+                filepath = os.path.join(_path, "config.py")
+                if os.path.exists(filepath):
+                    filename = os.path.basename(filepath)
+                    spec = importlib.util.spec_from_file_location(filename, filepath)
+                    config_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(config_module)
+                    config_modules.append(config_module)
 
         # First, we initialize the runtime.
         if config.colang_version == "1.0":
@@ -169,11 +171,12 @@ class LLMRails:
         else:
             raise ValueError(f"Unsupported colang version: {config.colang_version}.")
 
-        # If we have a config_module with an `init` function, we call it.
+        # If we have a config_modules with an `init` function, we call it.
         # We need to call this here because the `init` might register additional
         # LLM providers.
-        if config_module is not None and hasattr(config_module, "init"):
-            config_module.init(self)
+        for config_module in config_modules:
+            if hasattr(config_module, "init"):
+                config_module.init(self)
 
         # If we have a customized embedding model, we'll use it.
         for model in self.config.models:
