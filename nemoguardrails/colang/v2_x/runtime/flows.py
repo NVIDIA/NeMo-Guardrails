@@ -592,6 +592,8 @@ class FlowState:
     def _create_event(self, event_type: str, args: dict) -> InternalEvent:
         arguments = args.copy()
         arguments["flow_id"] = self.flow_id
+        if "flow_start_uid" in self.context:
+            arguments["flow_start_uid"] = self.context["flow_start_uid"]
         arguments.update(
             dict(
                 [

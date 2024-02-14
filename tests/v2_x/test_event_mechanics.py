@@ -1174,5 +1174,45 @@ def test_update_context():
     )
 
 
+def test_match_internal_event():
+    """Test to update the context."""
+
+    content = """
+    flow _bot_say $text
+      await UtteranceBotAction(script=$text) as $action
+
+    flow bot express $text
+      await _bot_say $text
+
+    flow bot express greeting
+      await bot express "hi"
+        or bot express "hello"
+
+    flow bot started saying something
+      match FlowStarted(flow_id="_bot_say") as $event
+
+    flow a
+      await bot started saying something
+      _bot_say "test"
+
+    flow main
+      activate a
+      bot express greeting
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "test",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_update_context()
+    test_match_internal_event()
