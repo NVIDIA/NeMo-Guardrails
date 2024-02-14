@@ -5,9 +5,18 @@ define parallel flow process user input
 
   # If we have input rails, we run them, otherwise we just create the user message event
   if $config.rails.input.flows
+
+    # Create a marker event.
+    create event StartInputRails
+    event StartInputRails
+
     # Run all the input rails
     # This can potentially alter the $user_message
     do run input rails
+
+    # Create a marker event.
+    create event InputRailsFinished
+    event InputRailsFinished
 
   create event UserMessage(text=$user_message)
 
@@ -23,8 +32,21 @@ define subflow run input rails
   $i = 0
   $input_flows = $config.rails.input.flows
   while $i < len($input_flows)
+    # We set the current rail as being triggered.
+    $triggered_input_rail = $input_flows[$i]
+
+    create event StartInputRail(flow_id=$triggered_input_rail)
+    event StartInputRail
+
     do $input_flows[$i]
     $i = $i + 1
+
+    create event InputRailFinished(flow_id=$triggered_input_rail)
+    event InputRailFinished
+
+    # If all went smooth, we remove it.
+    $triggered_input_rail = None
+
 
 
 define flow generate next step
@@ -70,7 +92,17 @@ define parallel extension flow process bot message
   else
     # If we have any output flows, we run them.
     if $config.rails.output.flows
+      # Create a marker event.
+      create event StartOutputRails
+      event StartOutputRails
+
+      # Run all the input rails
+      # This can potentially alter the $user_message
       do run output rails
+
+      # Create a marker event.
+      create event OutputRailsFinished
+      event OutputRailsFinished
 
   create event StartUtteranceBotAction(script=$bot_message)
 
@@ -80,8 +112,20 @@ define subflow run output rails
   $i = 0
   $output_flows = $config.rails.output.flows
   while $i < len($output_flows)
+    # We set the current rail as being triggered.
+    $triggered_output_rail = $output_flows[$i]
+
+    create event StartOutputRail(flow_id=$triggered_output_rail)
+    event StartOutputRail
+
     do $output_flows[$i]
     $i = $i + 1
+
+    create event OutputRailFinished(flow_id=$triggered_output_rail)
+    event OutputRailFinished
+
+    # If all went smooth, we remove it.
+    $triggered_output_rail = None
 
 
 define subflow run retrieval rails

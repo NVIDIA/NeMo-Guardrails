@@ -25,6 +25,7 @@ from langchain.schema import AgentAction, AgentFinish, BaseMessage, LLMResult
 
 from nemoguardrails.context import explain_info_var, llm_call_info_var
 from nemoguardrails.logging.explain import LLMCallInfo
+from nemoguardrails.logging.processing_log import processing_log_var
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.logging.verbose import Styles
 
@@ -158,6 +159,12 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
                 "total_completion_tokens", token_usage.get("completion_tokens", 0)
             )
             llm_call_info.completion_tokens = token_usage.get("completion_tokens", 0)
+
+        # Finally, we append the LLM call log to the processing log
+        processing_log = processing_log_var.get()
+        processing_log.append(
+            {"type": "llm_call_info", "timestamp": time(), "data": llm_call_info.dict()}
+        )
 
     async def on_llm_error(
         self,

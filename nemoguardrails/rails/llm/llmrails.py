@@ -35,11 +35,16 @@ from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.explain import ExplainInfo
+from nemoguardrails.logging.processing_log import compute_generation_log
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
-from nemoguardrails.rails.llm.options import GenerationOptions, GenerationResponse
+from nemoguardrails.rails.llm.options import (
+    GenerationLog,
+    GenerationOptions,
+    GenerationResponse,
+)
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 from nemoguardrails.streaming import StreamingHandler
 
@@ -487,7 +492,10 @@ class LLMRails:
         events = self._get_events_for_messages(messages)
 
         # Compute the new events.
-        new_events = await self.runtime.generate_events(events)
+        processing_log = []
+        new_events = await self.runtime.generate_events(
+            events, processing_log=processing_log
+        )
 
         # Extract and join all the messages from StartUtteranceBotAction events as the response.
         responses = []
@@ -544,6 +552,37 @@ class LLMRails:
                 # TODO: remove this in 0.10.0.
                 if return_context:
                     return new_message, context
+
+            # Include information about activated rails and LLM calls if requested
+            if options.log.activated_rails or options.log.llm_calls:
+                _log = compute_generation_log(processing_log)
+                res.log = GenerationLog()
+
+                # We always include the stats
+                res.log.stats = _log.stats
+
+                if options.log.activated_rails:
+                    res.log.activated_rails = _log.activated_rails
+
+                if options.log.llm_calls:
+                    res.log.llm_calls = []
+                    for activated_rail in _log.activated_rails:
+                        for executed_action in activated_rail.executed_actions:
+                            res.log.llm_calls.extend(executed_action.llm_calls)
+
+            # Include internal events if requested
+            if options.log.internal_events:
+                if res.log is None:
+                    res.log = GenerationLog()
+
+                res.log.internal_events = new_events
+
+            # Include the Colang history if requested
+            if options.log.colang_history:
+                if res.log is None:
+                    res.log = GenerationLog()
+
+                res.log.colang_history = get_colang_history(events)
 
             return res
         else:
@@ -624,7 +663,10 @@ class LLMRails:
         llm_stats.reset()
 
         # Compute the new events.
-        new_events = await self.runtime.generate_events(events)
+        processing_log = []
+        new_events = await self.runtime.generate_events(
+            events, processing_log=processing_log
+        )
 
         # If logging is enabled, we log the conversation
         # TODO: add support for logging flag

@@ -17,6 +17,7 @@
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
+from time import time
 from typing import Dict, List, Optional
 
 from nemoguardrails.flows.eval import eval_expression
@@ -51,12 +52,14 @@ class FlowConfig:
     allow_multiple: bool = False
 
     # The events that can trigger this flow to advance.
-    trigger_event_types = [
-        "UserIntent",
-        "BotIntent",
-        "run_action",
-        "InternalSystemActionFinished",
-    ]
+    trigger_event_types: List[str] = field(
+        default_factory=lambda: [
+            "UserIntent",
+            "BotIntent",
+            "run_action",
+            "InternalSystemActionFinished",
+        ]
+    )
 
     # The actual source code, if available
     source_code: Optional[str] = None
@@ -581,6 +584,7 @@ def compute_next_steps(
     history: List[dict],
     flow_configs: Dict[str, FlowConfig],
     rails_config: "RailsConfig",
+    processing_log: List[dict],
 ) -> List[dict]:
     """Computes the next step in a flow-driven system given a history of events.
 
@@ -588,6 +592,7 @@ def compute_next_steps(
         history (List[dict]): The history of events.
         flow_configs (Dict[str, FlowConfig]): Flow configurations.
         rails_config (RailsConfig): Rails configuration.
+        processing_log (List[dict]): The processing log so far. This will be mutated.
 
     Returns:
             List[dict]: The list of computed next steps.
@@ -612,7 +617,11 @@ def compute_next_steps(
         else:
             actual_history.append(event)
 
+    steps_history = []
     for event in actual_history:
+        # We append the events to the steps history
+        steps_history.append(event)
+
         state = compute_next_state(state, event)
 
         # NOTE (Jul 24, Razvan): this is a quick fix. Will debug further.
@@ -641,6 +650,21 @@ def compute_next_steps(
         if last_event["type"] == "BotIntent" and last_event["intent"] == "stop":
             # In this case, we remove any next steps
             next_steps = []
+
+    # If we have a next step, we record the flow that triggered it in the processing log
+    if next_steps and state.next_step_by_flow_uid:
+        for flow_state in state.flow_states:
+            if flow_state.uid == state.next_step_by_flow_uid:
+                flow_id = flow_state.flow_id
+
+                processing_log.append(
+                    {
+                        "type": "step",
+                        "timestamp": time(),
+                        "flow_id": flow_id,
+                        "next_steps": next_steps,
+                    }
+                )
 
     return next_steps
 
