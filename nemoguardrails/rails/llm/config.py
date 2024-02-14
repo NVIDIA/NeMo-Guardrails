@@ -363,6 +363,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "rails",
         "streaming",
         "passthrough",
+        "raw_llm_call_action",
     ]
 
     for field in additional_fields:
@@ -519,6 +520,11 @@ class RailsConfig(BaseModel):
             raise ValueError("You must provide a `self_check_facts` prompt template.")
 
         return values
+
+    raw_llm_call_action: Optional[str] = Field(
+        default="raw llm call",
+        description="The name of the action that would execute the original raw LLM call. ",
+    )
 
     @staticmethod
     def from_path(

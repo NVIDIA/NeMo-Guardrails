@@ -20,13 +20,18 @@ import logging
 import os
 import threading
 import time
+import warnings
 from typing import Any, AsyncIterator, List, Optional, Tuple, Type, Union
 
 from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
-from nemoguardrails.context import explain_info_var, streaming_handler_var
+from nemoguardrails.context import (
+    explain_info_var,
+    generation_options_var,
+    streaming_handler_var,
+)
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.flows.flows import compute_context
 from nemoguardrails.flows.runtime import Runtime
@@ -34,10 +39,16 @@ from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.explain import ExplainInfo
+from nemoguardrails.logging.processing_log import compute_generation_log
 from nemoguardrails.logging.stats import llm_stats
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
+from nemoguardrails.rails.llm.options import (
+    GenerationLog,
+    GenerationOptions,
+    GenerationResponse,
+)
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 from nemoguardrails.streaming import StreamingHandler
 
@@ -410,9 +421,10 @@ class LLMRails:
         self,
         prompt: Optional[str] = None,
         messages: Optional[List[dict]] = None,
+        options: Optional[Union[dict, GenerationOptions]] = None,
         streaming_handler: Optional[StreamingHandler] = None,
         return_context: bool = False,
-    ) -> Union[str, dict, Tuple[dict, dict]]:
+    ) -> Union[str, dict, GenerationResponse, Tuple[dict, dict]]:
         """Generate a completion or a next message.
 
         The format for messages is the following:
@@ -430,6 +442,7 @@ class LLMRails:
         Args:
             prompt: The prompt to be used for completion.
             messages: The history of messages to be used to generate the next message.
+            options: Options specific for the generation.
             streaming_handler: If specified, and the config supports streaming, the
               provided handler will be used for streaming.
             return_context: Whether to return the context at the end of the run.
@@ -438,6 +451,37 @@ class LLMRails:
             The completion (when a prompt is provided) or the next message.
 
         System messages are not yet supported."""
+        # We allow options to be specified both as a dict and as an object.
+        if options and isinstance(options, dict):
+            if "rails" in options and isinstance(options["rails"], list):
+                _rails = {
+                    "input": False,
+                    "dialog": False,
+                    "retrieval": False,
+                    "output": False,
+                }
+                for rail_type in options["rails"]:
+                    _rails[rail_type] = True
+                options["rails"] = _rails
+
+            options = GenerationOptions(**options)
+
+        # Save the generation options in the current async context.
+        generation_options_var.set(options)
+
+        if return_context:
+            warnings.warn(
+                "The `return_context` argument is deprecated and will be removed in 0.9.0. "
+                "Use `GenerationOptions.output_vars = True` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+            # And we use the generation options mechanism instead.
+            if options is None:
+                options = GenerationOptions()
+            options.output_vars = True
+
         if streaming_handler:
             streaming_handler_var.set(streaming_handler)
 
@@ -454,12 +498,25 @@ class LLMRails:
 
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
-            new_message = await self.generate_async(
-                messages=[{"role": "user", "content": prompt}]
-            )
+            messages = [{"role": "user", "content": prompt}]
 
-            assert new_message["role"] == "assistant"
-            return new_message["content"]
+        # If we have generation options, we also add them to the context
+        if options:
+            messages = [
+                {"role": "context", "content": {"generation_options": options.dict()}}
+            ] + messages
+
+        # If the last message is from the assistant, rather than the user, then
+        # we move that to the `$bot_message` variable. This is to enable a more
+        # convenient interface. (only when dialog rails are disabled)
+        if (
+            messages[-1]["role"] == "assistant"
+            and options
+            and options.rails.dialog is False
+        ):
+            # We already have the first message with a context update, so we use that
+            messages[0]["content"]["bot_message"] = messages[-1]["content"]
+            messages = messages[0:-1]
 
         # TODO: Add support to load back history of events, next to history of messages
         #   This is important as without it, the LLM prediction is not as good.
@@ -471,7 +528,10 @@ class LLMRails:
         events = self._get_events_for_messages(messages)
 
         # Compute the new events.
-        new_events = await self.runtime.generate_events(events)
+        processing_log = []
+        new_events = await self.runtime.generate_events(
+            events, processing_log=processing_log
+        )
 
         # Extract and join all the messages from StartUtteranceBotAction events as the response.
         responses = []
@@ -505,12 +565,78 @@ class LLMRails:
             # print("Closing the stream handler explicitly")
             await streaming_handler.push_chunk(None)
 
-        if return_context:
-            # If we need to return the context as well,
-            context = compute_context(events)
-            return new_message, context
+        # If we have generation options, we prepare a GenerationResponse instance.
+        if options:
+            # If a prompt was used, we only need to return the content of the message.
+            if prompt:
+                res = GenerationResponse(response=new_message["content"])
+            else:
+                res = GenerationResponse(response=[new_message])
+
+            # If output variables are specified, we extract their values
+            if options.output_vars:
+                context = compute_context(events)
+                if isinstance(options.output_vars, list):
+                    # If we have only a selection of keys, we filter to only that.
+                    res.output_data = {k: context.get(k) for k in options.output_vars}
+                else:
+                    # Otherwise, we return the full context
+                    res.output_data = context
+
+                # If the `return_context` is used, then we return a tuple to keep
+                # the interface compatible.
+                # TODO: remove this in 0.10.0.
+                if return_context:
+                    return new_message, context
+
+            _log = compute_generation_log(processing_log)
+
+            # Include information about activated rails and LLM calls if requested
+            if options.log.activated_rails or options.log.llm_calls:
+                res.log = GenerationLog()
+
+                # We always include the stats
+                res.log.stats = _log.stats
+
+                if options.log.activated_rails:
+                    res.log.activated_rails = _log.activated_rails
+
+                if options.log.llm_calls:
+                    res.log.llm_calls = []
+                    for activated_rail in _log.activated_rails:
+                        for executed_action in activated_rail.executed_actions:
+                            res.log.llm_calls.extend(executed_action.llm_calls)
+
+            # Include internal events if requested
+            if options.log.internal_events:
+                if res.log is None:
+                    res.log = GenerationLog()
+
+                res.log.internal_events = new_events
+
+            # Include the Colang history if requested
+            if options.log.colang_history:
+                if res.log is None:
+                    res.log = GenerationLog()
+
+                res.log.colang_history = get_colang_history(events)
+
+            # Include the raw llm output if requested
+            if options.llm_output:
+                # Currently, we include the output from the generation LLM calls.
+                for activated_rail in _log.activated_rails:
+                    if activated_rail.type == "generation":
+                        for executed_action in activated_rail.executed_actions:
+                            for llm_call in executed_action.llm_calls:
+                                res.llm_output = llm_call.raw_response
+
+            return res
         else:
-            return new_message
+            # If a prompt is used, we only return the content of the message.
+            if prompt:
+                return new_message["content"]
+            else:
+                return new_message
 
     def stream_async(
         self,
@@ -535,6 +661,7 @@ class LLMRails:
         prompt: Optional[str] = None,
         messages: Optional[List[dict]] = None,
         return_context: bool = False,
+        options: Optional[Union[dict, GenerationOptions]] = None,
     ):
         """Synchronous version of generate_async."""
 
@@ -546,11 +673,17 @@ class LLMRails:
 
         return asyncio.run(
             self.generate_async(
-                prompt=prompt, messages=messages, return_context=return_context
+                prompt=prompt,
+                messages=messages,
+                options=options,
+                return_context=return_context,
             )
         )
 
-    async def generate_events_async(self, events: List[dict]) -> List[dict]:
+    async def generate_events_async(
+        self,
+        events: List[dict],
+    ) -> List[dict]:
         """Generate the next events based on the provided history.
 
         The format for events is the following:
@@ -564,6 +697,7 @@ class LLMRails:
 
         Args:
             events: The history of events to be used to generate the next events.
+            options: The options to be used for the generation.
 
         Returns:
             The newly generate event(s).
@@ -573,7 +707,10 @@ class LLMRails:
         llm_stats.reset()
 
         # Compute the new events.
-        new_events = await self.runtime.generate_events(events)
+        processing_log = []
+        new_events = await self.runtime.generate_events(
+            events, processing_log=processing_log
+        )
 
         # If logging is enabled, we log the conversation
         # TODO: add support for logging flag
@@ -586,7 +723,10 @@ class LLMRails:
 
         return new_events
 
-    def generate_events(self, events: List[dict]) -> List[dict]:
+    def generate_events(
+        self,
+        events: List[dict],
+    ) -> List[dict]:
         """Synchronous version of `LLMRails.generate_events_async`."""
 
         if check_sync_call_from_async_loop():
