@@ -1,0 +1,4 @@
+flow main
+    match UtteranceUserActionFinished()
+    send StartUtteranceBotAction(script="Hello") as $event_ref
+    send StartUtteranceBotAction(script=$event_ref.arguments.script)
