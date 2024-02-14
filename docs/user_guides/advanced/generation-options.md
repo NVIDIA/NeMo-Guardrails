@@ -113,3 +113,7 @@ res.log.print_summary()
 ```
 
 **TODO**: add more details about the returned data.
+
+## Limitations
+
+- Only supported for the `generate`/`generate_async` methods (not for `generate_events`/`generate_events_async`).

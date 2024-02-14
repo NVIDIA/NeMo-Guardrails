@@ -596,7 +596,6 @@ class LLMRails:
         self,
         prompt: Optional[str] = None,
         messages: Optional[List[dict]] = None,
-        options: Optional[Union[dict, GenerationOptions]] = None,
     ) -> AsyncIterator[str]:
         """Simplified interface for getting directly the streamed tokens from the LLM."""
         streaming_handler = StreamingHandler()
@@ -638,7 +637,6 @@ class LLMRails:
     async def generate_events_async(
         self,
         events: List[dict],
-        options: Optional[Union[dict, GenerationOptions]] = None,
     ) -> List[dict]:
         """Generate the next events based on the provided history.
 
@@ -682,7 +680,6 @@ class LLMRails:
     def generate_events(
         self,
         events: List[dict],
-        options: Optional[Union[dict, GenerationOptions]] = None,
     ) -> List[dict]:
         """Synchronous version of `LLMRails.generate_events_async`."""
 
@@ -692,7 +689,7 @@ class LLMRails:
                 "You should replace with `await generate_events_async(...)` or use `nest_asyncio.apply()`."
             )
 
-        return asyncio.run(self.generate_events_async(events=events, options=options))
+        return asyncio.run(self.generate_events_async(events=events))
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""
