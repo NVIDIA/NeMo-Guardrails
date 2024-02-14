@@ -611,7 +611,11 @@ class FlowState:
     # Expose all flow variables as attributes of the flow
     # TODO: Hide non public flow variables
     def __getattr__(self, name):
-        if "context" in self.__dict__ and name in self.__dict__["context"]:
+        if (
+            name not in self.__dict__
+            and "context" in self.__dict__
+            and name in self.__dict__["context"]
+        ):
             return self.__dict__["context"][name]
         else:
             return object.__getattribute__(self, "params")[name]
