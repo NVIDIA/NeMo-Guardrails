@@ -31,6 +31,7 @@ from langchain.callbacks.manager import (
 )
 from langchain.llms.base import LLM
 from langchain.llms.huggingface_pipeline import HuggingFacePipeline
+from langchain.schema.output import GenerationChunk
 from langchain_community import llms
 
 from nemoguardrails.rails.llm.config import Model
@@ -116,8 +117,9 @@ class HuggingFacePipelineCompatible(HuggingFacePipeline):
             completion = ""
             async for item in streamer:
                 completion += item
+                chunk = GenerationChunk(text=item)
                 if run_manager:
-                    await run_manager.on_llm_new_token(item)
+                    await run_manager.on_llm_new_token(item, chunk=chunk)
             return completion
 
         llm_result = await self._agenerate(
