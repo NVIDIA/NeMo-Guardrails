@@ -27,7 +27,11 @@ from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
-from nemoguardrails.context import explain_info_var, streaming_handler_var
+from nemoguardrails.context import (
+    explain_info_var,
+    generation_options_var,
+    streaming_handler_var,
+)
 from nemoguardrails.embeddings.index import EmbeddingsIndex
 from nemoguardrails.flows.flows import compute_context
 from nemoguardrails.flows.runtime import Runtime
@@ -450,6 +454,9 @@ class LLMRails:
         # We allow options to be specified both as a dict and as an object.
         if options and isinstance(options, dict):
             options = GenerationOptions(**options)
+
+        # Save the generation options in the current async context.
+        generation_options_var.set(options)
 
         if return_context:
             warnings.warn(

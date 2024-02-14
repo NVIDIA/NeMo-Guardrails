@@ -52,6 +52,20 @@ The returned data will be included in the `output_data` key of the response:
 }
 ```
 
+## Additional LLM Parameters
+
+You can pass additional parameters to the LLM call that is used to generate the final message by using the `llm_params` generation option. For example, to use a lower temperature than the default one:
+
+```python
+rails.generate(messages=messages, options={
+    "llm_params": {
+        "temperature": 0.2
+    }
+})
+```
+
+The supported parameters depend on the underlying LLM engine. NeMo Guardrails passes them "as is".
+
 ## Detailed Logging Information
 
 You can obtain detailed information about what happened under the hood during the generation process by setting the `log` generation option. This option has four different inner-options:
