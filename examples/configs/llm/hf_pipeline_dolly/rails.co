@@ -8,6 +8,11 @@ define user ask capabilities
   "tell me what you can do"
   "tell me about you"
 
+define user ask general question
+  "How is the weather tomorrow?"
+  "Can you tell me which is the best movie this week"
+  "i would like to know the best scifi books of all time."
+
 define flow
   user express greeting
   bot express greeting
