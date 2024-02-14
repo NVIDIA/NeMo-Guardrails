@@ -788,8 +788,7 @@ def test_match_failure_flow_abort():
 
     content = """
     flow a
-      start b
-      match b
+      await b
 
     flow b
       match WaitAction().Finished()
@@ -799,9 +798,9 @@ def test_match_failure_flow_abort():
       send StopFlow(flow_id="b")
 
     flow main
-      start a
+      start a as $ref_a
       start c
-      match FlowFailed(flow_id="a")
+      match $ref_a.Failed()
       await UtteranceBotAction(script="Yes")
     """
 
@@ -870,8 +869,8 @@ def test_abort_flow_propagation_v_b():
 
     content = """
     flow a
-      start b
-      match FlowFailed(flow_id="b")
+      start b as $ref_b
+      match $ref_b.Failed()
 
     flow b
       match UtteranceUserAction().Finished(final_transcript="Start")
@@ -1068,4 +1067,4 @@ def test_action_event_requeuing():
 
 
 if __name__ == "__main__":
-    test_action_event_requeuing()
+    test_child_flow_abort()

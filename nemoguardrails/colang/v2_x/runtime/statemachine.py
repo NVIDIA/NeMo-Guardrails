@@ -1700,7 +1700,7 @@ def _compute_event_comparison_score(
 
         # TODO: Generalize this with mismatch using e.g. the 'not' keyword
         if match_score > 0.0:
-            if (
+            if "flow_start_uid" in ref_event.arguments and (
                 (
                     ref_event.name == InternalEvents.FLOW_FINISHED
                     and event.name == InternalEvents.FLOW_FAILED
