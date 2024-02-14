@@ -140,6 +140,101 @@ res.log.print_summary()
 
 **TODO**: add more details about the returned data.
 
+## Disabling Rails
+
+You can choose which categories of rails you want to apply by using the `rails` generation option. The four supported categories are: `input`, `dialog`, `retrieval` and `output`. By default, all are enabled.
+
+```python
+res = rails.generate(messages=messages)
+```
+
+is equivalent to:
+
+```python
+res = rails.generate(messages=messages, options={
+    "rails": ["input", "dialog", "retrieval", "output"]
+})
+```
+
+### Input Rails Only
+
+If you only want to check a user's input by running the input rails from a guardrails configuration, you must disable all the others:
+
+```python
+res = rails.generate(messages=[{
+    "role": "user",
+    "content": "Some user input."
+}], options={
+    "rails": ["input"]
+})
+```
+
+The response will be the same string if the input was allowed "as is":
+
+```json
+{
+  "role": "assistant",
+  "content": "Some user input."
+}
+```
+
+If some of the rails alter the input, e.g., to mask sensitive information, then the returned value is the altered input.
+
+```json
+{
+  "role": "assistant",
+  "content": "Some altered user input."
+}
+```
+
+If the input was blocked, you will get the predefined repose `bot refuse to respond` (by default "I'm sorry, I can't respond to that").
+
+```json
+{
+  "role": "assistant",
+  "content": "I'm sorry, I can't respond to that."
+}
+```
+
+For more details on what rails was triggered, use the `log.activated_rails` generation option.
+
+### Input and Output Rails Only
+
+If you want to check both the user input and an output that was generated outside of the guardrails configuration, you must disable the dialog rails and the retrieval rails, and provide a bot message as well when making the call:
+
+```python
+res = rails.generate(messages=[{
+    "role": "user",
+    "content": "Some user input."
+}, {
+    "role": "bot",
+    "content": "Some bot output."
+}], options={
+    "rails": ["input", "output"]
+})
+```
+
+The response will be the exact bot message provided, if allowed, an altered version if an output rail decides to change it, e.g., to remove sensitive information, or the predefined message for `bot refuse to respond`, if the message was blocked.
+
+For more details on what rails was triggered, use the `log.activated_rails` generation option.
+
+### Output Rails Only
+
+If you want to apply only the output rails to an LLM output, you must disable the input rails as well and provide an empty input.
+
+```python
+res = rails.generate(messages=[{
+    "role": "user",
+    "content": ""
+}, {
+    "role": "bot",
+    "content": "Some bot output."
+}], options={
+    "rails": ["output"]
+})
+```
+
 ## Limitations
 
 - Only supported for the `generate`/`generate_async` methods (not for `generate_events`/`generate_events_async`).
+- Specifying which individual rails of a particular type to activate is not yet supported.

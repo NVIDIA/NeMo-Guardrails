@@ -5,18 +5,19 @@ define parallel flow process user input
 
   # If we have input rails, we run them, otherwise we just create the user message event
   if $config.rails.input.flows
+    # If we have generation options, we make sure the input rails are enabled.
+    if $generation_options is None or $generation_options.rails.input:
+      # Create a marker event.
+      create event StartInputRails
+      event StartInputRails
 
-    # Create a marker event.
-    create event StartInputRails
-    event StartInputRails
+      # Run all the input rails
+      # This can potentially alter the $user_message
+      do run input rails
 
-    # Run all the input rails
-    # This can potentially alter the $user_message
-    do run input rails
-
-    # Create a marker event.
-    create event InputRailsFinished
-    event InputRailsFinished
+      # Create a marker event.
+      create event InputRailsFinished
+      event InputRailsFinished
 
   create event UserMessage(text=$user_message)
 
@@ -24,7 +25,18 @@ define parallel flow process user input
 define flow generate user intent
   """Generate the user's intent based on the text."""
   event UserMessage(text="...")
-  execute generate_user_intent
+
+  # If the dialog_rails are disabled
+  if $generation_options and $generation_options.rails.dialog == False
+    # If the output rails are also disabled, we just return user message.
+    if $generation_options.rails.output == False
+      create event StartUtteranceBotAction(script=$user_message)
+    else
+      # we take the $bot_message from context.
+      create event BotMessage(text=$bot_message)
+  else
+    # If not, we continue the usual process
+    execute generate_user_intent
 
 
 define subflow run input rails
@@ -73,7 +85,9 @@ define parallel extension flow generate bot message
 
   # If we have any retrieval rails, we run them.
   if $config.rails.retrieval.flows
-    do run retrieval rails
+    # If we have generation options, we make sure the retrieval rails are enabled.
+    if $generation_options is None or $generation_options.rails.retrieval:
+      do run retrieval rails
 
   # $output_rails_enabled = True
   execute generate_bot_message
@@ -92,17 +106,19 @@ define parallel extension flow process bot message
   else
     # If we have any output flows, we run them.
     if $config.rails.output.flows
-      # Create a marker event.
-      create event StartOutputRails
-      event StartOutputRails
+      # If we have generation options, we make sure the output rails are enabled.
+      if $generation_options is None or $generation_options.rails.output:
+        # Create a marker event.
+        create event StartOutputRails
+        event StartOutputRails
 
-      # Run all the input rails
-      # This can potentially alter the $user_message
-      do run output rails
+        # Run all the input rails
+        # This can potentially alter the $user_message
+        do run output rails
 
-      # Create a marker event.
-      create event OutputRailsFinished
-      event OutputRailsFinished
+        # Create a marker event.
+        create event OutputRailsFinished
+        event OutputRailsFinished
 
   create event StartUtteranceBotAction(script=$bot_message)
 

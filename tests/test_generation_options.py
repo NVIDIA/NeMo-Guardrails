@@ -214,3 +214,102 @@ def test_triggered_rails_info_3():
     # print(json.dumps(res.log.dict(), indent=True))
     print(json.dumps(res.dict(), indent=True))
     res.log.print_summary()
+
+
+def test_only_input_output_validation():
+    config = RailsConfig.from_content(
+        colang_content='''
+            define user express greeting
+              "hi"
+
+            define flow
+              user express greeting
+              $user_greeted = True
+              bot express greeting
+
+            define subflow dummy input rail
+              """A dummy input rail which checks if the word "dummy" is included in the text."""
+              if "dummy" in $user_message
+                bot refuse to respond
+                stop
+
+            define subflow dummy output rail
+              """A dummy input rail which checks if the word "dummy" is included in the text."""
+              if "dummy" in $bot_message
+                bot refuse to respond
+                stop
+        ''',
+        yaml_content="""
+            rails:
+              input:
+                flows:
+                  - dummy input rail
+              output:
+                flows:
+                  - dummy output rail
+        """,
+    )
+    chat = TestChat(
+        config,
+        llm_completions=[],
+    )
+
+    # Test only input
+
+    res: GenerationResponse = chat.app.generate(
+        "Hello!",
+        options={
+            "rails": ["input"],
+            "log": {
+                "activated_rails": True,
+            },
+        },
+    )
+
+    assert res.response == "Hello!"
+
+    res = chat.app.generate(
+        "Hello dummy!",
+        options={
+            "rails": ["input"],
+            "log": {
+                "activated_rails": True,
+            },
+        },
+    )
+
+    assert res.response == "I'm sorry, I can't respond to that."
+
+    # Test only output
+
+    res: GenerationResponse = chat.app.generate(
+        messages=[
+            {"role": "user", "content": "hi!"},
+            {"role": "assistant", "content": "Hi there!"},
+        ],
+        options={
+            "rails": ["output"],
+            "log": {
+                "activated_rails": True,
+            },
+        },
+    )
+
+    assert res.response == [{"content": "Hi there!", "role": "assistant"}]
+
+    res = chat.app.generate(
+        messages=[
+            {"role": "user", "content": "hi!"},
+            {"role": "assistant", "content": "Hi dummy!"},
+        ],
+        options={
+            "rails": ["output"],
+            "log": {
+                "activated_rails": True,
+            },
+        },
+    )
+
+    assert res.response == [
+        {"content": "I'm sorry, I can't respond to that.", "role": "assistant"}
+    ]

@@ -453,6 +453,17 @@ class LLMRails:
         System messages are not yet supported."""
         # We allow options to be specified both as a dict and as an object.
         if options and isinstance(options, dict):
+            if "rails" in options and isinstance(options["rails"], list):
+                _rails = {
+                    "input": False,
+                    "dialog": False,
+                    "retrieval": False,
+                    "output": False,
+                }
+                for rail_type in options["rails"]:
+                    _rails[rail_type] = True
+                options["rails"] = _rails
+
             options = GenerationOptions(**options)
 
         # Save the generation options in the current async context.
@@ -488,6 +499,24 @@ class LLMRails:
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
             messages = [{"role": "user", "content": prompt}]
+
+        # If we have generation options, we also add them to the context
+        if options:
+            messages = [
+                {"role": "context", "content": {"generation_options": options.dict()}}
+            ] + messages
+
+        # If the last message is from the assistant, rather than the user, then
+        # we move that to the `$bot_message` variable. This is to enable a more
+        # convenient interface. (only when dialog rails are disabled)
+        if (
+            messages[-1]["role"] == "assistant"
+            and options
+            and options.rails.dialog is False
+        ):
+            # We already have the first message with a context update, so we use that
+            messages[0]["content"]["bot_message"] = messages[-1]["content"]
+            messages = messages[0:-1]
 
         # TODO: Add support to load back history of events, next to history of messages
         #   This is important as without it, the LLM prediction is not as good.
