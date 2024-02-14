@@ -66,6 +66,18 @@ rails.generate(messages=messages, options={
 
 The supported parameters depend on the underlying LLM engine. NeMo Guardrails passes them "as is".
 
+## Additional LLM Output
+
+You can receive the additional output from the LLM generation by using the `llm_output` generation options.
+
+```python
+rails.generate(messages=messages, options={
+    "llm_output": True
+})
+```
+
+**NOTE**: The data that is returned is highly dependent on the underlying implementation of the LangChain connector for the LLM provider. For example, for OpenAI, it only returns `token_usage` and `model_name`.
+
 ## Detailed Logging Information
 
 You can obtain detailed information about what happened under the hood during the generation process by setting the `log` generation option. This option has four different inner-options:

@@ -146,18 +146,23 @@ class GenerationOptions(BaseModel):
         default=None,
         description="Additional parameters that should be used for the LLM call",
     )
+    llm_output: Optional[bool] = Field(
+        default=False,
+        description="Whether the response should also include any custom LLM output.",
+    )
     output_vars: Optional[Union[bool, List[str]]] = Field(
         default=None,
         description="Whether additional context information should be returned. "
         "When True is specified, the whole context is returned. "
         "Otherwise, a list of key names can be specified.",
     )
-    enforce: Optional[bool] = Field(
-        default=True,
-        description="Whether the rails configuration should be enforced. "
-        "When set to False, the raw LLM call is made in parallel with running the input rails "
-        "on the user input. Also, the output rails are applied to the output of the raw",
-    )
+    # TODO: add support for this
+    # enforce: Optional[bool] = Field(
+    #     default=True,
+    #     description="Whether the rails configuration should be enforced. "
+    #     "When set to False, the raw LLM call is made in parallel with running the input rails "
+    #     "on the user input. Also, the output rails are applied to the output of the raw",
+    # )
     log: GenerationLogOptions = Field(
         default_factory=GenerationLogOptions,
         description="Options about what to include in the log. By default, nothing is included. ",
@@ -372,6 +377,9 @@ class GenerationResponse(BaseModel):
     # TODO: add typing for the list of messages
     response: Union[str, List[dict]] = Field(
         description="The list of the generated messages."
+    )
+    llm_output: Optional[dict] = Field(
+        default=None, description="Contains any additional output coming from the LLM."
     )
     output_data: Optional[dict] = Field(
         default=None,

@@ -171,7 +171,7 @@ def compute_generation_log(processing_log: List[dict]) -> GenerationLog:
                 output_rails_finished_at = event["timestamp"]
 
         elif event["type"] == "llm_call_info":
-            executed_action.llm_calls.append(LLMCallInfo(**event["data"]))
+            executed_action.llm_calls.append(event["data"])
 
     # If at the end of the processing we still have an active rail, it is because
     # we have hit a stop. In this case, we take the last timestamp as the timestamp for

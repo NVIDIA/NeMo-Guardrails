@@ -205,10 +205,12 @@ def test_triggered_rails_info_3():
                 "internal_events": True,
                 "colang_history": True,
             },
+            "llm_output": True,
             "output_vars": True,
         },
     )
 
     print("############################")
-    print(json.dumps(res.log.dict(), indent=True))
+    # print(json.dumps(res.log.dict(), indent=True))
+    print(json.dumps(res.dict(), indent=True))
     res.log.print_summary()

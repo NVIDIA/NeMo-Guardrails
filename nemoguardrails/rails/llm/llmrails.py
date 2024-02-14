@@ -560,9 +560,10 @@ class LLMRails:
                 if return_context:
                     return new_message, context
 
+            _log = compute_generation_log(processing_log)
+
             # Include information about activated rails and LLM calls if requested
             if options.log.activated_rails or options.log.llm_calls:
-                _log = compute_generation_log(processing_log)
                 res.log = GenerationLog()
 
                 # We always include the stats
@@ -590,6 +591,15 @@ class LLMRails:
                     res.log = GenerationLog()
 
                 res.log.colang_history = get_colang_history(events)
+
+            # Include the raw llm output if requested
+            if options.llm_output:
+                # Currently, we include the output from the generation LLM calls.
+                for activated_rail in _log.activated_rails:
+                    if activated_rail.type == "generation":
+                        for executed_action in activated_rail.executed_actions:
+                            for llm_call in executed_action.llm_calls:
+                                res.llm_output = llm_call.raw_response
 
             return res
         else:
