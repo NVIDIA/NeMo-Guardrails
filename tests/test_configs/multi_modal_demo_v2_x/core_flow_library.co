@@ -384,7 +384,7 @@ flow trigger user intent for unhandled user utterance
     $transcript = $event.arguments.final_transcript
     log "trigger user intent for unhandled user utterance: {{$transcript}}"
     $action = 'user said "{{$transcript}}"'
-    $intent = await derive user intent from user action $action 10
+    $intent = await derive user intent from user action $action 20
 
   # We need to log the user action
   send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=$intent)
