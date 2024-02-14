@@ -84,6 +84,23 @@ Sample response:
 }]
 ```
 
+The completion endpoint also supports combining multiple configurations in a single request. To do this, you can use the `config_ids` field instead of `config_id`:
+
+```
+POST /v1/chat/completions
+```
+```json
+{
+    "config_ids": ["config_1", "config_2"],
+    "messages": [{
+      "role":"user",
+      "content":"Hello! What can you do for me?"
+    }]
+}
+```
+
+The configurations will be combined in the order they are specified in the `config_ids` list. If there are any conflicts between the configurations, the last configuration in the list will take precedence. The rails will be combined in the order they are specified in the `config_ids` list. The model type and engine across the configurations must be the same.
+
 ### Threads
 
 The Guardrails Server has basic support for storing the conversation threads. This is useful when you can only send the latest user message(s) for a conversation rather than the entire history (e.g., from a third-party integration hook).
