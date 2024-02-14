@@ -12,4 +12,4 @@ rails:
 
   input:
     flows:
-      - jailbreak detect heuristics
+      - jailbreak detection heuristics
