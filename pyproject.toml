@@ -95,12 +95,15 @@ changelog = "https://github.com/NVIDIA/NeMo-Guardrails/blob/develop/CHANGELOG.md
 nemoguardrails = "nemoguardrails.__main__:app"
 
 [tool.setuptools]
-packages = ["nemoguardrails"]
 license-files = [
   "LICENSE.md",
   "LICENSE-Apache-2.0.txt",
   "LICENCES-3rd-party.txt"
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nemoguardrails*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "nemoguardrails.__version__"}
@@ -111,6 +114,7 @@ nemoguardrails = [
   "**/*.co",
   "**/*.txt",
   "**/*.json",
+  "**/*.lark",
   "../examples/**/*",
   "../chat-ui/**/*",
   "eval/data/**/*",
