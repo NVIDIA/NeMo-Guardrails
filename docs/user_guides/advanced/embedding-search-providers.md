@@ -40,6 +40,14 @@ knowledge_base:
       embedding_model: text-embedding-ada-002
 ```
 
+## Default Embedding Provider
+
+NeMo Guardrails provides a basic implementation of the search provider within its [embeddings folder](../../nemoguardrails/embeddings/basic.py). This implementation is designed to support asynchronous execution of the embedding computation process, thereby enhancing the efficiency of the search functionality.
+
+### Batch Implementation
+
+The default embedding provider includes a batch processing feature designed to optimize the embedding generation process. This feature is designed to initiate the embedding generation process after a predefined latency of 100 milliseconds.
+
 ## Custom Embedding Search Providers
 
 You can implement your own custom embedding search provider by subclassing `EmbeddingsIndex`. For quick reference, the complete interface is included below:
