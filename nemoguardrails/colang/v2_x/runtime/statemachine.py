@@ -1544,7 +1544,7 @@ def _is_done_flow(flow_state: FlowState) -> bool:
     )
 
 
-def _generate_umim_event(state: State, event: Event) -> None:
+def _generate_umim_event(state: State, event: Event) -> Dict[str, Any]:
     umim_event = create_umim_event(event, event.arguments)
     state.outgoing_events.append(umim_event)
     log.info("[bold violet]<- Action[/]: %s", event)
@@ -1552,6 +1552,8 @@ def _generate_umim_event(state: State, event: Event) -> None:
     # Update the status of relevant actions by event
     if isinstance(event, ActionEvent):
         _update_action_status_by_event(state, event)
+
+    return umim_event
 
 
 def _push_internal_event(state: State, event: Event) -> None:
@@ -2067,7 +2069,14 @@ def _generate_action_event_from_actionable_element(
 
     if isinstance(element, SpecOp) and element.op == "send":
         event = get_event_from_element(state, flow_state, element)
-        _generate_umim_event(state, event)
+        umim_event = _generate_umim_event(state, event)
+        if isinstance(event, ActionEvent):
+            event.action_uid = umim_event["action_uid"]
+            assert isinstance(element.spec, Spec)
+            # Assign action event to optional reference
+            if element.spec.ref and isinstance(element.spec.ref, dict):
+                ref_name = element.spec.ref["elements"][0]["elements"][0].lstrip("$")
+                flow_state.context.update({ref_name: event})
 
     # Extract the comment, if any
     # state.next_steps_comment = element.get("_source_mapping", {}).get("comment")
