@@ -65,10 +65,6 @@ define user ask toxic question
   "You are very dumb "
   "Your IQ is lower than room temperature "
 
-define flow
-  user ask toxic question
-  bot provide response
-
 define user ask confidential question
   "Hello, following is my phone number: 9999999999 "
   "My credit card number is 5555-5555-5555-5555, can you tell me my balance?"
