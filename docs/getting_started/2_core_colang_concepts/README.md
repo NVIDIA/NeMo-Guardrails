@@ -1,36 +1,36 @@
 # Core Colang Concepts
 
-This guide builds on the previous [Hello World guide](../1_hello_world/README.md) and introduces the core Colang concepts you should understand to get started with NeMo Guardrails.
+This guide builds on the [Hello World guide](../1_hello_world/README.md) and introduces the core Colang concepts you should understand to get started with NeMo Guardrails.
 
 ## Prerequisites
 
-Set up an OpenAI API key, if not already set.
+1. Set up an OpenAI API key, if not already set:
 
-```bash
-export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
-```
+   ```bash
+   export OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+   ```
 
-If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+2. To run inside a notebook, patch the AsyncIO loop:
 
-```python
-import nest_asyncio
+   ```python
+   import nest_asyncio
 
-nest_asyncio.apply()
-```
+   nest_asyncio.apply()
+   ```
 
 ## What is Colang?
 
-Colang is a modeling language for conversational applications. Using Colang you can design how the conversation between a user and a **bot** should happen.
+Colang is a modeling language for conversational applications. Use Colang to design how the conversation between a user and a bot should happen.
 
-> **NOTE**: throughout this guide, the term *bot* is used to mean the entire LLM-based Conversational Application.
+> **NOTE**: throughout this guide, bot means the entire LLM-based Conversational Application.
 
 ## Core Concepts
 
-In Colang, the two core concepts are: **messages** and **flows**.
+In Colang, the two core concepts are *messages* and *flows*.
 
 ### Messages
 
-In Colang, a conversation is modeled as an exchange of messages between a user and a bot. An exchanged **message** has an **utterance**, e.g. *"What can you do?"*, and a **canonical form**, e.g. `ask about capabilities`. A canonical form is a paraphrase of the utterance to a standard, usually shorter, form.
+In Colang, a conversation is modeled as an exchange of messages between a user and a bot. An exchanged message has an *utterance*, such as *"What can you do?"*, and a *canonical form*, such as `ask about capabilities`. A canonical form is a paraphrase of the utterance to a standard, usually shorter, form.
 
 Using Colang, you can define the user messages that are important for your LLM-based application. For example, in the "Hello World" example, the `express greeting` user message is defined as:
 
@@ -43,7 +43,7 @@ define user express greeting
 
 The `express greeting` represents the canonical form and "Hello", "Hi" and "Wassup?" represent example utterances. The role of the example utterances is to teach the bot the meaning of a defined canonical form.
 
-You can also define bot messages, i.e. how the bot should talk to the user. For example, in the "Hello World" example, the `express greeting` and `ask how are you` bot messages are defined as:
+You can also define bot messages, such as how the bot should converse with the user. For example, in the "Hello World" example, the `express greeting` and `ask how are you` bot messages are defined as:
 
 ```
 define bot express greeting
@@ -53,15 +53,13 @@ define bot ask how are you
   "How are you doing?"
 ```
 
-If more than one utterance are given for a canonical form, a random one will be used whenever the message is used.
+If more than one utterance is given for a canonical form, the bot uses a random utterance whenever the message is used.
 
-**Are the *user message canonical forms* the same thing as classical intents?**
-
-Yes, you can think of them as intents. However, when using them, the bot is not constrained to use only the pre-defined list.
+If you are wondering whether *user message canonical forms* are the same as classical intents, the answer is yes. You can think of them as intents. However, when using them, the bot is not constrained to use only the pre-defined list.
 
 ### Flows
 
-In Colang, **flows** represent patterns of interaction between the user and the bot. In their simplest form, they are sequences of user and bot messages. In the "Hello World" example, the `greeting` flow is defined as:
+In Colang, *flows* represent patterns of interaction between the user and the bot. In their simplest form, they are sequences of user and bot messages. In the "Hello World" example, the `greeting` flow is defined as:
 
 ```colang
 define flow greeting
@@ -70,21 +68,21 @@ define flow greeting
   bot ask how are you
 ```
 
-Intuitively, this flow instructs the bot to respond with a greeting and ask how the user is feeling every time the user greets the bot.
+This flow instructs the bot to respond with a greeting and ask how the user is feeling every time the user greets the bot.
 
 ## Guardrails
 
-Messages and flows provide the core building blocks for defining **guardrails** (or "rails" for short). The `greeting` flow above is in fact a **rail** that guides the LLM how to respond to a greeting.
+Messages and flows provide the core building blocks for defining guardrails,  or rails for short. The previous `greeting` flow is in fact a rail that guides the LLM how to respond to a greeting.
 
 ## How does it work?
 
-Before moving further, let's take a closer look at what happens under the hood. Some of the questions that we are going to answer are:
+This section answers the following questions:
 
 - How are the user and bot message definitions used?
-- How exactly is the LLM prompted and how many calls are made?
+- How is the LLM prompted and how many calls are made?
 - Can I use bot messages without example utterances?
 
-Let's run again the greeting example.
+Let's use the following greeting as an example.
 
 ```python
 from nemoguardrails import RailsConfig, LLMRails
@@ -104,18 +102,18 @@ Hello World!
 How are you doing?
 ```
 
-### The `explain` feature
+### The `ExplainInfo` class
 
-To get more visibility on what happens under the hood, we will make use of the *explain* feature that the `LLMRails` class provides.
+To get information about the LLM calls, call the **explain** function of the `LLMRails` class.
 
 ```python
-# We fetch the latest `ExplainInfo` object using the `explain` method.
+# Fetch the `ExplainInfo` object.
 info = rails.explain()
 ```
 
 #### Colang History
 
-Firstly, we can check the history of the conversation in Colang format. This shows us the exact messages and their canonical forms:
+Use the `colang_history` function to retrieve the history of the conversation in Colang format. This shows us the exact messages and their canonical forms:
 
 ```python
 print(info.colang_history)
@@ -132,7 +130,7 @@ bot ask how are you
 
 #### LLM Calls
 
-Secondly, we can check the actual LLM calls that have been made:
+Use the `print_llm_calls_summary` function to list a summary of the LLM calls that have been made:
 
 ```python
 info.print_llm_calls_summary()
@@ -144,19 +142,19 @@ Summary: 1 LLM call(s) took 0.48 seconds and used 524 tokens.
 1. Task `generate_user_intent` took 0.48 seconds and used 524 tokens.
 ```
 
-The `info` object also contains an `info.llm_calls` attribute with detailed information about each LLM call. We will look at this shortly.
+The `info` object also contains an `info.llm_calls` attribute with detailed information about each LLM call. That attribute is described in a subsequent guide.
 
 ### The process
 
 Once an input message is received from the user, a multi-step process begins.
 
-### Step 1: compute user message canonical form
+### Step 1: Compute the canonical form of the user message
 
-After an utterance is received from the user (e.g., "Hello!" in the example above), the guardrails instance will compute the corresponding canonical form. By default, the LLM itself is used to perform this task.
+After an utterance, such as  "Hello!" in the previous example, is received from the user, the guardrails instance uses the LLM to compute the corresponding canonical form.
 
-> **NOTE**: NeMo Guardrails uses a task-oriented interaction model with the LLM. Every time the LLM is called, a specific task prompt template is used, e.g. `generate_user_intent`, `generate_next_step`, `generate_bot_message`. The default template prompts can be found [here](../../../nemoguardrails/llm/prompts/general.yml).
+> **NOTE**: NeMo Guardrails uses a task-oriented interaction model with the LLM. Every time the LLM is called, it uses a specific task prompt template, such as `generate_user_intent`, `generate_next_step`, `generate_bot_message`. See the [default template prompts](../../../nemoguardrails/llm/prompts/general.yml) for details.
 
-In the case of the "Hello!" message, a single LLM call was made using the `generate_user_intent` task prompt template. Let's see how the prompt looks like:
+In the case of the "Hello!" message, a single LLM call is made using the `generate_user_intent` task prompt template. The prompt looks like the following:
 
 ```python
 print(info.llm_calls[0].prompt)
@@ -164,7 +162,7 @@ print(info.llm_calls[0].prompt)
 
 ```
 """
-Below is a conversation between a helpful AI assistant and a user. The bot is designed to generate human-like text based on the input that it receives. The bot is talkative and provides lots of specific details. If the bot does not know the answer to a question, it truthfully says it does not know.
+The following conversation is between an AI assistant (bot) and a user. The bot is designed to generate human-like text based on the input that it receives. The bot is talkative and provides lots of specific details. If the bot does not know the answer to a question, it says it does not know.
 """
 
 # This is how a conversation between a user and the bot can go:
@@ -214,11 +212,11 @@ user "Hello!"
 
 The prompt has four logical sections:
 
-1. A set of general instructions. These can [be configured](../../user_guides/configuration-guide.md#general-instructions) using the `instructions` key in `config.yml`.
+1. A set of general instructions. These can be [configured](../../user_guides/configuration-guide.md#general-instructions) using the `instructions` key in *config.yml*.
 
-2. A sample conversation, which can also [be configured](../../user_guides/configuration-guide.md#sample-conversation) using the `sample_conversation` key in `config.yml`.
+2. A sample conversation, which can also be [configured](../../user_guides/configuration-guide.md#sample-conversation) using the `sample_conversation` key in *config.yml*.
 
-3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details check out the [ABC Bot](../../../examples/bots/abc).
+3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details see [ABC Bot](../../../examples/bots/abc).
 
 4. The current conversation preceded by the first two turns from the sample conversation.
 
@@ -232,14 +230,15 @@ print(info.llm_calls[0].completion)
   express greeting
 ```
 
-As we can see, the LLM correctly predicted the `express greeting` canonical form. It even went further to predict what the bot should do, i.e. `bot express greeting`, and the utterance that should be used. However, for the `generate_user_intent` task, only the first predicted line is used. If you want the LLM to predict everything in a single call, you can enable the [single LLM call option](#) in `config.yml` (by setting the `rails.dialog.single_call` key to `True`).
+As we can see, the LLM correctly predicted the `express greeting` canonical form. It even went further to predict what the bot should do, which is `bot express greeting`, and the utterance that should be used. However, for the `generate_user_intent` task, only the first predicted line is used. If you want the LLM to predict everything in a single call, you can enable the [single LLM call option](#) in *config.yml* by setting the `rails.dialog.single_call` key to **True**.
 
-### Step 2: decide next step
+### Step 2: Determine the next step
 
-After the canonical form for the user message has been determined, the guardrails instance needs to decide what should happen next. There are two cases:
+After the canonical form for the user message has been computed, the guardrails instance needs to decide what should happen next. There are two cases:
 
-1. If there is a flow that matches the canonical form, then it will be used. The flow can decide that the bot should respond with a certain message, or execute an action.
-2. If there is no flow, the LLM is prompted for the next step, i.e. the `generate_next_step` task.
+1. If there is a flow that matches the canonical form, then it is used. The flow can decide that the bot should respond with a certain message, or execute an action.
+
+2. If there is no flow, the LLM is prompted for the next step using the `generate_next_step` task.
 
 In our example, there was a match from the `greeting` flow and the next steps are:
 
@@ -248,24 +247,25 @@ bot express greeting
 bot ask how are you
 ```
 
-### Step 3: generate bot message
+### Step 3: Generate the bot message
 
-Once the canonical form for what the bot should say has been decided, the actual message needs to be generated. And here we have two cases as well:
+Once the canonical form for what the bot should say has been decided, the message must be generated. There are two cases:
 
-1. If a predefined message is found, the exact utterance is used. If more than one example utterances are associated with the same canonical form, a random one will be used.
-2. If a predefined message does not exist, the LLM will be prompted to generate the message, i.e. the `generate_bot_message` task.
+1. If a predefined message is found, the exact utterance is used. If more than one example utterances are associated with the same canonical form, a random one is used.
 
-In our "Hello World" example, the predefined messages "Hello world!" and "How are you doing?" have been used.
+2. If a predefined message does not exist, the LLM is prompted to generate the message using the `generate_bot_message` task.
 
-## The followup question
+In our "Hello World" example, the predefined messages "Hello world!" and "How are you doing?" are used.
 
-In the above example, we've seen a case where the LLM was prompted only once. The figure below provides a summary of the outlined sequence of steps:
+## The follow-up question
+
+In the previous example, the LLM is prompted once. The following figure provides a summary of the outlined sequence of steps:
 
 <div align="center">
 <img src="../../_assets/puml/core_colang_concepts_fig_1.png" width="486">
 </div>
 
-Now, let's look at the same process described above, on the followup question "What is the capital of France?".
+Let's examine the same process for the follow-up question "What is the capital of France?".
 
 ```python
 response = rails.generate(messages=[{
@@ -307,7 +307,7 @@ Summary: 3 LLM call(s) took 1.79 seconds and used 1374 tokens.
 3. Task `generate_bot_message` took 0.53 seconds and used 612 tokens.
 ```
 
-Based on the above we can see that the `ask general question` canonical form is predicted for the user utterance "What is the capital of France?". Because there is no flow that matches it, the LLM is asked to predict the next step, which in this case is `bot response for general question`. And because there is no predefined response, the LLM is asked a third time to predict the final message.
+Based on these steps, we can see that the `ask general question` canonical form is predicted for the user utterance "What is the capital of France?". Since there is no flow that matches it, the LLM is asked to predict the next step, which in this case is `bot response for general question`. Also, since there is no predefined response, the LLM is asked a third time to predict the final message.
 
 <div align="center">
 <img src="../../_assets/puml/core_colang_concepts_fig_2.png" width="686">
@@ -315,8 +315,8 @@ Based on the above we can see that the `ask general question` canonical form is 
 
 ## Wrapping up
 
-This guide has provided a detailed overview of two core Colang concepts: *messages* and *flows*. We've also looked at how the message and flow definitions are used under the hood and how the LLM is prompted. For more details, check out the reference documentation for the [Python API](../../user_guides/python-api.md) and the [Colang Language Syntax](../../user_guides/colang-language-syntax-guide.md).
+This guide provides a detailed overview of two core Colang concepts: *messages* and *flows*. It also looked at how the message and flow definitions are used under the hood and how the LLM is prompted. For more details, see the reference documentation for the [Python API](../../user_guides/python-api.md) and the [Colang Language Syntax](../../user_guides/colang-language-syntax-guide.md).
 
 ## Next
 
-In the [next guide](../3_demo_use_case) we pick a demo use case that we will use to implement different types of rails (input, output, dialog, etc.).
+The next guide, [Demo Use Case](../3_demo_use_case), guides you through selecting a demo use case to implement different types of rails, such as for input, output, or dialog.
