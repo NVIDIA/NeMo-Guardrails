@@ -16,6 +16,18 @@ define subflow output autoguard factcheck
         bot refuse to respond autoguard factcheck
         stop
 
+define subflow input autoguard toxicity
+    $result = execute autoguard_toxicity_input_api
+    if $result[0] == True
+        bot refuse to respond autoguard toxicity
+        stop
+
+define subflow output autoguard toxicity
+    $result = execute autoguard_toxicity_output_api
+    if $result[0] == True
+        bot refuse to respond autoguard toxicity
+        stop
+
 define subflow input autoguard pii
     $pii_result = execute autoguard_pii_api
 
@@ -28,3 +40,6 @@ define bot refuse to respond autoguard
 
 define bot refuse to respond autoguard factcheck
     "Factcheck violation has been detected by AutoGuard."
+
+define bot refuse to respond autoguard toxicity
+    "$result[1] has been detected by AutoGuard; Sorry, can't process. Toxic phrases: $result[2]"
