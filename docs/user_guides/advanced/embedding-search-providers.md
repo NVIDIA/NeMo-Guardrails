@@ -60,8 +60,14 @@ knowledge_base:
       store_config: {}
 ```
 
+The default implementation is also designed to support asynchronous execution of the embedding computation process, thereby enhancing the efficiency of the search functionality.
+
 The `cache` configuration is optional. If enabled, it uses the specified `key_generator` and `store` to cache the embeddings. The `store_config` can be used to provide additional configuration options required for the store.
 The default `cache` configuration uses the `md5` key generator and the `filesystem` store. The cache is disabled by default.
+
+### Batch Implementation
+
+The default embedding provider includes a batch processing feature designed to optimize the embedding generation process. This feature is designed to initiate the embedding generation process after a predefined latency of 10 milliseconds.
 
 ## Custom Embedding Search Providers
 
