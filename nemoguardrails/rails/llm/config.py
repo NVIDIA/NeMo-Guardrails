@@ -559,7 +559,9 @@ class RailsConfig(BaseModel):
             # Iterate all .yml files and join them
             raw_config = {}
 
-            for root, dirs, files in os.walk(config_path):
+            for root, dirs, files in os.walk(config_path, followlinks=True):
+                # followlinks means symlinks will be walked through instead of ignored
+
                 for file in files:
                     # This is the raw configuration that will be loaded from the file.
                     _raw_config = {}
