@@ -292,6 +292,20 @@ define flow
   bot provide report answer
 ```
 
+#### Usage in combination with a custom RAG
+
+Fact-checking also works in a custom RAG implementation based on a custom action:
+
+```colang
+define flow answer report question
+  user ...
+  $answer = execute rag()
+  $check_facts = True
+  bot $answer
+```
+
+Please refer to the [Custom RAG Output Rails example](../../examples/configs/rag/custom_rag_output_rails/README.md).
+
 ### Hallucination Detection
 
 The goal of the hallucination detection output rail is to protect against false claims (also called "hallucinations") in the generated bot message. While similar to the fact-checking rail, hallucination detection can be used when there are no supporting documents (i.e., `$relevant_chunks`).
@@ -364,6 +378,20 @@ To override the default message, include the following in one of your Colang fil
 define bot inform answer prone to hallucination
   "The previous answer is prone to hallucination and may not be accurate."
 ```
+
+##### Usage in combination with a custom RAG
+
+Hallucination-checking also works in a custom RAG implementation based on a custom action:
+
+```colang
+define flow answer report question
+  user ...
+  $answer = execute rag()
+  $check_hallucination = True
+  bot $answer
+```
+
+Please refer to the [Custom RAG Output Rails example](../../examples/configs/rag/custom_rag_output_rails/README.md).
 
 #### Implementation Details
 
