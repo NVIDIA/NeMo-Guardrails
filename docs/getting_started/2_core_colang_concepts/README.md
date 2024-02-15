@@ -4,19 +4,27 @@ This guide builds on the [Hello World guide](../1_hello_world/README.md) and int
 
 ## Prerequisites
 
-1. Set up an OpenAI API key, if not already set:
+This "Hello World" guardrails configuration uses the OpenAI `gpt-3.5-turbo-instruct` model.
 
-   ```bash
-   export OPENAI_API_KEY=YOUR_OPENAI_API_KEY
-   ```
+1. Install the `openai` package:
 
-2. To run inside a notebook, patch the AsyncIO loop:
+```bash
+pip install openai
+```
 
-   ```python
-   import nest_asyncio
+2. Set the `OPENAI_API_KEY` environment variable:
 
-   nest_asyncio.apply()
-   ```
+```bash
+export OPENAI_API_KEY=$OPENAI_API_KEY  # Replace with your own key
+```
+
+3. If you're running this inside a notebook, patch the AsyncIO loop.
+
+```python
+import nest_asyncio
+
+nest_asyncio.apply()
+```
 
 ## What is Colang?
 
@@ -72,7 +80,7 @@ This flow instructs the bot to respond with a greeting and ask how the user is f
 
 ## Guardrails
 
-Messages and flows provide the core building blocks for defining guardrails,  or rails for short. The previous `greeting` flow is in fact a rail that guides the LLM how to respond to a greeting.
+Messages and flows provide the core building blocks for defining guardrails, or rails for short. The previous `greeting` flow is in fact a rail that guides the LLM how to respond to a greeting.
 
 ## How does it work?
 
@@ -162,7 +170,7 @@ print(info.llm_calls[0].prompt)
 
 ```
 """
-The following conversation is between an AI assistant (bot) and a user. The bot is designed to generate human-like text based on the input that it receives. The bot is talkative and provides lots of specific details. If the bot does not know the answer to a question, it says it does not know.
+Below is a conversation between a helpful AI assistant and a user. The bot is designed to generate human-like text based on the input that it receives. The bot is talkative and provides lots of specific details. If the bot does not know the answer to a question, it truthfully says it does not know.
 """
 
 # This is how a conversation between a user and the bot can go:

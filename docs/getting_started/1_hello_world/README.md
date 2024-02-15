@@ -8,23 +8,23 @@ This "Hello World" guardrails configuration uses the OpenAI `gpt-3.5-turbo-instr
 
 1. Install the `openai` package:
 
-   ```bash
-   pip install openai==0.28.1
-   ```
+```bash
+pip install openai
+```
 
 2. Set the `OPENAI_API_KEY` environment variable:
 
-   ```bash
-   export OPENAI_API_KEY=YOUR_OPENAI_API_KEY
-   ```
+```bash
+export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+```
 
-3. If you're running this inside a notebook, patch the AsyncIO loop:
+3. If you're running this inside a notebook, patch the AsyncIO loop.
 
-   ```python
-   import nest_asyncio
+```python
+import nest_asyncio
 
-   nest_asyncio.apply()
-   ```
+nest_asyncio.apply()
+```
 
 ## Step 1: create a new guardrails configuration
 
@@ -39,25 +39,25 @@ Every guardrails configuration must be stored in a folder. The standard folder s
 │   ├── rails.co
 │   ├── ...
 ```
+
 See the [Configuration Guide](../../user_guides/configuration-guide.md) for information about the contents of these files.
 
 1. Create a folder, such as *config*, for your configuration:
 
-   ```bash
-   mkdir config
-   cd config
-   ```
+```bash
+mkdir config
+```
 
 2. Create a *config.yml* file with the following content:
 
-   ```yaml
-   models:
-    - type: main
-      engine: openai
-      model: gpt-3.5-turbo-instruct
-   ```
+```yaml
+models:
+ - type: main
+   engine: openai
+   model: gpt-3.5-turbo-instruct
+```
 
-   The `models` key in the *config.yml* file configures the LLM model. For a complete list of supported LLM models, see [Supported LLM Models](../../user_guides/configuration-guide.md#supported-llm-models).
+The `models` key in the *config.yml* file configures the LLM model. For a complete list of supported LLM models, see [Supported LLM Models](../../user_guides/configuration-guide.md#supported-llm-models).
 
 ## Step 2: load the guardrails configuration
 
@@ -97,49 +97,49 @@ To control the greeting response, define the user and bot messages, and the flow
 
 1. Define the `greeting` user message by creating a *config/rails.co* file with the following content:
 
-   ```colang
-   define user express greeting
-     "Hello"
-     "Hi"
-     "Wassup?"
-   ```
+```colang
+define user express greeting
+  "Hello"
+  "Hi"
+  "Wassup?"
+```
 
 2. Add a greeting flow that instructs the bot to respond back with "Hello World!" and ask how they are doing by adding the following content to the *rails.co* file:
 
-   ```python
-   define flow greeting
-     user express greeting
-     bot express greeting
-     bot ask how are you
-   ```
+```python
+define flow greeting
+  user express greeting
+  bot express greeting
+  bot ask how are you
+```
 
 3. Define the messages for the response by adding the following content to the *rails.co* file:
 
-   ```python
-   define bot express greeting
-     "Hello World!"
+```python
+define bot express greeting
+  "Hello World!"
 
-   define bot ask how are you
-     "How are you doing?"
-   ```
+define bot ask how are you
+  "How are you doing?"
+```
 
 4. Reload the config and test it:
 
-   ```python
-   config = RailsConfig.from_path("./config")
-   rails = LLMRails(config)
+```python
+config = RailsConfig.from_path("./config")
+rails = LLMRails(config)
 
-   response = rails.generate(messages=[{
-       "role": "user",
-       "content": "Hello!"
-   }])
-   print(response["content"])
-   ```
+response = rails.generate(messages=[{
+    "role": "user",
+    "content": "Hello!"
+}])
+print(response["content"])
+```
 
-   ```
-   Hello World!
-   How are you doing?
-   ```
+```
+Hello World!
+How are you doing?
+```
 
 **Congratulations!** You've just created you first guardrails configuration!
 
@@ -172,7 +172,6 @@ $ nemoguardrails chat
 Without any additional parameters, the CLI chat loads the configuration from the *config.yml* file in the *config* folder in the current directory.
 
 ### Sample session
-
 ```
 $ nemoguardrails chat
 Starting the chat (Press Ctrl+C to quit) ...

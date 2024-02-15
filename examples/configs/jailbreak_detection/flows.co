@@ -45,4 +45,3 @@ define user ask general question
 define flow
   user ask general question
   bot provide response
-

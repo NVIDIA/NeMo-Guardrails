@@ -27,7 +27,7 @@ Most systems already have installed a C++ runtime. If the **annoy** installation
 
 Install the [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/). This installs Microsoft Visual C++ (version 14.0 or greater is required by the latest version of **annoy**).
 
-## Setting up a virtual environment 
+## Setting up a virtual environment
 
 To experiment with NeMo Guardrails from scratch, use a fresh virtual environment. Otherwise, you can skip to the following section.
 
@@ -89,7 +89,7 @@ NeMo Guardrails is under active development and the main branch always contains 
 ## Optional dependencies
 
 To use OpenAI, install the **openai** package with the latest version supported by Nemo Guardrails as shown below.
-Make sure the `OPENAI_API_KEY` environment variable is set, 
+Make sure the `OPENAI_API_KEY` environment variable is set,
 as shown in the following example, where *YOUR_KEY* is your OpenAI key.
 
  ```bash
@@ -97,7 +97,7 @@ as shown in the following example, where *YOUR_KEY* is your OpenAI key.
  > export OPENAI_API_KEY=YOUR_KEY
  ```
 
-Some NeMo Guardrails LLMs and features have specific installation requirements, including a more complex set of steps. For example, [AlignScore](../user_guides/advanced/align_score_deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md) requires two additional packages. 
+Some NeMo Guardrails LLMs and features have specific installation requirements, including a more complex set of steps. For example, [AlignScore](../user_guides/advanced/align_score_deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md) requires two additional packages.
 For each feature or LLM example, check the readme file associated with it.
 
 ## Extra dependencies
