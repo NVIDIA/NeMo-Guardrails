@@ -102,7 +102,6 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
             embedding_model=self.embedding_model, embedding_engine=self.embedding_engine
         )
 
-
     @cache_embeddings
     async def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Compute embeddings for a list of texts.
@@ -344,10 +343,6 @@ class OpenAIEmbeddingModel(EmbeddingModel):
 
         """
         import openai
-
-        print("performing embeddings on :", len(documents))
-        if len(documents) == 1:
-            print(documents)
 
         # Make embedding request to OpenAI API
         res = openai.Embedding.create(input=documents, engine=self.model)
