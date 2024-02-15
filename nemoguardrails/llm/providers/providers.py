@@ -68,7 +68,7 @@ class HuggingFacePipelineCompatible(HuggingFacePipeline):
                 "`generate` instead."
             )
 
-        # Streaming for NeMo Guardrails is not supported in async calls.
+        # Streaming for NeMo Guardrails is not supported in sync calls.
         if self.model_kwargs.get("streaming"):
             raise Exception(
                 "Streaming mode not supported for HuggingFacePipeline in NeMo Guardrails!"
@@ -102,24 +102,35 @@ class HuggingFacePipelineCompatible(HuggingFacePipeline):
         # Handle streaming, if the flag is set
         if self.model_kwargs.get("streaming"):
             # Retrieve the streamer object, needs to be set in model_kwargs
-            streamer = self.model_kwargs["streamer"]
+            streamer = self.model_kwargs.get("streamer")
             if not streamer:
                 raise Exception(
                     "Cannot stream, please add HuggingFace streamer object to model_kwargs!"
                 )
 
-            generation_kwargs = dict(
-                prompts=[prompt], stop=stop, run_manager=run_manager, **kwargs
-            )
             loop = asyncio.get_running_loop()
+
+            # Pass the asyncio loop to the stream so that it can send back
+            # the chunks in the queue.
+            streamer.loop = loop
+
+            # Launch the generation in a separate task.
+            generation_kwargs = dict(
+                prompts=[prompt],
+                stop=stop,
+                run_manager=run_manager,
+                **kwargs,
+            )
             loop.create_task(self._agenerate(**generation_kwargs))
 
+            # And start waiting for the chunks to come in.
             completion = ""
             async for item in streamer:
                 completion += item
                 chunk = GenerationChunk(text=item)
                 if run_manager:
                     await run_manager.on_llm_new_token(item, chunk=chunk)
+
             return completion
 
         llm_result = await self._agenerate(

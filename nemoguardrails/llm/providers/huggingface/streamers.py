@@ -32,12 +32,15 @@ class AsyncTextIteratorStreamer(TextStreamer):
         super().__init__(tokenizer, skip_prompt, **decode_kwargs)
         self.text_queue = asyncio.Queue()
         self.stop_signal = None
+        self.loop = None
 
     def on_finalized_text(self, text: str, stream_end: bool = False):
         """Put the new text in the queue. If the stream is ending, also put a stop signal in the queue."""
-        self.text_queue.put_nowait(text)
+        if len(text) > 0:
+            asyncio.run_coroutine_threadsafe(self.text_queue.put(text), self.loop)
+
         if stream_end:
-            self.text_queue.put_nowait(self.stop_signal)
+            asyncio.run_coroutine_threadsafe(self.text_queue.put(text), self.loop)
 
     def __aiter__(self):
         return self

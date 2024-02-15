@@ -22,18 +22,15 @@ from nemoguardrails.llm.providers import (
     register_llm_provider,
 )
 
-# Flag to test streaming in NeMo Guardrails of HuggingFacePipeline models
-ENABLE_STREAMING = True
-
 
 @lru_cache
-def get_dolly_v2_3b_llm():
+def get_dolly_v2_3b_llm(streaming: bool = True):
     name = "databricks/dolly-v2-3b"
 
     config = AutoConfig.from_pretrained(name, trust_remote_code=True)
-    device = "cuda:0"
+    device = "cpu"
     config.init_device = device
-    config.max_seq_len = 450
+    config.max_seq_len = 45
 
     model = AutoModelForCausalLM.from_pretrained(
         name,
@@ -43,12 +40,12 @@ def get_dolly_v2_3b_llm():
     tokenizer = AutoTokenizer.from_pretrained(name)
     params = {"temperature": 0.01, "max_new_tokens": 100}
 
-    # Set this flag to False if you do not require streaming for the HuggingFacePipeline
-    if ENABLE_STREAMING:
+    # If we want streaming, we create a streamer.
+    if streaming:
         from nemoguardrails.llm.providers.huggingface import AsyncTextIteratorStreamer
 
         streamer = AsyncTextIteratorStreamer(tokenizer, skip_prompt=True)
-        params = {"temperature": 0.01, "max_new_tokens": 100, "streamer": streamer}
+        params["streamer"] = streamer
 
     pipe = pipeline(
         model=model,
