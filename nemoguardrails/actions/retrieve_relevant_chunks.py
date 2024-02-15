@@ -34,7 +34,10 @@ async def retrieve_relevant_chunks(
         kb (Optional[KnowledgeBase]): The KnowledgeBase to search for relevant chunks. Defaults to None.
 
     Returns:
-        ActionResult: An action result containing the retrieved relevant chunks.
+        ActionResult: An action result containing the retrieved relevant chunks with context updates:
+            - "relevant_chunks" -- the relevant chunks as a single string,
+            - "relevant_chunks_sep" -- the relevant chunks as a list of strings before concatenation,
+            - "retrieved_for" -- the user message that the chunks were retrieved for.
 
     Note:
         This action retrieves relevant chunks from the KnowledgeBase based on the user's last message
@@ -47,17 +50,27 @@ async def retrieve_relevant_chunks(
         print(result.context_updates)  # Updated context with relevant chunks
         ```
     """
+
     user_message = context.get("last_user_message")
     context_updates = {}
 
     if user_message and kb:
+        # Are these needed two needed?
         context_updates["relevant_chunks"] = ""
-        chunks = await kb.search_relevant_chunks(user_message)
-        relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
-        context_updates["relevant_chunks"] = relevant_chunks
+        context_updates["relevant_chunks_sep"] = []
+
+        context_updates["retrieved_for"] = user_message
+
+        chunks = [chunk["body"] for chunk in await kb.search_relevant_chunks(user_message)]
+
+        context_updates["relevant_chunks"] = "\n".join(chunks)
+        context_updates["relevant_chunks_sep"] = chunks
+
     else:
         # No KB is set up, we keep the existing relevant_chunks if we have them.
         context_updates["relevant_chunks"] = context.get("relevant_chunks", "") + "\n"
+        context_updates["relevant_chunks_sep"] = context.get("relevant_chunks_sep", [])
+        context_updates["retrieved_for"] = None
 
     return ActionResult(
         return_value=context_updates["relevant_chunks"],
