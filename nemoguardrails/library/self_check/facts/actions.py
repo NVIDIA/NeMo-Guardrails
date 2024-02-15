@@ -47,12 +47,13 @@ async def self_check_facts(
             "response": response,
         },
     )
+    stop = llm_task_manager.get_stop_tokens(task=Task.SELF_CHECK_FACTS)
 
     # Initialize the LLMCallInfo object
     llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_FACTS.value))
 
     with llm_params(llm, temperature=0.0):
-        entails = await llm_call(llm, prompt)
+        entails = await llm_call(llm, prompt, stop=stop)
 
     entails = entails.lower().strip()
 

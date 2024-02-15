@@ -50,6 +50,7 @@ async def llm_call(
         all_callbacks = logging_callbacks
 
     if isinstance(prompt, str):
+        # stop sinks here
         result = await llm.agenerate_prompt(
             [StringPromptValue(text=prompt)], callbacks=all_callbacks, stop=stop
         )

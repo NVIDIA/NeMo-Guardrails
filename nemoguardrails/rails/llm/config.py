@@ -138,6 +138,10 @@ class TaskPrompt(BaseModel):
         default=_default_config["prompting_mode"],
         description="Corresponds to the `prompting_mode` for which this prompt is fetched. Default is 'standard'.",
     )
+    stop: Optional[List[str]] = Field(
+        default=None,
+        description="If specified, will be configure stop tokens for models that support this.",
+    )
 
     @root_validator(pre=True, allow_reuse=True)
     def check_fields(cls, values):
