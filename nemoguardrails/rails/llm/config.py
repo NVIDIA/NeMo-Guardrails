@@ -139,6 +139,10 @@ class TaskPrompt(BaseModel):
         default=_default_config["prompting_mode"],
         description="Corresponds to the `prompting_mode` for which this prompt is fetched. Default is 'standard'.",
     )
+    stop: Optional[List[str]] = Field(
+        default=None,
+        description="If specified, will be configure stop tokens for models that support this.",
+    )
 
     @root_validator(pre=True, allow_reuse=True)
     def check_fields(cls, values):
@@ -153,6 +157,31 @@ class TaskPrompt(BaseModel):
         return values
 
 
+class EmbeddingsCacheConfig(BaseModel):
+    """Configuration for the caching embeddings."""
+
+    enabled: bool = Field(
+        default=False,
+        description="Whether caching of the embeddings should be enabled or not.",
+    )
+    key_generator: str = Field(
+        default="md5",
+        description="The method to use for generating the cache keys.",
+    )
+    store: str = Field(
+        default="filesystem",
+        description="What type of store to use for the cached embeddings.",
+    )
+    store_config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Any additional configuration options required for the store. "
+        "For example, path for `filesystem` or `host`/`port`/`db` for redis.",
+    )
+
+    def to_dict(self):
+        return self.dict()
+
+
 class EmbeddingSearchProvider(BaseModel):
     """Configuration of a embedding search provider."""
 
@@ -161,6 +190,7 @@ class EmbeddingSearchProvider(BaseModel):
         description="The name of the embedding search provider. If not specified, default is used.",
     )
     parameters: Dict[str, Any] = Field(default_factory=dict)
+    cache: EmbeddingsCacheConfig = Field(default_factory=EmbeddingsCacheConfig)
 
 
 class KnowledgeBaseConfig(BaseModel):
@@ -252,6 +282,21 @@ class FactCheckingRailConfig(BaseModel):
     )
 
 
+class JailbreakDetectionConfig(BaseModel):
+    """Configuration data for jailbreak detection."""
+
+    server_endpoint: Optional[str] = Field(
+        default=None,
+        description="The endpoint for the jailbreak detection heuristics server.",
+    )
+    length_per_perplexity_threshold: float = Field(
+        default=89.79, description="The length/perplexity threshold."
+    )
+    prefix_suffix_perplexity_threshold: float = Field(
+        default=1845.65, description="The prefix/suffix perplexity threshold."
+    )
+
+
 class RailsConfigData(BaseModel):
     """Configuration data for specific rails that are supported out-of-the-box."""
 
@@ -263,6 +308,11 @@ class RailsConfigData(BaseModel):
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
         default_factory=SensitiveDataDetection,
         description="Configuration for detecting sensitive data.",
+    )
+
+    jailbreak_detection: Optional[JailbreakDetectionConfig] = Field(
+        default_factory=JailbreakDetectionConfig,
+        description="Configuration for jailbreak detection.",
     )
 
 
@@ -368,6 +418,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "rails",
         "streaming",
         "passthrough",
+        "raw_llm_call_action",
     ]
 
     for field in additional_fields:
@@ -509,7 +560,7 @@ class RailsConfig(BaseModel):
     actions_server_url: Optional[str] = Field(
         default=None,
         description="The URL of the actions server that should be used for the rails.",
-    )
+    )  # consider as conflict
 
     sample_conversation: Optional[str] = Field(
         default=_default_config["sample_conversation"],
@@ -628,6 +679,11 @@ class RailsConfig(BaseModel):
             raise ValueError("You must provide a `self_check_facts` prompt template.")
 
         return values
+
+    raw_llm_call_action: Optional[str] = Field(
+        default="raw llm call",
+        description="The name of the action that would execute the original raw LLM call. ",
+    )
 
     @staticmethod
     def from_path(
@@ -748,3 +804,79 @@ class RailsConfig(BaseModel):
             return False
 
         return True
+
+    def __add__(self, other):
+        """Adds two RailsConfig objects."""
+        return _join_rails_configs(self, other)
+
+
+def _join_dict(dict1, dict2):
+    """
+    Joins two dictionaries recursively.
+    - If values are dictionaries, it applies _join_dict recursively.
+    - If values are lists, it concatenates them, ensuring unique elements.
+    - For other types, values from dict2 overwrite dict1.
+    """
+    result = dict(dict1)  # Create a copy of dict1 to avoid modifying the original
+
+    for key, value in dict2.items():
+        # If key is in both dictionaries and both values are dictionaries, apply _join_dict recursively
+        if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
+            result[key] = _join_dict(dict1[key], value)
+        # If key is in both dictionaries and both values are lists, concatenate unique elements
+        elif key in dict1 and isinstance(dict1[key], list) and isinstance(value, list):
+            # Since we want values from dict2 to take precedence, we concatenate dict2 first
+            result[key] = _unique_list_concat(value, dict1[key])
+        # Otherwise, simply overwrite the value from dict2
+        else:
+            result[key] = value
+
+    return result
+
+
+def _unique_list_concat(list1, list2):
+    """
+    Concatenates two lists ensuring all elements are unique.
+    Handles unhashable types like dictionaries.
+    """
+    result = list(list1)
+    for item in list2:
+        if item not in result:
+            result.append(item)
+    return result
+
+
+def _join_rails_configs(
+    base_rails_config: RailsConfig, updated_rails_config: RailsConfig
+):
+    """Helper to join two rails configuration."""
+
+    config_old_types = {}
+    for model_old in base_rails_config.models:
+        config_old_types[model_old.type] = model_old
+
+    for model_new in updated_rails_config.models:
+        if model_new.type in config_old_types:
+            if model_new.engine != config_old_types[model_new.type].engine:
+                raise ValueError(
+                    "Both config files should have the same engine for the same model type"
+                )
+            if model_new.model != config_old_types[model_new.type].model:
+                raise ValueError(
+                    "Both config files should have the same model for the same model type"
+                )
+
+    if base_rails_config.actions_server_url != updated_rails_config.actions_server_url:
+        raise ValueError("Both config files should have the same actions_server_url")
+
+    combined_rails_config_dict = _join_dict(
+        base_rails_config.dict(), updated_rails_config.dict()
+    )
+    combined_rails_config_dict["config_path"] = ",".join(
+        [
+            base_rails_config.dict()["config_path"],
+            updated_rails_config.dict()["config_path"],
+        ]
+    )
+    combined_rails_config = RailsConfig(**combined_rails_config_dict)
+    return combined_rails_config

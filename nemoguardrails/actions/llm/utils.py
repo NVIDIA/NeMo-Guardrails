@@ -52,9 +52,11 @@ async def llm_call(
         all_callbacks = logging_callbacks
 
     if isinstance(prompt, str):
+        # stop sinks here
         result = await llm.agenerate_prompt(
             [StringPromptValue(text=prompt)], callbacks=all_callbacks, stop=stop
         )
+        llm_call_info.raw_response = result.llm_output
 
         # TODO: error handling
         return result.generations[0][0].text
@@ -73,6 +75,7 @@ async def llm_call(
         result = await llm.agenerate_prompt(
             [ChatPromptValue(messages=messages)], callbacks=all_callbacks, stop=stop
         )
+        llm_call_info.raw_response = result.llm_output
 
         return result.generations[0][0].text
 

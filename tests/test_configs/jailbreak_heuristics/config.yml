@@ -1,0 +1,10 @@
+rails:
+  config:
+    jailbreak_detection:
+      server_endpoint: ""
+      length_per_perplexity_threshold: 89.79
+      prefix_suffix_perplexity_threshold: 1845.65
+
+  input:
+    flows:
+      - jailbreak detection heuristics

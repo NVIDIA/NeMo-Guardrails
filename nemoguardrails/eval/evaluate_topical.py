@@ -55,6 +55,7 @@ def _split_test_set_from_config(
     test_set_percentage: float,
     test_set: Dict[str, List],
     max_samples_per_intent: int,
+    random_seed: Optional[int] = None,
 ):
     """Extracts a test set of user messages from a config.
 
@@ -68,7 +69,11 @@ def _split_test_set_from_config(
         for intent, samples in config.user_messages.items():
             # We need at least 2 samples to create a test split
             if len(samples) > 1:
-                random.shuffle(samples)
+                if random_seed:
+                    random.Random(random_seed).shuffle(samples)
+                else:
+                    random.shuffle(samples)
+
                 num_test_elements = int(len(samples) * test_set_percentage)
                 test_set[intent] = samples[:num_test_elements]
                 config.user_messages[intent] = samples[num_test_elements:]

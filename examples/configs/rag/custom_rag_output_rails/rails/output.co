@@ -1,0 +1,11 @@
+define user ask about report
+  "What was last month's unemployment rate?"
+  "Which industry added the most jobs?"
+  "How many jobs were added in the transportation industry?"
+
+define flow answer report question
+  user ...
+  $answer = execute rag()
+  $check_facts = True
+  $check_hallucination = True
+  bot $answer

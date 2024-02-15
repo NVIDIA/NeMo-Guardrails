@@ -72,7 +72,9 @@ class ActionDispatcher:
             # Last, but not least, if there was a config path, we try to load actions
             # from there as well.
             if config_path:
-                self.load_actions_from_path(config_path)
+                config_path = config_path.split(",")
+                for path in config_path:
+                    self.load_actions_from_path(path)
 
             # If there are any imported paths, we load the actions from there as well.
             if import_paths:

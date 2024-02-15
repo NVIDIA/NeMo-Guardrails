@@ -237,3 +237,55 @@ def test_prompt_length_exceeded_compressed_history():
         events=events,
     )
     assert len(generate_user_intent_prompt) <= max_task_prompt_length
+
+    # Test to check the stop configuration parameter
+
+
+def test_stop_configuration_parameter():
+    """Test the prompts for the OpenAI GPT-3 5 Turbo model."""
+    config = RailsConfig.from_content(
+        yaml_content=textwrap.dedent(
+            """
+            models:
+            - type: main
+              engine: openai
+              model: gpt-3.5-turbo-instruct
+            prompts:
+            - task: generate_user_intent
+              stop:
+              - <<end>>
+              - <<stop>>
+              max_length: 3000
+              content: |-
+                {{ general_instructions }}
+
+                # This is how a conversation between a user and the bot can go:
+                {{ sample_conversation }}
+
+                # This is how the user talks:
+                {{ examples }}
+
+                # This is the current conversation between the user and the bot:
+                {{ sample_conversation | first_turns(2) }}
+                {{ history | colang }}
+                    )
+                )"""
+        )
+    )
+
+    task_prompt = get_prompt(config, Task.GENERATE_USER_INTENT)
+
+    # Assuming the stop parameter is a list of strings
+    expected_stop_tokens = ["<<end>>", "<<stop>>"]
+    llm_task_manager = LLMTaskManager(config)
+
+    # Render the task prompt with the stop configuration
+    rendered_prompt = llm_task_manager.render_task_prompt(
+        task=Task.GENERATE_USER_INTENT,
+        context={"examples": 'user "Hello there!"\n  express greeting'},
+        events=[],
+    )
+
+    # Check if the stop tokens are correctly set in the rendered prompt
+    for stop_token in expected_stop_tokens:
+        assert stop_token in task_prompt.stop

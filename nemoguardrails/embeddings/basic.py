@@ -13,11 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+import asyncio
+from typing import Any, Dict, List
 
 from annoy import AnnoyIndex
 
+from nemoguardrails.embeddings.cache import cache_embeddings
 from nemoguardrails.embeddings.index import EmbeddingModel, EmbeddingsIndex, IndexItem
+from nemoguardrails.rails.llm.config import EmbeddingsCacheConfig
 
 
 class BasicEmbeddingsIndex(EmbeddingsIndex):
@@ -31,16 +34,24 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embedding_engine (str): The engine for computing embeddings.
         embeddings_index (AnnoyIndex): The current embedding index.
         embedding_size (int): The size of the embeddings.
+        cache_config (EmbeddingsCacheConfig): The cache configuration.
         embeddings (List[List[float]]): The computed embeddings.
     """
 
-    def __init__(self, embedding_model=None, embedding_engine=None, index=None):
+    def __init__(
+        self,
+        embedding_model=None,
+        embedding_engine=None,
+        index=None,
+        cache_config: EmbeddingsCacheConfig | Dict[str, Any] = None,
+    ):
         """Initialize the BasicEmbeddingsIndex.
 
         Args:
             embedding_model (str, optional): The model for computing embeddings. Defaults to None.
             embedding_engine (str, optional): The engine for computing embeddings. Defaults to None.
             index (AnnoyIndex, optional): The pre-existing index. Defaults to None.
+            cache_config (EmbeddingsCacheConfig | Dict[str, Any], optional): The cache configuration. Defaults to None.
         """
         self._model = None
         self._items = []
@@ -48,14 +59,27 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         self.embedding_model = embedding_model
         self.embedding_engine = embedding_engine
         self._embedding_size = 0
-
-        # When the index is provided, it means it's from the cache.
+        if isinstance(cache_config, Dict):
+            self._cache_config = EmbeddingsCacheConfig(**cache_config)
+        else:
+            self._cache_config = cache_config or EmbeddingsCacheConfig()
         self._index = index
+
+        # Data structures for batching embedding requests
+        self._req_queue = {}
+        self._req_results = {}
+        self._req_idx = 0
+        self._current_batch_event = None
 
     @property
     def embeddings_index(self):
         """Get the current embedding index"""
         return self._index
+
+    @property
+    def cache_config(self):
+        """Get the cache configuration."""
+        return self._cache_config
 
     @property
     def embedding_size(self):
@@ -78,7 +102,8 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
             embedding_model=self.embedding_model, embedding_engine=self.embedding_engine
         )
 
-    def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
+    @cache_embeddings
+    async def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Compute embeddings for a list of texts.
 
         Args:
@@ -103,7 +128,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
 
         # If the index is already built, we skip this
         if self._index is None:
-            self._embeddings.append(self._get_embeddings([item.text])[0])
+            await self._embeddings.append(self._get_embeddings([item.text])[0])
 
             # Update the embedding if it was not computed up to this point
             self._embedding_size = len(self._embeddings[0])
@@ -118,7 +143,9 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
 
         # If the index is already built, we skip this
         if self._index is None:
-            self._embeddings.extend(self._get_embeddings([item.text for item in items]))
+            self._embeddings.extend(
+                await self._get_embeddings([item.text for item in items])
+            )
 
             # Update the embedding if it was not computed up to this point
             self._embedding_size = len(self._embeddings[0])
@@ -130,6 +157,54 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
             self._index.add_item(i, self._embeddings[i])
         self._index.build(10)
 
+    async def _run_batch(self):
+        """Runs the current batch of embeddings."""
+
+        # Wait up to 100ms for the batch to fill
+        # TODO: add support to also trigger when a certain number of items is reached
+        await asyncio.sleep(0.01)
+
+        # Reset the batch event
+        batch_event: asyncio.Event = self._current_batch_event
+        self._current_batch_event = None
+
+        # Create the actual batch to be send for computing
+        batch = []
+        batch_ids = list(self._req_queue.keys())
+        for req_id in batch_ids:
+            batch.append(self._req_queue[req_id])
+
+        # Empty the queue up to this point
+        self._req_queue = {}
+
+        print(f"Running batch of length {len(batch)}")
+
+        # Compute the embeddings
+        embeddings = await self._get_embeddings(batch)
+        for i in range(len(embeddings)):
+            self._req_results[batch_ids[i]] = embeddings[i]
+
+        # Signal that the batch has finished processing
+        batch_event.set()
+
+    async def _batch_get_embeddings(self, text: str) -> List[float]:
+        req_id = self._req_idx
+        self._req_idx += 1
+        self._req_queue[req_id] = text
+
+        if self._current_batch_event is None:
+            self._current_batch_event = asyncio.Event()
+            asyncio.ensure_future(self._run_batch())
+
+        # Wait for the batch to finish
+        await self._current_batch_event.wait()
+
+        # Remove the result and return it
+        result = self._req_results[req_id]
+        del self._req_results[req_id]
+
+        return result
+
     async def search(self, text: str, max_results: int = 20) -> List[IndexItem]:
         """Search the closest `max_results` items.
 
@@ -140,7 +215,9 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         Returns:
             List[IndexItem]: The closest items found.
         """
-        _embedding = self._get_embeddings([text])[0]
+        _embedding = await self._batch_get_embeddings(text)
+        # _embedding = (await self._get_embeddings([text]))[0]
+
         results = self._index.get_nns_by_vector(
             _embedding,
             max_results,
@@ -181,7 +258,8 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
         Returns:
             List[List[float]]: The list of sentence embeddings, where each embedding is a list of floats.
         """
-        return self.model.encode(documents)
+
+        return self.model.encode(documents).tolist()
 
 
 class FastEmbedEmbeddingModel(EmbeddingModel):
@@ -205,7 +283,17 @@ class FastEmbedEmbeddingModel(EmbeddingModel):
         if embedding_model == "all-MiniLM-L6-v2":
             embedding_model = "sentence-transformers/all-MiniLM-L6-v2"
 
-        self.model = Embedding(embedding_model)
+        try:
+            self.model = Embedding(embedding_model)
+        except ValueError as ex:
+            # Sometimes the cached model in the temporary folder gets removed,
+            # but the folder still exists, which causes an error. In this case,
+            # we fall back to an explicit cache directory.
+            if "Could not find model.onnx in" in str(ex):
+                self.model = Embedding(embedding_model, cache_dir=".cache")
+            else:
+                raise ex
+
         # Get the embedding dimension of the model
         self.embedding_size = len(list(self.model.embed("test"))[0].tolist())
 
@@ -236,8 +324,12 @@ class OpenAIEmbeddingModel(EmbeddingModel):
 
     """
 
-    def __init__(self, embedding_model: str):
+    def __init__(
+        self,
+        embedding_model: str,
+    ):
         self.model = embedding_model
+
         self.embedding_size = len(self.encode(["test"])[0])
 
     def encode(self, documents: List[str]) -> List[List[float]]:

@@ -17,7 +17,8 @@ import inspect
 import logging
 import uuid
 from textwrap import indent
-from typing import Any, Dict, List, Tuple
+from time import time
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import aiohttp
@@ -31,6 +32,7 @@ from nemoguardrails.colang.v1_0.runtime.flows import (
     compute_context,
     compute_next_steps,
 )
+from nemoguardrails.logging.processing_log import processing_log_var
 from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
@@ -100,6 +102,14 @@ class RuntimeV1_0(Runtime):
                     "UtteranceUserActionFinished"
                 )
 
+            # If a flow creates a type of event, we also allow it to trigger the event.
+            if (
+                element["_type"] == "run_action"
+                and element["action_name"] == "create_event"
+            ):
+                event_type = element["action_params"]["event"]["_type"]
+                self.flow_configs[flow_id].trigger_event_types.append(event_type)
+
     def _init_flow_configs(self):
         """
         Initialize the flow configurations.
@@ -112,7 +122,9 @@ class RuntimeV1_0(Runtime):
         for flow in self.config.flows:
             self._load_flow_config(flow)
 
-    async def generate_events(self, events: List[dict]) -> List[dict]:
+    async def generate_events(
+        self, events: List[dict], processing_log: Optional[List[dict]] = None
+    ) -> List[dict]:
         """Generates the next events based on the provided history.
 
         This is a wrapper around the `process_events` method, that will keep
@@ -120,12 +132,23 @@ class RuntimeV1_0(Runtime):
 
         Args:
             events (List[dict]): The list of events.
+            processing_log (Optional[List[dict]]): The processing log so far. This will be mutated.
 
         Returns:
             List[dict]: The list of generated events.
         """
         events = events.copy()
         new_events = []
+        if processing_log is None:
+            processing_log = []
+
+        # We record the processing log in the async context.
+        # This is needed to automatically record the LLM calls.
+        processing_log_var.set(processing_log)
+
+        processing_log.append(
+            {"type": "event", "timestamp": time(), "data": events[-1]}
+        )
 
         while True:
             last_event = events[-1]
@@ -145,12 +168,16 @@ class RuntimeV1_0(Runtime):
 
             # If we need to start a flow, we parse the content and register it.
             elif last_event["type"] == "start_flow":
-                next_events = await self._process_start_flow(events)
+                next_events = await self._process_start_flow(
+                    events, processing_log=processing_log
+                )
 
             else:
                 # We need to slide all the flows based on the current event,
                 # to compute the next steps.
-                next_events = await self._compute_next_steps(events)
+                next_events = await self._compute_next_steps(
+                    events, processing_log=processing_log
+                )
 
                 if len(next_events) == 0:
                     next_events = [new_event_dict("Listen")]
@@ -158,6 +185,11 @@ class RuntimeV1_0(Runtime):
             # Otherwise, we append the event and continue the processing.
             events.extend(next_events)
             new_events.extend(next_events)
+
+            for event in next_events:
+                processing_log.append(
+                    {"type": "event", "timestamp": time(), "data": event}
+                )
 
             # If the next event is a listen, we stop the processing.
             if next_events[-1]["type"] == "Listen":
@@ -169,18 +201,24 @@ class RuntimeV1_0(Runtime):
 
         return new_events
 
-    async def _compute_next_steps(self, events: List[dict]) -> List[dict]:
+    async def _compute_next_steps(
+        self, events: List[dict], processing_log: List[dict]
+    ) -> List[dict]:
         """
         Compute the next steps based on the current flow.
 
         Args:
             events (List[dict]): The list of events.
+            processing_log (List[dict]): The processing log so far. This will be mutated.
 
         Returns:
             List[dict]: The list of computed next steps.
         """
         next_steps = compute_next_steps(
-            events, self.flow_configs, rails_config=self.config
+            events,
+            self.flow_configs,
+            rails_config=self.config,
+            processing_log=processing_log,
         )
 
         # If there are any StartInternalSystemAction events, we mark if they are system actions or not
@@ -431,12 +469,15 @@ class RuntimeV1_0(Runtime):
             log.info(f"Failed to get response from {action_name} due to exception {e}")
         return result, status
 
-    async def _process_start_flow(self, events: List[dict]) -> List[dict]:
+    async def _process_start_flow(
+        self, events: List[dict], processing_log: List[dict]
+    ) -> List[dict]:
         """
         Start a flow.
 
         Args:
             events (List[dict]): The list of events.
+            processing_log (List[dict]): The processing log so far. This will be mutated.
 
         Returns:
             List[dict]: The list of next steps.
@@ -467,6 +508,9 @@ class RuntimeV1_0(Runtime):
 
         # And we compute the next steps. The new flow should match the current event,
         # and start.
-        next_steps = await self._compute_next_steps(events)
+
+        next_steps = await self._compute_next_steps(
+            events, processing_log=processing_log
+        )
 
         return next_steps

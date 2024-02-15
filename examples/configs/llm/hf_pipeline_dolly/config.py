@@ -14,7 +14,7 @@
 # limitations under the License.
 from functools import lru_cache
 
-from torch.cuda import device_count
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, pipeline
 
 from nemoguardrails.llm.helpers import get_llm_instance_wrapper
 from nemoguardrails.llm.providers import (
@@ -24,16 +24,40 @@ from nemoguardrails.llm.providers import (
 
 
 @lru_cache
-def get_dolly_v2_3b_llm():
-    repo_id = "databricks/dolly-v2-3b"
-    params = {"temperature": 0, "max_length": 1024}
+def get_dolly_v2_3b_llm(streaming: bool = True):
+    name = "databricks/dolly-v2-3b"
 
-    # Use the first CUDA-enabled GPU, if any
-    device = 0 if device_count() else -1
+    config = AutoConfig.from_pretrained(name, trust_remote_code=True)
+    device = "cpu"
+    config.init_device = device
+    config.max_seq_len = 45
 
-    llm = HuggingFacePipelineCompatible.from_model_id(
-        model_id=repo_id, device=device, task="text-generation", model_kwargs=params
+    model = AutoModelForCausalLM.from_pretrained(
+        name,
+        config=config,
+        trust_remote_code=True,
     )
+    tokenizer = AutoTokenizer.from_pretrained(name)
+    params = {"temperature": 0.01, "max_new_tokens": 100}
+
+    # If we want streaming, we create a streamer.
+    if streaming:
+        from nemoguardrails.llm.providers.huggingface import AsyncTextIteratorStreamer
+
+        streamer = AsyncTextIteratorStreamer(tokenizer, skip_prompt=True)
+        params["streamer"] = streamer
+
+    pipe = pipeline(
+        model=model,
+        task="text-generation",
+        tokenizer=tokenizer,
+        device=device,
+        do_sample=True,
+        use_cache=True,
+        **params,
+    )
+
+    llm = HuggingFacePipelineCompatible(pipeline=pipe, model_kwargs=params)
 
     return llm
 

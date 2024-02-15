@@ -1,0 +1,15 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo-instruct
+
+rails:
+  config:
+    jailbreak_detection:
+      server_endpoint: "http://localhost:1337/heuristics"
+      lp_threshold: 89.79
+      ps_ppl_threshold: 1845.65
+
+  input:
+    flows:
+      - jailbreak detection heuristics

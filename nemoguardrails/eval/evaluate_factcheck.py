@@ -143,7 +143,8 @@ class FactCheckEvaluation:
             fact_check_prompt = self.llm_task_manager.render_task_prompt(
                 Task.SELF_CHECK_FACTS, {"evidence": evidence, "response": answer}
             )
-            fact_check = self.llm(fact_check_prompt)
+            stop = self.llm_task_manager.get_stop_tokens(Task.SELF_CHECK_FACTS)
+            fact_check = self.llm(fact_check_prompt, stop=stop)
             end_time = time.time()
             time.sleep(0.5)  # avoid rate-limits
             fact_check = fact_check.lower().strip()
