@@ -12,16 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import contextvars
-
-streaming_handler_var = contextvars.ContextVar("streaming_handler", default=None)
-
-# The object that holds additional explanation information.
-explain_info_var = contextvars.ContextVar("explain_info", default=None)
-
-# The current LLM call.
-llm_call_info_var = contextvars.ContextVar("llm_call_info", default=None)
-
-# All the generation options applicable to the current context.
-generation_options_var = contextvars.ContextVar("generation_options", default=None)

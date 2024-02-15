@@ -13,15 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import contextvars
+from typing import Optional
 
-streaming_handler_var = contextvars.ContextVar("streaming_handler", default=None)
+from nemoguardrails.actions import action
 
-# The object that holds additional explanation information.
-explain_info_var = contextvars.ContextVar("explain_info", default=None)
 
-# The current LLM call.
-llm_call_info_var = contextvars.ContextVar("llm_call_info", default=None)
+@action(is_system_action=True)
+async def check_blocked_terms(context: Optional[dict] = None):
+    bot_response = context.get("bot_message")
 
-# All the generation options applicable to the current context.
-generation_options_var = contextvars.ContextVar("generation_options", default=None)
+    # A quick hard-coded list of proprietary terms. You can also read this from a file.
+    proprietary_terms = ["proprietary", "proprietary1", "proprietary2"]
+
+    for term in proprietary_terms:
+        if term in bot_response.lower():
+            return True
+
+    return False
