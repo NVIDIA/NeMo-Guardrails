@@ -30,6 +30,7 @@ GUARDRAIL_RESPONSE_TEXT = {
     "gender_bias_detection": "Gender bias in text",
     "harm_detection": "Harm to human violation",
     "text_toxicity_extraction": "Toxicity in text",
+    "tonal_detection": "Negative tone in text",
     "racial_bias_detection": "Racial bias in text",
     "jailbreak_detection": "Jailbreak attempt",
     "factcheck": "Factcheck violation in text",
@@ -82,7 +83,8 @@ async def autoguard_infer(request_url, text, tasks, task_config=None):
     config = DEFAULT_CONFIG
     # enable the select guardrail
     for task in tasks:
-        config[task] = {"mode": "DETECT"}
+        if task not in ["text_toxicity_extraction", "pii_fast", "factcheck"]:
+            config[task] = {"mode": "DETECT"}
         if task_config:
             config[task].update(task_config)
     request_body = {"prompt": text, "config": config}
@@ -104,6 +106,44 @@ async def autoguard_infer(request_url, text, tasks, task_config=None):
                     resp = json.loads(line_text)
                     if resp["guarded"]:
                         return True, GUARDRAIL_RESPONSE_TEXT[resp["task"]]
+    return False, None
+
+
+async def autoguard_toxicity_infer(request_url, text, task_config=None):
+    api_key = os.environ.get("AUTOGUARD_API_KEY")
+    if api_key is None:
+        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
+
+    headers = {"x-api-key": api_key}
+    config = DEFAULT_CONFIG
+    # enable the select guardrail
+    config["text_toxicity_extraction"] = {"mode": "DETECT"}
+    if task_config:
+        config["text_toxicity_extraction"].update(task_config)
+
+    request_body = {"prompt": text, "config": config}
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            url=request_url,
+            headers=headers,
+            json=request_body,
+        ) as response:
+            if response.status != 200:
+                raise ValueError(
+                    f"AutoGuard call failed with status code {response.status}.\n"
+                    f"Details: {await response.text()}"
+                )
+            async for line in response.content:
+                line_text = line.strip()
+                if len(line_text) > 0:
+                    resp = json.loads(line_text)
+                    if resp["task"] == "text_toxicity_extraction":
+                        return (
+                            resp["guarded"],
+                            GUARDRAIL_RESPONSE_TEXT[resp["task"]],
+                            " ".join(resp["output_data"]),
+                        )
     return False, None
 
 
@@ -217,3 +257,58 @@ async def autoguard_output_api(
     prompt = bot_message
 
     return await autoguard_infer(autoguard_api_url, prompt, tasks)
+
+
+@action()
+async def autoguard_toxicity_input_api(
+    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+):
+    user_message = context.get("user_message")
+    autoguard_config = llm_task_manager.config.rails.config.autoguard
+
+    autoguard_toxicity_api_url = autoguard_config.parameters.get("toxicity_endpoint")
+    if not autoguard_toxicity_api_url:
+        raise ValueError("Provide the autoguard endpoint in the config")
+    return await autoguard_toxicity_infer(autoguard_toxicity_api_url, user_message)
+
+
+@action()
+async def autoguard_toxicity_output_api(
+    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+):
+    bot_message = context.get("bot_message")
+    autoguard_config = llm_task_manager.config.rails.config.autoguard
+
+    autoguard_toxicity_api_url = autoguard_config.parameters.get("toxicity_endpoint")
+    if not autoguard_toxicity_api_url:
+        raise ValueError("Provide the autoguard endpoint in the config")
+    return await autoguard_toxicity_infer(autoguard_toxicity_api_url, bot_message)
+
+
+@action()
+async def autoguard_factcheck_api(
+    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+):
+    api_key = os.environ.get("AUTOGUARD_API_KEY")
+
+    if api_key is None:
+        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
+
+    bot_message = context.get("bot_message")
+    documents = context.get("relevant_chunks", [])
+    autoguard_config = llm_task_manager.config.rails.config.autoguard
+    autoguard_fact_check_api_url = autoguard_config.parameters.get(
+        "fact_check_endpoint"
+    )
+    if not autoguard_fact_check_api_url:
+        raise ValueError("Provide the autoguard factcheck endpoint in the config")
+    if isinstance(documents, str):
+        documents = documents.split("\n")
+    prompt = bot_message
+
+    if isinstance(documents, list) and len(documents) > 0:
+        return await autoguard_factcheck_infer(
+            autoguard_fact_check_api_url, prompt, documents
+        )
+    else:
+        raise ValueError("Provide relevant documents in proper format")
