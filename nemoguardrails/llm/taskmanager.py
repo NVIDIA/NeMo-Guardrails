@@ -255,6 +255,11 @@ class LLMTaskManager:
         else:
             return output
 
+    def get_stop_tokens(self, task: Union[str, Task]) -> List[str]:
+        """Return the stop sequence for the given task."""
+        prompt = get_prompt(self.config, task)
+        return prompt.stop
+
     def register_filter(self, filter_fn: callable, name: Optional[str] = None):
         """Register a custom filter for the rails configuration."""
         name = name or filter_fn.__name__

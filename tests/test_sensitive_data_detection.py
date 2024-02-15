@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import pytest
-import spacy
 
 from nemoguardrails import RailsConfig
 from nemoguardrails.actions import action
@@ -25,6 +24,7 @@ from tests.utils import TestChat
 try:
     import presidio_analyzer
     import presidio_anonymizer
+    import spacy
 
     assert spacy.util.is_package("en_core_web_lg")
 

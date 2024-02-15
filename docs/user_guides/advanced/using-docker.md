@@ -43,6 +43,15 @@ docker build -t alignscore-server .
 
 NOTE: the provided Dockerfile downloads only the `base` AlignScore image. If you want support for the large model, uncomment the corresponding line in the Dockerfile.
 
+### 4. \[Optional] Build the Jailbreak Detection Heuristics Server Image
+
+If you want to use the jailbreak detection heuristics server, you can also build a Docker image using the provided [Dockerfile](../../../nemoguardrails/library/jailbreak_detection/Dockerfile).
+
+```bash
+cd nemoguardrails/jailbreak_detection
+docker build -t jailbreak_detection_heuristics .
+```
+
 ## Running using Docker
 
 To run the NeMo Guardrails server using the Docker image, run the following command:

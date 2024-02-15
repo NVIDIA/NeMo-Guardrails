@@ -24,7 +24,7 @@ from typing import List, Optional
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from starlette import status
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
@@ -76,8 +76,8 @@ if ENABLE_CORS:
     )
 
 # By default, we use the rails in the examples folder
-app.rails_config_path = os.path.join(
-    os.path.dirname(__file__), "..", "..", "examples", "bots"
+app.rails_config_path = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "examples", "bots")
 )
 
 # Weather the chat UI is enabled or not.
@@ -91,7 +91,14 @@ app.stop_signal = False
 
 
 class RequestBody(BaseModel):
-    config_id: str = Field(description="The id of the configuration to be used.")
+    config_id: Optional[str] = Field(
+        description="The id of the configuration to be used."
+    )
+    config_ids: Optional[List[str]] = Field(
+        default=None,
+        description="The list of configuration ids to be used. "
+        "If set, the configurations will be combined.",
+    )
     thread_id: Optional[str] = Field(
         default=None,
         description="The id of an existing thread to which the messages should be added.",
@@ -109,6 +116,14 @@ class RequestBody(BaseModel):
         "Tokens will be sent as data-only server-sent events as they become "
         "available, with the stream terminated by a data: [DONE] message.",
     )
+
+    @validator("config_ids", always=True)
+    def check_if_set(cls, v, values, **kwargs):
+        if v is not None and values["config_id"] is not None:
+            raise ValueError("Only one of config_id or config_ids should be specified")
+        if v is None and values["config_id"] is None:
+            raise ValueError("Either config_id or config_ids must be specified")
+        return v
 
 
 class ResponseBody(BaseModel):
@@ -146,18 +161,43 @@ llm_rails_instances = {}
 llm_rails_events_history_cache = {}
 
 
-def _get_rails(config_id: str) -> LLMRails:
+def _generate_cache_key(config_ids: List[str]) -> str:
+    """Generates a cache key for the given config ids."""
+
+    return "-".join((config_ids))  # remove sorted
+
+
+def _get_rails(config_ids: List[str]) -> LLMRails:
     """Returns the rails instance for the given config id."""
 
-    if config_id in llm_rails_instances:
-        return llm_rails_instances[config_id]
+    # If we have a single config id, we just use it as the key
+    configs_cache_key = _generate_cache_key(config_ids)
 
-    rails_config = RailsConfig.from_path(os.path.join(app.rails_config_path, config_id))
-    llm_rails = LLMRails(config=rails_config, verbose=True)
-    llm_rails_instances[config_id] = llm_rails
+    if configs_cache_key in llm_rails_instances:
+        return llm_rails_instances[configs_cache_key]
+
+    full_llm_rails_config = None
+    for config_id in config_ids:
+        full_path = os.path.normpath(os.path.join(app.rails_config_path, config_id))
+        if not full_path.startswith(app.rails_config_path):
+            raise Exception("Not allowed.")
+
+        rails_config = RailsConfig.from_path(
+            os.path.join(app.rails_config_path, config_id)
+        )
+
+        if not full_llm_rails_config:
+            full_llm_rails_config = rails_config
+        else:
+            full_llm_rails_config = full_llm_rails_config + rails_config
+
+    llm_rails = LLMRails(config=full_llm_rails_config, verbose=True)
+    llm_rails_instances[configs_cache_key] = llm_rails
 
     # If we have a cache for the events, we restore it
-    llm_rails.events_history_cache = llm_rails_events_history_cache.get(config_id, {})
+    llm_rails.events_history_cache = llm_rails_events_history_cache.get(
+        configs_cache_key, {}
+    )
 
     return llm_rails
 
@@ -171,6 +211,8 @@ async def chat_completion(body: RequestBody, request: Request):
 
     TODO: add support for explicit state object.
     """
+    if not body.config_ids:
+        body.config_ids = [body.config_id]
     log.info("Got request for config %s", body.config_id)
     for logger in registered_loggers:
         asyncio.get_event_loop().create_task(
@@ -180,15 +222,17 @@ async def chat_completion(body: RequestBody, request: Request):
     # Save the request headers in a context variable.
     api_request_headers.set(request.headers)
 
-    config_id = body.config_id
+    config_ids = body.config_ids
     try:
-        llm_rails = _get_rails(config_id)
+        llm_rails = _get_rails(config_ids)
     except ValueError as ex:
+        log.exception(ex)
         return {
             "messages": [
                 {
                     "role": "assistant",
-                    "content": f"Could not load the {config_id} guardrails configuration: {str(ex)}",
+                    "content": f"Could not load the {config_ids} guardrails configuration. "
+                    f"An internal error has occurred.",
                 }
             ]
         }

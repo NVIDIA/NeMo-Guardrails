@@ -1,0 +1,17 @@
+rails:
+  output:
+    flows:
+      - dummy output rail
+
+      # ... other output rails go in here
+
+      # The last output rail will rewrite the message to "ALLOW" if it was not blocked
+      # up to this point.
+      - allow output
+
+  dialog:
+    # We need this setting so that the LLM is not used to compute the user intent.
+    # Because there is only one canonical form `user input`, everything will fit into that
+    # and the flow that returns the $llm_output is used.
+    user_messages:
+      embeddings_only: True

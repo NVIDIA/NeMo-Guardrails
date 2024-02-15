@@ -22,6 +22,7 @@ import os
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain.chains.base import Chain
+from langchain_core.runnables import Runnable
 
 from nemoguardrails.logging.callbacks import logging_callbacks
 
@@ -66,7 +67,9 @@ class ActionDispatcher:
             # Last, but not least, if there was a config path, we try to load actions
             # from there as well.
             if config_path:
-                self.load_actions_from_path(config_path)
+                config_path = config_path.split(",")
+                for path in config_path:
+                    self.load_actions_from_path(path)
 
         log.info(f"Registered Actions: {self._registered_actions}")
         log.info("Action dispatcher initialized")
@@ -196,6 +199,11 @@ class ActionDispatcher:
                             # Not ideal, but for now we fall back to sync execution
                             # if the async is not available
                             result = fn.run(**params)
+                    elif isinstance(fn, Runnable):
+                        # If it's a Runnable, we invoke it as well
+                        runnable = fn
+
+                        result = await runnable.ainvoke(input=params)
                     else:
                         # TODO: there should be a common base class here
                         result = fn.run(**params)
