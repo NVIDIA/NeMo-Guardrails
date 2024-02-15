@@ -4,19 +4,25 @@ This guide shows how to apply a guardrails configuration in a RAG scenario. This
 
 ## Prerequisites
 
-1. Set up an OpenAI API key, if not already set.
+1. Install the `openai` package:
 
-   ```bash
-   export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
-   ```
+```bash
+pip install openai
+```
 
-2. If you're running this inside a notebook, patch the AsyncIO loop.
+2. Set the `OPENAI_API_KEY` environment variable:
 
-   ```python
-   import nest_asyncio
+```bash
+export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+```
 
-   nest_asyncio.apply()
-   ```
+3. If you're running this inside a notebook, patch the AsyncIO loop.
+
+```python
+import nest_asyncio
+
+nest_asyncio.apply()
+```
 
 ## Usage
 
@@ -104,5 +110,5 @@ This guide introduced how a guardrails configuration can be used in the context 
 ## Next
 
 To continue learning about NeMo Guardrails, check out:
-1. [Guardrails Library](../../docs/user_guides/guardrails-library.md).
-2. [Configuration Guide](../../docs/user_guides/configuration-guide.md).
+1. [Guardrails Library](../../../docs/user_guides/guardrails-library.md).
+2. [Configuration Guide](../../../docs/user_guides/configuration-guide.md).

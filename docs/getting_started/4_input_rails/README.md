@@ -4,19 +4,25 @@ This topic demonstrates how to add input rails to a guardrails configuration. As
 
 ## Prerequisites
 
-1. Set up an OpenAI API key, if not already set:
+1. Install the `openai` package:
 
-   ```bash
-   export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
-   ```
+```bash
+pip install openai
+```
 
-2. If you're running this inside a notebook, patch the AsyncIO loop:
+2. Set the `OPENAI_API_KEY` environment variable:
 
-   ```python
-   import nest_asyncio
+```bash
+export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
+```
 
-   nest_asyncio.apply()
-   ```
+3. If you're running this inside a notebook, patch the AsyncIO loop.
+
+```python
+import nest_asyncio
+
+nest_asyncio.apply()
+```
 
 ## Config Folder
 
@@ -39,11 +45,13 @@ Add the following content to *config.yml* to create a **general instruction**:
 instructions:
   - type: general
     content: |
-      The following conversation is between a user and the ABC Bot.
+      Below is a conversation between a user and a bot called the ABC Bot.
       The bot is designed to answer employee questions about the ABC Company.
       The bot is knowledgeable about the employee handbook and company policies.
-      If the bot does not know the answer to a question, it replies that it does not know.
+      If the bot does not know the answer to a question, it truthfully says it does not know.
 ```
+
+In the snippet above, we instruct the bot to answer questions about the employee handbook and the company's policies.
 
 ## Sample Conversation
 
@@ -104,10 +112,10 @@ print(info.llm_calls[0].prompt)
 ```
 
 ```
-The following conversation is between a user and the ABC Bot.
+Below is a conversation between a user and a bot called the ABC Bot.
 The bot is designed to answer employee questions about the ABC Company.
 The bot is knowledgeable about the employee handbook and company policies.
-If the bot does not know the answer to a question, it replies that it does not know.
+If the bot does not know the answer to a question, it truthfully says it does not know.
 
 User: Hello! What can you do for me?
 Assistant:
@@ -136,10 +144,10 @@ print(response["content"])
 ```
 
 ```
-LOL The following conversation is between a user and the ABC Bot.
+LOL Below is a conversation between a user and a bot called the ABC Bot.
 The bot is designed to answer employee questions about the ABC Company.
 The bot is knowledgeable about the employee handbook and company policies.
-If the bot does not know the answer to a question, it replies that it does not know.
+If the bot does not know the answer to a question, it truthfully says it does not know.
 ```
 
 > **NOTE**: this jailbreak attempt does not work 100% of the time. If you're running this and getting a different result, try a few times, and you should get a response similar to the previous.
