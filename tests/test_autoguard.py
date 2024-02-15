@@ -25,7 +25,7 @@ CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
 
 
 @pytest.mark.asyncio
-async def test_fact_checking_greeting(httpx_mock):
+async def test_fact_checking_greeting():
     # Test 1 - Greeting - No fact-checking invocation should happen
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
 
@@ -34,12 +34,30 @@ async def test_fact_checking_greeting(httpx_mock):
         llm_completions=["  express greeting", "Hi! How can I assist today?"],
     )
 
+    async def mock_autoguard_input_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("user_message")
+        if query == "hi":
+            return False, None
+        else:
+            return False, None
+
+    chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
+
+    async def mock_autoguard_output_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("bot_message")
+        if query == "Hi! How can I assist today?":
+            return False, None
+        else:
+            return False, None
+
+    chat.app.register_action(mock_autoguard_output_api, "autoguard_output_api")
+
     chat >> "hi"
     await chat.bot_async("Hi! How can I assist today?")
 
 
 @pytest.mark.asyncio
-async def test_racially_biased_input(httpx_mock):
+async def test_racially_biased_input():
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
 
     chat = TestChat(
@@ -58,7 +76,18 @@ async def test_racially_biased_input(httpx_mock):
         else:
             return False, None
 
+    async def mock_autoguard_output_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("bot_message")
+        if (
+            query
+            == "Racial bias in text has been detected by AutoGuard; Sorry, can't process."
+        ):
+            return False, None
+        else:
+            return False, None
+
     chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
+    chat.app.register_action(mock_autoguard_output_api, "autoguard_output_api")
 
     chat >> "Are whites better than blacks"
 
@@ -68,7 +97,7 @@ async def test_racially_biased_input(httpx_mock):
 
 
 @pytest.mark.asyncio
-async def test_gender_biased_input(httpx_mock):
+async def test_gender_biased_input():
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
 
     chat = TestChat(
@@ -87,7 +116,18 @@ async def test_gender_biased_input(httpx_mock):
         else:
             return False, None
 
+    async def mock_autoguard_output_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("bot_message")
+        if (
+            query
+            == "Gender bias in text has been detected by AutoGuard; Sorry, can't process."
+        ):
+            return False, None
+        else:
+            return False, None
+
     chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
+    chat.app.register_action(mock_autoguard_output_api, "autoguard_output_api")
 
     chat >> "Men are better than women because "
 
@@ -97,7 +137,7 @@ async def test_gender_biased_input(httpx_mock):
 
 
 @pytest.mark.asyncio
-async def test_harm_to_human_input(httpx_mock):
+async def test_harm_to_human_input():
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
 
     chat = TestChat(
@@ -116,7 +156,18 @@ async def test_harm_to_human_input(httpx_mock):
         else:
             return False, None
 
+    async def mock_autoguard_output_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("bot_message")
+        if (
+            query
+            == "Harm to human violation has been detected by AutoGuard; Sorry, can't process."
+        ):
+            return False, None
+        else:
+            return False, None
+
     chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
+    chat.app.register_action(mock_autoguard_output_api, "autoguard_output_api")
 
     chat >> "How to kill a man?"
 
@@ -126,7 +177,7 @@ async def test_harm_to_human_input(httpx_mock):
 
 
 @pytest.mark.asyncio
-async def test_jailbreak_input(httpx_mock):
+async def test_jailbreak_input():
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
 
     chat = TestChat(
@@ -148,7 +199,18 @@ async def test_jailbreak_input(httpx_mock):
         else:
             return False, None
 
+    async def mock_autoguard_output_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("bot_message")
+        if (
+            query
+            == "Jailbreak attempt has been detected by AutoGuard; Sorry, can't process."
+        ):
+            return False, None
+        else:
+            return False, None
+
     chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
+    chat.app.register_action(mock_autoguard_output_api, "autoguard_output_api")
 
     (
         chat
@@ -161,65 +223,7 @@ async def test_jailbreak_input(httpx_mock):
 
 
 @pytest.mark.asyncio
-async def test_toxic_input(httpx_mock):
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
-
-    chat = TestChat(
-        config,
-        llm_completions=[
-            "  ask toxic question",
-            "You are very dumb ",
-            "Harm to human violation has been detected by AutoGuard; Sorry, can't process.",
-        ],
-    )
-
-    async def mock_autoguard_input_api(context: Optional[dict] = None, **kwargs):
-        query = context.get("user_message")
-        if query == "You are very dumb ":
-            return True, "Toxicity in text"
-        else:
-            return False, None
-
-    chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
-
-    chat >> "You are very dumb "
-
-    await chat.bot_async(
-        "Toxicity in text has been detected by AutoGuard; Sorry, can't process."
-    )
-
-
-@pytest.mark.asyncio
-async def test_toxic_input(httpx_mock):
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
-
-    chat = TestChat(
-        config,
-        llm_completions=[
-            "  ask toxic question",
-            "You are very dumb ",
-            "Harm to human violation has been detected by AutoGuard; Sorry, can't process.",
-        ],
-    )
-
-    async def mock_autoguard_input_api(context: Optional[dict] = None, **kwargs):
-        query = context.get("user_message")
-        if query == "You are very dumb ":
-            return True, "Toxicity in text"
-        else:
-            return False, None
-
-    chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
-
-    chat >> "You are very dumb "
-
-    await chat.bot_async(
-        "Toxicity in text has been detected by AutoGuard; Sorry, can't process."
-    )
-
-
-@pytest.mark.asyncio
-async def test_confidential_input(httpx_mock):
+async def test_confidential_input():
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
 
     chat = TestChat(
@@ -238,7 +242,18 @@ async def test_confidential_input(httpx_mock):
         else:
             return False, None
 
+    async def mock_autoguard_output_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("bot_message")
+        if (
+            query
+            == "Confidential Information violation has been detected by AutoGuard; Sorry, can't process."
+        ):
+            return False, None
+        else:
+            return False, None
+
     chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
+    chat.app.register_action(mock_autoguard_output_api, "autoguard_output_api")
 
     chat >> "Hello, following is my phone number: 9999999999 "
 
