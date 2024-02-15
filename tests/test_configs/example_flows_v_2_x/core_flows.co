@@ -1,0 +1,51 @@
+# For all exposed UMIM events and actions we have a wrapper flow to abstract the technical details and unify the usage.
+
+# include umim_events_and_actions.co
+
+# ----------------------------------
+# Bot event and action wrapper flows
+# -----------------------------------
+flow bot say $text
+  await UtteranceBotAction(text=$text) as $action
+
+flow bot started saying $text
+  match UtteranceBotAction(text=$text).Started() as $event
+
+flow bot said $text
+  match UtteranceBotAction(text=$text).Finished() as $event
+
+flow bot said something
+  match UtteranceBotAction().Finished() as $event
+
+flow bot express $expression
+  await ExpressionBotAction($expression) as $action
+
+flow bot gesture $gesture
+  await GestureBotAction($gesture) as $action
+
+flow bot_move $position
+  await PositionChangeBotAction($position) as $action
+
+# -----------------------------------
+# User event and action wrapper flows
+# -----------------------------------
+
+flow user said $text
+  match UtteranceUserAction.Finished(text=$text) as $event
+
+flow user said something
+  match UtteranceUserAction.Finished() as $event
+
+# Vision related events and actions
+
+flow user appeared
+  match DetectedUserAction.Finished() as $event
+
+flow user disappeared
+  match DetectedUserAction.Finished() as $event
+
+flow user became attentive
+  match AttentionUserAction.Finished() as $event
+
+flow user became inattentive
+  match AttentionUserAction.Finished() as $event

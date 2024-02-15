@@ -17,12 +17,12 @@ import logging
 import textwrap
 from typing import List, Optional
 
-from nemoguardrails.language.colang_parser import (
+from nemoguardrails.colang.v1_0.lang.colang_parser import (
     parse_coflows_to_yml_flows,
     parse_snippets_and_imports,
 )
-from nemoguardrails.language.comd_parser import parse_md_file
-from nemoguardrails.language.coyml_parser import parse_flow_elements
+from nemoguardrails.colang.v1_0.lang.comd_parser import parse_md_file
+from nemoguardrails.colang.v1_0.lang.coyml_parser import parse_flow_elements
 
 log = logging.getLogger(__name__)
 
@@ -61,11 +61,14 @@ def _extract_flow_code(file_content: str, flow_elements: List[dict]) -> Optional
     return None
 
 
-def parse_colang_file(filename: str, content: str):
+def parse_colang_file(filename: str, content: str, include_source_mapping: bool = True):
     """Parse the content of a .co file into the CoYML format."""
     snippets, imports = parse_snippets_and_imports(filename, content)
     result = parse_coflows_to_yml_flows(
-        filename, content, snippets=snippets, include_source_mapping=True
+        filename,
+        content,
+        snippets=snippets,
+        include_source_mapping=include_source_mapping,
     )
 
     flows = []

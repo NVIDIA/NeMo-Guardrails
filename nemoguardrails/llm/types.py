@@ -25,7 +25,13 @@ class Task(Enum):
     GENERATE_NEXT_STEPS = "generate_next_steps"
     GENERATE_BOT_MESSAGE = "generate_bot_message"
     GENERATE_INTENT_STEPS_MESSAGE = "generate_intent_steps_message"
+
     GENERATE_VALUE = "generate_value"
+    GENERATE_VALUE_FROM_INSTRUCTION = "generate_value_from_instruction"
+    GENERATE_USER_INTENT_FROM_USER_ACTION = "generate_user_intent_from_user_action"
+    GENERATE_FLOW_FROM_INSTRUCTIONS = "generate_flow_from_instructions"
+    GENERATE_FLOW_FROM_NAME = "generate_flow_from_name"
+    GENERATE_FLOW_CONTINUATION = "generate_flow_continuation"
 
     # Tasks for various rails
     SELF_CHECK_INPUT = "self_check_input"

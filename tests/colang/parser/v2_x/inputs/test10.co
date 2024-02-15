@@ -1,0 +1,3 @@
+flow main
+  if True and True
+    bot say "ok"

@@ -24,42 +24,22 @@ from urllib.parse import urljoin
 import aiohttp
 from langchain.chains.base import Chain
 
-from nemoguardrails.actions.action_dispatcher import ActionDispatcher
 from nemoguardrails.actions.actions import ActionResult
-from nemoguardrails.flows.flows import FlowConfig, compute_context, compute_next_steps
-from nemoguardrails.language.parser import parse_colang_file
-from nemoguardrails.llm.taskmanager import LLMTaskManager
+from nemoguardrails.colang import parse_colang_file
+from nemoguardrails.colang.runtime import Runtime
+from nemoguardrails.colang.v1_0.runtime.flows import (
+    FlowConfig,
+    compute_context,
+    compute_next_steps,
+)
 from nemoguardrails.logging.processing_log import processing_log_var
-from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
 
 
-class Runtime:
+class RuntimeV1_0(Runtime):
     """Runtime for executing the guardrails."""
-
-    def __init__(self, config: RailsConfig, verbose: bool = False):
-        """
-        Initialize the Runtime.
-
-        Args:
-            config (RailsConfig): The configuration for the Rails system.
-            verbose (bool, optional): Whether to enable verbose logging. Defaults to False.
-        """
-        self.config = config
-        self.verbose = verbose
-
-        # Register the actions with the dispatcher.
-        self.action_dispatcher = ActionDispatcher(config_path=config.config_path)
-
-        # The list of additional parameters that can be passed to the actions.
-        self.registered_action_params = {}
-
-        self._init_flow_configs()
-
-        # Initialize the prompt renderer as well.
-        self.llm_task_manager = LLMTaskManager(config)
 
     def _load_flow_config(self, flow: dict):
         """
@@ -142,59 +122,6 @@ class Runtime:
         for flow in self.config.flows:
             self._load_flow_config(flow)
 
-    def register_action(
-        self, action: callable, name: Optional[str] = None, override: bool = True
-    ):
-        """
-        Register an action.
-
-        Args:
-            action (callable): The action function.
-            name (str, optional): The name of the action. Defaults to None.
-            override (bool, optional): Whether to override if the action already exists. Defaults to True.
-
-        Returns:
-            None
-        """
-        self.action_dispatcher.register_action(action, name, override=override)
-
-    def register_actions(self, actions_obj: any, override: bool = True):
-        """
-        Register actions from an object.
-
-        Args:
-            actions_obj (any): The object containing actions.
-            override (bool, optional): Whether to override if the action already exists. Defaults to True.
-
-        Returns:
-            None
-        """
-
-        self.action_dispatcher.register_actions(actions_obj, override=override)
-
-    @property
-    def registered_actions(self):
-        """
-        Get the registered actions.
-
-        Returns:
-            any: The registered actions.
-        """
-        return self.action_dispatcher.registered_actions
-
-    def register_action_param(self, name: str, value: any):
-        """
-        Register an additional parameter for actions.
-
-        Args:
-            name (str): The name of the parameter.
-            value (any): The value of the parameter.
-
-        Returns:
-            None
-        """
-        self.registered_action_params[name] = value
-
     async def generate_events(
         self, events: List[dict], processing_log: Optional[List[dict]] = None
     ) -> List[dict]:
@@ -248,7 +175,7 @@ class Runtime:
             else:
                 # We need to slide all the flows based on the current event,
                 # to compute the next steps.
-                next_events = await self.compute_next_steps(
+                next_events = await self._compute_next_steps(
                     events, processing_log=processing_log
                 )
 
@@ -274,7 +201,7 @@ class Runtime:
 
         return new_events
 
-    async def compute_next_steps(
+    async def _compute_next_steps(
         self, events: List[dict], processing_log: List[dict]
     ) -> List[dict]:
         """
@@ -581,7 +508,8 @@ class Runtime:
 
         # And we compute the next steps. The new flow should match the current event,
         # and start.
-        next_steps = await self.compute_next_steps(
+
+        next_steps = await self._compute_next_steps(
             events, processing_log=processing_log
         )
 

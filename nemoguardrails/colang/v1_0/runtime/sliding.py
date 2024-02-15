@@ -16,7 +16,7 @@
 import logging
 from typing import Optional
 
-from nemoguardrails.flows.eval import eval_expression
+from nemoguardrails.colang.v1_0.runtime.eval import eval_expression
 
 log = logging.getLogger(__name__)
 

@@ -1,0 +1,14 @@
+# include core_flows.co
+
+flow user silent $time
+  start TimerBotAction(uuid(), $time) as $action
+  when match $action.Finished()
+    return
+  else when user said something
+    abort
+
+# Future version
+flow user silent $time
+  start TimerBotAction(uuid(), $time) as $action
+  when match $action.Finished() and not user said something
+    return

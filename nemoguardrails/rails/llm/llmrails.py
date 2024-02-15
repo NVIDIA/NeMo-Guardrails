@@ -27,16 +27,19 @@ from langchain.llms.base import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
+from nemoguardrails.actions.v2_x.generation import LLMGenerationActionsV2dotx
+from nemoguardrails.colang import parse_colang_file
+from nemoguardrails.colang.v1_0.runtime.flows import compute_context
+from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
+from nemoguardrails.colang.v2_x.lang.utils import new_uuid
+from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.context import (
     explain_info_var,
     generation_options_var,
     streaming_handler_var,
 )
 from nemoguardrails.embeddings.index import EmbeddingsIndex
-from nemoguardrails.flows.flows import compute_context
-from nemoguardrails.flows.runtime import Runtime
 from nemoguardrails.kb.kb import KnowledgeBase
-from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.explain import ExplainInfo
 from nemoguardrails.logging.processing_log import compute_generation_log
@@ -51,12 +54,19 @@ from nemoguardrails.rails.llm.options import (
 )
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 from nemoguardrails.streaming import StreamingHandler
+from nemoguardrails.utils import new_event_dict
 
 log = logging.getLogger(__name__)
+
+process_events_semaphore = asyncio.Semaphore(1)
 
 
 class LLMRails:
     """Rails based on a given configuration."""
+
+    config: RailsConfig
+    llm: Optional[BaseLLM]
+    runtime: Runtime
 
     def __init__(
         self, config: RailsConfig, llm: Optional[BaseLLM] = None, verbose: bool = False
@@ -91,32 +101,38 @@ class LLMRails:
         # Weather the main LLM supports streaming
         self.main_llm_supports_streaming = False
 
-        # We also load the default flows from the `llm_flows.co` file in the current folder.
-        current_folder = os.path.dirname(__file__)
-        default_flows_file = "llm_flows.co"
-        default_flows_path = os.path.join(current_folder, default_flows_file)
-        with open(default_flows_path, "r") as f:
-            default_flows_content = f.read()
-            default_flows = parse_colang_file(
-                default_flows_file, default_flows_content
-            )["flows"]
+        # We also load the default flows from the `default_flows.yml` file in the current folder.
+        # But only for version 1.0.
+        # TODO: decide on the default flows for 2.x.
+        if config.colang_version == "1.0":
+            # We also load the default flows from the `llm_flows.co` file in the current folder.
+            current_folder = os.path.dirname(__file__)
+            default_flows_file = "llm_flows.co"
+            default_flows_path = os.path.join(current_folder, default_flows_file)
+            with open(default_flows_path, "r") as f:
+                default_flows_content = f.read()
+                default_flows = parse_colang_file(
+                    default_flows_file, default_flows_content
+                )["flows"]
 
-        # We mark all the default flows as system flows.
-        for flow_config in default_flows:
-            flow_config["is_system_flow"] = True
+            # We mark all the default flows as system flows.
+            for flow_config in default_flows:
+                flow_config["is_system_flow"] = True
 
-        # We add the default flows to the config.
-        self.config.flows.extend(default_flows)
+            # We add the default flows to the config.
+            self.config.flows.extend(default_flows)
 
-        # We also need to load the content from the components library.
-        library_path = os.path.join(os.path.dirname(__file__), "../../library")
-        for root, dirs, files in os.walk(library_path):
-            for file in files:
-                # Extract the full path for the file
-                full_path = os.path.join(root, file)
-                if file.endswith(".co"):
-                    with open(full_path, "r", encoding="utf-8") as f:
-                        content = parse_colang_file(file, content=f.read())
+            # We also need to load the content from the components library.
+            library_path = os.path.join(os.path.dirname(__file__), "../../library")
+            for root, dirs, files in os.walk(library_path):
+                for file in files:
+                    # Extract the full path for the file
+                    full_path = os.path.join(root, file)
+                    if file.endswith(".co"):
+                        with open(full_path, "r", encoding="utf-8") as f:
+                            content = parse_colang_file(
+                                file, content=f.read(), version=config.colang_version
+                            )
 
                         # We mark all the flows coming from the guardrails library as system flows.
                         for flow_config in content["flows"]:
@@ -146,24 +162,32 @@ class LLMRails:
                 # We also mark them as subflows by default, to simplify the syntax
                 flow_config["is_subflow"] = True
 
-        # We check if the configuration has a config.py module associated with it.
-        config_module = None
-        if self.config.config_path:
-            filepath = os.path.join(self.config.config_path, "config.py")
-            if os.path.exists(filepath):
-                filename = os.path.basename(filepath)
-                spec = importlib.util.spec_from_file_location(filename, filepath)
-                config_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(config_module)
+        # We check if the configuration or any of the imported ones have config.py modules.
+        config_modules = []
+        for _path in self.config.import_paths + [self.config.config_path]:
+            if _path:
+                filepath = os.path.join(_path, "config.py")
+                if os.path.exists(filepath):
+                    filename = os.path.basename(filepath)
+                    spec = importlib.util.spec_from_file_location(filename, filepath)
+                    config_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(config_module)
+                    config_modules.append(config_module)
 
         # First, we initialize the runtime.
-        self.runtime = Runtime(config=config, verbose=verbose)
+        if config.colang_version == "1.0":
+            self.runtime = RuntimeV1_0(config=config, verbose=verbose)
+        elif config.colang_version == "2.x":
+            self.runtime = RuntimeV2_x(config=config, verbose=verbose)
+        else:
+            raise ValueError(f"Unsupported colang version: {config.colang_version}.")
 
-        # If we have a config_module with an `init` function, we call it.
+        # If we have a config_modules with an `init` function, we call it.
         # We need to call this here because the `init` might register additional
         # LLM providers.
-        if config_module is not None and hasattr(config_module, "init"):
-            config_module.init(self)
+        for config_module in config_modules:
+            if hasattr(config_module, "init"):
+                config_module.init(self)
 
         # If we have a customized embedding model, we'll use it.
         for model in self.config.models:
@@ -179,7 +203,12 @@ class LLMRails:
         self._init_llms()
 
         # Next, we initialize the LLM Generate actions and register them.
-        self.llm_generation_actions = LLMGenerationActions(
+        llm_generation_actions_class = (
+            LLMGenerationActions
+            if config.colang_version == "1.0"
+            else LLMGenerationActionsV2dotx
+        )
+        self.llm_generation_actions = llm_generation_actions_class(
             config=config,
             llm=self.llm,
             llm_task_manager=self.runtime.llm_task_manager,
@@ -408,9 +437,19 @@ class LLMRails:
                     )
 
             elif msg["role"] == "assistant":
-                events.append(
-                    {"type": "StartUtteranceBotAction", "script": msg["content"]}
+                action_uid = new_uuid()
+                start_event = new_event_dict(
+                    "StartUtteranceBotAction",
+                    final_transcript=msg["content"],
+                    action_uid=action_uid,
                 )
+                finished_event = new_event_dict(
+                    "UtteranceBotActionFinished",
+                    final_transcript=msg["content"],
+                    is_success=True,
+                    action_uid=action_uid,
+                )
+                events.extend([start_event, finished_event])
             elif msg["role"] == "context":
                 events.append({"type": "ContextUpdate", "data": msg["content"]})
             elif msg["role"] == "event":
@@ -536,6 +575,7 @@ class LLMRails:
 
         # Extract and join all the messages from StartUtteranceBotAction events as the response.
         responses = []
+        new_extra_events = []
         for event in new_events:
             if event["type"] == "StartUtteranceBotAction":
                 # Check if we need to remove a message
@@ -544,10 +584,22 @@ class LLMRails:
                 else:
                     responses.append(event["script"])
 
+                # For the messages interface, we need to consider the UtteranceBotAction finished
+                # as soon as we return the message, hence we add the finished event to the new events.
+                # new_extra_events.append(
+                #     new_event_dict(
+                #         "UtteranceBotActionFinished",
+                #         action_uid=event["action_uid"],
+                #         is_success=True,
+                #         final_script=event["script"],
+                #     )
+                # )
+
         new_message = {"role": "assistant", "content": "\n".join(responses)}
 
         # Save the new events in the history and update the cache
         events.extend(new_events)
+        events.extend(new_extra_events)
         cache_key = get_history_cache_key(messages + [new_message])
         self.events_history_cache[cache_key] = events
 
@@ -737,6 +789,53 @@ class LLMRails:
             )
 
         return asyncio.run(self.generate_events_async(events=events))
+
+    async def process_events_async(
+        self, events: List[dict], state: Optional[dict] = None
+    ) -> Tuple[List[dict], dict]:
+        """Process a sequence of events in a given state.
+
+        The events will be processed one by one, in the input order.
+
+        Args:
+            events: A sequence of events that needs to be processed.
+            state: The state that should be used as the starting point. If not provided,
+              a clean state will be used.
+
+        Returns:
+            (output_events, output_state) Returns a sequence of output events and an output
+              state.
+        """
+        t0 = time.time()
+        llm_stats.reset()
+
+        # Compute the new events.
+        # We need to protect 'process_events' to be called only once at a time
+        async with process_events_semaphore:
+            output_events, output_state = await self.runtime.process_events(
+                events, state
+            )
+
+        took = time.time() - t0
+        # Small tweak, disable this when there were no events (or it was just too fast).
+        if took > 0.01:
+            log.info("--- :: Total processing took %.2f seconds." % took)
+            log.info("--- :: Stats: %s" % llm_stats)
+
+        return output_events, output_state
+
+    def process_events(
+        self, events: List[dict], state: Optional[dict] = None
+    ) -> Tuple[List[dict], dict]:
+        """Synchronous version of `LLMRails.process_events_async`."""
+
+        if check_sync_call_from_async_loop():
+            raise RuntimeError(
+                "You are using the sync `generate_events` inside async code. "
+                "You should replace with `await generate_events_async(...)."
+            )
+
+        return asyncio.run(self.process_events_async(events, state))
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""

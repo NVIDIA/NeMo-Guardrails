@@ -17,13 +17,17 @@ from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
 
-# A decorator that sets a property on the function to indicate if it's a system action or not.
-def action(is_system_action: bool = False, name: Optional[str] = None):
+def action(
+    is_system_action: bool = False,
+    name: Optional[str] = None,
+    execute_async: bool = False,
+):
     """Decorator to mark a function or class as an action.
 
     Args:
         is_system_action (bool): Flag indicating if the action is a system action.
         name (Optional[str]): The name to associate with the action.
+        execute_async: Whether the function should be executed in async mode.
 
     Returns:
         callable: The decorated function or class.
@@ -38,6 +42,7 @@ def action(is_system_action: bool = False, name: Optional[str] = None):
         fn_or_cls.action_meta = {
             "name": name or fn_or_cls.__name__,
             "is_system_action": is_system_action,
+            "execute_async": execute_async,
         }
         return fn_or_cls
 

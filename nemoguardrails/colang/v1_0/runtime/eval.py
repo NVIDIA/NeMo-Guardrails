@@ -17,7 +17,7 @@ import re
 
 from simpleeval import simple_eval
 
-from nemoguardrails.flows.utils import AttributeDict
+from nemoguardrails.colang.v1_0.runtime.utils import AttributeDict
 
 
 def eval_expression(expr, context):

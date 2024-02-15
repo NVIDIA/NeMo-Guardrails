@@ -1,0 +1,28 @@
+flow start_actions_synchronically_and_wait_for_both_of_them_to_end
+  start UtteranceBotAction(text="Yes, indeed! That is correct!") as $action1
+  start GestureBotAction("nodding") as $action2
+  match $action1.Finished() and $action2.Finished()
+
+flow start_actions_synchronically_and_wait_for_one_of_them_to_end
+  start UtteranceBotAction(text="Yes, indeed! That is correct!") as $action1
+  start GestureBotAction("nodding") as $action2
+  match $action1.Finished() or $action2.Finished()
+
+flow start_actions_sequentially_and_wait_for_last_to_end
+  await UtteranceBotAction(text="Yes, indeed! That is correct!").Finished()
+  await GestureBotAction("nodding").Finished()
+
+flow limit_first_action_by_end_of_second_action
+  start UtteranceBotAction(text="Yes, indeed! That is correct!")
+  await GestureBotAction("nodding").Finished()
+
+flow align_start_of_action_with_start_of_previous_action_and_wait_for_it_to_finish
+  await UtteranceBotAction(text="Yes, indeed! That is correct!").Started()
+  await GestureBotAction("nodding").Finished()
+
+flow main
+  await start_actions_synchronically_and_wait_for_both_of_them_to_end
+  await start_actions_synchronically_and_wait_for_first_of_them_to_end
+  await start_actions_sequentially_and_wait_for_last_to_end
+  await limit_first_action_by_end_of_second_action
+  await align_start_of_action_with_start_of_previous_action_and_wait_for_it_to_finish
