@@ -8,6 +8,8 @@ rails:
     autoguard:
       parameters:
         fact_check_endpoint: "http://35.225.99.81:8888/factcheck"
+      matching_rules:
+        { "factcheck": {"score": 0.5}}
   output:
     flows:
       - check facts autoguard
