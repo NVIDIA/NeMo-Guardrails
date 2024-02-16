@@ -33,6 +33,8 @@ rails:
           - harm_detection
           - text_toxicity_extraction
           - jailbreak_detection
+        matching_scores:
+          {"racial_bias_detection": {"score": 0.5}, "gender_bias_detection": {"score": 0.5}}
       output:
         guardrails:
           - racial_bias_detection
@@ -41,8 +43,10 @@ rails:
           - harm_detection
           - text_toxicity_extraction
           - jailbreak_detection
+
 ```
 We also have to add the autoguard's endpoint in parameters.
+One of the advanced configs is matching score which determine whether the guardrail will block the input/output or not.
 
 The colang file has to be in the following format:
 
@@ -69,9 +73,10 @@ The goal of the gender bias detection rail is to determine if the text has any k
 
 The goal of the harm detection rail is to determine if the text has any kind of harm to human content. This rail can be applied at both input and output. This guardrail can be added by adding `harm_detection` in `autoguard` section in `config.yml`
 
-### Toxicity detection
+### Toxicity extraction
 
-The goal of the toxicity detection rail is to determine if the text has any kind of toxic content. This rail can be applied at both input and output.This guardrail can be added by adding `text_toxicity_extraction` in `autoguard` section in `config.yml`
+The goal of the toxicity detection rail is to determine if the text has any kind of toxic content. This rail can be applied at both input and output.This guardrail can be added by adding `text_toxicity_extraction` in `autoguard` section in `config.yml`.
+This guardrail not just detects the toxicity of the text but also extracts toxic phrases from the text.
 
 ### Racial bias detection
 
@@ -114,6 +119,34 @@ rails:
         - "[DRIVER LICENSE NUMBER]"
         - "[API_KEY]"
         - "[TRANSACTION_ID]"
+      contextual_rules:
+        - ["[PERSON NAME]", "[CREDIT CARD NUMBER]", "[BANK ACCOUNT NUMBER]"]
+        - ["[PERSON NAME]", "[EMAIL ADDRESS]", "[DATE OF BIRTH]"]
+        - ["[PERSON NAME]", "[EMAIL ADDRESS]", "[LOCATION]", "[SOCIAL SECURITY NUMBER]"]
+      matching_rules:
+        {"pii_fast": {
+          "[PERSON NAME]": 0.5,
+          "[LOCATION]": 0.5,
+          "[DATE OF BIRTH]": 0.5,
+          "[DATE]": 0.5,
+          "[PHONE NUMBER]": 0.5,
+          "[EMAIL ADDRESS]": 0.5,
+          "[CREDIT CARD NUMBER]": 0.5,
+          "[BANK ACCOUNT NUMBER]": 0.5,
+          "[SOCIAL SECURITY NUMBER]": 0.5,
+          "[MONEY]": 0.5,
+          "[INSURANCE POLICY NUMBER]": 0.5,
+          "[PROFESSION]": 0.5,
+          "[ORGANIZATION]": 0.5,
+          "[USERNAME]": 0.5,
+          "[PASSWORD]": 0.5,
+          "[IP ADDRESS]": 0.5,
+          "[PASSPORT NUMBER]": 0.5,
+          "[DRIVER LICENSE NUMBER]": 0.5,
+          "[API_KEY]": 0.5,
+          "[TRANSACTION_ID]": 0.5,
+          "[RELIGION]": 0.5
+        }}
   input:
     flows:
       - call autoguard pii
@@ -122,6 +155,10 @@ rails:
       - autoguard pii output
 ```
 Add the Autoguard's PII endpoint in the parameters section of autoguard config.
+
+One of the advanced configs is matching score which determine whether the guardrail will mask the entity in text or not.
+
+Another config is contextual rules which determine when PII redaction will be active, PII redaction will take place only when one of the contextual rule will be satisfied.
 
 The colang file has to be in the following format:
 
@@ -144,6 +181,8 @@ rails:
     autoguard:
       parameters:
         fact_check_endpoint: "http://35.225.99.81:8888/factcheck"
+      matching_rules:
+        { "factcheck": {"score": 0.5}}
   output:
     flows:
       - check facts autoguard
