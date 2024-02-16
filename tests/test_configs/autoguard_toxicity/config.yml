@@ -7,7 +7,7 @@ rails:
   config:
     autoguard:
       parameters:
-        toxicity_endpoint: "http://35.225.99.81:8888/guardrail"
+        toxicity_endpoint: "https://nvidia.autoalign.ai/guardrail"
       matching_rules:
         { "text_toxicity_extraction": { "score": 0.5 } }
   input:
