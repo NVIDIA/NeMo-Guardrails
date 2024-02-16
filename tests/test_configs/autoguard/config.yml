@@ -15,6 +15,8 @@ rails:
           - confidential_detection
           - harm_detection
           - jailbreak_detection
+        matching_scores:
+          {"racial_bias_detection": {"score": 0.5}, "gender_bias_detection": {"score": 0.5}}
       output:
         guardrails:
           - racial_bias_detection
