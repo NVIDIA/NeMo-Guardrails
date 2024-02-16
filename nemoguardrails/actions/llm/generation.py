@@ -100,12 +100,13 @@ class LLMGenerationActions:
 
         # There are still some edge cases not covered by nest_asyncio.
         # Using a separate thread always for now.
+        loop = asyncio.get_event_loop()
         if True or check_sync_call_from_async_loop():
             t = threading.Thread(target=asyncio.run, args=(self.init(),))
             t.start()
             t.join()
         else:
-            asyncio.run(self.init())
+            loop.run_until_complete(self.init())
 
         self.llm_task_manager = llm_task_manager
 
