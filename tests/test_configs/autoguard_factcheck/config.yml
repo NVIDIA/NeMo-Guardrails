@@ -7,7 +7,7 @@ rails:
   config:
     autoguard:
       parameters:
-        fact_check_endpoint: "http://35.225.99.81:8888/factcheck"
+        fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
       matching_rules:
         { "factcheck": {"score": 0.5}}
   output:
