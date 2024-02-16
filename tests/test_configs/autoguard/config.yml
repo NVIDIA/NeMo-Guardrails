@@ -7,7 +7,7 @@ rails:
   config:
     autoguard:
       parameters:
-        endpoint: "http://35.225.99.81:8888/guardrail"
+        endpoint: "https://nvidia.autoalign.ai/guardrail"
       input:
         guardrails:
           - racial_bias_detection
