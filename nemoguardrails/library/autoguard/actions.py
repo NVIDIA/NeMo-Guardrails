@@ -17,7 +17,7 @@ import json
 import logging
 import os
 from collections import defaultdict
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 
@@ -76,7 +76,13 @@ DEFAULT_CONFIG = {
 }
 
 
-async def autoguard_infer(request_url, text, tasks, matching_scores, task_config=None):
+async def autoguard_infer(
+    request_url: str,
+    text: str,
+    tasks: List[str],
+    matching_scores: Dict[str, Dict[str, float]],
+    task_config: Optional[Dict[Any, Any]] = None,
+):
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
@@ -114,7 +120,10 @@ async def autoguard_infer(request_url, text, tasks, matching_scores, task_config
 
 
 async def autoguard_toxicity_infer(
-    request_url, text, matching_scores, task_config=None
+    request_url: str,
+    text: str,
+    matching_scores: Dict[str, Dict[str, float]],
+    task_config: Optional[Dict[Any, Any]] = None,
 ):
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
@@ -158,7 +167,12 @@ async def autoguard_toxicity_infer(
 
 
 async def autoguard_pii_infer(
-    request_url, text, entities, contextual_rules, matching_scores, task_config=None
+    request_url: str,
+    text: str,
+    entities: List[str],
+    contextual_rules: List[List[str]],
+    matching_scores: Dict[str, Dict[str, float]],
+    task_config: Optional[Dict[Any, Any]] = None,
 ):
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
@@ -197,7 +211,12 @@ async def autoguard_pii_infer(
     return False, None
 
 
-async def autoguard_factcheck_infer(request_url, text, documents, matching_scores):
+async def autoguard_factcheck_infer(
+    request_url: str,
+    text: str,
+    documents: List[str],
+    matching_scores: Dict[str, Dict[str, float]],
+):
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
