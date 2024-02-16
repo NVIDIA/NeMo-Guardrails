@@ -222,12 +222,13 @@ class LLMRails:
         # Next, we initialize the Knowledge Base
         # There are still some edge cases not covered by nest_asyncio.
         # Using a separate thread always for now.
+        loop = asyncio.get_event_loop()
         if True or check_sync_call_from_async_loop():
             t = threading.Thread(target=asyncio.run, args=(self._init_kb(),))
             t.start()
             t.join()
         else:
-            asyncio.run(self._init_kb())
+            loop.run_until_complete(self._init_kb())
 
         # We also register the kb as a parameter that can be passed to actions.
         self.runtime.register_action_param("kb", self.kb)
@@ -724,7 +725,8 @@ class LLMRails:
                 "You should replace with `await generate_async(...)` or use `nest_asyncio.apply()`."
             )
 
-        return asyncio.run(
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(
             self.generate_async(
                 prompt=prompt,
                 messages=messages,
@@ -788,7 +790,8 @@ class LLMRails:
                 "You should replace with `await generate_events_async(...)` or use `nest_asyncio.apply()`."
             )
 
-        return asyncio.run(self.generate_events_async(events=events))
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.generate_events_async(events=events))
 
     async def process_events_async(
         self, events: List[dict], state: Optional[dict] = None
@@ -835,7 +838,8 @@ class LLMRails:
                 "You should replace with `await generate_events_async(...)."
             )
 
-        return asyncio.run(self.process_events_async(events, state))
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.process_events_async(events, state))
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""
