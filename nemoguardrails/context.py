@@ -25,3 +25,6 @@ llm_call_info_var = contextvars.ContextVar("llm_call_info", default=None)
 
 # All the generation options applicable to the current context.
 generation_options_var = contextvars.ContextVar("generation_options", default=None)
+
+# The stats about the LLM calls.
+llm_stats_var = contextvars.ContextVar("llm_stats", default=None)

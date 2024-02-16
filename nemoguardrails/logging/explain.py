@@ -34,6 +34,12 @@ class LLMCallSummary(BaseModel):
     completion_tokens: Optional[int] = Field(
         default=None, description="The number of output tokens."
     )
+    started_at: Optional[float] = Field(
+        default=0, description="The timestamp for when the LLM call started."
+    )
+    finished_at: Optional[float] = Field(
+        default=0, description="The timestamp for when the LLM call finished."
+    )
 
 
 class LLMCallInfo(LLMCallSummary):
