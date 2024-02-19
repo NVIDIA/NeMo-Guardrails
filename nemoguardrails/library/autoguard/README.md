@@ -46,7 +46,8 @@ rails:
 
 ```
 We also have to add the autoguard's endpoint in parameters.
-One of the advanced configs is matching score which determine whether the guardrail will block the input/output or not.
+
+One of the advanced configs is matching score which is a threshold that determines whether the guardrail will block the input/output or not.
 
 The colang file has to be in the following format:
 
@@ -156,7 +157,7 @@ rails:
 ```
 Add the Autoguard's PII endpoint in the parameters section of autoguard config.
 
-One of the advanced configs is matching score which determine whether the guardrail will mask the entity in text or not.
+One of the advanced configs is matching score which is a threshold that determines whether the guardrail will mask the entity in text or not.
 
 Another config is contextual rules which determine when PII redaction will be active, PII redaction will take place only when one of the contextual rule will be satisfied.
 
@@ -189,6 +190,8 @@ rails:
 ```
 
 Specify the factcheck endpoint the parameters section of autoguard's config.
+
+One of the advanced configs is matching score which is a threshold that determines whether the guardrail will block the text or not.
 
 Following is the format of the colang file:
 ```colang
