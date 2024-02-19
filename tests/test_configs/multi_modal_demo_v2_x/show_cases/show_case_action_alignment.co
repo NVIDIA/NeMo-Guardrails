@@ -1,0 +1,50 @@
+flow showcase multimodality
+  bot inform "I am going to demonstrate to you the different ways of how actions can be aligned!"
+  wait 1.0
+  bot inform "I will be using two different actions, a talking action, and a gesture action."
+  wait 1.0
+
+  bot inform "The talking action goes like this:"
+  wait 1.0
+  bot say "The quick brown fox jumps over the lazy dog."
+  wait 1.0
+
+  bot inform "The gesture action looks like this:"
+  wait 1.5
+  bot gesture "Being silly, suggesting having fun"
+
+  bot inform "First, lets run the two actions sequentially!"
+  wait 4.0
+  show sequential actions showcase
+  wait 1.0
+  bot inform "Ok, you just saw how the gesture only started after I was done talking."
+  wait 1.0
+
+  bot inform "Now I will trigger the two actions in parallel."
+  wait 4.0
+  show parallel actions waiting for both to end showcase
+  wait 1.0
+  bot inform "Ok, you just saw how I was making a gesture and talking at the same time."
+  wait 1.0
+
+  bot inform "Now, I will trigger the two actions in parallel but I will limit the gesture action with the end of the talking action."
+  wait 4.0
+  show parallel actions limiting second action by end of first one
+  wait 1.0
+  bot inform "Note, how I stopped the gesture as soon as I was done talking. Depending on the action duration, I also could have switched the two actions."
+  wait 1.0
+  bot inform "That's it!"
+  wait 1.0
+
+flow show sequential actions showcase
+  bot say "The quick brown fox jumps over the lazy dog."
+  bot gesture "Being silly, suggesting having fun"
+
+flow show parallel actions waiting for both to end showcase
+  bot say "The quick brown fox jumps over the lazy dog."
+    and bot gesture "Being silly, suggesting having fun"
+
+flow show parallel actions limiting second action by end of first one
+  start bot say "The quick brown fox jumps over the lazy dog." as $action_1
+  start bot gesture "Being silly, suggesting having fun"
+  match $action_1.Finished()

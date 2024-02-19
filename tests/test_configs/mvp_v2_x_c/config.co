@@ -1,0 +1,56 @@
+# Common
+
+flow user said $text
+  match UtteranceUserActionFinished(final_transcript=$text)
+
+flow user says something
+  match UtteranceUserActionFinished()
+
+flow bot say $text
+  await UtteranceBotAction(script=$text)
+
+# User Messages
+
+flow user express greeting
+  user said "hi"
+
+# Bot Messages
+
+flow bot express greeting
+  bot say "Hello world!"
+
+flow bot express greeting again
+  bot say "Hello again!"
+
+flow bot comment unsure how to respond
+  bot say "I'm not sure how to respond."
+
+# Flows
+
+flow wait
+  match SomeRandomEvent()
+
+flow greeting
+  user express greeting
+  bot express greeting
+  user express greeting
+  bot express greeting again
+
+flow greeting_2
+  # TODO: figure out why it works with the match statement and not the `user said`
+  user said "hello_2"
+  $msg = "Hello 2!"
+  bot say $msg
+  user said "hello_2"
+  bot say "hello_2_again"
+
+
+flow fallback
+  user says something
+  bot comment unsure how to respond
+
+flow main
+  activate greeting
+  activate greeting_2
+  activate fallback
+  wait

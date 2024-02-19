@@ -1,0 +1,70 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug python (current file)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
+            }
+        },
+        {
+            "name": "Debug story (current directory)",
+            "type": "debugpy",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "nemoguardrails",
+            "args": [
+                "chat",
+                "--config=${fileDirname}",
+                "--verbose",
+                "--verbose-llm-calls",
+                "--debug-level=DEBUG"
+            ],
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
+            }
+        },
+        {
+            "name": "Run story verbose (current directory)",
+            "type": "debugpy",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "nemoguardrails",
+            "args": [
+                "chat",
+                "--config=${fileDirname}",
+                "--verbose",
+                "--verbose-llm-calls"
+            ],
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
+            }
+        },
+        {
+            "name": "Run story (current directory)",
+            "type": "debugpy",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "nemoguardrails",
+            "args": ["chat", "--config=${fileDirname}"],
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
+            }
+        },
+        {
+            "name": "Run mypy",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "",
+            "console": "integratedTerminal",
+            "preLaunchTask": "Run mypy"
+        }
+    ]
+}

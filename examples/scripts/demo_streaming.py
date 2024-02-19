@@ -66,6 +66,19 @@ async def demo_2():
     print(result)
 
 
+async def demo_hf_pipeline():
+    """Demo for streaming of response chunks directly with HuggingFacePipline deployed LLMs."""
+    config = RailsConfig.from_path(config_path="./../configs/llm/hf_pipeline_dolly")
+    app = LLMRails(config)
+
+    history = [{"role": "user", "content": "What is the capital of France?"}]
+
+    async for chunk in app.stream_async(messages=history):
+        print(f"CHUNK: {chunk}")
+        # Or do something else with the token
+
+
 if __name__ == "__main__":
     asyncio.run(demo_1())
     asyncio.run(demo_2())
+    # asyncio.run(demo_hf_pipeline())

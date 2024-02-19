@@ -32,6 +32,14 @@ def get_llm_instance_wrapper(
     """
 
     class WrapperLLM(LLM):
+        """The wrapper class needs to have defined any parameters we need to be set by NeMo Guardrails.
+
+        Currently added only streaming and temperature.
+        """
+
+        streaming: Optional[bool] = False
+        temperature: Optional[float] = 1.0
+
         @property
         def model_kwargs(self):
             """Return the model's kwargs.
@@ -50,12 +58,24 @@ def get_llm_instance_wrapper(
             """
             return llm_type
 
+        def _modify_instance_kwargs(self):
+            """Modify the parameters of the llm_instance with the attributes set for the wrapper.
+
+            This will allow the actual LLM instance to use the parameters at generation.
+            TODO: Make this function more generic if needed.
+            """
+
+            if hasattr(llm_instance, "model_kwargs"):
+                llm_instance.model_kwargs["temperature"] = self.temperature
+                llm_instance.model_kwargs["streaming"] = self.streaming
+
         def _call(
             self,
             prompt: str,
             stop: Optional[List[str]] = None,
             run_manager: Optional[CallbackManagerForLLMRun] = None,
         ) -> str:
+            self._modify_instance_kwargs()
             return llm_instance._call(prompt, stop, run_manager)
 
         async def _acall(
@@ -64,6 +84,7 @@ def get_llm_instance_wrapper(
             stop: Optional[List[str]] = None,
             run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
         ) -> str:
+            self._modify_instance_kwargs()
             return await llm_instance._acall(prompt, stop, run_manager)
 
     return WrapperLLM

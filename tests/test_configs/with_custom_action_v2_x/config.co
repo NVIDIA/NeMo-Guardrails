@@ -1,0 +1,6 @@
+flow main
+  global $value
+  $value = 3
+  match UtteranceUserAction.Finished(final_transcript="start")
+  $sum = CustomTestAction(param=5)
+  start UtteranceBotAction(script="{{$sum}}")

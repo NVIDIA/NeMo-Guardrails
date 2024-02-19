@@ -24,7 +24,7 @@ import uuid
 from ast import literal_eval
 from functools import lru_cache
 from time import time
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, cast
 
 from jinja2 import Environment, meta
 from langchain.llms import BaseLLM
@@ -42,10 +42,15 @@ from nemoguardrails.actions.llm.utils import (
     llm_call,
     strip_quotes,
 )
-from nemoguardrails.context import llm_call_info_var, streaming_handler_var
+from nemoguardrails.colang import parse_colang_file
+from nemoguardrails.colang.v2_x.lang.colang_ast import Flow, Spec, SpecOp
+from nemoguardrails.context import (
+    generation_options_var,
+    llm_call_info_var,
+    streaming_handler_var,
+)
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.kb.kb import KnowledgeBase
-from nemoguardrails.language.parser import parse_colang_file
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import get_prompt
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -53,6 +58,7 @@ from nemoguardrails.llm.types import Task
 from nemoguardrails.logging.explain import LLMCallInfo
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
+from nemoguardrails.rails.llm.options import GenerationOptions
 from nemoguardrails.streaming import StreamingHandler
 from nemoguardrails.utils import new_event_dict
 
@@ -79,6 +85,10 @@ class LLMGenerationActions:
         self.llm = llm
         self.verbose = verbose
 
+        # We extract the user/bot messages from the config as we might alter them.
+        self.user_messages = config.user_messages.copy()
+        self.bot_messages = config.bot_messages.copy()
+
         # If we have user messages, we build an index with them
         self.user_message_index = None
         self.bot_message_index = None
@@ -90,12 +100,13 @@ class LLMGenerationActions:
 
         # There are still some edge cases not covered by nest_asyncio.
         # Using a separate thread always for now.
+        loop = asyncio.get_event_loop()
         if True or check_sync_call_from_async_loop():
             t = threading.Thread(target=asyncio.run, args=(self.init(),))
             t.start()
             t.join()
         else:
-            asyncio.run(self.init())
+            loop.run_until_complete(self.init())
 
         self.llm_task_manager = llm_task_manager
 
@@ -107,20 +118,95 @@ class LLMGenerationActions:
         self.passthrough_fn = None
 
     async def init(self):
+        # For Colang 2.x we need to do some initial processing
+        if self.config.colang_version == "2.x":
+            self._process_flows()
+
         await asyncio.gather(
             self._init_user_message_index(),
             self._init_bot_message_index(),
             self._init_flows_index(),
         )
 
+    def _extract_user_message_example(self, flow: Flow):
+        """Heuristic to extract user message examples from a flow."""
+        elements = [
+            item
+            for item in flow.elements
+            if item["_type"] != "doc_string_stmt" and item["_type"] != "stmt"
+        ]
+        if len(elements) != 2:
+            return
+
+        el = elements[1]
+        if isinstance(el, SpecOp):
+            if el.op == "match":
+                spec = cast(SpecOp, el).spec
+                if spec.name != "UtteranceUserActionFinished":
+                    return
+
+                if "final_transcript" not in spec.arguments:
+                    return
+
+                # Extract the message and remove the double quotes
+                message = spec.arguments["final_transcript"][1:-1]
+                self.user_messages[flow.name] = [message]
+
+            elif el.op == "await":
+                spec = cast(SpecOp, el).spec
+                if isinstance(spec, dict) and spec.get("_type") == "spec_or":
+                    specs = spec.get("elements")
+                else:
+                    assert isinstance(spec, Spec)
+                    specs = [spec]
+
+                for spec in specs:
+                    if not spec.name.startswith("user "):
+                        continue
+
+                    message = spec.arguments["$0"][1:-1]
+                    if flow.name not in self.user_messages:
+                        self.user_messages[flow.name] = []
+
+                    self.user_messages[flow.name].append(message)
+
+    def _extract_bot_message_example(self, flow: Flow):
+        # Quick heuristic to identify the user utterance examples
+        if len(flow.elements) != 2:
+            return
+
+        el = flow.elements[1]
+        if (
+            not isinstance(el, SpecOp)
+            or not hasattr(el.spec, "name")
+            or el.spec.name != "UtteranceBotAction"
+            or "script" not in el.spec.arguments
+        ):
+            return
+
+        # Extract the message and remove the double quotes
+        message = el.spec.arguments["script"][1:-1]
+
+        self.bot_messages[flow.name] = [message]
+
+    def _process_flows(self):
+        """Process the provided flows to extract the user utterance examples."""
+        flow: Flow
+        for flow in self.config.flows:
+            if flow.name.startswith("user "):
+                self._extract_user_message_example(flow)
+
+            if flow.name.startswith("bot "):
+                self._extract_bot_message_example(flow)
+
     async def _init_user_message_index(self):
         """Initializes the index of user messages."""
 
-        if not self.config.user_messages:
+        if not self.user_messages:
             return
 
         items = []
-        for intent, utterances in self.config.user_messages.items():
+        for intent, utterances in self.user_messages.items():
             for text in utterances:
                 items.append(IndexItem(text=text, meta={"intent": intent}))
 
@@ -139,11 +225,11 @@ class LLMGenerationActions:
     async def _init_bot_message_index(self):
         """Initializes the index of bot messages."""
 
-        if not self.config.bot_messages:
+        if not self.bot_messages:
             return
 
         items = []
-        for intent, utterances in self.config.bot_messages.items():
+        for intent, utterances in self.bot_messages.items():
             for text in utterances:
                 items.append(IndexItem(text=intent, meta={"text": text}))
 
@@ -261,12 +347,12 @@ class LLMGenerationActions:
 
         # TODO: check for an explicit way of enabling the canonical form detection
 
-        if self.config.user_messages:
+        if self.user_messages:
             # TODO: based on the config we can use a specific canonical forms model
             #  or use the LLM to detect the canonical form. The below implementation
             #  is for the latter.
 
-            log.info("Phase 1: Generating user intent")
+            log.info("Phase 1 :: Generating user intent")
 
             # We search for the most relevant similar user utterance
             examples = ""
@@ -368,11 +454,18 @@ class LLMGenerationActions:
                     # Initialize the LLMCallInfo object
                     llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
 
-                    text = await llm_call(
+                    generation_options: GenerationOptions = generation_options_var.get()
+                    with llm_params(
                         llm,
-                        prompt,
-                        custom_callback_handlers=[streaming_handler_var.get()],
-                    )
+                        **(
+                            (generation_options and generation_options.llm_params) or {}
+                        ),
+                    ):
+                        text = await llm_call(
+                            llm,
+                            prompt,
+                            custom_callback_handlers=[streaming_handler_var.get()],
+                        )
             else:
                 # Initialize the LLMCallInfo object
                 llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
@@ -382,13 +475,17 @@ class LLMGenerationActions:
                     task=Task.GENERAL, events=events
                 )
 
-                # We make this call with temperature 0 to have it as deterministic as possible.
-                result = await llm_call(
+                generation_options: GenerationOptions = generation_options_var.get()
+                with llm_params(
                     llm,
-                    prompt,
-                    custom_callback_handlers=[streaming_handler_var.get()],
-                    stop=["User:"],
-                )
+                    **((generation_options and generation_options.llm_params) or {}),
+                ):
+                    result = await llm_call(
+                        llm,
+                        prompt,
+                        custom_callback_handlers=[streaming_handler_var.get()],
+                        stop=["User:"],
+                    )
 
                 text = result.strip()
                 if text.startswith('"'):
@@ -591,9 +688,9 @@ class LLMGenerationActions:
             # Choose a message randomly from self.config.bot_messages[bot_message]
             # However, in test mode, we always choose the first one, to keep it predictable.
             if "pytest" in sys.modules:
-                bot_utterance = self.config.bot_messages[bot_intent][0]
+                bot_utterance = self.bot_messages[bot_intent][0]
             else:
-                bot_utterance = random.choice(self.config.bot_messages[bot_intent])
+                bot_utterance = random.choice(self.bot_messages[bot_intent])
 
             log.info("Found existing bot message: " + bot_utterance)
 
@@ -688,9 +785,18 @@ class LLMGenerationActions:
                     # We use the potentially updated $user_message. This means that even
                     # in passthrough mode, input rails can still alter the input.
                     prompt = context.get("user_message")
-                    result = await llm_call(
-                        llm, prompt, custom_callback_handlers=[streaming_handler]
-                    )
+
+                    generation_options: GenerationOptions = generation_options_var.get()
+                    with llm_params(
+                        llm,
+                        **(
+                            (generation_options and generation_options.llm_params) or {}
+                        ),
+                    ):
+                        result = await llm_call(
+                            llm, prompt, custom_callback_handlers=[streaming_handler]
+                        )
+
                     log.info(
                         "--- :: LLM Bot Message Generation passthrough call took %.2f seconds",
                         time() - t0,
@@ -737,9 +843,15 @@ class LLMGenerationActions:
                 # Initialize the LLMCallInfo object
                 llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_BOT_MESSAGE.value))
 
-                result = await llm_call(
-                    llm, prompt, custom_callback_handlers=[streaming_handler]
-                )
+                generation_options: GenerationOptions = generation_options_var.get()
+                with llm_params(
+                    llm,
+                    **((generation_options and generation_options.llm_params) or {}),
+                ):
+                    result = await llm_call(
+                        llm, prompt, custom_callback_handlers=[streaming_handler]
+                    )
+
                 log.info(
                     "--- :: LLM Bot Message Generation call took %.2f seconds",
                     time() - t0,
@@ -1034,7 +1146,12 @@ class LLMGenerationActions:
                     LLMCallInfo(task=Task.GENERATE_INTENT_STEPS_MESSAGE.value)
                 )
 
-                with llm_params(llm, temperature=self.config.lowest_temperature):
+                generation_options: GenerationOptions = generation_options_var.get()
+                additional_params = {
+                    **((generation_options and generation_options.llm_params) or {}),
+                    "temperature": self.config.lowest_temperature,
+                }
+                with llm_params(llm, **additional_params):
                     result = await llm_call(llm, prompt)
 
             # Parse the output using the associated parser
@@ -1110,7 +1227,11 @@ class LLMGenerationActions:
             llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
 
             # We make this call with temperature 0 to have it as deterministic as possible.
-            result = await llm_call(llm, prompt)
+            generation_options: GenerationOptions = generation_options_var.get()
+            with llm_params(
+                llm, **((generation_options and generation_options.llm_params) or {})
+            ):
+                result = await llm_call(llm, prompt)
 
             text = result.strip()
             if text.startswith('"'):
