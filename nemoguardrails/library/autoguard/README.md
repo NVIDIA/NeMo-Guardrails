@@ -123,7 +123,7 @@ rails:
         - ["[PERSON NAME]", "[CREDIT CARD NUMBER]", "[BANK ACCOUNT NUMBER]"]
         - ["[PERSON NAME]", "[EMAIL ADDRESS]", "[DATE OF BIRTH]"]
         - ["[PERSON NAME]", "[EMAIL ADDRESS]", "[LOCATION]", "[SOCIAL SECURITY NUMBER]"]
-      matching_rules:
+      matching_scores:
         {"pii_fast": {
           "[PERSON NAME]": 0.5,
           "[LOCATION]": 0.5,
@@ -181,7 +181,7 @@ rails:
     autoguard:
       parameters:
         fact_check_endpoint: "http://35.225.99.81:8888/factcheck"
-      matching_rules:
+      matching_scores:
         { "factcheck": {"score": 0.5}}
   output:
     flows:
