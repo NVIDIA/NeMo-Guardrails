@@ -8,7 +8,7 @@ rails:
     autoguard:
       parameters:
         toxicity_endpoint: "https://nvidia.autoalign.ai/guardrail"
-      matching_rules:
+      matching_scores:
         { "text_toxicity_extraction": { "score": 0.5 } }
   input:
     flows:
