@@ -14,12 +14,16 @@
 # limitations under the License.
 
 import asyncio
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from annoy import AnnoyIndex
 
 from nemoguardrails.embeddings.cache import cache_embeddings
-from nemoguardrails.embeddings.index import EmbeddingModel, EmbeddingsIndex, IndexItem
+from nemoguardrails.embeddings.embedding_providers import (
+    EmbeddingModel,
+    init_embedding_model,
+)
+from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.rails.llm.config import EmbeddingsCacheConfig
 
 
@@ -32,11 +36,24 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     Attributes:
         embedding_model (str): The model for computing embeddings.
         embedding_engine (str): The engine for computing embeddings.
-        embeddings_index (AnnoyIndex): The current embedding index.
+        index (AnnoyIndex): The current embedding index.
         embedding_size (int): The size of the embeddings.
         cache_config (EmbeddingsCacheConfig): The cache configuration.
         embeddings (List[List[float]]): The computed embeddings.
+        use_batching: Whether to batch requests when computing the embeddings.
+        max_batch_size: The maximum size of a batch.
+        max_batch_hold: The maximum time a batch is held before being processed
     """
+
+    embedding_model: str
+    embedding_engine: str
+    index: AnnoyIndex
+    embedding_size: int
+    cache_config: EmbeddingsCacheConfig
+    embeddings: List[List[float]]
+    use_batching: bool
+    max_batch_size: int
+    max_batch_hold: float
 
     def __init__(
         self,
@@ -44,6 +61,9 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embedding_engine=None,
         index=None,
         cache_config: EmbeddingsCacheConfig | Dict[str, Any] = None,
+        use_batching: bool = False,
+        max_batch_size: int = 10,
+        max_batch_hold: float = 0.01,
     ):
         """Initialize the BasicEmbeddingsIndex.
 
@@ -52,8 +72,11 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
             embedding_engine (str, optional): The engine for computing embeddings. Defaults to None.
             index (AnnoyIndex, optional): The pre-existing index. Defaults to None.
             cache_config (EmbeddingsCacheConfig | Dict[str, Any], optional): The cache configuration. Defaults to None.
+            use_batching: Whether to batch requests when computing the embeddings.
+            max_batch_size: The maximum size of a batch.
+            max_batch_hold: The maximum time a batch is held before being processed
         """
-        self._model = None
+        self._model: Optional[EmbeddingModel] = None
         self._items = []
         self._embeddings = []
         self.embedding_model = embedding_model
@@ -69,7 +92,14 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         self._req_queue = {}
         self._req_results = {}
         self._req_idx = 0
-        self._current_batch_event = None
+        self._current_batch_finished_event = None
+        self._current_batch_full_event = None
+        self._current_batch_submitted = asyncio.Event()
+
+        # Initialize the batching configuration
+        self.use_batching = use_batching
+        self.max_batch_size = max_batch_size
+        self.max_batch_hold = max_batch_hold
 
     @property
     def embeddings_index(self):
@@ -115,7 +145,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         if self._model is None:
             self._init_model()
 
-        embeddings = self._model.encode(texts)
+        embeddings = await self._model.encode_async(texts)
         return embeddings
 
     async def add_item(self, item: IndexItem):
@@ -128,7 +158,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
 
         # If the index is already built, we skip this
         if self._index is None:
-            await self._embeddings.append(self._get_embeddings([item.text])[0])
+            self._embeddings.append((await self._get_embeddings([item.text]))[0])
 
             # Update the embedding if it was not computed up to this point
             self._embedding_size = len(self._embeddings[0])
@@ -160,13 +190,20 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     async def _run_batch(self):
         """Runs the current batch of embeddings."""
 
-        # Wait up to 100ms for the batch to fill
-        # TODO: add support to also trigger when a certain number of items is reached
-        await asyncio.sleep(0.01)
+        # Wait up to `max_batch_hold` time or until `max_batch_size` is reached.
+        done, pending = await asyncio.wait(
+            [
+                asyncio.create_task(asyncio.sleep(self.max_batch_hold)),
+                asyncio.create_task(self._current_batch_full_event.wait()),
+            ],
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        for task in pending:
+            task.cancel()
 
         # Reset the batch event
-        batch_event: asyncio.Event = self._current_batch_event
-        self._current_batch_event = None
+        batch_event: asyncio.Event = self._current_batch_finished_event
+        self._current_batch_finished_event = None
 
         # Create the actual batch to be send for computing
         batch = []
@@ -177,7 +214,10 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         # Empty the queue up to this point
         self._req_queue = {}
 
-        print(f"Running batch of length {len(batch)}")
+        # We allow other batches to start
+        self._current_batch_submitted.set()
+
+        # print(f"Running batch of length {len(batch)}")
 
         # Compute the embeddings
         embeddings = await self._get_embeddings(batch)
@@ -188,16 +228,26 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         batch_event.set()
 
     async def _batch_get_embeddings(self, text: str) -> List[float]:
+        # As long as the queue is full, we wait for the next batch
+        while len(self._req_queue) >= self.max_batch_size:
+            await self._current_batch_submitted.wait()
+
         req_id = self._req_idx
         self._req_idx += 1
         self._req_queue[req_id] = text
 
-        if self._current_batch_event is None:
-            self._current_batch_event = asyncio.Event()
+        if self._current_batch_finished_event is None:
+            self._current_batch_finished_event = asyncio.Event()
+            self._current_batch_full_event = asyncio.Event()
+            self._current_batch_submitted.clear()
             asyncio.ensure_future(self._run_batch())
 
+        # We check if we reached the max batch size
+        if len(self._req_queue) >= self.max_batch_size:
+            self._current_batch_full_event.set()
+
         # Wait for the batch to finish
-        await self._current_batch_event.wait()
+        await self._current_batch_finished_event.wait()
 
         # Remove the result and return it
         result = self._req_results[req_id]
@@ -215,8 +265,10 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         Returns:
             List[IndexItem]: The closest items found.
         """
-        _embedding = await self._batch_get_embeddings(text)
-        # _embedding = (await self._get_embeddings([text]))[0]
+        if self.use_batching:
+            _embedding = await self._batch_get_embeddings(text)
+        else:
+            _embedding = (await self._get_embeddings([text]))[0]
 
         results = self._index.get_nns_by_vector(
             _embedding,
@@ -224,160 +276,3 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         )
 
         return [self._items[i] for i in results]
-
-
-class SentenceTransformerEmbeddingModel(EmbeddingModel):
-    """Embedding model using sentence-transformers.
-
-    This class represents an embedding model that utilizes the sentence-transformers library
-    for generating sentence embeddings.
-
-    Args:
-        embedding_model (str): The name or path of the pre-trained sentence-transformers model.
-
-    Attributes:
-        model: The sentence-transformers model used for encoding sentences.
-        embedding_size: The dimensionality of the sentence embeddings generated by the model.
-    """
-
-    def __init__(self, embedding_model: str):
-        from sentence_transformers import SentenceTransformer
-        from torch import cuda
-
-        device = "cuda" if cuda.is_available() else "cpu"
-        self.model = SentenceTransformer(embedding_model, device=device)
-        # Get the embedding dimension of the model
-        self.embedding_size = self.model.get_sentence_embedding_dimension()
-
-    def encode(self, documents: List[str]) -> List[List[float]]:
-        """Encode a list of documents into their corresponding sentence embeddings.
-
-        Args:
-            documents (List[str]): The list of documents to be encoded.
-
-        Returns:
-            List[List[float]]: The list of sentence embeddings, where each embedding is a list of floats.
-        """
-
-        return self.model.encode(documents).tolist()
-
-
-class FastEmbedEmbeddingModel(EmbeddingModel):
-    """Embedding model using FastEmbed.
-
-    This class represents an embedding model that utilizes the FastEmbed library
-    for generating sentence embeddings.
-
-    Args:
-        embedding_model (str): The name or path of the pre-trained model.
-
-    Attributes:
-        model: The model used for encoding sentences.
-        embedding_size: The dimensionality of the sentence embeddings generated by the model.
-    """
-
-    def __init__(self, embedding_model: str):
-        from fastembed.embedding import FlagEmbedding as Embedding
-
-        # Enabling a short form model name for all-MiniLM-L6-v2.
-        if embedding_model == "all-MiniLM-L6-v2":
-            embedding_model = "sentence-transformers/all-MiniLM-L6-v2"
-
-        try:
-            self.model = Embedding(embedding_model)
-        except ValueError as ex:
-            # Sometimes the cached model in the temporary folder gets removed,
-            # but the folder still exists, which causes an error. In this case,
-            # we fall back to an explicit cache directory.
-            if "Could not find model.onnx in" in str(ex):
-                self.model = Embedding(embedding_model, cache_dir=".cache")
-            else:
-                raise ex
-
-        # Get the embedding dimension of the model
-        self.embedding_size = len(list(self.model.embed("test"))[0].tolist())
-
-    def encode(self, documents: List[str]) -> List[List[float]]:
-        """Encode a list of documents into their corresponding sentence embeddings.
-
-        Args:
-            documents (List[str]): The list of documents to be encoded.
-
-        Returns:
-            List[List[float]]: The list of sentence embeddings, where each embedding is a list of floats.
-        """
-        return [x.tolist() for x in self.model.embed(documents)]
-
-
-class OpenAIEmbeddingModel(EmbeddingModel):
-    """Embedding model using OpenAI API.
-
-    Args:
-        embedding_model (str): The name of the embedding model.
-
-    Attributes:
-        model (str): The name of the embedding model.
-        embedding_size (int): The size of the embeddings.
-
-    Methods:
-        encode: Encode a list of documents into embeddings.
-
-    """
-
-    def __init__(
-        self,
-        embedding_model: str,
-    ):
-        self.model = embedding_model
-
-        self.embedding_size = len(self.encode(["test"])[0])
-
-    def encode(self, documents: List[str]) -> List[List[float]]:
-        """Encode a list of documents into embeddings.
-
-        Args:
-            documents (List[str]): The list of documents to be encoded.
-
-        Returns:
-            List[List[float]]: The encoded embeddings.
-
-        """
-        import openai
-
-        # Make embedding request to OpenAI API
-        res = openai.Embedding.create(input=documents, engine=self.model)
-        embeddings = [record["embedding"] for record in res["data"]]
-        return embeddings
-
-
-_embedding_model_cache = {}
-
-
-def init_embedding_model(embedding_model: str, embedding_engine: str) -> EmbeddingModel:
-    """Initialize the embedding model.
-
-    Args:
-        embedding_model (str): The path or name of the embedding model.
-        embedding_engine (str): The name of the embedding engine.
-
-    Returns:
-        EmbeddingModel: An instance of the initialized embedding model.
-
-    Raises:
-        ValueError: If the embedding engine is invalid.
-    """
-    model_key = f"{embedding_engine}-{embedding_model}"
-
-    if model_key not in _embedding_model_cache:
-        if embedding_engine == "SentenceTransformers":
-            model = SentenceTransformerEmbeddingModel(embedding_model)
-        elif embedding_engine == "FastEmbed":
-            model = FastEmbedEmbeddingModel(embedding_model)
-        elif embedding_engine == "openai":
-            model = OpenAIEmbeddingModel(embedding_model)
-        else:
-            raise ValueError(f"Invalid embedding engine: {embedding_engine}")
-
-        _embedding_model_cache[model_key] = model
-
-    return _embedding_model_cache[model_key]

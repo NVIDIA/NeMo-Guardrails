@@ -93,7 +93,7 @@ Make sure the `OPENAI_API_KEY` environment variable is set,
 as shown in the following example, where *YOUR_KEY* is your OpenAI key.
 
  ```bash
- > pip install openai==0.28.1
+ > pip install openai
  > export OPENAI_API_KEY=YOUR_KEY
  ```
 

@@ -13,6 +13,9 @@ core:
     parameters:
       embedding_engine: FastEmbed
       embedding_model: all-MiniLM-L6-v2
+      use_batching: False
+      max_batch_size: 10
+      max_batch_hold: 0.01
     cache:
       enabled: False
       key_generator: md5
@@ -25,6 +28,9 @@ knowledge_base:
     parameters:
       embedding_engine: FastEmbed
       embedding_model: all-MiniLM-L6-v2
+      use_batching: False
+      max_batch_size: 10
+      max_batch_hold: 0.01
     cache:
       enabled: False
       key_generator: md5

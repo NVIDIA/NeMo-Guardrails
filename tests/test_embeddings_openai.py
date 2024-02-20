@@ -18,7 +18,7 @@ import os
 import pytest
 
 from nemoguardrails import LLMRails, RailsConfig
-from nemoguardrails.embeddings.basic import OpenAIEmbeddingModel
+from nemoguardrails.embeddings.embedding_providers.openai import OpenAIEmbeddingModel
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
 
@@ -43,6 +43,25 @@ def test_custom_llm_registration(app):
 
 
 @pytest.mark.skipif(not LIVE_TEST_MODE, reason="Not in live mode.")
+@pytest.mark.asyncio
+async def test_live_query():
+    config = RailsConfig.from_path(
+        os.path.join(CONFIGS_FOLDER, "with_openai_embeddings")
+    )
+    app = LLMRails(config)
+
+    result = await app.generate_async(
+        messages=[{"role": "user", "content": "tell me what you can do"}]
+    )
+
+    assert result == {
+        "role": "assistant",
+        "content": "I am an AI assistant that helps answer questions.",
+    }
+
+
+@pytest.mark.skipif(not LIVE_TEST_MODE, reason="Not in live mode.")
+@pytest.mark.asyncio
 def test_live_query(app):
     result = app.generate(
         messages=[{"role": "user", "content": "tell me what you can do"}]
@@ -52,3 +71,21 @@ def test_live_query(app):
         "role": "assistant",
         "content": "I am an AI assistant that helps answer questions.",
     }
+
+
+@pytest.mark.skipif(not LIVE_TEST_MODE, reason="Not in live mode.")
+def test_sync_embeddings():
+    model = OpenAIEmbeddingModel("text-embedding-3-small")
+
+    result = model.encode(["test"])
+
+    assert len(result[0]) == 1536
+
+
+@pytest.mark.asyncio
+async def test_async_embeddings():
+    model = OpenAIEmbeddingModel("text-embedding-3-small")
+
+    result = await model.encode_async(["test"])
+
+    assert len(result[0]) == 1536

@@ -35,8 +35,8 @@ from nemoguardrails.colang.v2_x.lang.utils import new_uuid
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.context import (
     explain_info_var,
-    llm_stats_var,
     generation_options_var,
+    llm_stats_var,
     streaming_handler_var,
 )
 from nemoguardrails.embeddings.index import EmbeddingsIndex
@@ -378,6 +378,13 @@ class LLMRails:
                     "embedding_engine", self.default_embedding_engine
                 ),
                 cache_config=esp_config.cache,
+                # We make sure we also pass additional relevant params.
+                **{
+                    k: v
+                    for k, v in esp_config.parameters.items()
+                    if k in ["use_batching", "max_batch_size", "matx_batch_hold"]
+                    and v is not None
+                },
             )
         else:
             if esp_config.name not in self.embedding_search_providers:
