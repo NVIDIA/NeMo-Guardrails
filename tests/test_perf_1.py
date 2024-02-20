@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+from random import random
 from time import time
 
 import pytest
@@ -43,7 +44,7 @@ async def test_1():
     )
     rails = LLMRails(config)
 
-    response = await rails.generate_async(prompt="hi")
+    response = await rails.generate_async(prompt="hi!" * 100)
 
     assert response == "Hello World!"
 
@@ -53,9 +54,17 @@ async def test_1():
     req_counter = 0
     concurrency = 100
     requests = 1000
+    latencies = []
 
-    async def _generate(text):
+    async def _generate(text, idx):
         nonlocal total_time, completed_requests, req_counter
+
+        if idx < concurrency:
+            # For the first `concurrency` calls, we introduce an artificial delay
+            # to avoid everything being triggered at once, "in waves".
+            delay = 10 * random()
+            print(f"Initial delay of {delay}")
+            await asyncio.sleep(delay)
 
         async with semaphore:
             req_counter += 1
@@ -64,6 +73,7 @@ async def test_1():
             assert _response == "Hello World!"
 
             duration = time() - start_time
+            latencies.append(duration)
             total_time += duration
 
             completed_requests += 1
@@ -72,7 +82,7 @@ async def test_1():
     t0 = time()
     semaphore = asyncio.Semaphore(concurrency)
     for i in range(requests):
-        task = asyncio.ensure_future(_generate(f"hi {i}"))
+        task = asyncio.ensure_future(_generate(f"hi {i}" * 100, i))
         tasks.append(task)
 
     await asyncio.gather(*tasks)
@@ -82,6 +92,9 @@ async def test_1():
 
     print(f"Completed {completed_requests} requests in {total_time:.2f} seconds.")
     average_latency = total_time / completed_requests if completed_requests else 0
+
     print(f"Average latency: {average_latency:.2f} seconds.")
     print(f"Maximum concurrency: {concurrency}")
     print(f"Throughput: {completed_requests / took}")
+
+    print(latencies)

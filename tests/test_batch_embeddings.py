@@ -30,6 +30,9 @@ async def test_search_speed():
         embedding_model="all-MiniLM-L6-v2", embedding_engine="SentenceTransformers"
     )
 
+    # We compute an initial embedding, to warm up the model.
+    await embeddings_index._get_embeddings(["warm up"])
+
     items = []
     for i in range(100):
         items.append(IndexItem(text=str(i), meta={"i": i}))

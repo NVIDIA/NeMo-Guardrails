@@ -65,11 +65,3 @@ class EmbeddingsIndex:
     async def search(self, text: str, max_results: int) -> List[IndexItem]:
         """Searches the index for the closest matches to the provided text."""
         raise NotImplementedError()
-
-
-class EmbeddingModel:
-    """The embedding model is responsible for creating the embeddings."""
-
-    def encode(self, documents: List[str]) -> List[List[float]]:
-        """Encode the provided documents into embeddings."""
-        raise NotImplementedError()

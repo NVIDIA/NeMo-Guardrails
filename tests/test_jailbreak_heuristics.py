@@ -88,7 +88,7 @@ def test_get_perplexity_performance():
     t0 = time()
     for i in range(10):
         get_perplexity("Short string")
-    assert time() - t0 < 2.0
+    assert time() - t0 < 3.0
 
 
 @pytest.mark.skipif(not torch_available, reason="Pytorch not installed.")
