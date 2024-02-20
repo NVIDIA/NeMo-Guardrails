@@ -18,7 +18,14 @@ import os
 import pytest
 
 from nemoguardrails import LLMRails, RailsConfig
-from nemoguardrails.embeddings.embedding_providers.openai import OpenAIEmbeddingModel
+
+try:
+    from nemoguardrails.embeddings.embedding_providers.openai import (
+        OpenAIEmbeddingModel,
+    )
+except ImportError:
+    # Ignore this if running in test environment when openai not installed.
+    OpenAIEmbeddingModel = None
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
 
@@ -82,6 +89,7 @@ def test_sync_embeddings():
     assert len(result[0]) == 1536
 
 
+@pytest.mark.skipif(not LIVE_TEST_MODE, reason="Not in live mode.")
 @pytest.mark.asyncio
 async def test_async_embeddings():
     model = OpenAIEmbeddingModel("text-embedding-3-small")
