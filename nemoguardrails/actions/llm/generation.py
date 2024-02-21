@@ -574,7 +574,18 @@ class LLMGenerationActions:
                 result = get_first_nonempty_line(result)
 
                 if result and result.startswith("bot "):
-                    next_step = {"bot": result[4:]}
+                    bot_intent = result[4:]
+
+                    # Sometimes, the LLMs add also the message on the same line.
+                    # We do some cleaning up if that's the case.
+                    if '"' in bot_intent:
+                        bot_intent = bot_intent.split('"')[0].strip()
+
+                    # Also, sometimes, there's a comma and more content
+                    if "," in bot_intent:
+                        bot_intent = bot_intent.split(",")[0].strip()
+
+                    next_step = {"bot": bot_intent}
                 else:
                     next_step = {"bot": "general response"}
 
