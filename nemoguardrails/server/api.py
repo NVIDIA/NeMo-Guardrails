@@ -119,9 +119,9 @@ class RequestBody(BaseModel):
 
     @validator("config_ids", always=True)
     def check_if_set(cls, v, values, **kwargs):
-        if v is not None and values["config_id"] is not None:
+        if v is not None and values.get("config_id") is not None:
             raise ValueError("Only one of config_id or config_ids should be specified")
-        if v is None and values["config_id"] is None:
+        if v is None and values.get("config_id") is None:
             raise ValueError("Either config_id or config_ids must be specified")
         return v
 
