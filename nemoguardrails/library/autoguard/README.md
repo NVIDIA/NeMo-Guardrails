@@ -110,16 +110,17 @@ rails:
         - "[BANK ACCOUNT NUMBER]"
         - "[SOCIAL SECURITY NUMBER]"
         - "[MONEY]"
-        - "[INSURANCE POLICY NUMBER]"
         - "[PROFESSION]"
+        - "[RACE/ETHNICITY]"
         - "[ORGANIZATION]"
         - "[USERNAME]"
         - "[PASSWORD]"
         - "[IP ADDRESS]"
         - "[PASSPORT NUMBER]"
         - "[DRIVER LICENSE NUMBER]"
-        - "[API_KEY]"
+        - "[SECRET_KEY]"
         - "[TRANSACTION_ID]"
+        - "[RELIGION]"
       contextual_rules:
         - ["[PERSON NAME]", "[CREDIT CARD NUMBER]", "[BANK ACCOUNT NUMBER]"]
         - ["[PERSON NAME]", "[EMAIL ADDRESS]", "[DATE OF BIRTH]"]
@@ -127,26 +128,26 @@ rails:
       matching_scores:
         {"pii_fast": {
           "[PERSON NAME]": 0.5,
-          "[LOCATION]": 0.5,
-          "[DATE OF BIRTH]": 0.5,
-          "[DATE]": 0.5,
-          "[PHONE NUMBER]": 0.5,
-          "[EMAIL ADDRESS]": 0.5,
-          "[CREDIT CARD NUMBER]": 0.5,
-          "[BANK ACCOUNT NUMBER]": 0.5,
-          "[SOCIAL SECURITY NUMBER]": 0.5,
-          "[MONEY]": 0.5,
-          "[INSURANCE POLICY NUMBER]": 0.5,
-          "[PROFESSION]": 0.5,
-          "[ORGANIZATION]": 0.5,
-          "[USERNAME]": 0.5,
-          "[PASSWORD]": 0.5,
-          "[IP ADDRESS]": 0.5,
-          "[PASSPORT NUMBER]": 0.5,
-          "[DRIVER LICENSE NUMBER]": 0.5,
-          "[API_KEY]": 0.5,
-          "[TRANSACTION_ID]": 0.5,
-          "[RELIGION]": 0.5
+            "[LOCATION]": 0.5,
+            "[DATE OF BIRTH]": 0.5,
+            "[DATE]": 0.5,
+            "[PHONE NUMBER]": 0.5,
+            "[EMAIL ADDRESS]": 0.5,
+            "[CREDIT CARD NUMBER]": 0.5,
+            "[BANK ACCOUNT NUMBER]": 0.5,
+            "[SOCIAL SECURITY NUMBER]": 0.5,
+            "[MONEY]": 0.5,
+            "[PROFESSION]": 0.5,
+            "[RACE/ETHNICITY]": 0.5,
+            "[ORGANIZATION]": 0.5,
+            "[USERNAME]": 0.5,
+            "[PASSWORD]": 0.5,
+            "[IP ADDRESS]": 0.5,
+            "[PASSPORT NUMBER]": 0.5,
+            "[DRIVER LICENSE NUMBER]": 0.5,
+            "[SECRET_KEY]": 0.5,
+            "[TRANSACTION_ID]": 0.5,
+            "[RELIGION]": 0.5,
         }}
   input:
     flows:
