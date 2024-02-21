@@ -1,20 +1,27 @@
-define user express greeting
-  "Hello"
-  "Hi"
+# Uncomment these to test dialog rails
 
-define user ask capabilities
-  "What can you do?"
-  "What can you help me with?"
-  "tell me what you can do"
-  "tell me about you"
-
-define flow
-  user express greeting
-  bot express greeting
-
-define flow
-  user ask capabilities
-  bot inform capabilities
-
-define bot inform capabilities
-  "I am an AI assistant and I'm here to help."
+#define user express greeting
+#  "Hello"
+#  "Hi"
+#
+#define user ask capabilities
+#  "What can you do?"
+#  "What can you help me with?"
+#  "tell me what you can do"
+#  "tell me about you"
+#
+#define user ask general question
+#  "How is the weather tomorrow?"
+#  "Can you tell me which is the best movie this week"
+#  "i would like to know the best scifi books of all time."
+#
+#define flow
+#  user express greeting
+#  bot express greeting
+#
+#define flow
+#  user ask capabilities
+#  bot inform capabilities
+#
+#define bot inform capabilities
+#  "I am an AI assistant and I'm here to help."

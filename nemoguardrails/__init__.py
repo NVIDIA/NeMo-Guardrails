@@ -14,9 +14,16 @@
 # limitations under the License.
 
 """NeMo Guardrails Toolkit."""
+import warnings
+
 from . import patch_asyncio
 from .rails import LLMRails, RailsConfig
 
 patch_asyncio.apply()
 
-__version__ = "0.6.1"
+# Ignore a warning message from torch.
+warnings.filterwarnings(
+    "ignore", category=UserWarning, message="TypedStorage is deprecated"
+)
+
+__version__ = "0.7.1"

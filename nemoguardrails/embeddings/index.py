@@ -24,10 +24,28 @@ class IndexItem:
 
 
 class EmbeddingsIndex:
-    """The embeddings index is responsible for computing and searching a set of embeddings."""
+    """The embeddings index is responsible for computing and searching a set of embeddings.
+
+    Attributes:
+        embedding_size (int): The size of the embeddings.
+        cache_config (EmbeddingsCacheConfig): The cache configuration for the index.
+
+    Methods:
+        add_item(item: IndexItem) -> None: Adds a new item to the index.
+        add_items(items: List[IndexItem]) -> None: Adds multiple items to the index.
+        build() -> None: Builds the index after the items are added. This is optional and might not be needed for all implementations.
+        search(text: str, max_results: int) -> List[IndexItem]: Searches the index for the closest matches to the provided text.
+    """
 
     @property
     def embedding_size(self):
+        raise NotImplementedError
+
+    @property
+    def cache_config(self):
+        raise NotImplementedError
+
+    async def _get_embeddings(self, texts: List[str]):
         raise NotImplementedError
 
     async def add_item(self, item: IndexItem):
@@ -45,13 +63,5 @@ class EmbeddingsIndex:
         pass
 
     async def search(self, text: str, max_results: int) -> List[IndexItem]:
-        """Searches the index for the closes matches to the provided text."""
-        raise NotImplementedError()
-
-
-class EmbeddingModel:
-    """The embedding model is responsible for creating the embeddings."""
-
-    def encode(self, documents: List[str]) -> List[List[float]]:
-        """Encode the provided documents into embeddings."""
+        """Searches the index for the closest matches to the provided text."""
         raise NotImplementedError()

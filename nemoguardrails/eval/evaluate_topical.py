@@ -18,10 +18,9 @@ import json
 import os
 import random
 import textwrap
-from typing import Optional
+from typing import Dict, List, Optional
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.actions.llm.utils import (
@@ -51,6 +50,41 @@ def cosine_similarity(v1, v2):
     return np.dot(np_v1, np_v2) / (np.linalg.norm(np_v1) * np.linalg.norm(np_v2))
 
 
+def _split_test_set_from_config(
+    config: RailsConfig,
+    test_set_percentage: float,
+    test_set: Dict[str, List],
+    max_samples_per_intent: int,
+    random_seed: Optional[int] = None,
+):
+    """Extracts a test set of user messages from a config.
+
+    Args:
+        config: The config from which the test set will be extracted.
+        test_set_percentage: The percentage used for the test set.
+        test_set: A dictionary where the test set will be added.
+        max_samples_per_intent: A limit on the number of samples per intent to be enforced.
+    """
+    if config.user_messages and test_set_percentage > 0:
+        for intent, samples in config.user_messages.items():
+            # We need at least 2 samples to create a test split
+            if len(samples) > 1:
+                if random_seed:
+                    random.Random(random_seed).shuffle(samples)
+                else:
+                    random.shuffle(samples)
+
+                num_test_elements = int(len(samples) * test_set_percentage)
+                test_set[intent] = samples[:num_test_elements]
+                config.user_messages[intent] = samples[num_test_elements:]
+
+                # Limit the number of samples per intent if specified
+                if 0 < max_samples_per_intent < len(config.user_messages[intent]):
+                    config.user_messages[intent] = config.user_messages[intent][
+                        :max_samples_per_intent
+                    ]
+
+
 class TopicalRailsEvaluation:
     """Helper class for running the topical rails evaluation for a Guardrails app.
     It contains all the configuration parameters required to run the evaluation."""
@@ -59,6 +93,9 @@ class TopicalRailsEvaluation:
         self.test_set = {}
         rails_config = RailsConfig.from_path(
             config_path=self.config_path,
+        )
+        _split_test_set_from_config(
+            rails_config,
             test_set_percentage=self.test_set_percentage,
             max_samples_per_intent=self.max_samples_per_intent,
             test_set=self.test_set,
@@ -72,6 +109,14 @@ class TopicalRailsEvaluation:
 
     def _initialize_embeddings_model(self):
         """Instantiate a sentence transformer if we use a similarity check for canonical forms."""
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError:
+            raise ImportError(
+                "Could not import sentence_transformers, please install it with "
+                "`pip install sentence-transformers`."
+            )
+
         self._model = None
         if self.similarity_threshold > 0:
             self._model = SentenceTransformer("all-MiniLM-L6-v2")

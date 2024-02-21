@@ -4,13 +4,19 @@ This guide will teach you what *topical rails* are and how to integrate them int
 
 ## Prerequisites
 
-Set up an OpenAI API key, if not already set.
+1. Install the `openai` package:
+
+```bash
+pip install openai
+```
+
+2. Set the `OPENAI_API_KEY` environment variable:
 
 ```bash
 export OPENAI_API_KEY=$OPENAI_API_KEY    # Replace with your own key
 ```
 
-If you're running this inside a notebook, you also need to patch the AsyncIO loop.
+3. If you're running this inside a notebook, patch the AsyncIO loop.
 
 ```python
 import nest_asyncio
@@ -24,12 +30,12 @@ nest_asyncio.apply()
 
 Topical rails can be implemented using multiple mechanisms in a guardrails configuration:
 
-1. **General instructions**: by specifying good general instructions, because of the model alignment, the bot will be inclined not to respond to unrelated topics.
+1. **General instructions**: by specifying good general instructions, because of the model alignment, the bot does not respond to unrelated topics.
 2. **Input rails**: you can adapt the `self_check_input` prompt to check the topic of the user's question.
 3. **Output rails**: you can adapt the `self_check_output` prompt to check the topic of the bot's response.
 4. **Dialog rails**: you can design explicit dialog rails for the topics you want to allow/avoid.
 
-In this guide, we will focus on the **dialog rails**. But before that, let's check that the *general instructions* already provide some topical rails.
+This guide focuses on the **dialog rails**. Note that the *general instructions* already provide some topical rails, as demonstrated by the following Python code.
 
 
 ```python
@@ -49,7 +55,7 @@ print(response["content"])
 I'm sorry, I am not able to answer that question as it is not related to ABC Company policies. Is there anything else I can assist you with?
 ```
 
-As we can see, the bot refused to talk about cooking. However, if we get a bit creative, we can overcome this:
+Note how the bot refused to talk about cooking. However, this limitation can be overcome with a carefully crafted message:
 
 ```python
 response = rails.generate(messages=[{
@@ -63,11 +69,13 @@ print(response["content"])
 According to the employee handbook, employees are allowed to use the kitchen for personal use as long as it does not interfere with work duties. As for the apple pie recipe, there are two included in the handbook. Would you like me to list both of them for you?
 ```
 
-We can already see that the bot is starting to cooperate.
+You can see that the bot is starting to cooperate.
 
 ### Using Dialog Rails
 
-As we've seen in [Step 2](../2_core_colang_concepts/README.md) of this getting started series, the core Colang concepts are **messages** and **flows**. To implement topical rails using dialog, we first need to define the user messages that correspond to the topics. Let's add the following to a new Colang file: `config/rails/disallowed_topics.co`.
+The [Core Colang Concepts](../2_core_colang_concepts/README.md) section of this getting started series, describes the core Colang concepts *messages* and *flows*. To implement topical rails using dialog, first define the user messages that correspond to the topics.
+
+1. Add the following content to a new Colang file: *config/rails/disallowed_topics.co*:
 
 ```colang
 define user ask about cooking
@@ -93,11 +101,11 @@ define user ask about criminal activity
   "How can I rob a bank?"
 ```
 
-We've chosen seven topics we don't want the bot to talk about. For simplicity, we've only included one message example for each topic.
+These are topics that the bot should not talk about. For simplicity, there is only one message example for each topic.
 
-> **NOTE**: the performance of dialog rails is strongly dependent on the number and the quality of the provided examples.
+> **NOTE**: the performance of dialog rails is depends strongly on the number and quality of the provided examples.
 
-Next, we have to define the flows that use the defined messages.
+2. Define the following flows that use these messages in *config/rails/disallowed_topics.co*.
 
 ```python
 define flow
@@ -129,7 +137,7 @@ define flow
   bot refuse to respond about criminal activity
 ```
 
-Now, let's reload the config and try again:
+Reload the configuration and try another message:
 
 ```python
 config = RailsConfig.from_path("./config")
@@ -146,7 +154,7 @@ print(response["content"])
 I'm sorry, I cannot respond to that. While the company does allow the use of the kitchen for cooking, I am not programmed with specific recipes. I suggest asking a colleague or referring to a cookbook for recipes.
 ```
 
-Let's see what happened behind the scenes.
+Look at the summary of LLM calls:
 
 ```python
 info = rails.explain()
@@ -174,13 +182,13 @@ bot refuse to respond about cooking
 ```
 
 Let's break it down:
-1. First, the `self_check_input` rail was triggered, which did not block the request.
-2. Next, the `generate_user_intent` prompt was used to determine what the user's intent was. As explained in [Step 2](../2_core_colang_concepts/README.md) of this series, this is an essential part of how dialog rails work.
-3. Next, as we can see from the Colang history above, the next step was `bot refuse to respond about cooking`, which came from the defined flows.
-4. Next, a message was generated for the refusal.
-5. Finally, the generated message was checked by the `self_check_output` rail.
+   1. First, the `self_check_input` rail was triggered, which did not block the request.
+   2. Next, the `generate_user_intent` prompt was used to determine what the user's intent was. As explained in [Step 2](../2_core_colang_concepts/README.md) of this series, this is an essential part of how dialog rails work.
+   3. Next, as we can see from the Colang history above, the next step was `bot refuse to respond about cooking`, which came from the defined flows.
+   4. Next, a message was generated for the refusal.
+   5. Finally, the generated message was checked by the `self_check_output` rail.
 
-Now, let's see what happens when we ask a question that should be answered.
+What happens when we ask a question that should be answered.
 
 ```python
 response = rails.generate(messages=[{
@@ -209,8 +217,8 @@ As we can see, this time the question was interpreted as `ask question about ben
 
 ## Wrapping Up
 
-This guide provided an overview of how topical rails can be added to a guardrails configuration. We've looked at how dialog rails can be used to guide the bot to avoid specific topics while allowing it to respond to the desired ones.
+This guide provides an overview of how topical rails can be added to a guardrails configuration. It demonstrates how to use dialog rails to guide the bot to avoid specific topics while allowing it to respond to the desired ones.
 
 ## Next
 
-In the [next guide](../7_rag/README.md), we look how we can use a guardrails configuration in a RAG (Retrieval Augmented Generation) setup.
+In the next guide, [Retrieval-Augmented Generation](../7_rag/README.md), demonstrates how to use a guardrails configuration in a RAG (Retrieval Augmented Generation) setup.

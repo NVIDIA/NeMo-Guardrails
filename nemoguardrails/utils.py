@@ -13,11 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
+import json
 import uuid
 from collections import namedtuple
-from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, Optional, Tuple
+from enum import Enum
+from typing import Any, Dict, List, Tuple, Union
+
+import yaml
 
 
 def new_uid() -> str:
@@ -99,6 +103,12 @@ _event_validators = [
 _action_to_modality_info: Dict[str, Tuple[str, str]] = {
     "UtteranceBotAction": ("bot_speech", "replace"),
     "UtteranceUserAction": ("user_speech", "replace"),
+    "TimerBotAction": ("time", "parallel"),
+    "GestureBotAction": ("bot_gesture", "override"),
+    "PostureBotAction": ("bot_posture", "override"),
+    "VisualChoiceSceneAction": ("information", "override"),
+    "VisualInformationSceneAction": ("information", "override"),
+    "VisualFormSceneAction": ("information", "override"),
 }
 
 
@@ -119,9 +129,15 @@ def _update_action_properties(event_dict: Dict[str, Any]) -> None:
     elif "Start" in event_dict["type"]:
         if "action_uid" not in event_dict:
             event_dict["action_uid"] = new_uid()
+    elif "Updated" in event_dict["type"]:
+        event_dict["action_updated_at"] = datetime.now(timezone.utc).isoformat()
     elif "Finished" in event_dict["type"]:
         event_dict["action_finished_at"] = datetime.now(timezone.utc).isoformat()
-        if event_dict["is_success"] and "failure_reason" in event_dict:
+        if (
+            "is_success" in event_dict
+            and event_dict["is_success"]
+            and "failure_reason" in event_dict
+        ):
             del event_dict["failure_reason"]
 
 
@@ -157,3 +173,30 @@ def new_event_dict(event_type: str, **payload) -> Dict[str, Any]:
 
     ensure_valid_event(event)
     return event
+
+
+class CustomDumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        return True
+
+    def increase_indent(self, flow=False, indentless=False):
+        return super(CustomDumper, self).increase_indent(flow, False)
+
+    def represent_data(self, data):
+        if isinstance(data, Enum):
+            return self.represent_data(data.value)
+        return super().represent_data(data)
+
+
+class EnhancedJsonEncoder(json.JSONEncoder):
+    """Custom json encoder to handler dataclass and enum types"""
+
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        if isinstance(o, Enum):
+            return o.value
+        try:
+            return super().default(o)
+        except Exception:
+            return f"Type {type(o)} not serializable"

@@ -75,6 +75,12 @@ class FactCheckEvaluation:
         """
         Create synthetic negative samples for fact checking. The negative samples are created by an LLM that acts
         as an adversary and modifies the answer to make it incorrect.
+
+        Args:
+            dataset (List[Dict]): The dataset to create negative samples for.
+
+        Returns:
+            List[Dict]: The dataset with synthetic negative samples.
         """
 
         create_negatives_template = """You will play the role of an adversary to confuse people with answers
@@ -106,6 +112,13 @@ class FactCheckEvaluation:
         """
         Check facts using the fact checking rail. The fact checking rail is a binary classifier that takes in
         evidence and a response and predicts whether the response is grounded in the evidence or not.
+
+        Args:
+            split (str): The split type for checking facts. Either "positive" or "negative".
+
+        Returns:
+            Tuple[List[FactCheckPrediction], int, float]: Tuple containing fact check predictions,
+            number of correct predictions, and total time taken.
         """
 
         fact_check_predictions = []
@@ -130,7 +143,8 @@ class FactCheckEvaluation:
             fact_check_prompt = self.llm_task_manager.render_task_prompt(
                 Task.SELF_CHECK_FACTS, {"evidence": evidence, "response": answer}
             )
-            fact_check = self.llm(fact_check_prompt)
+            stop = self.llm_task_manager.get_stop_tokens(Task.SELF_CHECK_FACTS)
+            fact_check = self.llm(fact_check_prompt, stop=stop)
             end_time = time.time()
             time.sleep(0.5)  # avoid rate-limits
             fact_check = fact_check.lower().strip()

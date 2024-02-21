@@ -1,0 +1,21 @@
+# include core_flows.co
+
+# Template flow for deriving states from events
+flow event_state_handling $event_flow $state_variable $state
+  await $event_flow
+  $state_variable = $state
+
+# State tracking based on events
+flow user ready state tracking
+  activate event_state(user appeared, $user_is_present, true)
+    and event_state_handling(user disappeared, $user_is_present, false)
+    and event_state_handling(user became attentive, $user_is_attentive, true)
+    and event_state_handling(user became inattentive, $user_is_attentive, false)
+
+# Wait for a combined user state to change
+flow user is ready
+  require user ready state tracking # Will start the flow at beginning of story
+  when $user_is_attentive and $user_is_present # Will continue one satisfied
+
+flow main
+  await user is ready

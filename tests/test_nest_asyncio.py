@@ -54,11 +54,18 @@ async def test_async_api_error(monkeypatch):
 
     # Reload the module to re-run its top-level code with the new env var
     importlib.reload(nemoguardrails)
+    importlib.reload(nemoguardrails.patch_asyncio)
     importlib.reload(asyncio)
+
+    # Remove the patching marker
+    delattr(asyncio, "_nest_patched")
+
+    assert nemoguardrails.patch_asyncio.nest_asyncio_patch_applied is False
+    assert not hasattr(asyncio, "_nest_patched")
 
     with pytest.raises(
         RuntimeError,
-        match=r"asyncio.run\(\) cannot be called from a running event loop",
+        match=r"await generate_async",
     ):
         chat >> "Hi!"
         chat << "Hello there!"

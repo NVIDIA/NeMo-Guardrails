@@ -1,0 +1,42 @@
+# User Messages
+
+flow user says something
+  match UtteranceUserActionFinished()
+
+flow user express greeting
+  match UtteranceUserActionFinished(final_transcript="hi")
+
+# Bot Messages
+
+flow bot express greeting
+  await UtteranceBotAction(script="Hello world!")
+
+flow bot express greeting again
+  await UtteranceBotAction(script="Hello again!")
+
+flow bot comment unsure how to respond
+  await UtteranceBotAction(script="I'm not sure how to respond.")
+
+# Flows
+
+flow wait
+  match SomeRandomEvent()
+
+flow greeting
+  user express greeting
+  bot express greeting
+  user express greeting
+  bot express greeting again
+
+flow fallback
+  user says something
+  bot comment unsure how to respond
+
+#flow generate user intent
+#  user says something
+#  send StartGenerateUserIntentAction
+
+flow main
+  activate greeting
+  activate fallback
+  wait

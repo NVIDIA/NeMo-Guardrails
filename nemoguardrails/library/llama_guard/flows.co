@@ -1,0 +1,21 @@
+define bot refuse to respond
+  "I'm sorry, I can't respond to that."
+
+define flow llama guard check input
+  $llama_guard_response = execute llama_guard_check_input
+  $allowed = $llama_guard_response["allowed"]
+  # Policy violations are currently unused, but can be used to better phrase the bot output
+  $llama_guard_policy_violations = $llama_guard_response["policy_violations"]
+
+  if not $allowed
+    bot refuse to respond
+    stop
+
+define flow llama guard check output
+  $llama_guard_response = execute llama_guard_check_output
+  $allowed = $llama_guard_response["allowed"]
+  $llama_guard_policy_violations = $llama_guard_response["policy_violations"]
+
+  if not $allowed
+    bot refuse to respond
+    stop

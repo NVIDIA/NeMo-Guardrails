@@ -1,156 +1,183 @@
 # Collection of all the prompts
 prompts:
-  # GENERAL PROMPTS
+    # GENERAL PROMPTS
 
-  - task: general
-    content: |-
-      {{ general_instructions }}
+    - task: general
+      content: |-
+          {{ general_instructions }}
 
-      {{ history | user_assistant_sequence }}
-      Assistant:
+          {{ history | user_assistant_sequence }}
+          Assistant:
 
-  # Prompt for detecting the user message canonical form.
-  - task: generate_user_intent
-    content: |-
-      """
-      {{ general_instructions }}
-      """
+    # Prompt for detecting the user message canonical form.
+    - task: generate_user_intent
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
-      # This is how a conversation between a user and the bot can go:
-      {{ sample_conversation }}
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
-      # This is how the user talks:
-      {{ examples }}
+          # This is how the user talks:
+          {{ examples }}
 
-      # This is the current conversation between the user and the bot:
-      # Choose intent from this list: {{ potential_user_intents }}
-      {{ sample_conversation | first_turns(2) }}
-      {{ history | colang }}
+          # This is the current conversation between the user and the bot:
+          # Choose intent from this list: {{ potential_user_intents }}
+          {{ sample_conversation | first_turns(2) }}
+          {{ history | colang }}
 
+    # Prompt for generating the next steps.
+    - task: generate_next_steps
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
-  # Prompt for generating the next steps.
-  - task: generate_next_steps
-    content: |-
-      """
-      {{ general_instructions }}
-      """
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation | remove_text_messages }}
 
-      # This is how a conversation between a user and the bot can go:
-      {{ sample_conversation | remove_text_messages }}
+          # This is how the bot thinks:
+          {{ examples | remove_text_messages}}
 
-      # This is how the bot thinks:
-      {{ examples | remove_text_messages}}
+          # This is the current conversation between the user and the bot:
+          {{ sample_conversation | first_turns(2) | remove_text_messages}}
+          {{ history | colang | remove_text_messages}}
 
-      # This is the current conversation between the user and the bot:
-      {{ sample_conversation | first_turns(2) | remove_text_messages}}
-      {{ history | colang | remove_text_messages}}
+    # Prompt for generating the bot message from a canonical form.
+    - task: generate_bot_message
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
-  # Prompt for generating the bot message from a canonical form.
-  - task: generate_bot_message
-    content: |-
-      """
-      {{ general_instructions }}
-      """
+          {% if relevant_chunks %}
+          # This is some additional context:
+          ```markdown
+          {{ relevant_chunks }}
+          ```
+          {% endif %}
 
-      # This is how a conversation between a user and the bot can go:
-      {{ sample_conversation }}
+          # This is how the bot talks:
+          {{ examples }}
 
-      {% if relevant_chunks %}
-      # This is some additional context:
-      ```markdown
-      {{ relevant_chunks }}
-      ```
-      {% endif %}
+          # This is the current conversation between the user and the bot:
+          {{ sample_conversation | first_turns(2) }}
+          {{ history | colang }}
 
-      # This is how the bot talks:
-      {{ examples }}
+    # Prompt for generating the user intent, next steps and bot message in a single call.
+    - task: generate_intent_steps_message
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
-      # This is the current conversation between the user and the bot:
-      {{ sample_conversation | first_turns(2) }}
-      {{ history | colang }}
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
-  # Prompt for generating the user intent, next steps and bot message in a single call.
-  - task: generate_intent_steps_message
-    content: |-
-      """
-      {{ general_instructions }}
-      """
+          # For each user message, generate the next steps and finish with the bot message.
+          # These are some examples how the bot thinks:
+          {{ examples }}
 
-      # This is how a conversation between a user and the bot can go:
-      {{ sample_conversation }}
+          # This is the current conversation between the user and the bot:
+          {{ sample_conversation | first_turns(2) }}
+          {{ history | colang }}
 
-      # For each user message, generate the next steps and finish with the bot message.
-      # These are some examples how the bot thinks:
-      {{ examples }}
+    # Prompt for generating the value of a context variable.
+    - task: generate_value
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
-      # This is the current conversation between the user and the bot:
-      # Choose intent from this list: {{ potential_user_intents }}
-      {{ sample_conversation | first_turns(2) }}
-      {{ history | colang }}
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
+          # This is how the bot thinks:
+          {{ examples }}
 
-  # Prompt for generating the value of a context variable.
-  - task: generate_value
-    content: |-
-      """
-      {{ general_instructions }}
-      """
+          # This is the current conversation between the user and the bot:
+          {{ sample_conversation | first_turns(2) }}
+          {{ history | colang }}
+          # {{ instructions }}
+          ${{ var_name }} =
 
-      # This is how a conversation between a user and the bot can go:
-      {{ sample_conversation }}
+    - task: fact_checking
+      content: |-
+          You are given a task to identify if the hypothesis is grounded and entailed to the evidence.
+          You will only use the contents of the evidence and not rely on external knowledge.
+          Answer with yes/no. "evidence": {{ evidence }} "hypothesis": {{ response }} "entails":
 
-      # This is how the bot thinks:
-      {{ examples }}
+    # Colang 2.x prompts below.
 
-      # This is the current conversation between the user and the bot:
-      {{ sample_conversation | first_turns(2) }}
-      {{ history | colang }}
-      # {{ instructions }}
-      ${{ var_name }} =
+    # Prompt for detecting the user message canonical form.
+    - task: generate_user_intent_from_user_action
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
-  # Prompts for compact mode for dialogue rails
-  # Prompt for detecting the user message canonical form in compact form.
-  - task: generate_user_intent
-    mode: compact
-    content: |-
-      # Task: generate the user intent for the last user message.
+          # These are the most likely user intents:
+          {{ examples }}
 
-      # This is a sample conversation between the user and the bot:
-      {{ sample_conversation | first_turns(2) }}
-      # Use these examples:
-      {{ examples }}
-      # Choose intent from this list: {{ potential_user_intents }}
-      {{ history | colang | last_turns(1) }}
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
 
+          user action: {{ user_action }}
+          user intent:
 
-  # Prompt for generating the next steps in compact form.
-  - task: generate_next_steps
-    mode: compact
-    content: |-
-      # Task: generate the next steps in a conversation.
+    # Prompt for generating the value of a context variable.
+    - task: generate_value_from_instruction
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
-      # Use these examples:
-      {{ examples | remove_text_messages}}
-      {{ history | colang | remove_text_messages | last_turns(1) }}
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
 
-  # Prompt for generating the bot message from a canonical form in compact form.
-  - task: generate_bot_message
-    mode: compact
-    content: |-
-      # Task: generate the bot message in a conversation.
+          # {{ instructions }}
+          ${{ var_name }} =
 
-      {% if relevant_chunks %}
-      # This is some additional context:
-      ```markdown
-      {{ relevant_chunks }}
-      ```
-      {% endif %}
+    # Prompt for generating a flow from instructions.
+    - task: generate_flow_from_instructions
+      content: |-
+          # Example flows:
+          {{ examples }}
 
-      # This is the current conversation between the user and the bot:
-      {{ history | colang | last_turns(3) }}
-      # Use these examples:
-      {{ examples }}
-      {{ history | colang | last_turns(1) }}
+          # Complete the following flow based on its instruction:
+          flow {{ flow_name }}
+            """{{ instructions }}"""
+
+    # Prompt for generating a flow from name.
+    - task: generate_flow_from_name
+      content: |-
+          # Example flows:
+          {{ examples }}
+
+          # Complete the following flow based on its name:
+          flow {{ flow_name }}
+
+      # Prompt for generating the continuation for the current conversation.
+    - task: generate_flow_continuation
+      content: |-
+          """
+          {{ general_instructions }}
+          """
+
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
+
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
+
+          bot intent:

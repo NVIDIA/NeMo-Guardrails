@@ -1,25 +1,41 @@
 # Embedding Search Providers
 
-NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../../architecture/README.md#the-guardrails-process) and for the [knowledge base](../configuration-guide.md#knowledge-base-documents) functionality.
+NeMo Guardrails utilizes embedding search, also known as vector databases, for implementing the [guardrails process](../../architecture/README.md#the-guardrails-process) and for the [knowledge base](../configuration-guide.md#knowledge-base-documents) functionality.
 
-The default embedding search uses SentenceTransformers for computing the embeddings (the `all-MiniLM-L6-v2` model) and Annoy for performing the search.
+To enhance the efficiency of the embedding search process, NeMo Guardrails can employ a caching mechanism for embeddings. This mechanism stores computed embeddings, thereby reducing the need for repeated computations and accelerating the search process. By default, the caching mechanism is disabled.
 
-The default configuration is the following:
+The default embedding search uses FastEmbed for computing the embeddings (the `all-MiniLM-L6-v2` model) and Annoy for performing the search. The default configuration is as follows:
 
 ```yaml
 core:
   embedding_search_provider:
     name: default
     parameters:
-      embedding_engine: SentenceTransformers
+      embedding_engine: FastEmbed
       embedding_model: all-MiniLM-L6-v2
+      use_batching: False
+      max_batch_size: 10
+      max_batch_hold: 0.01
+    cache:
+      enabled: False
+      key_generator: md5
+      store: filesystem
+      store_config: {}
 
 knowledge_base:
   embedding_search_provider:
     name: default
     parameters:
-      embedding_engine: SentenceTransformers
+      embedding_engine: FastEmbed
       embedding_model: all-MiniLM-L6-v2
+      use_batching: False
+      max_batch_size: 10
+      max_batch_hold: 0.01
+    cache:
+      enabled: False
+      key_generator: md5
+      store: filesystem
+      store_config: {}
 ```
 
 The default embedding search provider can also work with OpenAI embeddings:
@@ -31,6 +47,11 @@ core:
     parameters:
       embedding_engine: openai
       embedding_model: text-embedding-ada-002
+    cache:
+      enabled: False
+      key_generator: md5
+      store: filesystem
+      store_config: {}
 
 knowledge_base:
   embedding_search_provider:
@@ -38,7 +59,21 @@ knowledge_base:
     parameters:
       embedding_engine: openai
       embedding_model: text-embedding-ada-002
+    cache:
+      enabled: False
+      key_generator: md5
+      store: filesystem
+      store_config: {}
 ```
+
+The default implementation is also designed to support asynchronous execution of the embedding computation process, thereby enhancing the efficiency of the search functionality.
+
+The `cache` configuration is optional. If enabled, it uses the specified `key_generator` and `store` to cache the embeddings. The `store_config` can be used to provide additional configuration options required for the store.
+The default `cache` configuration uses the `md5` key generator and the `filesystem` store. The cache is disabled by default.
+
+### Batch Implementation
+
+The default embedding provider includes a batch processing feature designed to optimize the embedding generation process. This feature is designed to initiate the embedding generation process after a predefined latency of 10 milliseconds.
 
 ## Custom Embedding Search Providers
 
@@ -50,6 +85,13 @@ class EmbeddingsIndex:
 
     @property
     def embedding_size(self):
+        raise NotImplementedError
+
+    @property
+    def cache_config(self):
+      raise NotImplementedError
+
+    async def _get_embeddings(self, texts: List[str]):
         raise NotImplementedError
 
     async def add_item(self, item: IndexItem):

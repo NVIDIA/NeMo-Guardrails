@@ -23,7 +23,7 @@ from langchain.schema import BaseMessage
 from langchain.schema.messages import AIMessageChunk
 from langchain.schema.output import ChatGenerationChunk, GenerationChunk, LLMResult
 
-from nemoguardrails.language.utils import new_uuid
+from nemoguardrails.colang.v1_0.lang.utils import new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -126,7 +126,12 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
         self.buffer = ""
 
     async def __anext__(self):
-        element = await self.queue.get()
+        element = None
+        try:
+            element = await self.queue.get()
+        except RuntimeError as ex:
+            if "Event loop is closed" not in str(ex):
+                raise ex
         if element is None or element == "":
             raise StopAsyncIteration
         else:

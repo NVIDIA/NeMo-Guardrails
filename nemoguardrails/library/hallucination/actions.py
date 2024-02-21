@@ -18,8 +18,8 @@ from typing import Optional
 
 from langchain.chains import LLMChain
 from langchain.llms.base import BaseLLM
-from langchain.llms.openai import OpenAI
 from langchain.prompts import PromptTemplate
+from langchain_openai import OpenAI
 
 from nemoguardrails.actions import action
 from nemoguardrails.actions.llm.utils import (
@@ -114,9 +114,10 @@ async def check_hallucination(
 
             # Initialize the LLMCallInfo object
             llm_call_info_var.set(LLMCallInfo(task=Task.CHECK_HALLUCINATION.value))
+            stop = llm_task_manager.get_stop_tokens(task=Task.CHECK_HALLUCINATION)
 
             with llm_params(llm, temperature=0.0):
-                agreement = await llm_call(llm, prompt)
+                agreement = await llm_call(llm, prompt, stop=stop)
 
             agreement = agreement.lower().strip()
             log.info(f"Agreement result for looking for hallucination is {agreement}.")

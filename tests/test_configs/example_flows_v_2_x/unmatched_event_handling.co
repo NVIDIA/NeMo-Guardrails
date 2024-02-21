@@ -1,0 +1,13 @@
+# include core_flows.co
+
+flow bot thinking
+  bot gesture "Thinking"
+
+flow unmatched event handling
+  match UnmatchedActionEventInternalEvent() as $event
+  start FuzzyMatchAction($event.event) as $action # Calls LLM to find a matching flow
+  start bot thinking # Optional, indicates waiting for the LLM
+  match $action
+  if $action.has_match
+    send FlowFinishedInternalEvent($action.matched_flow)
+  # stop bot thinking

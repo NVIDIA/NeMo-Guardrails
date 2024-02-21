@@ -18,7 +18,8 @@
 The same validation logic can be applied to others as well.
 """
 
-from langchain.utilities import (
+from langchain.utilities.zapier import ZapierNLAWrapper
+from langchain_community.utilities import (
     ApifyWrapper,
     BingSearchAPIWrapper,
     GoogleSearchAPIWrapper,
@@ -29,7 +30,6 @@ from langchain.utilities import (
     WikipediaAPIWrapper,
     WolframAlphaAPIWrapper,
 )
-from langchain.utilities.zapier import ZapierNLAWrapper
 
 from nemoguardrails.actions.validation import validate_input, validate_response
 

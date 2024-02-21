@@ -175,8 +175,8 @@ We breakdown the performance into positive entailment accuracy and negative enta
 
 ### Moderation Rails
 
-The moderation involves two components: jailbreak detection and output moderation.
-* The jailbreak detection attempts to flag user inputs that could potentially cause the model to output unsafe content.
+The moderation involves two components: input and output moderation.
+* The input moderation attempts to block user inputs that are designed to elicit harmful responses from the bot.
 * The output moderation attempts to filter the language model output to avoid unsafe content from being displayed to the user.
 
 #### Self-Check
@@ -198,11 +198,11 @@ The various arguments that can be passed to evaluate the moderation rails are
 - `dataset-path`: Path to the dataset to evaluate the rails on. The dataset should contain one prompt per line.
 - `split`: The split of the dataset to evaluate on. Choices are 'helpful' or 'harmful'. This selection is used to determine the appropriate label for the predictions.
 - `num-samples`: Number of samples to evaluate. Default is 50.
-- `check-input`: Whether to evaluate the jailbreak rail. Default is True.
+- `check-input`: Whether to evaluate the input moderation rail. Default is True.
 - `check-output`: Whether to evaluate the output moderation rail. Default is True.
 - `output-path`: Folder to write the results to. Default is 'eval_outputs/moderation'.
 
-It is also possible to evaluate each of the rails individually. To evaluate the jailbreak rail only, use the following command:
+It is also possible to evaluate each of the rails individually. To evaluate the input rail only, use the following command:
 
 ```nemoguardrails evaluate moderation --check-output False --config=path/to/guardrails/config```
 
@@ -235,6 +235,30 @@ These results are using the _Simple_ prompt defined in the LLM Self-Checking met
 | gpt-3.5-turbo          | 70                           | 100                          |
 | text-davinci-003       | 80                           | 97                           |
 | nemollm-43b            | 88                           | 84                           |
+
+##### LlamaGuard-based Moderation Rails Performance
+Evaluation date: January 8, 2024.
+
+Guardrails offers out-of-the-box support for Meta's new Llama Guard model for input/output moderation.
+Below, we evaluate Llama Guard and compare it to the self-checking approach with the _Complex_ prompt for two popular datasets.
+
+Results on the OpenAI Moderation test set
+Dataset size: 1,680
+Number of user inputs labeled harmful: 552 (31.1%)
+| Main LLM               | Input Rail               | Accuracy | Precision | Recall | F1 score |
+|------------------------|--------------------------|----------|-----------|--------|----------|
+| gpt-3.5-turbo-instruct | self check input         | 65.9%    | 0.47      | 0.88   | 0.62     |
+| gpt-3.5-turbo-instruct | llama guard check input  | 81.9%    | 0.73      | 0.66   | 0.69     |
+
+Results on the ToxicChat dataset:
+Dataset size: 10,165
+Number of user inputs labeled harmful: 730 (7.2%)
+| Main LLM               | Input Rail               | Accuracy | Precision | Recall | F1 score |
+|------------------------|--------------------------|----------|-----------|--------|----------|
+| gpt-3.5-turbo-instruct | self check input         | 66.5%    | 0.16      | 0.85   | 0.27     |
+| gpt-3.5-turbo-instruct | llama guard check input  | 94.4%    | 0.67      | 0.44   | 0.53     |
+
+The low precision and high recall numbers from the self check input with the complex prompt indicates an overly defensive behavior from the self check input rail. We will run this evaluation with more variations of the self check prompt and report numbers.
 
 ### Hallucination Rails
 For general questions that the model uses parametric knowledge to answer, we can define a hallucination rail to detect when the model is potentially making up facts. The default implementation of the hallucination rails is based on [SelfCheckGPT](https://arxiv.org/abs/2303.08896).
