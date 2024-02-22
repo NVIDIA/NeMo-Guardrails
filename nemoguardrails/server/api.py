@@ -92,7 +92,7 @@ app.stop_signal = False
 
 class RequestBody(BaseModel):
     config_id: Optional[str] = Field(
-        description="The id of the configuration to be used."
+        default=None, description="The id of the configuration to be used."
     )
     config_ids: Optional[List[str]] = Field(
         default=None,
@@ -460,19 +460,19 @@ def start_auto_reload_monitoring():
         os._exit(-1)
 
 
-# Register a nicer error message for 422 error
-def register_exception(app: FastAPI):
-    @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(
-        request: Request, exc: RequestValidationError
-    ):
-        exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
-        # or logger.error(f'{exc}')
-        log.error(request, exc_str)
-        content = {"status_code": 10422, "message": exc_str, "data": None}
-        return JSONResponse(
-            content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
-        )
-
-
-register_exception(app)
+# # Register a nicer error message for 422 error
+# def register_exception(app: FastAPI):
+#     @app.exception_handler(RequestValidationError)
+#     async def validation_exception_handler(
+#         request: Request, exc: RequestValidationError
+#     ):
+#         exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
+#         # or logger.error(f'{exc}')
+#         log.error(request, exc_str)
+#         content = {"status_code": 10422, "message": exc_str, "data": None}
+#         return JSONResponse(
+#             content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+#         )
+#
+#
+# register_exception(app)
