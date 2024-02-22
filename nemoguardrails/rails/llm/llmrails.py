@@ -55,7 +55,7 @@ from nemoguardrails.rails.llm.options import (
 )
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import new_event_dict
+from nemoguardrails.utils import get_or_create_event_loop, new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -223,7 +223,7 @@ class LLMRails:
         # Next, we initialize the Knowledge Base
         # There are still some edge cases not covered by nest_asyncio.
         # Using a separate thread always for now.
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
         if True or check_sync_call_from_async_loop():
             t = threading.Thread(target=asyncio.run, args=(self._init_kb(),))
             t.start()
@@ -739,7 +739,8 @@ class LLMRails:
                 "You should replace with `await generate_async(...)` or use `nest_asyncio.apply()`."
             )
 
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
+
         return loop.run_until_complete(
             self.generate_async(
                 prompt=prompt,
@@ -807,7 +808,7 @@ class LLMRails:
                 "You should replace with `await generate_events_async(...)` or use `nest_asyncio.apply()`."
             )
 
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
         return loop.run_until_complete(self.generate_events_async(events=events))
 
     async def process_events_async(
@@ -856,7 +857,7 @@ class LLMRails:
                 "You should replace with `await generate_events_async(...)."
             )
 
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
         return loop.run_until_complete(self.process_events_async(events, state))
 
     def register_action(self, action: callable, name: Optional[str] = None):
