@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import asyncio
 import dataclasses
 import json
 import uuid
@@ -200,3 +200,17 @@ class EnhancedJsonEncoder(json.JSONEncoder):
             return super().default(o)
         except Exception:
             return f"Type {type(o)} not serializable"
+
+
+def get_or_create_event_loop():
+    """Helper to return the current asyncio loop.
+
+    If one does not exist, it will be created.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    return loop

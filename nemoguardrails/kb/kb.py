@@ -115,7 +115,15 @@ class KnowledgeBase:
             return
 
         # We compute the md5
-        md5_hash = hashlib.md5("".join(all_text_items).encode("utf-8")).hexdigest()
+        # As part of the hash, we also include the embedding engine and the model
+        # to prevent the cache being used incorrectly when the embedding model changes.
+        hash_prefix = self.config.embedding_search_provider.parameters.get(
+            "embedding_engine", ""
+        ) + self.config.embedding_search_provider.parameters.get("embedding_model", "")
+
+        md5_hash = hashlib.md5(
+            (hash_prefix + "".join(all_text_items)).encode("utf-8")
+        ).hexdigest()
         cache_file = os.path.join(CACHE_FOLDER, f"{md5_hash}.ann")
         embedding_size_file = os.path.join(CACHE_FOLDER, f"{md5_hash}.esize")
 

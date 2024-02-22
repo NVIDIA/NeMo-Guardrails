@@ -190,6 +190,23 @@ We follow the [Black](https://black.readthedocs.io/en/stable/the_black_code_styl
    pre-commit run --all-files
    ```
 
+## Jupyter Notebook Documentation
+
+For certain features, you can provide documentation in the form of a Jupyter notebook. In addition to the notebook, we also require that you generate a README.md file next to the Jupyter notebook, with the same content. To achieve this, follow the following process:
+
+1. Place the jupyter notebook in a separate sub-folder.
+
+2. Install `nbdoc`:
+   ```bash
+   pip install nbdoc
+   ```
+
+3. Use the `build_notebook_docs.py` script from the root of the project to perform the conversion:
+
+   ```bash
+   python build_notebook_docs.py PATH/TO/SUBFOLDER
+   ```
+
 ## Submitting Your Work
 
 We require that all contributions are certified under the terms of the Developer Certificate of Origin (DCO), Version 1.1. This certifies that the contribution is your original work or you have the right to submit it under the same or compatible license. Any public contribution that contains commits that are not signed off will not be accepted.
