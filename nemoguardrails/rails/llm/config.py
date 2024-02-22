@@ -282,6 +282,43 @@ class FactCheckingRailConfig(BaseModel):
     )
 
 
+class AutoGuardOptions(BaseModel):
+    """List of guardrails that are activated"""
+
+    guardrails: List[str] = Field(
+        default_factory=list,
+        description="The guardrails that are activated",
+    )
+
+
+class AutoGuardRailConfig(BaseModel):
+    """Configuration data for the AutoGuard API"""
+
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    contextual_rules: List[List[str]] = Field(
+        default_factory=list,
+        description="The list of contextual rules that would dictate whether there will be redaction or not",
+    )
+    entities: List[str] = Field(
+        default_factory=list,
+        description="The list of entities that should be redacted",
+    )
+    matching_scores: Dict[str, Dict[str, float]] = Field(
+        default_factory=dict,
+        description="The dictionary of score config that would "
+        "dictate whether there guardrail will activate "
+        "or not",
+    )
+    input: AutoGuardOptions = Field(
+        default_factory=AutoGuardOptions,
+        description="Input configuration for Autoguard",
+    )
+    output: AutoGuardOptions = Field(
+        default_factory=AutoGuardOptions,
+        description="Output configuration for Autoguard",
+    )
+
+
 class JailbreakDetectionConfig(BaseModel):
     """Configuration data for jailbreak detection."""
 
@@ -303,6 +340,11 @@ class RailsConfigData(BaseModel):
     fact_checking: FactCheckingRailConfig = Field(
         default_factory=FactCheckingRailConfig,
         description="Configuration data for the fact-checking rail.",
+    )
+
+    autoguard: AutoGuardRailConfig = Field(
+        default_factory=AutoGuardRailConfig,
+        description="Configuration data for the Autoguard API.",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
