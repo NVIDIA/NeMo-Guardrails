@@ -22,6 +22,9 @@ RUN pip install -r requirements.txt
 # Set the device on which the model should load e.g., "cpu", "cuda:0", etc.
 ENV JAILBREAK_CHECK_DEVICE=cuda:0
 
+# Predownload the GPT2 model.
+RUN python -c "from transformers import GPT2LMHeadModel, GPT2TokenizerFast; GPT2LMHeadModel.from_pretrained('gpt2-large'); GPT2TokenizerFast.from_pretrained('gpt2-large');"
+
 # Expose a port for the server
 EXPOSE 1337
 
