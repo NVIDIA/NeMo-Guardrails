@@ -187,7 +187,7 @@ If some of the rails alter the input, e.g., to mask sensitive information, then 
 }
 ```
 
-If the input was blocked, you will get the predefined repose `bot refuse to respond` (by default "I'm sorry, I can't respond to that").
+If the input was blocked, you will get the predefined response `bot refuse to respond` (by default "I'm sorry, I can't respond to that").
 
 ```json
 {
