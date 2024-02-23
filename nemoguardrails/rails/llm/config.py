@@ -303,12 +303,6 @@ class AutoGuardRailConfig(BaseModel):
         default_factory=list,
         description="The list of entities that should be redacted",
     )
-    matching_scores: Dict[str, Dict[str, float]] = Field(
-        default_factory=dict,
-        description="The dictionary of score config that would "
-        "dictate whether there guardrail will activate "
-        "or not",
-    )
     input: AutoGuardOptions = Field(
         default_factory=AutoGuardOptions,
         description="Input configuration for Autoguard",
