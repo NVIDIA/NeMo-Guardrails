@@ -37,7 +37,7 @@ class FastEmbedEmbeddingModel(EmbeddingModel):
     """
 
     def __init__(self, embedding_model: str):
-        from fastembed.embedding import FlagEmbedding as Embedding
+        from fastembed import TextEmbedding as Embedding
 
         # Enabling a short form model name for all-MiniLM-L6-v2.
         if embedding_model == "all-MiniLM-L6-v2":
