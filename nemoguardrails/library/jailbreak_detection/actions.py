@@ -17,10 +17,6 @@ import logging
 from typing import Optional
 
 from nemoguardrails.actions import action
-from nemoguardrails.library.jailbreak_detection.heuristics.checks import (
-    check_jailbreak_length_per_perplexity,
-    check_jailbreak_prefix_suffix_perplexity,
-)
 from nemoguardrails.library.jailbreak_detection.request import (
     jailbreak_detection_heuristics_request,
 )
@@ -43,6 +39,11 @@ async def jailbreak_detection_heuristics(
     prompt = context.get("user_message")
 
     if not jailbreak_api_url:
+        from nemoguardrails.library.jailbreak_detection.heuristics.checks import (
+            check_jailbreak_length_per_perplexity,
+            check_jailbreak_prefix_suffix_perplexity,
+        )
+
         log.warning(
             "No jailbreak heuristics endpoint set. Running in-process, NOT RECOMMENDED FOR PRODUCTION."
         )

@@ -40,6 +40,7 @@ def compute_generation_log(processing_log: List[dict]) -> GenerationLog:
     ignored_flows = [
         "process user input",
         "run input rails",
+        "run dialog rails",
         "process bot message",
         "run output rails",
     ]
@@ -69,9 +70,11 @@ def compute_generation_log(processing_log: List[dict]) -> GenerationLog:
                     continue
 
                 activated_rail = ActivatedRail(
-                    type="dialog"
-                    if event["flow_id"] not in generation_flows
-                    else "generation",
+                    type=(
+                        "dialog"
+                        if event["flow_id"] not in generation_flows
+                        else "generation"
+                    ),
                     name=event["flow_id"],
                     started_at=event["timestamp"],
                 )
@@ -88,9 +91,11 @@ def compute_generation_log(processing_log: List[dict]) -> GenerationLog:
                     continue
 
                 activated_rail = ActivatedRail(
-                    type="dialog"
-                    if event["flow_id"] not in generation_flows
-                    else "generation",
+                    type=(
+                        "dialog"
+                        if event["flow_id"] not in generation_flows
+                        else "generation"
+                    ),
                     name=event["flow_id"],
                     started_at=event["timestamp"],
                 )
