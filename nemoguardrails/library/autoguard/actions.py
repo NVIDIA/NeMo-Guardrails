@@ -261,10 +261,30 @@ async def autoguard_input_api(
     if not autoguard_api_url:
         raise ValueError("Provide the autoguard endpoint in the config")
     tasks = getattr(autoguard_config.input, "guardrails")
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
+    matching_scores = getattr(autoguard_config.input, "matching_scores", {})
     if not tasks:
         raise ValueError("Provide the guardrails in the config")
     prompt = user_message
+
+    return await autoguard_infer(autoguard_api_url, prompt, tasks, matching_scores)
+
+
+@action()
+async def autoguard_output_api(
+    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+):
+    """Calls AutoGuard API for the bot message and guardrail configuration provided"""
+    bot_message = context.get("bot_message")
+    autoguard_config = llm_task_manager.config.rails.config.autoguard
+    autoguard_api_url = autoguard_config.parameters.get("endpoint")
+    if not autoguard_api_url:
+        raise ValueError("Provide the autoguard endpoint in the config")
+    tasks = getattr(autoguard_config.output, "guardrails")
+    matching_scores = getattr(autoguard_config.output, "matching_scores", {})
+    if not tasks:
+        raise ValueError("Provide the guardrails in the config")
+
+    prompt = bot_message
 
     return await autoguard_infer(autoguard_api_url, prompt, tasks, matching_scores)
 
@@ -281,9 +301,9 @@ async def autoguard_pii_input_api(
     if not autoguard_api_url:
         raise ValueError("Provide the autoguard endpoint in the config")
 
-    entities = getattr(autoguard_config, "entities", [])
-    contextual_rules = getattr(autoguard_config, "contextual_rules", [])
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
+    entities = getattr(autoguard_config.input, "entities", [])
+    contextual_rules = getattr(autoguard_config.input, "contextual_rules", [])
+    matching_scores = getattr(autoguard_config.input, "matching_scores", {})
     return await autoguard_pii_infer(
         autoguard_api_url, user_message, entities, contextual_rules, matching_scores
     )
@@ -301,32 +321,12 @@ async def autoguard_pii_output_api(
     if not autoguard_api_url:
         raise ValueError("Provide the autoguard endpoint in the config")
 
-    entities = getattr(autoguard_config, "entities", [])
-    contextual_rules = getattr(autoguard_config, "contextual_rules", [])
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
+    entities = getattr(autoguard_config.output, "entities", [])
+    contextual_rules = getattr(autoguard_config.output, "contextual_rules", [])
+    matching_scores = getattr(autoguard_config.output, "matching_scores", {})
     return await autoguard_pii_infer(
         autoguard_api_url, user_message, entities, contextual_rules, matching_scores
     )
-
-
-@action()
-async def autoguard_output_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
-):
-    """Calls AutoGuard API for the bot message and guardrail configuration provided"""
-    bot_message = context.get("bot_message")
-    autoguard_config = llm_task_manager.config.rails.config.autoguard
-    autoguard_api_url = autoguard_config.parameters.get("endpoint")
-    if not autoguard_api_url:
-        raise ValueError("Provide the autoguard endpoint in the config")
-    tasks = getattr(autoguard_config.input, "guardrails")
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
-    if not tasks:
-        raise ValueError("Provide the guardrails in the config")
-
-    prompt = bot_message
-
-    return await autoguard_infer(autoguard_api_url, prompt, tasks, matching_scores)
 
 
 @action()
@@ -337,8 +337,8 @@ async def autoguard_toxicity_input_api(
     user_message = context.get("user_message")
     autoguard_config = llm_task_manager.config.rails.config.autoguard
 
-    autoguard_toxicity_api_url = autoguard_config.parameters.get("toxicity_endpoint")
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
+    autoguard_toxicity_api_url = autoguard_config.parameters.get("endpoint")
+    matching_scores = getattr(autoguard_config.input, "matching_scores", {})
     if not autoguard_toxicity_api_url:
         raise ValueError("Provide the autoguard endpoint in the config")
     return await autoguard_toxicity_infer(
@@ -354,8 +354,8 @@ async def autoguard_toxicity_output_api(
     bot_message = context.get("bot_message")
     autoguard_config = llm_task_manager.config.rails.config.autoguard
 
-    autoguard_toxicity_api_url = autoguard_config.parameters.get("toxicity_endpoint")
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
+    autoguard_toxicity_api_url = autoguard_config.parameters.get("endpoint")
+    matching_scores = getattr(autoguard_config.output, "matching_scores", {})
     if not autoguard_toxicity_api_url:
         raise ValueError("Provide the autoguard endpoint in the config")
     return await autoguard_toxicity_infer(
@@ -385,7 +385,7 @@ async def autoguard_factcheck_api(
     if isinstance(documents, str):
         documents = documents.split("\n")
     prompt = bot_message
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
+    matching_scores = getattr(autoguard_config.output, "matching_scores", {})
     if isinstance(documents, list) and len(documents) > 0:
         return await autoguard_factcheck_infer(
             autoguard_fact_check_api_url, prompt, documents, matching_scores
