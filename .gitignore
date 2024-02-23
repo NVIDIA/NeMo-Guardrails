@@ -27,3 +27,4 @@ eval_outputs
 /**/banking/user.co
 .mypy_cache
 .python-version
+local_cache
