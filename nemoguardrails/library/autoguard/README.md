@@ -7,11 +7,11 @@ AutoGuard comes with a library of built-in guardrails that you can easily use:
 1. [Confidential Detection](#confidential-detection)
 2. [Gender bias Detection](#gender-bias-detection)
 3. [Harm Detection](#harm-detection)
-4. [Toxicity detection](#toxicity-detection)
+4. [Toxicity detection](#toxicity-extraction)
 5. [Racial bias Detection](#racial-bias-detection)
 6. [Jailbreak Detection](#jailbreak-detection)
-7. Factcheck
-8. PII
+7. [Factcheck](#usage-autoguard-factcheck)
+8. [PII](#usage-autoguard-pii)
 
 ## Usage (AutoGuard)
 
@@ -100,63 +100,65 @@ rails:
       parameters:
         endpoint: "http://35.225.99.81:8888/guardrail"
       entities:
-        - "[PERSON NAME]"
-        - "[LOCATION]"
-        - "[DATE OF BIRTH]"
-        - "[DATE]"
-        - "[PHONE NUMBER]"
-        - "[EMAIL ADDRESS]"
-        - "[CREDIT CARD NUMBER]"
-        - "[BANK ACCOUNT NUMBER]"
-        - "[SOCIAL SECURITY NUMBER]"
-        - "[MONEY]"
-        - "[PROFESSION]"
-        - "[RACE/ETHNICITY]"
-        - "[ORGANIZATION]"
-        - "[USERNAME]"
-        - "[PASSWORD]"
-        - "[IP ADDRESS]"
-        - "[PASSPORT NUMBER]"
-        - "[DRIVER LICENSE NUMBER]"
-        - "[SECRET_KEY]"
-        - "[TRANSACTION_ID]"
-        - "[RELIGION]"
+        - '[BANK ACCOUNT NUMBER]'
+        - '[CREDIT CARD NUMBER]'
+        - '[DATE OF BIRTH]'
+        - '[DATE]'
+        - '[DRIVER LICENSE NUMBER]'
+        - '[EMAIL ADDRESS]'
+        - '[RACE/ETHNICITY]'
+        - '[GENDER]'
+        - '[IP ADDRESS]'
+        - '[LOCATION]'
+        - '[MONEY]'
+        - '[ORGANIZATION]'
+        - '[PASSPORT NUMBER]'
+        - '[PASSWORD]'
+        - '[PERSON NAME]'
+        - '[PHONE NUMBER]'
+        - '[PROFESSION]'
+        - '[SOCIAL SECURITY NUMBER]'
+        - '[USERNAME]'
+        - '[SECRET_KEY]'
+        - '[TRANSACTION_ID]'
+        - '[RELIGION]'
       contextual_rules:
+        - ["[PERSON NAME]"]
         - ["[PERSON NAME]", "[CREDIT CARD NUMBER]", "[BANK ACCOUNT NUMBER]"]
         - ["[PERSON NAME]", "[EMAIL ADDRESS]", "[DATE OF BIRTH]"]
         - ["[PERSON NAME]", "[EMAIL ADDRESS]", "[LOCATION]", "[SOCIAL SECURITY NUMBER]"]
       matching_scores:
         {"pii_fast": {
-          "[PERSON NAME]": 0.5,
-            "[LOCATION]": 0.5,
-            "[DATE OF BIRTH]": 0.5,
-            "[DATE]": 0.5,
-            "[PHONE NUMBER]": 0.5,
-            "[EMAIL ADDRESS]": 0.5,
-            "[CREDIT CARD NUMBER]": 0.5,
-            "[BANK ACCOUNT NUMBER]": 0.5,
-            "[SOCIAL SECURITY NUMBER]": 0.5,
-            "[MONEY]": 0.5,
-            "[PROFESSION]": 0.5,
-            "[RACE/ETHNICITY]": 0.5,
-            "[ORGANIZATION]": 0.5,
-            "[USERNAME]": 0.5,
-            "[PASSWORD]": 0.5,
-            "[IP ADDRESS]": 0.5,
-            "[PASSPORT NUMBER]": 0.5,
-            "[DRIVER LICENSE NUMBER]": 0.5,
-            "[SECRET_KEY]": 0.5,
-            "[TRANSACTION_ID]": 0.5,
-            "[RELIGION]": 0.5,
+          '[BANK ACCOUNT NUMBER]': 0.5,
+            '[CREDIT CARD NUMBER]': 0.5,
+            '[DATE OF BIRTH]': 0.5,
+            '[DATE]': 0.5,
+            '[DRIVER LICENSE NUMBER]': 0.5,
+            '[EMAIL ADDRESS]': 0.5,
+            '[RACE/ETHNICITY]': 0.5,
+            '[GENDER]': 0.5,
+            '[IP ADDRESS]': 0.5,
+            '[LOCATION]': 0.5,
+            '[MONEY]': 0.5,
+            '[ORGANIZATION]': 0.5,
+            '[PASSPORT NUMBER]': 0.5,
+            '[PASSWORD]': 0.5,
+            '[PERSON NAME]': 0.5,
+            '[PHONE NUMBER]': 0.5,
+            '[PROFESSION]': 0.5,
+            '[SOCIAL SECURITY NUMBER]': 0.5,
+            '[USERNAME]': 0.5,
+            '[SECRET_KEY]': 0.5,
+            '[TRANSACTION_ID]': 0.5,
+            '[RELIGION]': 0.5
         }}
-  input:
-    flows:
-      - call autoguard pii
   output:
     flows:
-      - autoguard pii output
+      - call autoguard pii
 ```
 Add the Autoguard's PII endpoint in the parameters section of autoguard config.
+
+The above provided sample shows all PII entities that is currently being supported by AutoGuard.
 
 One of the advanced configs is matching score which is a threshold that determines whether the guardrail will mask the entity in text or not.
 
@@ -166,11 +168,13 @@ The colang file has to be in the following format:
 
 ```colang
 define subflow call autoguard pii
-    $pii_result = execute autoguard_pii_api
-
-define subflow autoguard pii output
+    $pii_result = execute autoguard_pii_output_api
     if $pii_result[0] == True
-      $bot_message = $pii_result[1]
+      bot autoguard pii response
+      stop
+
+define bot autoguard pii response
+    "$pii_result[1]"
 ```
 
 ## Usage (AutoGuard Factcheck)
