@@ -22,7 +22,7 @@ define parallel flow process user input
   create event UserMessage(text=$user_message)
 
 
-define flow generate user intent
+define flow run dialog rails
   """Generate the user's intent based on the text."""
   event UserMessage(text="...")
 
@@ -36,7 +36,12 @@ define flow generate user intent
       create event BotMessage(text=$bot_message)
   else
     # If not, we continue the usual process
-    execute generate_user_intent
+    do generate user intent
+
+
+define subflow generate user intent
+  """Generates the user intent."""
+  execute generate_user_intent
 
 
 define subflow run input rails
