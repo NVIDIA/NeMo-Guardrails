@@ -212,7 +212,7 @@ async def autoguard_factcheck_infer(
     return 1.0
 
 
-@action()
+@action(name="autoguard_input_api")
 async def autoguard_input_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
@@ -232,7 +232,7 @@ async def autoguard_input_api(
     return await autoguard_infer(autoguard_api_url, prompt, tasks, matching_scores)
 
 
-@action()
+@action(name="autoguard_output_api")
 async def autoguard_output_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
@@ -252,7 +252,7 @@ async def autoguard_output_api(
     return await autoguard_infer(autoguard_api_url, prompt, tasks, matching_scores)
 
 
-@action()
+@action(name="autoguard_pii_input_api")
 async def autoguard_pii_input_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
@@ -272,7 +272,7 @@ async def autoguard_pii_input_api(
     )
 
 
-@action()
+@action(name="autoguard_pii_output_api")
 async def autoguard_pii_output_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
@@ -292,7 +292,7 @@ async def autoguard_pii_output_api(
     )
 
 
-@action()
+@action(name="autoguard_factcheck_api")
 async def autoguard_factcheck_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
