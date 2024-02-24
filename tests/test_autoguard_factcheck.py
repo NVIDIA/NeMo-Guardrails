@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+from typing import Optional
 
 import pytest
 from aioresponses import aioresponses
@@ -52,20 +53,22 @@ async def retrieve_relevant_chunks():
 async def test_fact_checking_greeting(httpx_mock):
     # Test 1 - Greeting - No fact-checking invocation should happen
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_factcheck"))
-    chat = TestChat(config)
+
+    chat = TestChat(
+        config,
+        llm_completions=["  express greeting", "Hi! How can I assist today?"],
+    )
+
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "  express greeting"},
-    )
+    async def mock_autoguard_factcheck_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("bot_message")
+        if query == "Hi! How can I assist today?":
+            return 1.0
+        else:
+            return 0.0
 
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "Hi! How can I assist today?"},
-    )
+    chat.app.register_action(mock_autoguard_factcheck_api, "autoguard_factcheck_api")
 
     chat >> "hi"
     await chat.bot_async("Hi! How can I assist today?")
@@ -75,115 +78,100 @@ async def test_fact_checking_greeting(httpx_mock):
 async def test_fact_checking_correct(httpx_mock):
     # Test 2 - Factual statement - high score
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_factcheck"))
-    chat = TestChat(config)
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "What is NeMo Guardrails?",
+            "  ask about guardrails",
+            "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to "
+            "LLM-based conversational systems.",
+        ],
+    )
+
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "  ask about guardrails"},
+    async def mock_autoguard_factcheck_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("bot_message")
+        if (
+            query
+            == "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based "
+            "conversational systems."
+        ):
+            return 0.82
+        else:
+            return 0.0
+
+    chat.app.register_action(mock_autoguard_factcheck_api, "autoguard_factcheck_api")
+
+    chat >> "What is NeMo Guardrails?"
+
+    await chat.bot_async(
+        "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based "
+        "conversational systems."
     )
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
-        },
-    )
-
-    with aioresponses() as m:
-        # Fact-checking using score
-        m.post(
-            "https://nvidia.autoalign.ai/factcheck",
-            payload={
-                "response": "Factcheck Score: 0.82",
-                "guarded": False,
-                "task": "factcheck",
-            },
-        )
-
-        # Succeeded, no more generations needed
-        chat >> "What is NeMo Guardrails?"
-
-        await chat.bot_async(
-            "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
-        )
 
 
 @pytest.mark.asyncio
 async def test_fact_checking_wrong(httpx_mock):
     # Test 3 - Very low score - Not factual
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_factcheck"))
-    chat = TestChat(config)
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "What is NeMo Guardrails?",
+            "  ask about guardrails",
+            "I don't know the answer that.",
+        ],
+    )
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "  ask about guardrails"},
-    )
+    async def mock_autoguard_factcheck_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("bot_message")
+        if (
+            query
+            == "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based "
+            "conversational systems."
+        ):
+            return 0.01
+        else:
+            return 1.0
 
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia."
-        },
-    )
-
-    with aioresponses() as m:
-        # Fact-checking using score
-        m.post(
-            "https://nvidia.autoalign.ai/factcheck",
-            payload={
-                "response": "Factcheck Score: 0.01",
-                "guarded": False,
-                "task": "factcheck",
-            },
-        )
-
-        chat >> "What is NeMo Guardrails?"
-
-        await chat.bot_async("I don't know the answer that.")
+    chat.app.register_action(mock_autoguard_factcheck_api, "autoguard_factcheck_api")
+    chat >> "What is NeMo Guardrails?"
+    await chat.bot_async("I don't know the answer that.")
 
 
 # fails for test_fact_checking as well
-@pytest.mark.skip(reason="Not sure why it fails.")
+# @pytest.mark.skip(reason="Not sure why it fails.")
 @pytest.mark.asyncio
 async def test_fact_checking_uncertain(httpx_mock):
     # Test 4 - Factual statement - score not very confident in its prediction
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_factcheck"))
-    chat = TestChat(config)
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "What is NeMo Guardrails?",
+            "  ask about guardrails",
+            "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia.\n"
+            + "Attention: the answer above is potentially inaccurate.",
+        ],
+    )
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={"text": "  ask about guardrails"},
+    async def mock_autoguard_factcheck_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("bot_message")
+        if (
+            query
+            == "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based "
+            "conversational systems."
+        ):
+            return 0.58
+        else:
+            return 1.0
+
+    chat.app.register_action(mock_autoguard_factcheck_api, "autoguard_factcheck_api")
+    chat >> "What is NeMo Guardrails?"
+    await chat.bot_async(
+        "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia.\n"
+        + "Attention: the answer above is potentially inaccurate."
     )
-
-    httpx_mock.add_response(
-        method="POST",
-        url=NEMO_API_URL_GPT_43B_002,
-        json={
-            "text": "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia."
-        },
-    )
-
-    with aioresponses() as m:
-        ## Fact-checking using score
-        m.post(
-            "https://nvidia.autoalign.ai/factcheck",
-            payload={
-                "response": "Factcheck Score: 0.58",
-                "guarded": False,
-                "task": "factcheck",
-            },
-        )
-
-        chat >> "What is NeMo Guardrails?"
-        await chat.bot_async(
-            "NeMo Guardrails is a closed-source proprietary toolkit by Nvidia.\n"
-            + "Attention: the answer above is potentially inaccurate."
-        )
