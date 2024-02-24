@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import asyncio
 import json
 import logging
 import os
@@ -26,14 +26,14 @@ from nemoguardrails.llm.taskmanager import LLMTaskManager
 log = logging.getLogger(__name__)
 
 GUARDRAIL_RESPONSE_TEXT = {
-    "confidential_detection": "Confidential Information violation",
-    "gender_bias_detection": "Gender bias in text",
-    "harm_detection": "Harm to human violation",
-    "text_toxicity_extraction": "Toxicity in text",
-    "tonal_detection": "Negative tone in text",
-    "racial_bias_detection": "Racial bias in text",
-    "jailbreak_detection": "Jailbreak attempt",
-    "factcheck": "Factcheck violation in text",
+    "confidential_detection": "Confidential Information violation has been detected by AutoGuard; Sorry, can't process.",
+    "gender_bias_detection": "Gender bias in text has been detected by AutoGuard; Sorry, can't process.",
+    "harm_detection": "Harm to human violation has been detected by AutoGuard; Sorry, can't process.",
+    "text_toxicity_extraction": "Toxicity in text has been detected by AutoGuard; Sorry, can't process.",
+    "tonal_detection": "Negative tone in text has been detected by AutoGuard; Sorry, can't process.",
+    "racial_bias_detection": "Racial bias in text has been detected by AutoGuard; Sorry, can't process.",
+    "jailbreak_detection": "Jailbreak attempt has been detected by AutoGuard; Sorry, can't process.",
+    "factcheck": "Factcheck violation in text has been detected by AutoGuard; Sorry, can't process.",
 }
 
 DEFAULT_CONFIG = {
@@ -75,6 +75,19 @@ DEFAULT_CONFIG = {
     "jailbreak_detection": {"mode": "OFF"},
     "intellectual_property": {"mode": "OFF"},
 }
+
+
+def process_autoguard_output(response: Any):
+    """Processes the output provided AutoGuard API"""
+    if response["task"] == "text_toxicity_extraction":
+        output_str = (
+            GUARDRAIL_RESPONSE_TEXT[response["task"]]
+            + " Toxic phrases: "
+            + " ".join(response["output_data"])
+        )
+    else:
+        output_str = GUARDRAIL_RESPONSE_TEXT[response["task"]]
+    return output_str
 
 
 async def autoguard_infer(
@@ -121,54 +134,6 @@ async def autoguard_infer(
     return False, None
 
 
-async def autoguard_toxicity_infer(
-    request_url: str,
-    text: str,
-    matching_scores: Dict[str, Dict[str, float]],
-    task_config: Optional[Dict[Any, Any]] = None,
-):
-    """Extracts the toxic phrases from the given text."""
-    api_key = os.environ.get("AUTOGUARD_API_KEY")
-    if api_key is None:
-        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
-
-    headers = {"x-api-key": api_key}
-    config = DEFAULT_CONFIG
-    # enable the select guardrail
-    config["text_toxicity_extraction"]["mode"] = "DETECT"
-    if task_config:
-        config["text_toxicity_extraction"].update(task_config)
-    if matching_scores:
-        config["text_toxicity_extraction"]["matching_scores"] = matching_scores.get(
-            "text_toxicity_extraction", {}
-        )
-
-    request_body = {"prompt": text, "config": config}
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            url=request_url,
-            headers=headers,
-            json=request_body,
-        ) as response:
-            if response.status != 200:
-                raise ValueError(
-                    f"AutoGuard call failed with status code {response.status}.\n"
-                    f"Details: {await response.text()}"
-                )
-            async for line in response.content:
-                line_text = line.strip()
-                if len(line_text) > 0:
-                    resp = json.loads(line_text)
-                    if resp["task"] == "text_toxicity_extraction":
-                        return (
-                            resp["guarded"],
-                            GUARDRAIL_RESPONSE_TEXT[resp["task"]],
-                            " ".join(resp["output_data"]),
-                        )
-    return False, None
-
-
 async def autoguard_pii_infer(
     request_url: str,
     text: str,
@@ -177,7 +142,7 @@ async def autoguard_pii_infer(
     matching_scores: Dict[str, Dict[str, float]],
     task_config: Optional[Dict[Any, Any]] = None,
 ):
-    """Extracts the PII instances from the given text, according to given configuration."""
+    """Provides request body for given text and other configuration"""
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
@@ -219,9 +184,8 @@ async def autoguard_factcheck_infer(
     request_url: str,
     text: str,
     documents: List[str],
-    matching_scores: Dict[str, Dict[str, float]],
 ):
-    """Checks the facts for the text using the given documents."""
+    """Checks the facts for the text using the given documents and provides a fact-checking score"""
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
@@ -229,7 +193,6 @@ async def autoguard_factcheck_infer(
     request_body = {
         "prompt": text,
         "documents": documents,
-        "matching_scores": matching_scores.get("factcheck", {}),
     }
     async with aiohttp.ClientSession() as session:
         async with session.post(
@@ -330,40 +293,6 @@ async def autoguard_pii_output_api(
 
 
 @action()
-async def autoguard_toxicity_input_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
-):
-    """Calls AutoGuard toxic text extraction API for the user message and extracts toxic phrases"""
-    user_message = context.get("user_message")
-    autoguard_config = llm_task_manager.config.rails.config.autoguard
-
-    autoguard_toxicity_api_url = autoguard_config.parameters.get("endpoint")
-    matching_scores = getattr(autoguard_config.input, "matching_scores", {})
-    if not autoguard_toxicity_api_url:
-        raise ValueError("Provide the autoguard endpoint in the config")
-    return await autoguard_toxicity_infer(
-        autoguard_toxicity_api_url, user_message, matching_scores
-    )
-
-
-@action()
-async def autoguard_toxicity_output_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
-):
-    """Calls AutoGuard toxic text extraction API for the bot message and extracts toxic phrases"""
-    bot_message = context.get("bot_message")
-    autoguard_config = llm_task_manager.config.rails.config.autoguard
-
-    autoguard_toxicity_api_url = autoguard_config.parameters.get("endpoint")
-    matching_scores = getattr(autoguard_config.output, "matching_scores", {})
-    if not autoguard_toxicity_api_url:
-        raise ValueError("Provide the autoguard endpoint in the config")
-    return await autoguard_toxicity_infer(
-        autoguard_toxicity_api_url, bot_message, matching_scores
-    )
-
-
-@action()
 async def autoguard_factcheck_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
@@ -385,10 +314,9 @@ async def autoguard_factcheck_api(
     if isinstance(documents, str):
         documents = documents.split("\n")
     prompt = bot_message
-    matching_scores = getattr(autoguard_config.output, "matching_scores", {})
     if isinstance(documents, list) and len(documents) > 0:
         return await autoguard_factcheck_infer(
-            autoguard_fact_check_api_url, prompt, documents, matching_scores
+            autoguard_fact_check_api_url, prompt, documents
         )
     else:
         raise ValueError("Provide relevant documents in proper format")
