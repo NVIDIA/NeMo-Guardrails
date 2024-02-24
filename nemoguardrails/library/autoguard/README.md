@@ -315,7 +315,7 @@ rails:
   config:
     autoguard:
       parameters:
-        fact_check_endpoint: "https://nvidia.autoalign.ai/guardrail"
+        fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
   output:
     flows:
       - output autoguard factcheck
