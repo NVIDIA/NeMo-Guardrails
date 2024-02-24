@@ -34,6 +34,15 @@ async def test_autoguard_pii_greeting():
         llm_completions=["  express greeting", "Hi! How can I assist today?"],
     )
 
+    async def mock_autoguard_pii_input_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("user_message")
+        if query == "hi":
+            return False, None
+        else:
+            return True, None
+
+    chat.app.register_action(mock_autoguard_pii_input_api, "autoguard_pii_input_api")
+
     chat >> "hi"
     await chat.bot_async("Hi! How can I assist today?")
 
