@@ -12,4 +12,4 @@ define subflow call autoguard output
     stop
 
 define bot refuse to respond autoguard
-  "$result[1] has been detected by AutoGuard; Sorry, can't process."
+  "$result[1]"
