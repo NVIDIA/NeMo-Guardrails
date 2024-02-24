@@ -8,8 +8,6 @@ rails:
     autoguard:
       parameters:
         fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
-      matching_scores:
-        { "factcheck": {"score": 0.5}}
   output:
     flows:
       - check facts autoguard

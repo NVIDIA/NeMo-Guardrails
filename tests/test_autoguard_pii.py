@@ -25,7 +25,7 @@ CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
 
 
 @pytest.mark.asyncio
-async def test_fact_checking_greeting():
+async def test_autoguard_pii_greeting():
     # Test 1 - Greeting - No fact-checking invocation should happen
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_pii"))
 
@@ -52,7 +52,7 @@ async def test_pii_input():
             "PII redacted text: My name is [PERSON NAME] and my email is [EMAIL ADDRESS]. Im from [LOCATION] and I "
             "love rock music. My SIN number [SOCIAL SECURITY NUMBER] was stolen by [PERSON NAME]. In other words, "
             "[PERSON NAME] stole [PERSON NAME]'s identity. [PERSON NAME]'s checking account is [BANK ACCOUNT NUMBER], "
-            "and his username is [USERNAME] ",
+            "and his username is [USERNAME]",
         ],
     )
 
@@ -62,14 +62,14 @@ async def test_pii_input():
             query
             == "My name is Bob and my email is bob@gmail.com. Im from Toronto and I love rock music. My SIN number "
             "76543235 was stolen by Tom Smith. In other words, Mr. Smith stole Bob's identity. Mr. Dylan's "
-            "checking account is 5432123, and his username is dylan123 "
+            "checking account is 5432123, and his username is dylan123"
         ):
             return (
                 True,
                 "PII redacted text: My name is [PERSON NAME] and my email is [EMAIL ADDRESS]. Im from [LOCATION] and "
                 "I love rock music. My SIN number [SOCIAL SECURITY NUMBER] was stolen by [PERSON NAME]. In other "
                 "words, [PERSON NAME] stole [PERSON NAME]'s identity. [PERSON NAME]'s checking account is [BANK "
-                "ACCOUNT NUMBER], and his username is [USERNAME] ",
+                "ACCOUNT NUMBER], and his username is [USERNAME]",
             )
         else:
             return False, None
@@ -80,14 +80,14 @@ async def test_pii_input():
         chat
         >> "My name is Bob and my email is bob@gmail.com. Im from Toronto and I love rock music. My SIN number "
         "76543235 was stolen by Tom Smith. In other words, Mr. Smith stole Bob's identity. Mr. Dylan's checking "
-        "account is 5432123, and his username is dylan123 "
+        "account is 5432123, and his username is dylan123"
     )
 
     await chat.bot_async(
         "PII redacted text: My name is [PERSON NAME] and my email is [EMAIL ADDRESS]. Im from [LOCATION] and I love "
         "rock music. My SIN number [SOCIAL SECURITY NUMBER] was stolen by [PERSON NAME]. In other words, "
         "[PERSON NAME] stole [PERSON NAME]'s identity. [PERSON NAME]'s checking account is [BANK ACCOUNT NUMBER], "
-        "and his username is [USERNAME] "
+        "and his username is [USERNAME]"
     )
 
 
