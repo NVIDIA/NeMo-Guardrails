@@ -508,7 +508,9 @@ def _load_path(
     if not os.path.exists(config_path):
         raise ValueError(f"Could not find config path: {config_path}")
 
-    for root, dirs, files in os.walk(config_path):
+    for root, _, files in os.walk(config_path, followlinks=True):
+        # Followlinks to traverse symlinks instead of ignoring them.
+        
         for file in files:
             # This is the raw configuration that will be loaded from the file.
             _raw_config = {}
