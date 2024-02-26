@@ -20,7 +20,7 @@ rails = LLMRails(config)
 ```
 
 ## Set your output variables and run generation
-Once your rails app is set up from the config, you can set your output variables via the the `options` keyword argument in `LLMRails.generate`. 
+Once your rails app is set up from the config, you can set your output variables via the the `options` keyword argument in `LLMRails.generate`.
 This is set up as a dictionary that allows fine-grained control over your LLM generation.
 Setting the `output_vars` generation option will record information about the context of your generation.
 As messages are sent, additional information will be stored in context variables.
@@ -48,7 +48,7 @@ print(output)
 ## Setting specific options
 
 As we can see, the amount of information logged is significant when using `output_vars=True` is significant.
-Let's say that we are only interested in whether any input or output rails are triggered. 
+Let's say that we are only interested in whether any input or output rails are triggered.
 In that case, we can set `output_vars` to `["triggered_input_rail", "triggered_output_rail"]`
 
 ```python
@@ -72,7 +72,7 @@ response=[{'role': 'assistant', 'content': "I'm sorry, I can't respond to that."
 
 ## Accessing our output vars
 
-As we can see, providing a list of output vars dramatically reduces the amount of data logged. 
+As we can see, providing a list of output vars dramatically reduces the amount of data logged.
 We can access the data of interest by accessing the elements of the generated response.
 
 ```python
@@ -93,7 +93,7 @@ output.response
 
 ## Getting Additional Detailed Logging Information
 
-In addition to the `output_vars` option, there is also a `log` generation option that can be set. 
+In addition to the `output_vars` option, there is also a `log` generation option that can be set.
 This includes four different inner options to log:
 * `activated_rails`
 * `llm_calls`
@@ -140,7 +140,7 @@ Here we can observe that a number of items are logged:
 * The executed actions, their parameters and return values
 * Any calls made to an LLM including time information, number of tokens, prompt, completion, and the raw response data.
 
-From the above, we clearly see that the self check rail checked whether the user's prompt complied with the company policy and decided that it was not a question that could be answered. 
+From the above, we clearly see that the self check rail checked whether the user's prompt complied with the company policy and decided that it was not a question that could be answered.
 As a point of comparison, let's look at the log information for a simple greeting.
 
 ```python
@@ -180,7 +180,7 @@ type='input' name='self check input' decisions=['execute self_check_input'] exec
 Here we see that the self check input rail is still being activated, but the rail decides that the message should not be blocked. If we look at the remainder of the log, we can see that the bot moves on to generate the user intent and upon assessing it, performs retrieval, generation, self check of the output, and then returns the message to the user.
 
 ```python
-print(output.log.activated_rails[-4].decisions, 
+print(output.log.activated_rails[-4].decisions,
       output.log.activated_rails[-3].decisions,
       output.log.activated_rails[-2].decisions,
       output.log.activated_rails[-1].decisions
