@@ -468,7 +468,7 @@ def _load_path(
 
     for root, _, files in os.walk(config_path, followlinks=True):
         # Followlinks to traverse symlinks instead of ignoring them.
-        
+
         for file in files:
             # This is the raw configuration that will be loaded from the file.
             _raw_config = {}
