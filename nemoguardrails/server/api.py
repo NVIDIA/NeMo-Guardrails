@@ -89,6 +89,10 @@ app.auto_reload = False
 # stop signal for observer
 app.stop_signal = False
 
+# Whether the server is pointed to a directory containing a single config.
+app.single_config_mode = False
+app.single_config_id = None
+
 
 class RequestBody(BaseModel):
     config_id: Optional[str] = Field(
@@ -139,6 +143,11 @@ class ResponseBody(BaseModel):
 async def get_rails_configs():
     """Returns the list of available rails configurations."""
 
+    # In single-config mode, we return a single config.
+    if app.single_config_mode:
+        # And we use the name of the root folder as the id of the config.
+        return [{"id": app.single_config_id}]
+
     # We extract all folder names as config names
     config_ids = [
         f
@@ -175,6 +184,15 @@ def _get_rails(config_ids: List[str]) -> LLMRails:
 
     if configs_cache_key in llm_rails_instances:
         return llm_rails_instances[configs_cache_key]
+
+    # In single-config mode, we only load the main config directory
+    if app.single_config_mode:
+        if config_ids != [app.single_config_id]:
+            raise ValueError(f"Invalid configuration ids: {config_ids}")
+
+        # We set this to an empty string so tha when joined with the root path, we
+        # get the same thing.
+        config_ids = [""]
 
     full_llm_rails_config = None
     for config_id in config_ids:
@@ -342,17 +360,26 @@ async def startup_event():
         with open(challenges_files) as f:
             register_challenges(json.load(f))
 
-    # Finally, check if we have a config.py for the server configuration
-    filepath = os.path.join(app.rails_config_path, "config.py")
-    if os.path.exists(filepath):
-        filename = os.path.basename(filepath)
-        spec = importlib.util.spec_from_file_location(filename, filepath)
-        config_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(config_module)
+    # If there is a `config.yml` in the root `app.rails_config_path`, then
+    # that means we are in single config mode.
+    if os.path.exists(
+        os.path.join(app.rails_config_path, "config.yml")
+    ) or os.path.exists(os.path.join(app.rails_config_path, "config.yaml")):
+        app.single_config_mode = True
+        app.single_config_id = os.path.basename(app.rails_config_path)
+    else:
+        # If we're not in single-config mode, we check if we have a config.py for the
+        # server configuration.
+        filepath = os.path.join(app.rails_config_path, "config.py")
+        if os.path.exists(filepath):
+            filename = os.path.basename(filepath)
+            spec = importlib.util.spec_from_file_location(filename, filepath)
+            config_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(config_module)
 
-        # If there is an `init` function, we call it with the reference to the app.
-        if config_module is not None and hasattr(config_module, "init"):
-            config_module.init(app)
+            # If there is an `init` function, we call it with the reference to the app.
+            if config_module is not None and hasattr(config_module, "init"):
+                config_module.init(app)
 
     # Finally, we register the static frontend UI serving
 
@@ -430,10 +457,9 @@ def start_auto_reload_monitoring():
                             instance = llm_rails_instances[config_id]
                             del llm_rails_instances[config_id]
                             if instance:
+                                val = instance.events_history_cache
                                 # We save the events history cache, to restore it on the new instance
-                                llm_rails_events_history_cache[
-                                    config_id
-                                ] = instance.events_history_cache
+                                llm_rails_events_history_cache[config_id] = val
 
                             log.info(
                                 f"Configuration {config_id} has changed. Clearing cache."
