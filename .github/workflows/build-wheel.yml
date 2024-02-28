@@ -51,9 +51,14 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
 
       - name: Download Artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: nemoguardrails-${{ env.VERSION }}.whl
+
+      - name: List files
+        run: |
+          pwd
+          ls -lh
 
       - name: Install Wheel
         run: |
