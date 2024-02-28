@@ -13,7 +13,7 @@ models:
 rails:
   output:
     flows:
-      - check facts
+      - self check facts
 
 instructions:
   - type: general
@@ -135,7 +135,7 @@ prompts:
       ${{ var_name }} =
     output_parser: "verbose_v1"
 
-  - task: fact_checking
+  - task: self_check_facts
     models:
       - hf_pipeline_llama2_13b
     content: |-
