@@ -69,7 +69,7 @@ class HuggingFacePipelineCompatible(HuggingFacePipeline):
             )
 
         # Streaming for NeMo Guardrails is not supported in sync calls.
-        if self.model_kwargs.get("streaming"):
+        if self.model_kwargs and self.model_kwargs.get("streaming"):
             raise Exception(
                 "Streaming mode not supported for HuggingFacePipeline in NeMo Guardrails!"
             )
@@ -100,7 +100,7 @@ class HuggingFacePipelineCompatible(HuggingFacePipeline):
             )
 
         # Handle streaming, if the flag is set
-        if self.model_kwargs.get("streaming"):
+        if self.model_kwargs and self.model_kwargs.get("streaming"):
             # Retrieve the streamer object, needs to be set in model_kwargs
             streamer = self.model_kwargs.get("streamer")
             if not streamer:

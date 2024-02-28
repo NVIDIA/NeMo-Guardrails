@@ -66,8 +66,9 @@ def get_llm_instance_wrapper(
             """
 
             if hasattr(llm_instance, "model_kwargs"):
-                llm_instance.model_kwargs["temperature"] = self.temperature
-                llm_instance.model_kwargs["streaming"] = self.streaming
+                if isinstance(llm_instance.model_kwargs, dict):
+                    llm_instance.model_kwargs["temperature"] = self.temperature
+                    llm_instance.model_kwargs["streaming"] = self.streaming
 
         def _call(
             self,
