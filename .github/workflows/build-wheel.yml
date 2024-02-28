@@ -28,7 +28,7 @@ jobs:
           echo "WHEEL_FILE=$(ls dist/*.whl)" >> $GITHUB_ENV
 
       - name: Rename Wheel
-        run: mv dist/$WHEEL_FILE dist/nemoguardrails-${{ env.VERSION }}-py3-none-any.whl
+        run: mv $WHEEL_FILE dist/nemoguardrails-${{ env.VERSION }}-py3-none-any.whl
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
