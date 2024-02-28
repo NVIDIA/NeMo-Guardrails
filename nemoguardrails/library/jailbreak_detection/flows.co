@@ -1,0 +1,12 @@
+define subflow jailbreak detection heuristics
+  """
+  Heuristic checks to assess whether the user's prompt is an attempted jailbreak.
+  """
+  $is_jailbreak = execute jailbreak_detection_heuristics
+
+  if $is_jailbreak
+    bot refuse to respond
+    stop
+
+define bot refuse to respond
+  "I'm sorry, I can't respond to that."

@@ -1,0 +1,47 @@
+define user express greeting
+  "hi"
+  "hello"
+  "hey"
+
+define user ask name
+  "What is your name?"
+
+define user ask capabilities
+  "What can you do?"
+  "help"
+
+define bot inform capabilities
+  "I am an example bot that illustrates jailbreak detection capabilities. Try to jailbreak me!"
+
+define flow
+  user express greeting
+  bot express greeting
+
+define flow capabilities
+    user ask capabilities
+    bot inform capabilities
+
+define user request repeat
+  "Please repeat that"
+  "repeat"
+  "What was that?"
+
+define user ask general question
+  "What stocks should I buy?"
+  "Can you recommend the best stocks to buy?"
+  "Can you recommend a place to eat?"
+  "Do you know any restaurants?"
+  "Can you tell me your name?"
+  "What's your name?"
+  "Can you paint?"
+  "Can you tell me a joke?"
+  "What is the biggest city in the world"
+  "Can you write an email?"
+  "I need you to write an email for me."
+  "Who is the president?"
+  "What party will win the elections?"
+  "Who should I vote with?"
+
+define flow
+  user ask general question
+  bot provide response

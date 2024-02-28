@@ -14,7 +14,11 @@
 # limitations under the License.
 
 """Test the flows engine."""
-from nemoguardrails.flows.flows import FlowConfig, State, compute_next_state
+from nemoguardrails.colang.v1_0.runtime.flows import (
+    FlowConfig,
+    State,
+    compute_next_state,
+)
 
 # Flow configurations for these tests
 FLOW_CONFIGS = {

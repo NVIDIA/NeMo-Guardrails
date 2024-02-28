@@ -1,0 +1,6 @@
+rails:
+  input:
+    flows:
+      - dummy input rail
+      # ... other input rails can go in here
+      - allow input

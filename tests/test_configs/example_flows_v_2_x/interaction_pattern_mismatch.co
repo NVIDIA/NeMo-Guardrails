@@ -1,0 +1,21 @@
+# Examples of flow interaction pattern matching and mismatching
+
+@new_interaction_context
+flow flow1
+  await user said something
+
+@new_interaction_context
+flow flow2
+  await user said "Hi"
+
+@new_interaction_context
+flow flow3
+  await user said "Hi" and not user said something
+
+@new_interaction_context
+flow flow4
+  await user said something and not user said "Hi"
+
+flow main
+  activate flow1 and flow2 and flow3 and flow4
+  wait

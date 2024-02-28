@@ -8,7 +8,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![arXiv](https://img.shields.io/badge/arXiv-2310.10501-b31b1b.svg)](https://arxiv.org/abs/2310.10501)
 
-> **LATEST RELEASE / DEVELOPMENT VERSION**: The [main](https://github.com/NVIDIA/NeMo-Guardrails/tree/main) branch tracks the latest released beta version: [0.7.1](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.7.1). For the latest development version, checkout the [develop](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop) branch.
+> **LATEST RELEASE / DEVELOPMENT VERSION**: The [main](https://github.com/NVIDIA/NeMo-Guardrails/tree/main) branch tracks the latest released beta version: [0.8.0](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.8.0). For the latest development version, checkout the [develop](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop) branch.
 
 > **DISCLAIMER**: The beta release is undergoing active development and may be subject to changes and improvements, which could cause instability and unexpected behavior. We currently do not recommend deploying this beta version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback are invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit. The examples provided within the documentation are for educational purposes to get started with NeMo Guardrails, and are not meant for use in production applications.
 
@@ -297,12 +297,25 @@ This toolkit is licensed under the [Apache License, Version 2.0](http://www.apac
 
 ## Hot to cite
 
-If you use this work, please cite [the paper](https://arxiv.org/abs/2310.10501) that introduces it.
+If you use this work, please cite the [EMNLP 2023 paper](https://aclanthology.org/2023.emnlp-demo.40) that introduces it.
+
 ```bibtex
-@article{2023nemoguardrails,
-  title={NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications with Programmable Rails},
-  author={Rebedea, Traian and Dinu, Razvan and Sreedhar, Makesh and Parisien, Christopher and Cohen, Jonathan},
-  journal={arXiv preprint arXiv:2310.10501},
-  year={2023}
+@inproceedings{rebedea-etal-2023-nemo,
+    title = "{N}e{M}o Guardrails: A Toolkit for Controllable and Safe {LLM} Applications with Programmable Rails",
+    author = "Rebedea, Traian  and
+      Dinu, Razvan  and
+      Sreedhar, Makesh Narsimhan  and
+      Parisien, Christopher  and
+      Cohen, Jonathan",
+    editor = "Feng, Yansong  and
+      Lefever, Els",
+    booktitle = "Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing: System Demonstrations",
+    month = dec,
+    year = "2023",
+    address = "Singapore",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.emnlp-demo.40",
+    doi = "10.18653/v1/2023.emnlp-demo.40",
+    pages = "431--445",
 }
 ```

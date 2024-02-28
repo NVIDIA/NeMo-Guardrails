@@ -21,7 +21,9 @@ from jinja2 import Environment, meta
 
 from nemoguardrails.llm.filters import (
     colang,
+    colang_without_identifiers,
     first_turns,
+    indent,
     last_turns,
     remove_text_messages,
     to_messages,
@@ -53,9 +55,11 @@ class LLMTaskManager:
 
         # Register the default filters.
         self.env.filters["colang"] = colang
+        self.env.filters["colang_without_identifiers"] = colang_without_identifiers
         self.env.filters["remove_text_messages"] = remove_text_messages
         self.env.filters["first_turns"] = first_turns
         self.env.filters["last_turns"] = last_turns
+        self.env.filters["indent"] = indent
         self.env.filters["user_assistant_sequence"] = user_assistant_sequence
         self.env.filters[
             "user_assistant_sequence_nemollm"
@@ -254,6 +258,11 @@ class LLMTaskManager:
             return output_parser(output)
         else:
             return output
+
+    def get_stop_tokens(self, task: Union[str, Task]) -> List[str]:
+        """Return the stop sequence for the given task."""
+        prompt = get_prompt(self.config, task)
+        return prompt.stop
 
     def register_filter(self, filter_fn: callable, name: Optional[str] = None):
         """Register a custom filter for the rails configuration."""

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nemoguardrails.language.utils import split_args
+from nemoguardrails.colang.v1_0.lang.utils import split_args
 
 
 def test_1():

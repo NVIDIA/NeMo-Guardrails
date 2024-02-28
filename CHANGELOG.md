@@ -3,6 +3,52 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2024-02-28
+
+### Added
+
+- [#292](https://github.com/NVIDIA/NeMo-Guardrails/pull/292) [Jailbreak heuristics](./docs/user_guides/guardrails-library.md#jailbreak-detection-heuristics) by @erickgalinkin.
+- [#256](https://github.com/NVIDIA/NeMo-Guardrails/pull/256) Support [generation options](./docs/user_guides/advanced/generation-options.md).
+- [#307](https://github.com/NVIDIA/NeMo-Guardrails/pull/307) Added support for multi-config api calls by @makeshn.
+- [#293](https://github.com/NVIDIA/NeMo-Guardrails/pull/293) Adds configurable stop tokens by @zmackie.
+- [#334](https://github.com/NVIDIA/NeMo-Guardrails/pull/334) Colang 2.0 - Preview by @schuellc.
+- [#208](https://github.com/NVIDIA/NeMo-Guardrails/pull/208) Implement cache embeddings (resolves #200) by @Pouyanpi.
+- [#331](https://github.com/NVIDIA/NeMo-Guardrails/pull/331) Huggingface pipeline streaming by @trebedea.
+
+Documentation:
+- [#311](https://github.com/NVIDIA/NeMo-Guardrails/pull/311) Update documentation to demonstrate the use of output rails when using a custom RAG by @niels-garve.
+- [#347](https://github.com/NVIDIA/NeMo-Guardrails/pull/347) Add [detailed logging docs](./docs/user_guides/detailed_logging) by @erickgalinkin.
+- [#354](https://github.com/NVIDIA/NeMo-Guardrails/pull/354) [Input and output rails only guide](./docs/user_guides/input_output_rails_only) by @trebedea.
+- [#359](https://github.com/NVIDIA/NeMo-Guardrails/pull/359) Added [user guide for jailbreak detection heuristics](./docs/user_guides/jailbreak_detection_heuristics) by @makeshn.
+- [#363](https://github.com/NVIDIA/NeMo-Guardrails/pull/363) Add [multi-config API call user guide](./docs/user_guides/multi_config_api).
+- [#297](https://github.com/NVIDIA/NeMo-Guardrails/pull/297) Example configurations for using only the guardrails, without LLM generation.
+
+### Changed
+
+- [#309](https://github.com/NVIDIA/NeMo-Guardrails/pull/309) Change the paper citation from ArXiV to EMNLP 2023 by @manuelciosici
+- [#319](https://github.com/NVIDIA/NeMo-Guardrails/pull/319) Enable embeddings model caching.
+- [#267](https://github.com/NVIDIA/NeMo-Guardrails/pull/267) Make embeddings computing async and add support for batching.
+- [#281](https://github.com/NVIDIA/NeMo-Guardrails/pull/281) Follow symlinks when building knowledge base by @piotrm0.
+- [#280](https://github.com/NVIDIA/NeMo-Guardrails/pull/280) Add more information to results of `retrieve_relevant_chunks` by @piotrm0.
+- [#332](https://github.com/NVIDIA/NeMo-Guardrails/pull/332) Update docs for batch embedding computations.
+- [#244](https://github.com/NVIDIA/NeMo-Guardrails/pull/244) Docs/edit getting started by @DougAtNvidia.
+- [#333](https://github.com/NVIDIA/NeMo-Guardrails/pull/333) Follow-up to PR 244.
+- [#341](https://github.com/NVIDIA/NeMo-Guardrails/pull/341) Updated 'fastembed' version to 0.2.2 by @NirantK.
+
+### Fixed
+
+- [#286](https://github.com/NVIDIA/NeMo-Guardrails/pull/286) Fixed #285 - using the same evaluation set given a random seed for topical rails by @trebedea.
+- [#336](https://github.com/NVIDIA/NeMo-Guardrails/pull/336) Fix #320. Reuse the asyncio loop between sync calls.
+- [#337](https://github.com/NVIDIA/NeMo-Guardrails/pull/337) Fix stats gathering in a parallel async setup.
+- [#342](https://github.com/NVIDIA/NeMo-Guardrails/pull/342) Fixes OpenAI embeddings support.
+- [#346](https://github.com/NVIDIA/NeMo-Guardrails/pull/346) Fix issues with KB embeddings cache, bot intent detection and config ids validator logic.
+- [#349](https://github.com/NVIDIA/NeMo-Guardrails/pull/349) Fix multi-config bug, asyncio loop issue and cache folder for embeddings.
+- [#350](https://github.com/NVIDIA/NeMo-Guardrails/pull/350) Fix the incorrect logging of an extra dialog rail.
+- [#358](https://github.com/NVIDIA/NeMo-Guardrails/pull/358) Fix Openai embeddings async support.
+- [#362](https://github.com/NVIDIA/NeMo-Guardrails/pull/362) Fix the issue with the server being pointed to a folder with a single config.
+- [#352](https://github.com/NVIDIA/NeMo-Guardrails/pull/352) Fix a few issues related to jailbreak detection heuristics.
+- [#356](https://github.com/NVIDIA/NeMo-Guardrails/pull/356) Redo followlinks PR in new code by @piotrm0.
+
 ## [0.7.1] - 2024-02-01
 
 ### Changed
@@ -27,6 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- [#286](https://github.com/NVIDIA/NeMo-Guardrails/pull/286) Fixed not having the same evaluation set given a random seed for topical rails.
 - [#239](https://github.com/NVIDIA/NeMo-Guardrails/pull/239) Fixed logging issue where `verbose=true` flag did not trigger expected log output.
 - [#228](https://github.com/NVIDIA/NeMo-Guardrails/pull/228) Fix docstrings for various functions.
 - [#242](https://github.com/NVIDIA/NeMo-Guardrails/pull/242) Fix Azure LLM support.

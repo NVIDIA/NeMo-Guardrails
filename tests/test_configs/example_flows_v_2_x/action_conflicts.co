@@ -1,0 +1,94 @@
+# Example of resolving competing flows
+
+# WORK IN PROGRESS (processing log not matching flows)
+
+# include core_flows.co
+
+flow faq response_1 # like match FlowStartInternalEvent("faq response 1") or FlowActivateInternalEvent("faq response 1")
+  start bot print "1"
+  start bot print "11"
+  await user said something
+  await bot say "Ok"
+
+flow faq response_2 # like match FlowStartInternalEvent("faq response 2") or FlowActivateInternalEvent("faq response 2")
+  start bot print "2"
+  start bot print "21"
+  await user said "How are you"
+  await bot say "I'm good!"
+
+flow faq response_3 # like match FlowStartInternalEvent("faq response 1") or FlowActivateInternalEvent("faq response 1")
+  await user said "Ok"
+  await bot say "Ok"
+  await bot say "Ok"
+
+flow faq response_4 # like match FlowStartInternalEvent("faq response 2") or FlowActivateInternalEvent("faq response 2")
+  await user said "Ok"
+  await bot say "Ok"
+  await bot say "I'm good!"
+
+flow main # like match FlowStartInternalEvent("main") or FlowActivateInternalEvent("main")
+  activate faq response_1 and faq response_2
+  start bot print "3"
+  start bot print "31"
+  await user said "Hi"
+  await bot say "Hi"
+
+# Processing loop:
+# - Pop next event from internal event queue
+# - If the internal event queue is empty, pop next event from external event queue and skip next step
+# - Gather all internal events in the queue with same processing-time id if available (see below)
+# - Check for matching flow heads for all gathered events (start of a flow is also just a matching)
+# - Assign matching score to matches (based on parameter matching, active flow, flow hierarchy level) [0-1]
+# - Sliding operation for each head up to next action statement
+# - Resolve conflicting actions (in same threads) based on previous matches using matching scores (its a score stack), highest earliest scores wins
+# - Abort and pause related flows due to conflict resolution
+# - Assign same processing-time id to all winning heads if there is not yet one (keep track of source match for future conflicts)
+# - Sliding operation on flow heads with winning matches, triggering all actions/emit events up to next match statement (for internal events we assign matching score and time id for future conflict resolution)
+# - Queue new internal events starting at the beginning of the internal event queue (pre-order depth-first)
+
+# Event processing log
+
+# pop event_0(timeId=000): FlowStartInternalEvent("main")
+# no other events with timeId=000
+# send FlowActivateInternalEvent("faq response 1") -> event_1(timeId=000)
+# send FlowActivateInternalEvent("faq response 2") -> event_2(timeId=001)
+# send FlowStartInternalEvent("user said 'Hi'") -> event_3(timeId=002)
+# main/head_1: match user said "Hi"
+
+# -> event_1(timeId=000): FlowActivateInternalEvent("faq response 1")
+# send FlowStartInternalEvent("user said something") -> event_1_1(timeId=004)
+# faq response 1/head_1: match user said something
+
+# -> event_1_1(timeId=004): FlowStartInternalEvent("user said something")
+# user said something/head_1: match UtteranceUserAction.Finished()
+
+# -> event_2(timeId=001): FlowActivateInternalEvent("faq response 2")
+# send FlowStartInternalEvent("user said 'How are you'") -> event_2_1(timeId=005)
+# faq response 2/head_1: match user said "How are you"
+
+# -> event_2_1(timeId=005): FlowStartInternalEvent("user said 'How are you'")
+# user said "How are you"/head_1: match UtteranceUserAction.Finished(text="How are you")
+
+# -> event_3(timeId=002): FlowStartInternalEvent("user said 'Hi'")
+# user said "Hi"/head_1: match UtteranceUserAction.Finished(text="Hi")
+
+# >> external_event_1: UtteranceUserAction.Finished(text="How are you")
+
+# Found 2 match statements:
+# * user said something/head_1: match UtteranceUserAction.Finished() -> Matching score: 0.5
+# * user said "How are you"/head_1: match UtteranceUserAction.Finished(text="How are you"): Matching score: 1.0
+# Since they are in different threads they don't conflict
+
+# -> external_event_1: UtteranceUserAction.Finished(text="How are you")
+# send FlowFinishedInternalEvent("user said something") -> event_4(timeId=006)
+
+# -> external_event_1: UtteranceUserAction.Finished(text="How are you")
+# send FlowFinishedInternalEvent("user said 'How are you'") -> event_5(timeId=006)
+
+# Found 2 match statements: for events with timeId=006:
+# * faq response 1/head_1: match user said something
+# * faq response 2/head_1: match user said "How are you"
+# They are in the same thread ("main") and therefore conflict
+
+# Resolve conflict based on score:
+#

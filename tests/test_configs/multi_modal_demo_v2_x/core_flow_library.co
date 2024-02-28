@@ -1,0 +1,481 @@
+# meta: exclude from llm
+
+# -----------------------------------
+# User UMIM event wrapper flows
+# DON'T CHANGE! Currently, hard-wired with LLM prompt generation
+# -----------------------------------
+
+flow user said $text -> $transcript
+  # meta: user action
+  match UtteranceUserAction.Finished(final_transcript=$text) as $event
+  $transcript = $event.arguments.final_transcript
+
+flow user saying $text -> $transcript
+  match UtteranceUserAction.TranscriptUpdated(interim_transcript=r"(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$") as $event
+  $transcript = $event.arguments.interim_transcript
+
+flow user started saying something
+  match UtteranceUserAction.Started() as $event
+
+flow user typing $text -> $inputs
+  match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*({{$text}})((\s*\w+\s*){0,2})\W*$"}]) as $event
+  $inputs = $event.arguments.interim_inputs
+
+flow user said something -> $transcript
+  match UtteranceUserAction.Finished() as $event
+  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
+  $transcript = $event.arguments.final_transcript
+
+flow user said something unexpected -> $transcript
+  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
+  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=None)
+  $transcript = $event.arguments.final_transcript
+
+flow user saying something -> $transcript
+  match UtteranceUserAction.TranscriptUpdated() as $event
+  #send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
+  $transcript = $event.arguments.interim_transcript
+
+flow user selected choice $choice_id -> $choice
+  # meta: user action
+  match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
+  $choice = $event.arguments.current_choice
+
+flow user has selected choice $choice_id
+  global $choice_selection_state
+  if $choice_selection_state == None or $choice_selection_state != $choice_id
+    match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
+
+flow unhandled user intent -> $intent
+  match UnhandledEvent(event="FinishFlow", flow_id=r"^user ", loop_ids={$loop_id}) as $event
+  $intent = $event.arguments.flow_id
+
+flow user was silent $time_s
+  """Triggers when user was silent for $time_s seconds."""
+  # meta: loop_id=user_was_silent
+  # meta: user intent
+  while True
+    start wait $time_s as $timer_ref
+    when $timer_ref.Finished()
+      break
+    orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
+      send $timer_ref.Stop()
+      match UtteranceUserAction.Finished()
+    orwhen UtteranceUserAction.Finished()
+      send $timer_ref.Stop()
+
+flow user didnt respond $time_s
+  """Triggers when user was silent for $time_s seconds while bot was silent."""
+  # meta: loop_id=user_did_not_respond
+  # meta: user intent
+  while True
+    start wait $time_s as $timer_ref
+    when $timer_ref.Finished()
+      break
+    orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
+      send $timer_ref.Stop()
+      match UtteranceUserAction.Finished()
+    orwhen UtteranceBotAction.Started()
+      send $timer_ref.Stop()
+      match UtteranceBotAction.Finished()
+    orwhen UtteranceUserAction.Finished() or UtteranceBotAction.Finished()
+      send $timer_ref.Stop()
+
+flow user interrupted bot talking $sentence_length=15
+  """Triggers when the user talked while bot is speaking."""
+  # meta: user intent
+  global $bot_talking_state
+  while True
+    if $bot_talking_state
+      log "Bot is talking..."
+    else
+      bot started saying something
+      log "Bot started talking..."
+    while True
+      when user saying something as $user_saying_ref
+        $transcript = $user_saying_ref.context.event.arguments.interim_transcript
+        log "User saying something: {{$transcript}}"
+      orwhen user said something as $user_said_ref
+        $transcript = $user_said_ref.context.transcript
+        log "User said something: {{$transcript}}"
+      orwhen bot said something
+        log "Bot finished talking without interruption"
+        break
+
+      if "{{len($transcript) > $sentence_length}}" == "True"
+        log "Bot interrupted by user with: {{$transcript}}"
+        return
+
+# ----------------------------------
+# Bot UMIM event wrapper flows
+# DON'T CHANGE! Currently, hard-wired with LLM prompt generation
+# ----------------------------------
+
+flow bot started saying $text
+  match FlowStarted(flow_id="_bot_say", script=$text) as $event
+
+flow bot started saying something
+  match FlowStarted(flow_id="_bot_say") as $event
+
+flow bot said $text
+  match FlowFinished(flow_id="_bot_say", script=$text) as $event
+
+flow bot said something
+  match FlowFinished(flow_id="_bot_say") as $event
+
+flow bot informed something
+  match FlowFinished(flow_id="bot inform") as $event
+
+flow bot asked something -> $text
+  match FlowFinished(flow_id="bot ask") as $event
+  $text = $event.arguments.text
+
+flow bot expressed something
+  match FlowFinished(flow_id="bot express") as $event
+
+flow bot responded something
+  match FlowFinished(flow_id="bot respond") as $event
+
+flow bot clarified something
+  match FlowFinished(flow_id="bot clarify") as $event
+
+flow bot suggested something
+  match FlowFinished(flow_id="bot suggest") as $event
+
+flow bot started gesture $gesture
+  match FlowStarted(flow_id="bot gesture", gesture=$gesture) as $event
+
+flow bot started a gesture
+  match FlowStarted(flow_id="bot gesture") as $event
+
+flow bot started posture $posture
+  match FlowStarted(flow_id="bot posture", posture=$posture) as $event
+
+flow bot started a posture
+  match FlowStarted(flow_id="bot posture") as $event
+
+flow bot started an action
+  # meta: bot action
+  match bot started saying something
+    or bot started a gesture
+    or bot started a posture
+
+flow bot was silent $time_s
+  # meta: loop_id=bot_was_silent
+  # meta: bot intent
+  while True
+    start wait $time_s as $timer_ref
+    when $timer_ref.Finished()
+      break
+    orwhen UtteranceBotAction.Started()
+      send $timer_ref.Stop()
+      match UtteranceBotAction.Finished()
+    orwhen UtteranceBotAction.Finished()
+      send $timer_ref.Stop()
+
+# ----------------------------------
+# Bot UMIM action wrapper flows
+# DON'T CHANGE! Currently, hard-wired with LLM prompt generation
+# -----------------------------------
+
+flow _bot_say $text
+  """It's an internal helper for higher semantic level flows"""
+  await UtteranceBotAction(script=$text) as $action
+
+flow bot gesture $gesture
+  # meta: bot action
+  await GestureBotAction(gesture=$gesture) as $action
+
+flow bot posture $posture
+  # meta: bot action
+  await PostureBotAction(posture=$posture) as $action
+
+flow scene show choice $prompt
+  # meta: bot action
+  await VisualChoiceSceneAction(prompt=$prompt,choice_type="selection", allow_multiple_choices=False) as $action
+
+flow scene show textual information $title $text $header_image
+  # meta: bot action
+  await VisualInformationSceneAction(title=$title, support_prompts=[], content=[{"image":$header_image},{"text":$text}]) as $action
+
+flow scene show short information $info
+  # meta: bot action
+  await VisualInformationSceneAction(title=$info, support_prompts=[], content=[]) as $action
+
+flow scene show form $prompt
+  # meta: bot action
+  await VisualInformationSceneAction(prompt=$prompt) as $action
+
+# ----------------------------------
+# Bot action semantic wrapper flows
+# DON'T CHANGE! Currently, hard-wired with LLM prompt generation
+# -----------------------------------
+
+flow bot say $text
+  # meta: bot action
+  await _bot_say $text
+
+flow bot say something like $text
+  $variation = """Return a single string that is a new variation of: {{$text}}"""
+  await bot say $variation
+
+flow bot inform $text
+  # meta: bot action
+  await _bot_say $text
+
+flow bot ask $text
+  # meta: bot action
+  await _bot_say $text
+
+flow bot express $text
+  # meta: bot action
+  await _bot_say $text
+
+flow bot respond $text
+  # meta: bot action
+  await _bot_say $text
+
+flow bot clarify $text
+  # meta: bot action
+  await _bot_say $text
+
+flow bot suggest $text
+  # meta: bot action
+  await _bot_say $text
+
+# ----------------------------------
+# State tracking flows
+# DON'T CHANGE! Currently, hard-wired with LLM prompt generation
+# -----------------------------------
+
+flow track bot talking state
+  # meta: loop_id=state_tracking
+  global $bot_talking_state
+  await bot started saying something
+  $bot_talking_state = True
+  await bot said something
+  $bot_talking_state = False
+
+flow track user talking state
+  # meta: loop_id=state_tracking
+  global $user_talking_state
+  await user started saying something
+  $user_talking_state = True
+  await user said something
+  $user_talking_state = False
+
+flow track unhandled user intent state
+  # meta: loop_id=state_tracking
+  global $user_intent_state
+  when unhandled user intent as $flow
+    $unhandled_user_intent_state = $flow.context.flow_name
+  orwhen FlowFinished(flow_id=r"^user ") as $event
+    $unhandled_user_intent_state = None
+
+flow track visual choice selection state
+  # meta: loop_id=state_tracking
+  global $choice_selection_state
+  when VisualChoiceSceneAction.Started()
+    $choice_selection_state = None
+  orwhen VisualChoiceSceneAction.ChoiceUpdated() as $event
+    if "{{len($event.arguments.current_choice) > 0}}" == "True"
+      $choice_selection_state = $event.arguments.current_choice[0]
+    else
+      $choice_selection_state = None
+  orwhen VisualChoiceSceneAction.Finished()
+    $choice_selection_state = None
+
+# ----------------------------------
+# Utility flows
+# ----------------------------------
+
+flow finish all bot actions
+  """Stops all the current bot actions."""
+  send FinishFlow(flow_id="_bot_say")
+  send FinishFlow(flow_id="bot gesture")
+  send FinishFlow(flow_id="bot posture")
+
+flow finish all scene actions
+  """Stops all the current scene actions."""
+  send FinishFlow(flow_id="scene show choice")
+  send FinishFlow(flow_id="scene show textual information")
+  send FinishFlow(flow_id="scene show short information")
+  send FinishFlow(flow_id="scene show form")
+
+flow wait indefinitely
+  """Little helper flow to wait indefinitely."""
+  match NeverComingEvent()
+
+flow wait $time_s $timer_id="wait_timer_{{uid()}}"
+  """Wait the specified number of seconds before continuing."""
+  # meta: loop_id=NEW
+  await TimerBotAction(timer_name=$timer_id, duration=$time_s)
+
+flow catch colang errors
+  """A flow to catch any runtime Colang errors"""
+  # meta: loop_id=catch_colang_errors
+  match ColangError() as $event
+  log "Colang error: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
+  bot say "Excuse me, what did you say?"
+
+flow catch undefined flows
+  """A flow to catch the start of undefined flows."""
+  priority 0.1
+  match UnhandledEvent(event="StartFlow") as $event
+  log "Undefined flow: '{{$event.arguments.flow_id}}' {{$event.arguments.loop_ids}}"
+  bot say "Excuse me, what did you say?"
+  # We need to abort the flow that sent the FlowStart event since it might be waiting for it
+  send StopFlow(flow_instance_uid=$event.arguments.source_flow_instance_uid)
+
+flow catch unexpected user utterance
+  """A flow to catch unhandled user utterances."""
+  priority 0.1
+  match UnhandledEvent(event="UtteranceUserActionFinished") as $event
+  bot say "Warning: Unexpected user utterance '{{$event.arguments.final_transcript}}'"
+
+flow repeating timer $timer_id $interval_s
+  """Repeating timer."""
+  while True
+    await wait $interval_s $timer_id
+    # await TimerBotAction(timer_name=$timer_id, duration=$interval_s)
+
+flow await_flow_by_name $flow_name
+  $new_flow_start_uid = "{{uid()}}"
+  send StartFlow(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid)
+  match FlowStarted(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid) as $event_ref
+  match $event_ref.flow.Finished()
+
+flow interruption handling bot talking $mode="inform"
+  """Handling the bot talking interruption reaction."""
+  # meta: loop_id=bot_interruption
+  user interrupted bot talking
+  if $mode == "interrupt"
+    finish all bot actions
+    log "Bot talking stopped"
+  elif $mode == "inform"
+    start VisualInformationSceneAction(title="Please wait with talking!", support_prompts=["You should only talk after the avatar."], content=[])
+    wait 3.0
+    log "Bot informed user not to talk"
+  elif $mode == "ignore"
+    log "Bot ignored user interruption"
+
+# ----------------------------------
+# LLM mechanics
+# ----------------------------------
+
+flow poll llm request response $interval
+  # meta: loop_id=llm_response_polling
+  match StartGenerateUserIntentAction() as $event_ref
+    or StartGenerateFlowContinuationAction() as $event_ref
+    or StartGenerateFlowFromNameAction() as $event_ref
+    or StartGenerateValueAction() as $event_ref
+    or StartGenerateFlowFromInstructionsAction() as $event_ref
+  start repeating timer "llm_response_polling" $interval as $polling_timer
+  start bot posture "Thinking, idle" as $posture
+  match $event_ref.action.Finished()
+  send $polling_timer.Stop()
+  send $posture.Stop()
+
+flow trigger user intent for unhandled user utterance
+  """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
+  global $bot_talking_state
+  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
+  if $bot_talking_state == False
+    $transcript = $event.arguments.final_transcript
+    log "trigger user intent for unhandled user utterance: {{$transcript}}"
+    $action = 'user said "{{$transcript}}"'
+    $intent = await derive user intent from user action $action 20
+
+  # We need to log the user action
+  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=$intent)
+  # We need to add the generated user intent to the intent log
+  send UserIntentLog(flow_id=$intent, parameter=None)
+
+  # Generate the 'user intent' by sending out the FinishFlow event
+  send FinishFlow(flow_id=$intent)
+
+flow derive user intent from user action $user_action $max_example_flows -> $intent
+  $intent = await GenerateUserIntentAction(user_action=$user_action, max_example_flows=$max_example_flows)
+  return $intent
+
+flow generate interaction continuation -> $flow_name
+  # Generate continuation based current interaction history
+  $flow_info = await GenerateFlowContinuationAction(temperature=0.1)
+
+  $exists = await CheckValidFlowExistsAction(flow_id=$flow_info.name)
+  if $exists == False
+    $flows = await AddFlowsAction(config=$flow_info.body)
+    if "{{len($flows)}}" == "0"
+      log "LLM generated flow parsing failed!"
+      bot say "Sorry, what did you say?"
+      return None
+
+  $flow_name = $flow_info.name
+  return $flow_info.name
+
+flow generate then continue interaction
+  $generated_flow_name = await generate interaction continuation
+  if $generated_flow_name != None
+    await await_flow_by_name $generated_flow_name
+    await RemoveFlowsAction(flow_ids=[$generated_flow_name])
+
+# ----------------------------------
+# Experimental flows
+# ----------------------------------
+
+flow respond to unhandled user intent
+  """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
+  await unhandled user intent
+  $flow_name = await generate interaction continuation
+  await await_flow_by_name $flow_name
+  await RemoveFlowsAction(flow_ids=[$flow_name])
+
+flow handle undefined flow starts
+  """We want to start an undefined flow."""
+
+  match UnhandledEvent(event="StartFlow") as $event
+
+  start_new_flow_instance:
+
+  if "{{search('^user ',$event.arguments.flow_id)}}" == "True"
+
+    # We have an undefined user intent, so we just fake it to be started by this fallback flow
+    send FlowStarted(flow_id=$event.arguments.flow_id, flow_start_uid=$event.arguments.flow_start_uid)
+    # Once this fallback flow receives the user intent it will finish and therefore also trigger the original matcher
+    match FlowFinished(flow_id=$event.arguments.flow_id)
+
+  else
+
+    # We have an undefined bot intent, let's generate a new flow for it
+
+    $flow_source = await GenerateFlowFromNameAction(name=$event.arguments.flow_id)
+
+    await AddFlowsAction(config=$flow_source)
+    $new_flow_start_uid = "{{uid()}}"
+    send StartFlow(flow_id=$event.arguments.flow_id, flow_start_uid=$new_flow_start_uid)
+    match FlowStarted(flow_id=$event.arguments.flow_id, flow_start_uid=$new_flow_start_uid) as $event_ref
+    match $event_ref.flow.Finished()
+    await RemoveFlowsAction(flow_ids=[$event.arguments.flow_id])
+
+flow execute llm instruction$instructions
+  """This will create a new flow based on the provided instructions and start it."""
+  $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
+
+  await AddFlowsAction(config=$flow_info.body)
+
+  $new_flow_start_uid = "{{uid()}}"
+  send StartFlow(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid)
+  match FlowStarted(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid) as $event_ref
+  match $event_ref.flow.Finished()
+  await RemoveFlowsAction(flow_ids=[$flow_info.name])
+
+flow user requested a task
+  # meta: user intent
+  user said "do something"
+    or user said "can you do something"
+    or user said "please do"
+
+flow custom instructions
+  user requested a task
+  $instructions = await GetLastUserMessageAction()
+  execute llm instruction $instructions

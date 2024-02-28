@@ -1,0 +1,53 @@
+# Example flows with instructions
+
+# Simple bot utterance action
+flow bot answer question about france
+  """Bot answers the following question: What is the capital of France."""
+  bot say "The capital of France it's Paris."
+
+# User action
+flow user expressed a color choice
+  """The user expressed a color choice."""
+  user said "blue"
+    or user said "red"
+    or user said "I take the green option"
+    or user said "I like black"
+
+# Mutlimodal bot action
+flow bot attract user
+  """Attracts a user by calling and waving bot hands."""
+  bot say "Hey there! Come closer!"
+    and bot gesture "Wave with both hands"
+
+# Mutlimodal bot action sequence
+flow bot tell a joke
+  """Tell a joke."""
+  bot say "Why don't scientists trust atoms?"
+    and bot gesture "raising both eyebrows, making a question face"
+  bot make short pause
+  bot say "Because they make up everything!"
+    and bot gesture "Smiles"
+
+# Bot user interaction sequence
+flow bot ask user for age
+  """Ask the user how old she is and response with 'You look younger!' when she answers something."""
+  bot say "How old are you?"
+  user said something
+  bot say "You look younger!"
+
+# Loop
+flow bot count from a number to another number
+  """Bot counts from 1 to 5."""
+  $count = 1
+  while $count <= 5
+    bot say "{{$count}}"
+    $count = $count + 1
+
+# Branching
+flow bot ask user to pick a color
+  """Ask user to choose from two offered colors: red and blue then give a answer depending on the user choice."""
+  bot say "What color would you like? Red or blue?"
+  when user expressed a color choice red
+    bot say "I like red!"
+  orwhen user expressed a color choice blue
+    bot say "I don't like blue!"

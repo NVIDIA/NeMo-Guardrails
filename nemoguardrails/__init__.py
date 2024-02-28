@@ -26,4 +26,4 @@ warnings.filterwarnings(
     "ignore", category=UserWarning, message="TypedStorage is deprecated"
 )
 
-__version__ = "0.7.1"
+__version__ = "0.8.0"

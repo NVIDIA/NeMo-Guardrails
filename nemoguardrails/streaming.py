@@ -23,7 +23,7 @@ from langchain.schema import BaseMessage
 from langchain.schema.messages import AIMessageChunk
 from langchain.schema.output import ChatGenerationChunk, GenerationChunk, LLMResult
 
-from nemoguardrails.language.utils import new_uuid
+from nemoguardrails.colang.v1_0.lang.utils import new_uuid
 
 log = logging.getLogger(__name__)
 

@@ -38,19 +38,24 @@ dependencies = [
   "aiohttp>=3.9.2",
   "annoy>=1.17.3",
   "fastapi>=0.103.0",
-  "fastembed>=0.1.3",
+  "fastembed>=0.2.2",
   "httpx>=0.24.1",
   "jinja2>=3.1.3",
-  "langchain>=0.1.0,<0.2.0",
+  # The 0.1.9 has a bug related to SparkLLM which breaks everything.
+  "langchain>=0.1.0,<0.2.0,!=0.1.9",
+  "langchain-core>=0.1.0,!=0.1.26",
   "langchain-community>=0.0.16,<0.1.0",
+  "lark~=1.1.7",
   "nest-asyncio>=1.5.6",
+  "prompt-toolkit>=3.0",
   "pydantic>=1.10",
   "pyyaml>=6.0",
+  "rich>=13.5.2",
   "simpleeval>=0.9.13",
   "starlette>=0.27.0",
   "typer>=0.7.0",
   "uvicorn>=0.23",
-  "watchdog>=3.0.0"
+  "watchdog>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -92,12 +97,15 @@ changelog = "https://github.com/NVIDIA/NeMo-Guardrails/blob/develop/CHANGELOG.md
 nemoguardrails = "nemoguardrails.__main__:app"
 
 [tool.setuptools]
-packages = ["nemoguardrails"]
 license-files = [
   "LICENSE.md",
   "LICENSE-Apache-2.0.txt",
   "LICENCES-3rd-party.txt"
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nemoguardrails*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "nemoguardrails.__version__"}
@@ -108,6 +116,7 @@ nemoguardrails = [
   "**/*.co",
   "**/*.txt",
   "**/*.json",
+  "**/*.lark",
   "../examples/**/*",
   "../chat-ui/**/*",
   "eval/data/**/*",

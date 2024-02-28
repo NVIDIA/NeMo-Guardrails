@@ -20,13 +20,18 @@ and registers them.
 
 Additional providers can be registered using the `register_llm_provider` function.
 """
+import asyncio
 import logging
 from typing import Any, Dict, List, Optional, Type
 
 from langchain.base_language import BaseLanguageModel
-from langchain.callbacks.manager import CallbackManagerForLLMRun
+from langchain.callbacks.manager import (
+    AsyncCallbackManagerForLLMRun,
+    CallbackManagerForLLMRun,
+)
 from langchain.llms.base import LLM
 from langchain.llms.huggingface_pipeline import HuggingFacePipeline
+from langchain.schema.output import GenerationChunk
 from langchain_community import llms
 
 from nemoguardrails.rails.llm.config import Model
@@ -62,6 +67,13 @@ class HuggingFacePipelineCompatible(HuggingFacePipeline):
                 f"{type(prompt)}. If you want to run the LLM on multiple prompts, use "
                 "`generate` instead."
             )
+
+        # Streaming for NeMo Guardrails is not supported in sync calls.
+        if self.model_kwargs and self.model_kwargs.get("streaming"):
+            raise Exception(
+                "Streaming mode not supported for HuggingFacePipeline in NeMo Guardrails!"
+            )
+
         llm_result = self._generate(
             [prompt],
             stop=stop,
@@ -74,7 +86,7 @@ class HuggingFacePipelineCompatible(HuggingFacePipeline):
         self,
         prompt: str,
         stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> str:
         """
@@ -86,6 +98,41 @@ class HuggingFacePipelineCompatible(HuggingFacePipeline):
                 f"{type(prompt)}. If you want to run the LLM on multiple prompts, use "
                 "`generate` instead."
             )
+
+        # Handle streaming, if the flag is set
+        if self.model_kwargs and self.model_kwargs.get("streaming"):
+            # Retrieve the streamer object, needs to be set in model_kwargs
+            streamer = self.model_kwargs.get("streamer")
+            if not streamer:
+                raise Exception(
+                    "Cannot stream, please add HuggingFace streamer object to model_kwargs!"
+                )
+
+            loop = asyncio.get_running_loop()
+
+            # Pass the asyncio loop to the stream so that it can send back
+            # the chunks in the queue.
+            streamer.loop = loop
+
+            # Launch the generation in a separate task.
+            generation_kwargs = dict(
+                prompts=[prompt],
+                stop=stop,
+                run_manager=run_manager,
+                **kwargs,
+            )
+            loop.create_task(self._agenerate(**generation_kwargs))
+
+            # And start waiting for the chunks to come in.
+            completion = ""
+            async for item in streamer:
+                completion += item
+                chunk = GenerationChunk(text=item)
+                if run_manager:
+                    await run_manager.on_llm_new_token(item, chunk=chunk)
+
+            return completion
+
         llm_result = await self._agenerate(
             [prompt],
             stop=stop,
@@ -106,7 +153,18 @@ async def _acall(self, *args, **kwargs):
 
 def discover_langchain_providers():
     """Automatically discover all LLM providers from LangChain."""
-    _providers.update(llms.type_to_cls_dict)
+    # To deal with deprecated stuff and avoid warnings, we compose the type_to_cls_dict here
+    if hasattr(llms, "get_type_to_cls_dict"):
+        type_to_cls_dict = {
+            k: v()
+            for k, v in llms.get_type_to_cls_dict().items()
+            # Exclude deprecated ones
+            if k not in ["mlflow-chat", "databricks-chat"]
+        }
+    else:
+        type_to_cls_dict = llms.type_to_cls_dict
+
+    _providers.update(type_to_cls_dict)
 
     # We make sure we have OpenAI from the right package.
     if "openai" in _providers:
