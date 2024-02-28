@@ -69,7 +69,7 @@ jobs:
       - name: Start server in the background
         run: |
           nemoguardrails server &
-          SERVER_PID=$!
+          echo "SERVER_PID=$!" >> $GITHUB_ENV
 
       - name: Wait for server to be up
         run: |
