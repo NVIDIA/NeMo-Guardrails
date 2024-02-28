@@ -20,7 +20,7 @@ import logging
 from abc import ABC, abstractmethod
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 from nemoguardrails.rails.llm.config import EmbeddingsCacheConfig
 
@@ -207,7 +207,7 @@ class EmbeddingsCache:
         self._store_config = store_config or {}
 
     @classmethod
-    def from_dict(cls, d: dict[str, str]):
+    def from_dict(cls, d: Dict[str, str]):
         key_generator = KeyGenerator.from_name(d.get("key_generator"))()
         store_config = d.get("store_config")
         cache_store = CacheStore.from_name(d.get("store"))(**store_config)

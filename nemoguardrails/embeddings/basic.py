@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from annoy import AnnoyIndex
 
@@ -60,7 +60,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embedding_model=None,
         embedding_engine=None,
         index=None,
-        cache_config: EmbeddingsCacheConfig | Dict[str, Any] = None,
+        cache_config: Union[EmbeddingsCacheConfig, Dict[str, Any]] = None,
         use_batching: bool = False,
         max_batch_size: int = 10,
         max_batch_hold: float = 0.01,
