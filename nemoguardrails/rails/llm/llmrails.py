@@ -502,17 +502,6 @@ class LLMRails:
         System messages are not yet supported."""
         # We allow options to be specified both as a dict and as an object.
         if options and isinstance(options, dict):
-            if "rails" in options and isinstance(options["rails"], list):
-                _rails = {
-                    "input": False,
-                    "dialog": False,
-                    "retrieval": False,
-                    "output": False,
-                }
-                for rail_type in options["rails"]:
-                    _rails[rail_type] = True
-                options["rails"] = _rails
-
             options = GenerationOptions(**options)
 
         # Save the generation options in the current async context.

@@ -30,6 +30,11 @@ from starlette.responses import JSONResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.rails.llm.options import (
+    GenerationLog,
+    GenerationOptions,
+    GenerationResponse,
+)
 from nemoguardrails.server.datastore.datastore import DataStore
 from nemoguardrails.streaming import StreamingHandler
 
@@ -120,6 +125,9 @@ class RequestBody(BaseModel):
         "Tokens will be sent as data-only server-sent events as they become "
         "available, with the stream terminated by a data: [DONE] message.",
     )
+    options: Optional[GenerationOptions] = Field(
+        default=None, description="Additional options for controlling the generation."
+    )
 
     @validator("config_ids", always=True)
     def check_if_set(cls, v, values, **kwargs):
@@ -133,6 +141,17 @@ class RequestBody(BaseModel):
 class ResponseBody(BaseModel):
     messages: List[dict] = Field(
         default=None, description="The new messages in the conversation"
+    )
+    llm_output: Optional[dict] = Field(
+        default=None,
+        description="Contains any additional output coming from the LLM.",
+    )
+    output_data: Optional[dict] = Field(
+        default=None,
+        description="The output data, i.e. a dict with the values corresponding to the `output_vars`.",
+    )
+    log: Optional[GenerationLog] = Field(
+        default=None, description="Additional logging information."
     )
 
 
@@ -221,6 +240,7 @@ def _get_rails(config_ids: List[str]) -> LLMRails:
 @app.post(
     "/v1/chat/completions",
     response_model=ResponseBody,
+    response_model_exclude_none=True,
 )
 async def chat_completion(body: RequestBody, request: Request):
     """Chat completion for the provided conversation.
@@ -295,7 +315,9 @@ async def chat_completion(body: RequestBody, request: Request):
             # Start the generation
             asyncio.create_task(
                 llm_rails.generate_async(
-                    messages=messages, streaming_handler=streaming_handler
+                    messages=messages,
+                    streaming_handler=streaming_handler,
+                    options=body.options,
                 )
             )
 
@@ -303,14 +325,30 @@ async def chat_completion(body: RequestBody, request: Request):
 
             return StreamingResponse(streaming_handler)
         else:
-            bot_message = await llm_rails.generate_async(messages=messages)
+            res = await llm_rails.generate_async(
+                messages=messages, options=body.options
+            )
+
+            if isinstance(res, GenerationResponse):
+                bot_message = res.response[0]
+            else:
+                assert isinstance(res, dict)
+                bot_message = res
 
             # If we're using threads, we also need to update the data before returning
             # the message.
             if body.thread_id:
                 await datastore.set(datastore_key, json.dumps(messages + [bot_message]))
 
-            return {"messages": [bot_message]}
+            result = {"messages": [bot_message]}
+
+            # If we have additional GenerationResponse fields, we return as well
+            if isinstance(res, GenerationResponse):
+                result["llm_output"] = res.llm_output
+                result["output_data"] = res.output_data
+                result["log"] = res.log
+
+            return result
 
     except Exception as ex:
         log.exception(ex)
