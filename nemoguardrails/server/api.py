@@ -200,9 +200,7 @@ def _get_rails(config_ids: List[str]) -> LLMRails:
         if not full_path.startswith(app.rails_config_path):
             raise Exception("Not allowed.")
 
-        rails_config = RailsConfig.from_path(
-            os.path.join(app.rails_config_path, config_id)
-        )
+        rails_config = RailsConfig.from_path(full_path)
 
         if not full_llm_rails_config:
             full_llm_rails_config = rails_config
