@@ -1,4 +1,4 @@
-name: Build and Save Python Wheel
+name: Build and Test Python Wheel
 
 on:
   push:
@@ -32,3 +32,34 @@ jobs:
         with:
           name: nemoguardrails-${{ env.VERSION }}.whl
           path: dist/nemoguardrails-${{ env.VERSION }}-py3-none-any.whl
+
+  test-wheel:
+    needs: build-wheel
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '3.8', '3.9', '3.10', '3.11' ]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Extract Version Tag
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: nemoguardrails-${{ env.VERSION }}.whl
+
+      - name: Install Wheel
+        run: |
+          pip install nemoguardrails-${{ env.VERSION }}-*.whl
+          pip install nemoguardrails-${{ env.VERSION }}-*.whl[dev]
+
+      - name: Test with pytest
+        run: |
+          pytest
