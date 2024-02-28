@@ -1,0 +1,37 @@
+name: Build and Save Python Wheel
+
+on:
+  push:
+    # Ensures the workflow is triggered by version tags.
+    tags:
+      - 'v*'
+
+jobs:
+  build-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+
+      - name: Extract Version Tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Build Wheel
+        run: |
+          pip install build
+          python -m build --wheel
+          echo "WHEEL_FILE=$(ls dist/*.whl)" >> $GITHUB_ENV
+
+      - name: Rename Wheel
+        run: mv dist/$WHEEL_FILE dist/nemoguardrails-${{ env.VERSION }}-py3-none-any.whl
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: nemoguardrails-${{ env.VERSION }}.whl
+          path: dist/nemoguardrails-${{ env.VERSION }}-py3-none-any.whl
