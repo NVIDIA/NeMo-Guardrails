@@ -63,3 +63,32 @@ jobs:
       - name: Test with pytest
         run: |
           pytest
+
+      # Next, we also do a basic test of the server.
+
+      - name: Start server in the background
+        run: |
+          nemoguardrails server &
+          SERVER_PID=$!
+
+      - name: Wait for server to be up
+        run: |
+          echo "Waiting for server to start..."
+          while ! curl --output /dev/null --silent --head --fail http://localhost:8000; do
+            printf '.'
+            sleep 1
+          done
+          echo "Server is up!"
+
+      - name: Check server status
+        run: |
+          RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/v1/rails/configs)
+          if [ "$RESPONSE_CODE" -ne 200 ]; then
+            echo "Server responded with code $RESPONSE_CODE."
+            exit 1
+          fi
+
+      - name: Stop server
+        if: ${{ success() }}
+        run: |
+          kill $SERVER_PID
