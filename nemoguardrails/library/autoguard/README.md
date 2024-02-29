@@ -227,6 +227,26 @@ For text toxicity detection, the matching score has to be following format:
 "text_toxicity_extraction": { "score": 0.5}
 ```
 
+Can extract toxic phrases by changing the colang file a bit:
+
+```colang
+define subflow call autoguard input
+    $result = execute autoguard_input_api
+    if $result[0] == True
+        bot refuse to respond autoguard
+        stop
+
+define subflow call autoguard output
+    $result = execute autoguard_output_api
+    if $result[0] == True
+        bot refuse to respond autoguard
+        stop
+
+define bot refuse to respond autoguard
+  "$result[1] $result[2]"
+```
+
+
 ### PII
 
 To use AutoGuard's PII (Personal Identifiable Information) module, you have to list the entities that you wish to redact in following format:
