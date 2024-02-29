@@ -78,7 +78,7 @@ To get more details on the LLM calls that were executed, including the raw respo
 """
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator
 
 from nemoguardrails.logging.explain import LLMCallInfo, LLMCallSummary
 
@@ -167,6 +167,22 @@ class GenerationOptions(BaseModel):
         default_factory=GenerationLogOptions,
         description="Options about what to include in the log. By default, nothing is included. ",
     )
+
+    @root_validator(pre=True, allow_reuse=True)
+    def check_fields(cls, values):
+        # Translate the `rails` generation option from List[str] to dict.
+        if "rails" in values and isinstance(values["rails"], list):
+            _rails = {
+                "input": False,
+                "dialog": False,
+                "retrieval": False,
+                "output": False,
+            }
+            for rail_type in values["rails"]:
+                _rails[rail_type] = True
+            values["rails"] = _rails
+
+        return values
 
 
 class ExecutedAction(BaseModel):

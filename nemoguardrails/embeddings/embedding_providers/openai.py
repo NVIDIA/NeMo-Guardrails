@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import asyncio
 from contextvars import ContextVar
 from typing import List, Optional
 
@@ -78,15 +78,22 @@ class OpenAIEmbeddingModel(EmbeddingModel):
             List[List[float]]: The encoded embeddings.
 
         """
-        # We do lazy initialization of the async client to make sure it's on the correct loop
-        async_client = async_client_var.get()
-        if async_client is None:
-            async_client = AsyncOpenAI()
-            async_client_var.set(async_client)
+        loop = asyncio.get_running_loop()
+        embeddings = await loop.run_in_executor(None, self.encode, documents)
 
-        # Make embedding request to OpenAI API
-        res = await async_client.embeddings.create(input=documents, model=self.model)
-        embeddings = [record.embedding for record in res.data]
+        # NOTE: The async implementation below has some edge cases because of
+        # httpx and async and returns "Event loop is closed." errors. Falling back to
+        # a thread-based implementation for now.
+
+        # # We do lazy initialization of the async client to make sure it's on the correct loop
+        # async_client = async_client_var.get()
+        # if async_client is None:
+        #     async_client = AsyncOpenAI()
+        #     async_client_var.set(async_client)
+        #
+        # # Make embedding request to OpenAI API
+        # res = await async_client.embeddings.create(input=documents, model=self.model)
+        # embeddings = [record.embedding for record in res.data]
 
         return embeddings
 

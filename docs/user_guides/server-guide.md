@@ -29,6 +29,8 @@ If a `--prefix` option is specified, the root path for the guardrails server wil
 │   ...
 ```
 
+**Note**: If the server is pointed to a folder with a single configuration, then only that configuration will be available.
+
 If the `--auto-reload` option is specified, the server will monitor any changes to the files inside the folder holding the configurations and reload them automatically when they change. This allows you to iterate faster on your configurations, and even regenerate messages mid-conversation, after changes have been made. **IMPORTANT**: this option should only be used in development environments.
 
 ### CORS

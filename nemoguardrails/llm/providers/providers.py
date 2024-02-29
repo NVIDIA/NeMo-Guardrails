@@ -69,7 +69,7 @@ class HuggingFacePipelineCompatible(HuggingFacePipeline):
             )
 
         # Streaming for NeMo Guardrails is not supported in sync calls.
-        if self.model_kwargs.get("streaming"):
+        if self.model_kwargs and self.model_kwargs.get("streaming"):
             raise Exception(
                 "Streaming mode not supported for HuggingFacePipeline in NeMo Guardrails!"
             )
@@ -100,7 +100,7 @@ class HuggingFacePipelineCompatible(HuggingFacePipeline):
             )
 
         # Handle streaming, if the flag is set
-        if self.model_kwargs.get("streaming"):
+        if self.model_kwargs and self.model_kwargs.get("streaming"):
             # Retrieve the streamer object, needs to be set in model_kwargs
             streamer = self.model_kwargs.get("streamer")
             if not streamer:
@@ -153,7 +153,18 @@ async def _acall(self, *args, **kwargs):
 
 def discover_langchain_providers():
     """Automatically discover all LLM providers from LangChain."""
-    _providers.update(llms.type_to_cls_dict)
+    # To deal with deprecated stuff and avoid warnings, we compose the type_to_cls_dict here
+    if hasattr(llms, "get_type_to_cls_dict"):
+        type_to_cls_dict = {
+            k: v()
+            for k, v in llms.get_type_to_cls_dict().items()
+            # Exclude deprecated ones
+            if k not in ["mlflow-chat", "databricks-chat"]
+        }
+    else:
+        type_to_cls_dict = llms.type_to_cls_dict
+
+    _providers.update(type_to_cls_dict)
 
     # We make sure we have OpenAI from the right package.
     if "openai" in _providers:

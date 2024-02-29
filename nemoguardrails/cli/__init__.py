@@ -118,7 +118,9 @@ def server(
 ):
     """Start a NeMo Guardrails server."""
     if config:
-        api.app.rails_config_path = config[0]
+        # We make sure there is no trailing separator, as that might break things in
+        # single config mode.
+        api.app.rails_config_path = config[0].rstrip(os.path.sep)
     else:
         # If we don't have a config, we try to see if there is a local config folder
         local_path = os.getcwd()
