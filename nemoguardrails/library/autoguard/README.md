@@ -349,3 +349,5 @@ define bot refuse to respond autoguard factcheck
     "Factcheck violation has been detected by AutoGuard."
 ```
 The output of the factcheck endpoint provides you with a factcheck score against which we can add a threshold which determines whether the given output is factually correct or not.
+
+The supporting documents or the evidence has to be placed within a `kb` folder within `config` folder.
