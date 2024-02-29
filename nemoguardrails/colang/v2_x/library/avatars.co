@@ -399,9 +399,9 @@ flow repeating timer $timer_id $interval_s
     # await TimerBotAction(timer_name=$timer_id, duration=$interval_s)
 
 flow await_flow_by_name $flow_name
-  $new_flow_start_uid = "{{uid()}}"
-  send StartFlow(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid)
-  match FlowStarted(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid) as $event_ref
+  $new_flow_instance_uid = "{{uid()}}"
+  send StartFlow(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid)
+  match FlowStarted(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
   match $event_ref.flow.Finished()
 
 flow handling bot talking interruption $mode="inform"
@@ -497,7 +497,7 @@ flow handling start of undefined flow
   if "{{search('^user ',$event.flow_id)}}" == "True"
 
     # We have an undefined user intent, so we just fake it to be started by this fallback flow
-    send FlowStarted(flow_id=$event.flow_id, flow_start_uid=$event.arguments.flow_start_uid)
+    send FlowStarted(flow_id=$event.flow_id, flow_instance_uid=$event.arguments.flow_instance_uid)
     # Once this fallback flow receives the user intent it will finish and therefore also trigger the original matcher
     match FlowFinished(flow_id=$event.flow_id)
 
@@ -508,9 +508,9 @@ flow handling start of undefined flow
     $flow_source = await GenerateFlowFromNameAction(name=$event.flow_id)
 
     await AddFlowsAction(config=$flow_source)
-    $new_flow_start_uid = "{{uid()}}"
-    send StartFlow(flow_id=$event.flow_id, flow_start_uid=$new_flow_start_uid)
-    match FlowStarted(flow_id=$event.flow_id, flow_start_uid=$new_flow_start_uid) as $event_ref
+    $new_flow_instance_uid = "{{uid()}}"
+    send StartFlow(flow_id=$event.flow_id, flow_instance_uid=$new_flow_instance_uid)
+    match FlowStarted(flow_id=$event.flow_id, flow_instance_uid=$new_flow_instance_uid) as $event_ref
     match $event_ref.flow.Finished()
     await RemoveFlowsAction(flow_ids=[$event.flow_id])
 
@@ -520,9 +520,9 @@ flow execute llm instruction $instructions
 
   await AddFlowsAction(config=$flow_info.body)
 
-  $new_flow_start_uid = "{{uid()}}"
-  send StartFlow(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid)
-  match FlowStarted(flow_id=$flow_info.name, flow_start_uid=$new_flow_start_uid) as $event_ref
+  $new_flow_instance_uid = "{{uid()}}"
+  send StartFlow(flow_id=$flow_info.name, flow_instance_uid=$new_flow_instance_uid)
+  match FlowStarted(flow_id=$flow_info.name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
   match $event_ref.flow.Finished()
   await RemoveFlowsAction(flow_ids=[$flow_info.name])
 

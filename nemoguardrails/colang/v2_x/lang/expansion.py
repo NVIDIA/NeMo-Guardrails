@@ -165,7 +165,7 @@ def _expand_start_element(
             element.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
-                    "flow_start_uid": f"'{new_var_uid()}'",
+                    "flow_instance_uid": f"'{new_var_uid()}'",
                 }
             )
             new_elements.append(
@@ -577,7 +577,7 @@ def _expand_activate_element(
             element_copy.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
-                    "flow_start_uid": f"'{new_var_uid()}'",
+                    "flow_instance_uid": f"'{new_var_uid()}'",
                     "activated": "True",
                 }
             )
@@ -674,9 +674,11 @@ def _expand_if_element(
     elements.append(
         Goto(
             expression=f"not({element.expression})",
-            label=if_end_label_name
-            if not element.else_elements
-            else if_else_body_label_name,
+            label=(
+                if_end_label_name
+                if not element.else_elements
+                else if_else_body_label_name
+            ),
         )
     )
     elements.extend(expand_elements(element.then_elements, flow_configs))
@@ -888,9 +890,11 @@ def normalize_element_groups(group: Union[Spec, dict]) -> dict:
             {
                 "_type": "spec_or",
                 "elements": [
-                    normalize_element_groups(elem)
-                    if isinstance(elem, dict)
-                    else {"_type": "spec_and", "elements": [elem]}
+                    (
+                        normalize_element_groups(elem)
+                        if isinstance(elem, dict)
+                        else {"_type": "spec_and", "elements": [elem]}
+                    )
                     for elem in group["elements"]
                 ],
             }

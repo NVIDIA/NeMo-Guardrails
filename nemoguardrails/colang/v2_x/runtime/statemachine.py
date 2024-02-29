@@ -1721,7 +1721,7 @@ def _compute_event_comparison_score(
 
         # TODO: Generalize this with mismatch using e.g. the 'not' keyword
         if match_score > 0.0:
-            if "flow_start_uid" in ref_event.arguments and (
+            if "flow_instance_uid" in ref_event.arguments and (
                 (
                     ref_event.name == InternalEvents.FLOW_FINISHED
                     and event.name == InternalEvents.FLOW_FAILED
@@ -2181,8 +2181,8 @@ def create_internal_flow_event(
             "return_value": source_flow_state.context.get("_return_value", None),
         }
     )
-    if "flow_start_uid" in source_flow_state.context:
-        arguments["flow_start_uid"] = source_flow_state.context["flow_start_uid"]
+    if "flow_instance_uid" in source_flow_state.context:
+        arguments["flow_instance_uid"] = source_flow_state.context["flow_instance_uid"]
     return create_internal_event(
         event_name,
         arguments,

@@ -86,7 +86,7 @@ def test_FlowStart_event_fallback():
     flow a
       match StartFlow() as $ref
       start UtteranceBotAction(script="Success")
-      send FlowStarted(flow_id=$ref.arguments.flow_id, flow_start_uid=$ref.arguments.flow_start_uid ,param="test")
+      send FlowStarted(flow_id=$ref.arguments.flow_id, flow_instance_uid=$ref.arguments.flow_instance_uid ,param="test")
 
     flow main
       start a
