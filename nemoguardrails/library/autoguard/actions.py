@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 GUARDRAIL_RESPONSE_TEXT = {
     "confidential_detection": "Confidential Information violation has been detected by AutoGuard; Sorry, can't process.",
     "gender_bias_detection": "Gender bias in text has been detected by AutoGuard; Sorry, can't process.",
-    "harm_detection": "Harm to human violation has been detected by AutoGuard; Sorry, can't process.",
+    "harm_detection": "Potential harm to human has been detected by AutoGuard; Sorry, can't process.",
     "text_toxicity_extraction": "Toxicity in text has been detected by AutoGuard; Sorry, can't process.",
     "tonal_detection": "Negative tone in text has been detected by AutoGuard; Sorry, can't process.",
     "racial_bias_detection": "Racial bias in text has been detected by AutoGuard; Sorry, can't process.",
