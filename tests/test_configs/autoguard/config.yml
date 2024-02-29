@@ -17,13 +17,15 @@ rails:
           - harm_detection
           - text_toxicity_extraction
           - jailbreak_detection
+          - intellectual_property
         matching_scores:
           {"gender_bias_detection": {"score": 0.5}, "harm_detection": {"score": 0.5},
-          "jailbreak_detection": {"score": 0.5}, "confidential_detection": {"No Confidential": 0.5,
-                                                                             "Legal Documents": 0.5,
-                                                                             "Business Strategies": 0.5,
-                                                                             "Medical Information": 0.5,
-                                                                             "Professional Records": 0.5},
+          "jailbreak_detection": {"score": 0.5}, "intellectual_property":{"score": 0.5},
+           "confidential_detection": {"No Confidential": 0.5,
+                                      "Legal Documents": 0.5,
+                                      "Business Strategies": 0.5,
+                                      "Medical Information": 0.5,
+                                      "Professional Records": 0.5},
            "racial_bias_detection": { "No Racial Bias": 0.5,
                                       "Racial Bias": 0.5,
                                       "Historical Racial Event": 0.5}, "tonal_detection": {"Negative Tones": 0.8,
@@ -42,13 +44,15 @@ rails:
           - harm_detection
           - text_toxicity_extraction
           - jailbreak_detection
+          - intellectual_property
         matching_scores:
           { "gender_bias_detection": { "score": 0.5 }, "harm_detection": { "score": 0.5 },
-            "jailbreak_detection": { "score": 0.5 }, "confidential_detection": { "No Confidential": 0.5,
-                                                                                 "Legal Documents": 0.5,
-                                                                                 "Business Strategies": 0.5,
-                                                                                 "Medical Information": 0.5,
-                                                                                 "Professional Records": 0.5 },
+            "jailbreak_detection": { "score": 0.5 }, "intellectual_property": { "score": 0.5 },
+            "confidential_detection": { "No Confidential": 0.5,
+                                        "Legal Documents": 0.5,
+                                        "Business Strategies": 0.5,
+                                        "Medical Information": 0.5,
+                                        "Professional Records": 0.5 },
             "racial_bias_detection": { "No Racial Bias": 0.5,
                                        "Racial Bias": 0.5,
                                        "Historical Racial Event": 0.5 }, "tonal_detection": { "Negative Tones": 0.8,

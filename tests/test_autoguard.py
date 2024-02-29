@@ -223,6 +223,47 @@ async def test_confidential_input():
 
 
 @pytest.mark.asyncio
+async def test_intellectual_property_input():
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
+
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "  ask intellectual property question",
+            "Gorilla Glass is a brand of chemically strengthened glass developed and manufactured by Corning. It is "
+            "in its eighth generation.",
+            "Confidential Information violation has been detected by AutoGuard; Sorry, can't process.",
+        ],
+    )
+
+    async def mock_autoguard_input_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("user_message")
+        if (
+            query
+            == "Gorilla Glass is a brand of chemically strengthened glass developed and manufactured by Corning. "
+            "It is in its eighth generation."
+        ):
+            return (
+                True,
+                "Intellectual property has been detected by AutoGuard; Sorry, can't process.",
+            )
+        else:
+            return False, None
+
+    chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
+
+    (
+        chat
+        >> "Gorilla Glass is a brand of chemically strengthened glass developed and manufactured by Corning. It is "
+        "in its eighth generation. "
+    )
+
+    await chat.bot_async(
+        "Intellectual property has been detected by AutoGuard; Sorry, can't process.",
+    )
+
+
+@pytest.mark.asyncio
 async def test_toxic_input():
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
 
