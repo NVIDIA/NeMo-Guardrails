@@ -26,15 +26,15 @@ from nemoguardrails.llm.taskmanager import LLMTaskManager
 log = logging.getLogger(__name__)
 
 GUARDRAIL_RESPONSE_TEXT = {
-    "confidential_detection": "Confidential Information violation has been detected by AutoGuard; Sorry, can't process.",
-    "gender_bias_detection": "Gender bias in text has been detected by AutoGuard; Sorry, can't process.",
-    "harm_detection": "Potential harm to human has been detected by AutoGuard; Sorry, can't process.",
-    "text_toxicity_extraction": "Toxicity in text has been detected by AutoGuard; Sorry, can't process.",
-    "tonal_detection": "Negative tone in text has been detected by AutoGuard; Sorry, can't process.",
-    "racial_bias_detection": "Racial bias in text has been detected by AutoGuard; Sorry, can't process.",
-    "jailbreak_detection": "Jailbreak attempt has been detected by AutoGuard; Sorry, can't process.",
-    "intellectual_property": "Intellectual property has been detected by AutoGuard; Sorry, can't process.",
-    "factcheck": "Factcheck violation in text has been detected by AutoGuard; Sorry, can't process.",
+    "confidential_detection": "Confidential Information violation",
+    "gender_bias_detection": "Gender bias",
+    "harm_detection": "Potential harm to human",
+    "text_toxicity_extraction": "Toxicity in text",
+    "tonal_detection": "Negative tone",
+    "racial_bias_detection": "Racial bias",
+    "jailbreak_detection": "Jailbreak attempt",
+    "intellectual_property": "Intellectual property",
+    "factcheck": "Factcheck violation",
 }
 
 DEFAULT_CONFIG = {
@@ -78,16 +78,21 @@ DEFAULT_CONFIG = {
 }
 
 
-def process_autoguard_output(response: Any):
+def process_autoguard_output(responses: List[Any]):
     """Processes the output provided AutoGuard API"""
-    if response["task"] == "text_toxicity_extraction":
-        output_str = (
-            GUARDRAIL_RESPONSE_TEXT[response["task"]]
-            + " Toxic phrases: "
-            + " ".join(response["output_data"])
-        )
-    else:
-        output_str = GUARDRAIL_RESPONSE_TEXT[response["task"]]
+
+    prefix = []
+    suffix = []
+    for response in responses:
+        if response["task"] == "text_toxicity_extraction":
+            suffix += response["output_data"]
+        prefix += [GUARDRAIL_RESPONSE_TEXT[response["task"]]]
+
+    output_str = (
+        ", ".join(prefix) + " has been detected by AutoGuard; Sorry, can't process."
+    )
+    if len(suffix) > 0:
+        output_str += " Toxic phrases: " + ", ".join(suffix)
     return output_str
 
 
@@ -107,7 +112,7 @@ async def autoguard_infer(
     config = DEFAULT_CONFIG
     # enable the select guardrail
     for task in tasks:
-        if task not in ["text_toxicity_extraction", "pii_fast", "factcheck"]:
+        if task not in ["pii_fast", "factcheck"]:
             config[task] = {"mode": "DETECT"}
             if matching_scores:
                 config[task]["matching_scores"] = matching_scores.get(task, {})
@@ -126,12 +131,15 @@ async def autoguard_infer(
                     f"AutoGuard call failed with status code {response.status}.\n"
                     f"Details: {await response.text()}"
                 )
+            guardrails_triggered = []
             async for line in response.content:
                 line_text = line.strip()
                 if len(line_text) > 0:
                     resp = json.loads(line_text)
                     if resp["guarded"]:
-                        return True, GUARDRAIL_RESPONSE_TEXT[resp["task"]]
+                        guardrails_triggered.append(resp)
+            if len(guardrails_triggered) > 0:
+                return True, process_autoguard_output(guardrails_triggered)
     return False, None
 
 
