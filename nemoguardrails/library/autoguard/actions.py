@@ -16,7 +16,6 @@
 import json
 import logging
 import os
-from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
 import aiohttp
@@ -27,39 +26,42 @@ from nemoguardrails.llm.taskmanager import LLMTaskManager
 log = logging.getLogger(__name__)
 
 GUARDRAIL_RESPONSE_TEXT = {
-    "confidential_detection": "Confidential Information violation",
-    "gender_bias_detection": "Gender bias in text",
-    "harm_detection": "Harm to human violation",
-    "text_toxicity_extraction": "Toxicity in text",
-    "tonal_detection": "Negative tone in text",
-    "racial_bias_detection": "Racial bias in text",
-    "jailbreak_detection": "Jailbreak attempt",
-    "factcheck": "Factcheck violation in text",
+    "confidential_detection": "Confidential Information violation has been detected by AutoGuard; Sorry, can't process.",
+    "gender_bias_detection": "Gender bias in text has been detected by AutoGuard; Sorry, can't process.",
+    "harm_detection": "Potential harm to human has been detected by AutoGuard; Sorry, can't process.",
+    "text_toxicity_extraction": "Toxicity in text has been detected by AutoGuard; Sorry, can't process.",
+    "tonal_detection": "Negative tone in text has been detected by AutoGuard; Sorry, can't process.",
+    "racial_bias_detection": "Racial bias in text has been detected by AutoGuard; Sorry, can't process.",
+    "jailbreak_detection": "Jailbreak attempt has been detected by AutoGuard; Sorry, can't process.",
+    "intellectual_property": "Intellectual property has been detected by AutoGuard; Sorry, can't process.",
+    "factcheck": "Factcheck violation in text has been detected by AutoGuard; Sorry, can't process.",
 }
 
 DEFAULT_CONFIG = {
     "pii_fast": {
         "mode": "OFF",
-        "mask": True,
+        "mask": False,
+        "coreference": False,
         "enabled_types": [
-            "[PERSON NAME]",
-            "[LOCATION]",
+            "[BANK ACCOUNT NUMBER]",
+            "[CREDIT CARD NUMBER]",
             "[DATE OF BIRTH]",
             "[DATE]",
-            "[PHONE NUMBER]",
-            "[EMAIL ADDRESS]",
-            "[CREDIT CARD NUMBER]",
-            "[BANK ACCOUNT NUMBER]",
-            "[SOCIAL SECURITY NUMBER]",
-            "[MONEY]",
-            "[PROFESSION]",
-            "[RACE/ETHNICITY]",
-            "[ORGANIZATION]",
-            "[USERNAME]",
-            "[PASSWORD]",
-            "[IP ADDRESS]",
-            "[PASSPORT NUMBER]",
             "[DRIVER LICENSE NUMBER]",
+            "[EMAIL ADDRESS]",
+            "[RACE/ETHNICITY]",
+            "[GENDER]",
+            "[IP ADDRESS]",
+            "[LOCATION]",
+            "[MONEY]",
+            "[ORGANIZATION]",
+            "[PASSPORT NUMBER]",
+            "[PASSWORD]",
+            "[PERSON NAME]",
+            "[PHONE NUMBER]",
+            "[PROFESSION]",
+            "[SOCIAL SECURITY NUMBER]",
+            "[USERNAME]",
             "[SECRET_KEY]",
             "[TRANSACTION_ID]",
             "[RELIGION]",
@@ -76,6 +78,19 @@ DEFAULT_CONFIG = {
 }
 
 
+def process_autoguard_output(response: Any):
+    """Processes the output provided AutoGuard API"""
+    if response["task"] == "text_toxicity_extraction":
+        output_str = (
+            GUARDRAIL_RESPONSE_TEXT[response["task"]]
+            + " Toxic phrases: "
+            + " ".join(response["output_data"])
+        )
+    else:
+        output_str = GUARDRAIL_RESPONSE_TEXT[response["task"]]
+    return output_str
+
+
 async def autoguard_infer(
     request_url: str,
     text: str,
@@ -83,6 +98,7 @@ async def autoguard_infer(
     matching_scores: Dict[str, Dict[str, float]],
     task_config: Optional[Dict[Any, Any]] = None,
 ):
+    """Checks whether the given text passes through the applied guardrails."""
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
@@ -119,53 +135,6 @@ async def autoguard_infer(
     return False, None
 
 
-async def autoguard_toxicity_infer(
-    request_url: str,
-    text: str,
-    matching_scores: Dict[str, Dict[str, float]],
-    task_config: Optional[Dict[Any, Any]] = None,
-):
-    api_key = os.environ.get("AUTOGUARD_API_KEY")
-    if api_key is None:
-        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
-
-    headers = {"x-api-key": api_key}
-    config = DEFAULT_CONFIG
-    # enable the select guardrail
-    config["text_toxicity_extraction"] = {"mode": "DETECT"}
-    if task_config:
-        config["text_toxicity_extraction"].update(task_config)
-    if matching_scores:
-        config["text_toxicity_extraction"]["matching_scores"] = matching_scores.get(
-            "text_toxicity_extraction", {}
-        )
-
-    request_body = {"prompt": text, "config": config}
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            url=request_url,
-            headers=headers,
-            json=request_body,
-        ) as response:
-            if response.status != 200:
-                raise ValueError(
-                    f"AutoGuard call failed with status code {response.status}.\n"
-                    f"Details: {await response.text()}"
-                )
-            async for line in response.content:
-                line_text = line.strip()
-                if len(line_text) > 0:
-                    resp = json.loads(line_text)
-                    if resp["task"] == "text_toxicity_extraction":
-                        return (
-                            resp["guarded"],
-                            GUARDRAIL_RESPONSE_TEXT[resp["task"]],
-                            " ".join(resp["output_data"]),
-                        )
-    return False, None
-
-
 async def autoguard_pii_infer(
     request_url: str,
     text: str,
@@ -174,6 +143,7 @@ async def autoguard_pii_infer(
     matching_scores: Dict[str, Dict[str, float]],
     task_config: Optional[Dict[Any, Any]] = None,
 ):
+    """Provides request body for given text and other configuration"""
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
@@ -181,7 +151,7 @@ async def autoguard_pii_infer(
     headers = {"x-api-key": api_key}
     config = DEFAULT_CONFIG
     # enable the select guardrail
-    config["pii_fast"] = {"mode": "DETECT"}
+    config["pii_fast"]["mode"] = "DETECT"
     if task_config:
         config["pii_fast"].update(task_config)
 
@@ -215,8 +185,8 @@ async def autoguard_factcheck_infer(
     request_url: str,
     text: str,
     documents: List[str],
-    matching_scores: Dict[str, Dict[str, float]],
 ):
+    """Checks the facts for the text using the given documents and provides a fact-checking score"""
     api_key = os.environ.get("AUTOGUARD_API_KEY")
     if api_key is None:
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
@@ -224,7 +194,6 @@ async def autoguard_factcheck_infer(
     request_body = {
         "prompt": text,
         "documents": documents,
-        "matching_scores": matching_scores.get("factcheck", {}),
     }
     async with aiohttp.ClientSession() as session:
         async with session.post(
@@ -244,10 +213,11 @@ async def autoguard_factcheck_infer(
     return 1.0
 
 
-@action()
+@action(name="autoguard_input_api")
 async def autoguard_input_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
+    """Calls AutoGuard API for the user message and guardrail configuration provided"""
     user_message = context.get("user_message")
     autoguard_config = llm_task_manager.config.rails.config.autoguard
 
@@ -255,7 +225,7 @@ async def autoguard_input_api(
     if not autoguard_api_url:
         raise ValueError("Provide the autoguard endpoint in the config")
     tasks = getattr(autoguard_config.input, "guardrails")
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
+    matching_scores = getattr(autoguard_config.input, "matching_scores", {})
     if not tasks:
         raise ValueError("Provide the guardrails in the config")
     prompt = user_message
@@ -263,36 +233,18 @@ async def autoguard_input_api(
     return await autoguard_infer(autoguard_api_url, prompt, tasks, matching_scores)
 
 
-@action()
-async def autoguard_pii_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
-):
-    user_message = context.get("user_message")
-    autoguard_config = llm_task_manager.config.rails.config.autoguard
-
-    autoguard_api_url = autoguard_config.parameters.get("endpoint")
-    if not autoguard_api_url:
-        raise ValueError("Provide the autoguard endpoint in the config")
-
-    entities = getattr(autoguard_config, "entities", [])
-    contextual_rules = getattr(autoguard_config, "contextual_rules", [])
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
-    return await autoguard_pii_infer(
-        autoguard_api_url, user_message, entities, contextual_rules, matching_scores
-    )
-
-
-@action()
+@action(name="autoguard_output_api")
 async def autoguard_output_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
+    """Calls AutoGuard API for the bot message and guardrail configuration provided"""
     bot_message = context.get("bot_message")
     autoguard_config = llm_task_manager.config.rails.config.autoguard
     autoguard_api_url = autoguard_config.parameters.get("endpoint")
     if not autoguard_api_url:
         raise ValueError("Provide the autoguard endpoint in the config")
-    tasks = getattr(autoguard_config.input, "guardrails")
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
+    tasks = getattr(autoguard_config.output, "guardrails")
+    matching_scores = getattr(autoguard_config.output, "matching_scores", {})
     if not tasks:
         raise ValueError("Provide the guardrails in the config")
 
@@ -301,39 +253,52 @@ async def autoguard_output_api(
     return await autoguard_infer(autoguard_api_url, prompt, tasks, matching_scores)
 
 
-@action()
-async def autoguard_toxicity_input_api(
+@action(name="autoguard_pii_input_api")
+async def autoguard_pii_input_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
+    """Calls AutoGuard API for the user message and guardrail configuration provided"""
     user_message = context.get("user_message")
     autoguard_config = llm_task_manager.config.rails.config.autoguard
 
-    autoguard_toxicity_api_url = autoguard_config.parameters.get("toxicity_endpoint")
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
-    if not autoguard_toxicity_api_url:
+    autoguard_api_url = autoguard_config.parameters.get("endpoint")
+    if not autoguard_api_url:
         raise ValueError("Provide the autoguard endpoint in the config")
-    return await autoguard_toxicity_infer(
-        autoguard_toxicity_api_url, user_message, matching_scores
+
+    entities = getattr(autoguard_config.input, "entities", [])
+    contextual_rules = getattr(autoguard_config.input, "contextual_rules", [])
+    matching_scores = getattr(autoguard_config.input, "matching_scores", {})
+    return await autoguard_pii_infer(
+        autoguard_api_url, user_message, entities, contextual_rules, matching_scores
     )
 
 
-@action()
-async def autoguard_toxicity_output_api(
+@action(name="autoguard_pii_output_api")
+async def autoguard_pii_output_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
-    bot_message = context.get("bot_message")
+    """Calls AutoGuard API for the bot message and guardrail configuration provided"""
+    user_message = context.get("bot_message")
     autoguard_config = llm_task_manager.config.rails.config.autoguard
 
-    autoguard_toxicity_api_url = autoguard_config.parameters.get("toxicity_endpoint")
-    if not autoguard_toxicity_api_url:
+    autoguard_api_url = autoguard_config.parameters.get("endpoint")
+    if not autoguard_api_url:
         raise ValueError("Provide the autoguard endpoint in the config")
-    return await autoguard_toxicity_infer(autoguard_toxicity_api_url, bot_message)
+
+    entities = getattr(autoguard_config.output, "entities", [])
+    contextual_rules = getattr(autoguard_config.output, "contextual_rules", [])
+    matching_scores = getattr(autoguard_config.output, "matching_scores", {})
+    return await autoguard_pii_infer(
+        autoguard_api_url, user_message, entities, contextual_rules, matching_scores
+    )
 
 
-@action()
+@action(name="autoguard_factcheck_api")
 async def autoguard_factcheck_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
+    """Calls AutoGuard factcheck API and checks whether the bot message is factually correct according to given
+    documents"""
     api_key = os.environ.get("AUTOGUARD_API_KEY")
 
     if api_key is None:
@@ -350,10 +315,9 @@ async def autoguard_factcheck_api(
     if isinstance(documents, str):
         documents = documents.split("\n")
     prompt = bot_message
-    matching_scores = getattr(autoguard_config, "matching_scores", {})
     if isinstance(documents, list) and len(documents) > 0:
         return await autoguard_factcheck_infer(
-            autoguard_fact_check_api_url, prompt, documents, matching_scores
+            autoguard_fact_check_api_url, prompt, documents
         )
     else:
         raise ValueError("Provide relevant documents in proper format")
