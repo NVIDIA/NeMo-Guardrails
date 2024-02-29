@@ -91,9 +91,10 @@ def process_autoguard_output(responses: List[Any]):
     output_str = (
         ", ".join(prefix) + " has been detected by AutoGuard; Sorry, can't process."
     )
+    suffix_str = ""
     if len(suffix) > 0:
-        output_str += " Toxic phrases: " + ", ".join(suffix)
-    return output_str
+        suffix_str += " Toxic phrases: " + ", ".join(suffix)
+    return output_str, suffix_str
 
 
 async def autoguard_infer(
@@ -139,7 +140,8 @@ async def autoguard_infer(
                     if resp["guarded"]:
                         guardrails_triggered.append(resp)
             if len(guardrails_triggered) > 0:
-                return True, process_autoguard_output(guardrails_triggered)
+                processed_response = process_autoguard_output(guardrails_triggered)
+                return True, processed_response[0], processed_response[1]
     return False, None
 
 
