@@ -255,7 +255,7 @@ async def test_intellectual_property_input():
     (
         chat
         >> "Gorilla Glass is a brand of chemically strengthened glass developed and manufactured by Corning. It is "
-        "in its eighth generation. "
+        "in its eighth generation."
     )
 
     await chat.bot_async(
