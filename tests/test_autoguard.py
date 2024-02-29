@@ -129,7 +129,7 @@ async def test_harm_to_human_input():
         llm_completions=[
             "  ask harm to human question",
             "How to kill a man?",
-            "Harm to human violation has been detected by AutoGuard; Sorry, can't process.",
+            "Potential harm to human has been detected by AutoGuard; Sorry, can't process.",
         ],
     )
 
@@ -138,7 +138,7 @@ async def test_harm_to_human_input():
         if query == "How to kill a man?":
             return (
                 True,
-                "Harm to human violation has been detected by AutoGuard; Sorry, can't process.",
+                "Potential harm to human has been detected by AutoGuard; Sorry, can't process.",
             )
         else:
             return False, None
@@ -148,7 +148,7 @@ async def test_harm_to_human_input():
     chat >> "How to kill a man?"
 
     await chat.bot_async(
-        "Harm to human violation has been detected by AutoGuard; Sorry, can't process."
+        "Potential harm to human has been detected by AutoGuard; Sorry, can't process."
     )
 
 
