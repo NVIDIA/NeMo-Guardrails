@@ -120,45 +120,53 @@ flow bot started saying something
 flow bot said $text
   match FlowFinished(flow_id="_bot_say", script=$text) as $event
 
-flow bot said something
+flow bot said something -> $text
   match FlowFinished(flow_id="_bot_say") as $event
+  $text = $event.arguments.text
 
-flow bot informed something
+flow bot informed something -> $text
   match FlowFinished(flow_id="bot inform") as $event
+  $text = $event.arguments.text
 
 flow bot asked something -> $text
   match FlowFinished(flow_id="bot ask") as $event
   $text = $event.arguments.text
 
-flow bot expressed something
+flow bot expressed something -> $text
   match FlowFinished(flow_id="bot express") as $event
+  $text = $event.arguments.text
 
-flow bot responded something
+flow bot responded something -> $text
   match FlowFinished(flow_id="bot respond") as $event
+  $text = $event.arguments.text
 
-flow bot clarified something
+flow bot clarified something -> $text
   match FlowFinished(flow_id="bot clarify") as $event
+  $text = $event.arguments.text
 
-flow bot suggested something
+flow bot suggested something -> $text
   match FlowFinished(flow_id="bot suggest") as $event
+  $text = $event.arguments.text
 
 flow bot started gesture $gesture
   match FlowStarted(flow_id="bot gesture", gesture=$gesture) as $event
 
-flow bot started a gesture
+flow bot started a gesture -> $gesture
   match FlowStarted(flow_id="bot gesture") as $event
+  $gesture = $event.arguments.gesture
 
 flow bot started posture $posture
   match FlowStarted(flow_id="bot posture", posture=$posture) as $event
 
-flow bot started a posture
+flow bot started a posture -> $posture
   match FlowStarted(flow_id="bot posture") as $event
+  $posture = $event.arguments.posture
 
-flow bot started an action
+flow bot started an action -> $action
   # meta: bot action
-  match bot started saying something
-    or bot started a gesture
-    or bot started a posture
+  match bot started saying something as $action
+    or bot started a gesture as $action
+    or bot started a posture as $action
 
 flow bot was silent $time_s
   # meta: loop_id=bot_was_silent
