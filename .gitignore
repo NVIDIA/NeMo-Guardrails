@@ -26,3 +26,5 @@ eval_outputs
 /**/chitchat/user.co
 /**/banking/user.co
 .mypy_cache
+.python-version
+local_cache

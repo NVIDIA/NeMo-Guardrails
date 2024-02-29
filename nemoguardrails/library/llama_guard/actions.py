@@ -70,12 +70,13 @@ async def llama_guard_check_input(
             "user_input": user_input,
         },
     )
+    stop = llm_task_manager.get_stop_tokens(task=Task.LLAMA_GUARD_CHECK_INPUT)
 
     # Initialize the LLMCallInfo object
     llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_INPUT.value))
 
     with llm_params(llama_guard_llm, temperature=0.0):
-        result = await llm_call(llama_guard_llm, check_input_prompt)
+        result = await llm_call(llama_guard_llm, check_input_prompt, stop=stop)
 
     allowed, policy_violations = parse_llama_guard_response(result)
     return {"allowed": allowed, "policy_violations": policy_violations}
@@ -101,12 +102,13 @@ async def llama_guard_check_output(
             "bot_response": bot_response,
         },
     )
+    stop = llm_task_manager.get_stop_tokens(task=Task.LLAMA_GUARD_CHECK_OUTPUT)
 
     # Initialize the LLMCallInfo object
     llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_OUTPUT.value))
 
     with llm_params(llama_guard_llm, temperature=0.0):
-        result = await llm_call(llama_guard_llm, check_output_prompt)
+        result = await llm_call(llama_guard_llm, check_output_prompt, stop=stop)
 
     allowed, policy_violations = parse_llama_guard_response(result)
     return {"allowed": allowed, "policy_violations": policy_violations}

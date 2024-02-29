@@ -28,6 +28,7 @@ class EmbeddingsIndex:
 
     Attributes:
         embedding_size (int): The size of the embeddings.
+        cache_config (EmbeddingsCacheConfig): The cache configuration for the index.
 
     Methods:
         add_item(item: IndexItem) -> None: Adds a new item to the index.
@@ -38,6 +39,13 @@ class EmbeddingsIndex:
 
     @property
     def embedding_size(self):
+        raise NotImplementedError
+
+    @property
+    def cache_config(self):
+        raise NotImplementedError
+
+    async def _get_embeddings(self, texts: List[str]):
         raise NotImplementedError
 
     async def add_item(self, item: IndexItem):
@@ -56,12 +64,4 @@ class EmbeddingsIndex:
 
     async def search(self, text: str, max_results: int) -> List[IndexItem]:
         """Searches the index for the closest matches to the provided text."""
-        raise NotImplementedError()
-
-
-class EmbeddingModel:
-    """The embedding model is responsible for creating the embeddings."""
-
-    def encode(self, documents: List[str]) -> List[List[float]]:
-        """Encode the provided documents into embeddings."""
         raise NotImplementedError()

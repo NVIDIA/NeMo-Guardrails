@@ -31,7 +31,10 @@ log = logging.getLogger(__name__)
 
 class ActionDispatcher:
     def __init__(
-        self, load_all_actions: bool = True, config_path: Optional[str] = None
+        self,
+        load_all_actions: bool = True,
+        config_path: Optional[str] = None,
+        import_paths: Optional[List[str]] = None,
     ):
         """
         Initializes an actions dispatcher.
@@ -40,6 +43,8 @@ class ActionDispatcher:
                 'actions' folder both in the current working directory and in the package.
             config_path (str, optional): The path from which the configuration was loaded.
                 If there are actions at the specified path, it loads them as well.
+            import_paths (List[str], optional): Additional imported paths from which actions
+                should be loaded.
         """
         log.info("Initializing action dispatcher")
 
@@ -67,7 +72,14 @@ class ActionDispatcher:
             # Last, but not least, if there was a config path, we try to load actions
             # from there as well.
             if config_path:
-                self.load_actions_from_path(config_path)
+                config_path = config_path.split(",")
+                for path in config_path:
+                    self.load_actions_from_path(path)
+
+            # If there are any imported paths, we load the actions from there as well.
+            if import_paths:
+                for import_path in import_paths:
+                    self.load_actions_from_path(import_path)
 
         log.info(f"Registered Actions: {self._registered_actions}")
         log.info("Action dispatcher initialized")

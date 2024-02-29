@@ -30,6 +30,7 @@ class LLMStats:
             "total_tokens": 0,
             "total_prompt_tokens": 0,
             "total_completion_tokens": 0,
+            "latencies": [],
         }
 
     def inc(self, name: str, value: Union[float, int] = 1):
@@ -38,6 +39,9 @@ class LLMStats:
             self._stats[name] = 0
 
         self._stats[name] += value
+
+        if name == "total_time":
+            self._stats["latencies"].append(value)
 
     def get_stat(self, name):
         return self._stats[name]
@@ -51,13 +55,9 @@ class LLMStats:
     def __str__(self):
         return (
             f"{self._stats['total_calls']} total calls, "
-            f"{self._stats['total_time']} total time, "
+            f"{round(self._stats['total_time'], 2)} total time, "
             f"{self._stats['total_tokens']} total tokens, "
             f"{self._stats['total_prompt_tokens']} total prompt tokens, "
-            f"{self._stats['total_completion_tokens']} total completion tokens"
+            f"{self._stats['total_completion_tokens']} total completion tokens, "
+            f"{[round(x, 2) for x in self._stats['latencies']]} as latencies"
         )
-
-
-# Global stats object
-# TODO: make this per async context, otherwise, in the server setup it will be shared.
-llm_stats = LLMStats()

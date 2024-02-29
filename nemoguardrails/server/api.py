@@ -24,12 +24,17 @@ from typing import List, Optional
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from starlette import status
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.rails.llm.options import (
+    GenerationLog,
+    GenerationOptions,
+    GenerationResponse,
+)
 from nemoguardrails.server.datastore.datastore import DataStore
 from nemoguardrails.streaming import StreamingHandler
 
@@ -89,9 +94,20 @@ app.auto_reload = False
 # stop signal for observer
 app.stop_signal = False
 
+# Whether the server is pointed to a directory containing a single config.
+app.single_config_mode = False
+app.single_config_id = None
+
 
 class RequestBody(BaseModel):
-    config_id: str = Field(description="The id of the configuration to be used.")
+    config_id: Optional[str] = Field(
+        default=None, description="The id of the configuration to be used."
+    )
+    config_ids: Optional[List[str]] = Field(
+        default=None,
+        description="The list of configuration ids to be used. "
+        "If set, the configurations will be combined.",
+    )
     thread_id: Optional[str] = Field(
         default=None,
         description="The id of an existing thread to which the messages should be added.",
@@ -109,11 +125,33 @@ class RequestBody(BaseModel):
         "Tokens will be sent as data-only server-sent events as they become "
         "available, with the stream terminated by a data: [DONE] message.",
     )
+    options: Optional[GenerationOptions] = Field(
+        default=None, description="Additional options for controlling the generation."
+    )
+
+    @validator("config_ids", always=True)
+    def check_if_set(cls, v, values, **kwargs):
+        if v is not None and values.get("config_id") is not None:
+            raise ValueError("Only one of config_id or config_ids should be specified")
+        if v is None and values.get("config_id") is None:
+            raise ValueError("Either config_id or config_ids must be specified")
+        return v
 
 
 class ResponseBody(BaseModel):
     messages: List[dict] = Field(
         default=None, description="The new messages in the conversation"
+    )
+    llm_output: Optional[dict] = Field(
+        default=None,
+        description="Contains any additional output coming from the LLM.",
+    )
+    output_data: Optional[dict] = Field(
+        default=None,
+        description="The output data, i.e. a dict with the values corresponding to the `output_vars`.",
+    )
+    log: Optional[GenerationLog] = Field(
+        default=None, description="Additional logging information."
     )
 
 
@@ -123,6 +161,11 @@ class ResponseBody(BaseModel):
 )
 async def get_rails_configs():
     """Returns the list of available rails configurations."""
+
+    # In single-config mode, we return a single config.
+    if app.single_config_mode:
+        # And we use the name of the root folder as the id of the config.
+        return [{"id": app.single_config_id}]
 
     # We extract all folder names as config names
     config_ids = [
@@ -146,24 +189,50 @@ llm_rails_instances = {}
 llm_rails_events_history_cache = {}
 
 
-def _get_rails(config_id: str) -> LLMRails:
+def _generate_cache_key(config_ids: List[str]) -> str:
+    """Generates a cache key for the given config ids."""
+
+    return "-".join((config_ids))  # remove sorted
+
+
+def _get_rails(config_ids: List[str]) -> LLMRails:
     """Returns the rails instance for the given config id."""
 
-    if config_id in llm_rails_instances:
-        return llm_rails_instances[config_id]
+    # If we have a single config id, we just use it as the key
+    configs_cache_key = _generate_cache_key(config_ids)
 
-    # Construct the full path and make sure that it is relative to the server
-    # config path. Otherwise, reject.
-    full_path = os.path.normpath(os.path.join(app.rails_config_path, config_id))
-    if not full_path.startswith(app.rails_config_path):
-        raise Exception("Not allowed.")
+    if configs_cache_key in llm_rails_instances:
+        return llm_rails_instances[configs_cache_key]
 
-    rails_config = RailsConfig.from_path(full_path)
-    llm_rails = LLMRails(config=rails_config, verbose=True)
-    llm_rails_instances[config_id] = llm_rails
+    # In single-config mode, we only load the main config directory
+    if app.single_config_mode:
+        if config_ids != [app.single_config_id]:
+            raise ValueError(f"Invalid configuration ids: {config_ids}")
+
+        # We set this to an empty string so tha when joined with the root path, we
+        # get the same thing.
+        config_ids = [""]
+
+    full_llm_rails_config = None
+    for config_id in config_ids:
+        full_path = os.path.normpath(os.path.join(app.rails_config_path, config_id))
+        if not full_path.startswith(app.rails_config_path):
+            raise Exception("Not allowed.")
+
+        rails_config = RailsConfig.from_path(full_path)
+
+        if not full_llm_rails_config:
+            full_llm_rails_config = rails_config
+        else:
+            full_llm_rails_config = full_llm_rails_config + rails_config
+
+    llm_rails = LLMRails(config=full_llm_rails_config, verbose=True)
+    llm_rails_instances[configs_cache_key] = llm_rails
 
     # If we have a cache for the events, we restore it
-    llm_rails.events_history_cache = llm_rails_events_history_cache.get(config_id, {})
+    llm_rails.events_history_cache = llm_rails_events_history_cache.get(
+        configs_cache_key, {}
+    )
 
     return llm_rails
 
@@ -171,12 +240,15 @@ def _get_rails(config_id: str) -> LLMRails:
 @app.post(
     "/v1/chat/completions",
     response_model=ResponseBody,
+    response_model_exclude_none=True,
 )
 async def chat_completion(body: RequestBody, request: Request):
     """Chat completion for the provided conversation.
 
     TODO: add support for explicit state object.
     """
+    if not body.config_ids:
+        body.config_ids = [body.config_id]
     log.info("Got request for config %s", body.config_id)
     for logger in registered_loggers:
         asyncio.get_event_loop().create_task(
@@ -186,16 +258,16 @@ async def chat_completion(body: RequestBody, request: Request):
     # Save the request headers in a context variable.
     api_request_headers.set(request.headers)
 
-    config_id = body.config_id
+    config_ids = body.config_ids
     try:
-        llm_rails = _get_rails(config_id)
+        llm_rails = _get_rails(config_ids)
     except ValueError as ex:
         log.exception(ex)
         return {
             "messages": [
                 {
                     "role": "assistant",
-                    "content": f"Could not load the {config_id} guardrails configuration. "
+                    "content": f"Could not load the {config_ids} guardrails configuration. "
                     f"An internal error has occurred.",
                 }
             ]
@@ -243,7 +315,9 @@ async def chat_completion(body: RequestBody, request: Request):
             # Start the generation
             asyncio.create_task(
                 llm_rails.generate_async(
-                    messages=messages, streaming_handler=streaming_handler
+                    messages=messages,
+                    streaming_handler=streaming_handler,
+                    options=body.options,
                 )
             )
 
@@ -251,14 +325,30 @@ async def chat_completion(body: RequestBody, request: Request):
 
             return StreamingResponse(streaming_handler)
         else:
-            bot_message = await llm_rails.generate_async(messages=messages)
+            res = await llm_rails.generate_async(
+                messages=messages, options=body.options
+            )
+
+            if isinstance(res, GenerationResponse):
+                bot_message = res.response[0]
+            else:
+                assert isinstance(res, dict)
+                bot_message = res
 
             # If we're using threads, we also need to update the data before returning
             # the message.
             if body.thread_id:
                 await datastore.set(datastore_key, json.dumps(messages + [bot_message]))
 
-            return {"messages": [bot_message]}
+            result = {"messages": [bot_message]}
+
+            # If we have additional GenerationResponse fields, we return as well
+            if isinstance(res, GenerationResponse):
+                result["llm_output"] = res.llm_output
+                result["output_data"] = res.output_data
+                result["log"] = res.log
+
+            return result
 
     except Exception as ex:
         log.exception(ex)
@@ -306,17 +396,26 @@ async def startup_event():
         with open(challenges_files) as f:
             register_challenges(json.load(f))
 
-    # Finally, check if we have a config.py for the server configuration
-    filepath = os.path.join(app.rails_config_path, "config.py")
-    if os.path.exists(filepath):
-        filename = os.path.basename(filepath)
-        spec = importlib.util.spec_from_file_location(filename, filepath)
-        config_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(config_module)
+    # If there is a `config.yml` in the root `app.rails_config_path`, then
+    # that means we are in single config mode.
+    if os.path.exists(
+        os.path.join(app.rails_config_path, "config.yml")
+    ) or os.path.exists(os.path.join(app.rails_config_path, "config.yaml")):
+        app.single_config_mode = True
+        app.single_config_id = os.path.basename(app.rails_config_path)
+    else:
+        # If we're not in single-config mode, we check if we have a config.py for the
+        # server configuration.
+        filepath = os.path.join(app.rails_config_path, "config.py")
+        if os.path.exists(filepath):
+            filename = os.path.basename(filepath)
+            spec = importlib.util.spec_from_file_location(filename, filepath)
+            config_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(config_module)
 
-        # If there is an `init` function, we call it with the reference to the app.
-        if config_module is not None and hasattr(config_module, "init"):
-            config_module.init(app)
+            # If there is an `init` function, we call it with the reference to the app.
+            if config_module is not None and hasattr(config_module, "init"):
+                config_module.init(app)
 
     # Finally, we register the static frontend UI serving
 
@@ -394,10 +493,9 @@ def start_auto_reload_monitoring():
                             instance = llm_rails_instances[config_id]
                             del llm_rails_instances[config_id]
                             if instance:
+                                val = instance.events_history_cache
                                 # We save the events history cache, to restore it on the new instance
-                                llm_rails_events_history_cache[
-                                    config_id
-                                ] = instance.events_history_cache
+                                llm_rails_events_history_cache[config_id] = val
 
                             log.info(
                                 f"Configuration {config_id} has changed. Clearing cache."
@@ -424,19 +522,19 @@ def start_auto_reload_monitoring():
         os._exit(-1)
 
 
-# Register a nicer error message for 422 error
-def register_exception(app: FastAPI):
-    @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(
-        request: Request, exc: RequestValidationError
-    ):
-        exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
-        # or logger.error(f'{exc}')
-        log.error(request, exc_str)
-        content = {"status_code": 10422, "message": exc_str, "data": None}
-        return JSONResponse(
-            content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
-        )
-
-
-register_exception(app)
+# # Register a nicer error message for 422 error
+# def register_exception(app: FastAPI):
+#     @app.exception_handler(RequestValidationError)
+#     async def validation_exception_handler(
+#         request: Request, exc: RequestValidationError
+#     ):
+#         exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
+#         # or logger.error(f'{exc}')
+#         log.error(request, exc_str)
+#         content = {"status_code": 10422, "message": exc_str, "data": None}
+#         return JSONResponse(
+#             content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+#         )
+#
+#
+# register_exception(app)
