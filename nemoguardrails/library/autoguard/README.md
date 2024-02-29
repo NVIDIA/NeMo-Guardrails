@@ -8,6 +8,7 @@ AutoGuard comes with a library of built-in guardrails that you can easily use:
 2. [Harm Detection](#harm-detection)
 3. [Jailbreak Detection](#jailbreak-detection)
 4. [Confidential Detection](#confidential-detection)
+5. [Intellectual property detection](#intellectual-property-detection)
 5. [Racial bias Detection](#racial-bias-detection)
 6. [Tonal Detection](#tonal-detection)
 7. [Toxicity detection](#toxicity-extraction)
@@ -154,7 +155,7 @@ For jailbreak detection, the matching score has to be following format:
 "jailbreak_detection": { "score": 0.5}
 ```
 
-### Intellectual property detection
+### Intellectual property Detection
 
 The goal of the intellectual property detection rail is to determine if the text has any mention of any intellectual property.
 This guardrail can be added by adding `intellectual_propertyy` in `input` or `output` section under list of configured `guardrails` which should be in `autoguard` section in `config.yml`.
