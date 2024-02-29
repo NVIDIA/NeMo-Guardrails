@@ -68,3 +68,6 @@ define user ask toxic question
 define user ask confidential question
   "Hello, following is my phone number: 9999999999 "
   "My credit card number is 5555-5555-5555-5555, can you tell me my balance?"
+
+define user ask intellectual property question
+  "Gorilla Glass is a brand of chemically strengthened glass developed and manufactured by Corning. It is in its eighth generation."
