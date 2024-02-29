@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import asyncio
+
 import json
 import logging
 import os
@@ -33,6 +33,7 @@ GUARDRAIL_RESPONSE_TEXT = {
     "tonal_detection": "Negative tone in text has been detected by AutoGuard; Sorry, can't process.",
     "racial_bias_detection": "Racial bias in text has been detected by AutoGuard; Sorry, can't process.",
     "jailbreak_detection": "Jailbreak attempt has been detected by AutoGuard; Sorry, can't process.",
+    "intellectual_property": "Intellectual property has been detected by AutoGuard; Sorry, can't process.",
     "factcheck": "Factcheck violation in text has been detected by AutoGuard; Sorry, can't process.",
 }
 
