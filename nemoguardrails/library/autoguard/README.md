@@ -41,9 +41,10 @@ rails:
           - harm_detection
           - text_toxicity_extraction
           - jailbreak_detection
+          - intellectual_property
         matching_scores:
           {"gender_bias_detection": {"score": 0.5}, "harm_detection": {"score": 0.5},
-          "jailbreak_detection": {"score": 0.5}, "confidential_detection": {"No Confidential": 0.5,
+          "jailbreak_detection": {"score": 0.5},"intellectual_property": {"score": 0.5}, "confidential_detection": {"No Confidential": 0.5,
                                                                              "Legal Documents": 0.5,
                                                                              "Business Strategies": 0.5,
                                                                              "Medical Information": 0.5,
@@ -66,9 +67,10 @@ rails:
           - harm_detection
           - text_toxicity_extraction
           - jailbreak_detection
+          - intellectual_property
         matching_scores:
           { "gender_bias_detection": { "score": 0.5 }, "harm_detection": { "score": 0.5 },
-            "jailbreak_detection": { "score": 0.5 }, "confidential_detection": { "No Confidential": 0.5,
+            "jailbreak_detection": { "score": 0.5 }, "intellectual_property": {"score": 0.5}, "confidential_detection": { "No Confidential": 0.5,
                                                                                  "Legal Documents": 0.5,
                                                                                  "Business Strategies": 0.5,
                                                                                  "Medical Information": 0.5,
@@ -150,6 +152,17 @@ For jailbreak detection, the matching score has to be following format:
 
 ```yaml
 "jailbreak_detection": { "score": 0.5}
+```
+
+### Intellectual property detection
+
+The goal of the intellectual property detection rail is to determine if the text has any mention of any intellectual property.
+This guardrail can be added by adding `intellectual_propertyy` in `input` or `output` section under list of configured `guardrails` which should be in `autoguard` section in `config.yml`.
+
+For intellectual property detection, the matching score has to be following format:
+
+```yaml
+"intellectual_property": { "score": 0.5}
 ```
 
 ### Confidential detection
