@@ -13,17 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""NeMo Guardrails Toolkit."""
-import warnings
+from typing import Optional
 
-from . import patch_asyncio
-from .rails import LLMRails, RailsConfig
+from nemoguardrails.actions import action
 
-patch_asyncio.apply()
 
-# Ignore a warning message from torch.
-warnings.filterwarnings(
-    "ignore", category=UserWarning, message="TypedStorage is deprecated"
-)
+@action(is_system_action=True)
+async def check_blocked_terms(context: Optional[dict] = None):
+    bot_response = context.get("bot_message")
 
-__version__ = "0.8.0"
+    # A quick hard-coded list of proprietary terms. You can also read this from a file.
+    proprietary_terms = ["proprietary", "proprietary1", "proprietary2"]
+
+    for term in proprietary_terms:
+        if term in bot_response.lower():
+            return True
+
+    return False

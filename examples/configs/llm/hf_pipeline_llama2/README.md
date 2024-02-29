@@ -9,7 +9,7 @@ Before running this rail, you need to set the environment via export HF_TOKEN="Y
 
 Please install additional package via :
 
-`pip install accelerate transformers==4.33.1 --upgrade`
+`pip install accelerate transformers==4.33.1 sentencepiece --upgrade`
 
 
 The `meta-llama/Llama-2-13b-chat-hf` LLM model has been tested on the topical rails evaluation sets, results are available [here](../../../../nemoguardrails/eval/README.md).

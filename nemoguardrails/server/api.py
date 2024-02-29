@@ -30,6 +30,11 @@ from starlette.responses import JSONResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.rails.llm.options import (
+    GenerationLog,
+    GenerationOptions,
+    GenerationResponse,
+)
 from nemoguardrails.server.datastore.datastore import DataStore
 from nemoguardrails.streaming import StreamingHandler
 
@@ -89,6 +94,10 @@ app.auto_reload = False
 # stop signal for observer
 app.stop_signal = False
 
+# Whether the server is pointed to a directory containing a single config.
+app.single_config_mode = False
+app.single_config_id = None
+
 
 class RequestBody(BaseModel):
     config_id: Optional[str] = Field(
@@ -116,6 +125,9 @@ class RequestBody(BaseModel):
         "Tokens will be sent as data-only server-sent events as they become "
         "available, with the stream terminated by a data: [DONE] message.",
     )
+    options: Optional[GenerationOptions] = Field(
+        default=None, description="Additional options for controlling the generation."
+    )
 
     @validator("config_ids", always=True)
     def check_if_set(cls, v, values, **kwargs):
@@ -130,6 +142,17 @@ class ResponseBody(BaseModel):
     messages: List[dict] = Field(
         default=None, description="The new messages in the conversation"
     )
+    llm_output: Optional[dict] = Field(
+        default=None,
+        description="Contains any additional output coming from the LLM.",
+    )
+    output_data: Optional[dict] = Field(
+        default=None,
+        description="The output data, i.e. a dict with the values corresponding to the `output_vars`.",
+    )
+    log: Optional[GenerationLog] = Field(
+        default=None, description="Additional logging information."
+    )
 
 
 @app.get(
@@ -138,6 +161,11 @@ class ResponseBody(BaseModel):
 )
 async def get_rails_configs():
     """Returns the list of available rails configurations."""
+
+    # In single-config mode, we return a single config.
+    if app.single_config_mode:
+        # And we use the name of the root folder as the id of the config.
+        return [{"id": app.single_config_id}]
 
     # We extract all folder names as config names
     config_ids = [
@@ -176,15 +204,22 @@ def _get_rails(config_ids: List[str]) -> LLMRails:
     if configs_cache_key in llm_rails_instances:
         return llm_rails_instances[configs_cache_key]
 
+    # In single-config mode, we only load the main config directory
+    if app.single_config_mode:
+        if config_ids != [app.single_config_id]:
+            raise ValueError(f"Invalid configuration ids: {config_ids}")
+
+        # We set this to an empty string so tha when joined with the root path, we
+        # get the same thing.
+        config_ids = [""]
+
     full_llm_rails_config = None
     for config_id in config_ids:
         full_path = os.path.normpath(os.path.join(app.rails_config_path, config_id))
         if not full_path.startswith(app.rails_config_path):
             raise Exception("Not allowed.")
 
-        rails_config = RailsConfig.from_path(
-            os.path.join(app.rails_config_path, config_id)
-        )
+        rails_config = RailsConfig.from_path(full_path)
 
         if not full_llm_rails_config:
             full_llm_rails_config = rails_config
@@ -205,6 +240,7 @@ def _get_rails(config_ids: List[str]) -> LLMRails:
 @app.post(
     "/v1/chat/completions",
     response_model=ResponseBody,
+    response_model_exclude_none=True,
 )
 async def chat_completion(body: RequestBody, request: Request):
     """Chat completion for the provided conversation.
@@ -279,7 +315,9 @@ async def chat_completion(body: RequestBody, request: Request):
             # Start the generation
             asyncio.create_task(
                 llm_rails.generate_async(
-                    messages=messages, streaming_handler=streaming_handler
+                    messages=messages,
+                    streaming_handler=streaming_handler,
+                    options=body.options,
                 )
             )
 
@@ -287,14 +325,30 @@ async def chat_completion(body: RequestBody, request: Request):
 
             return StreamingResponse(streaming_handler)
         else:
-            bot_message = await llm_rails.generate_async(messages=messages)
+            res = await llm_rails.generate_async(
+                messages=messages, options=body.options
+            )
+
+            if isinstance(res, GenerationResponse):
+                bot_message = res.response[0]
+            else:
+                assert isinstance(res, dict)
+                bot_message = res
 
             # If we're using threads, we also need to update the data before returning
             # the message.
             if body.thread_id:
                 await datastore.set(datastore_key, json.dumps(messages + [bot_message]))
 
-            return {"messages": [bot_message]}
+            result = {"messages": [bot_message]}
+
+            # If we have additional GenerationResponse fields, we return as well
+            if isinstance(res, GenerationResponse):
+                result["llm_output"] = res.llm_output
+                result["output_data"] = res.output_data
+                result["log"] = res.log
+
+            return result
 
     except Exception as ex:
         log.exception(ex)
@@ -342,17 +396,26 @@ async def startup_event():
         with open(challenges_files) as f:
             register_challenges(json.load(f))
 
-    # Finally, check if we have a config.py for the server configuration
-    filepath = os.path.join(app.rails_config_path, "config.py")
-    if os.path.exists(filepath):
-        filename = os.path.basename(filepath)
-        spec = importlib.util.spec_from_file_location(filename, filepath)
-        config_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(config_module)
+    # If there is a `config.yml` in the root `app.rails_config_path`, then
+    # that means we are in single config mode.
+    if os.path.exists(
+        os.path.join(app.rails_config_path, "config.yml")
+    ) or os.path.exists(os.path.join(app.rails_config_path, "config.yaml")):
+        app.single_config_mode = True
+        app.single_config_id = os.path.basename(app.rails_config_path)
+    else:
+        # If we're not in single-config mode, we check if we have a config.py for the
+        # server configuration.
+        filepath = os.path.join(app.rails_config_path, "config.py")
+        if os.path.exists(filepath):
+            filename = os.path.basename(filepath)
+            spec = importlib.util.spec_from_file_location(filename, filepath)
+            config_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(config_module)
 
-        # If there is an `init` function, we call it with the reference to the app.
-        if config_module is not None and hasattr(config_module, "init"):
-            config_module.init(app)
+            # If there is an `init` function, we call it with the reference to the app.
+            if config_module is not None and hasattr(config_module, "init"):
+                config_module.init(app)
 
     # Finally, we register the static frontend UI serving
 
@@ -430,10 +493,9 @@ def start_auto_reload_monitoring():
                             instance = llm_rails_instances[config_id]
                             del llm_rails_instances[config_id]
                             if instance:
+                                val = instance.events_history_cache
                                 # We save the events history cache, to restore it on the new instance
-                                llm_rails_events_history_cache[
-                                    config_id
-                                ] = instance.events_history_cache
+                                llm_rails_events_history_cache[config_id] = val
 
                             log.info(
                                 f"Configuration {config_id} has changed. Clearing cache."
