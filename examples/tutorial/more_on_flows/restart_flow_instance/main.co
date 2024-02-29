@@ -1,0 +1,16 @@
+flow main
+    activate manage user presence
+    bot say "Welcome"
+    match RestartEvent()
+
+flow manage user presence
+    user said "Hi"
+    bot say "Hello again"
+    user said "Bye"
+    bot say "Goodbye"
+
+flow bot say $text
+  await UtteranceBotAction(script=$text)
+
+flow user said $text
+  match UtteranceUserAction.Finished(final_transcript=$text)
