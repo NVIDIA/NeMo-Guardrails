@@ -29,11 +29,11 @@ log = logging.getLogger(__name__)
 
 GUARDRAIL_RESPONSE_TEXT = {
     "confidential_detection": "Confidential Information violation",
-    "gender_bias_detection": "Gender bias",
+    "gender_bias_detection": "Stereotypical bias",
     "harm_detection": "Potential harm to human",
     "text_toxicity_extraction": "Toxicity in text",
     "tonal_detection": "Negative tone",
-    "racial_bias_detection": "Racial bias",
+    "racial_bias_detection": "Stereotypical bias",
     "jailbreak_detection": "Jailbreak attempt",
     "intellectual_property": "Intellectual property",
 }
