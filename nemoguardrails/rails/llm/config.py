@@ -333,17 +333,9 @@ class JailbreakDetectionConfig(BaseModel):
 class AutoGuardOptions(BaseModel):
     """List of guardrails that are activated"""
 
-    guardrails: List[str] = Field(
-        default_factory=list,
-        description="The guardrails that are activated",
-    )
-    contextual_rules: List[List[str]] = Field(
-        default_factory=list,
-        description="The list of contextual rules that would dictate whether there will be redaction or not",
-    )
-    matching_scores: Dict[str, Dict[str, float]] = Field(
+    guardrails_config: Dict[str, Any] = Field(
         default_factory=dict,
-        description="The thresholds which determine whether a guardrail is activated or not",
+        description="The guardrails configuration that is passed to the AutoGuard endpoint",
     )
 
 
@@ -351,10 +343,6 @@ class AutoGuardRailConfig(BaseModel):
     """Configuration data for the AutoGuard API"""
 
     parameters: Dict[str, Any] = Field(default_factory=dict)
-    entities: List[str] = Field(
-        default_factory=list,
-        description="The list of entities that should be redacted",
-    )
     input: AutoGuardOptions = Field(
         default_factory=AutoGuardOptions,
         description="Input configuration for Autoguard",

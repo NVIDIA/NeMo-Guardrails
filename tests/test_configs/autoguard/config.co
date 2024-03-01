@@ -71,3 +71,12 @@ define user ask confidential question
 
 define user ask intellectual property question
   "Gorilla Glass is a brand of chemically strengthened glass developed and manufactured by Corning. It is in its eighth generation."
+
+define user ask pii question
+  "My name is Bob and my email is bob@gmail.com. Im from Toronto and I love rock music. My SIN number 76543235 was stolen by Tom Smith. In other words, Mr. Smith stole Bob's identity. Mr. Dylan's checking account is 5432123, and his username is dylan123"
+  "Alice recently set up her new application. She uses the following credentials:Username: aliceSmith01, Password: Al!c3$ecretP@ss, API Key: AKIAIOSFODNN7EXAMPLE1Bob. Bob, working on a separate project, logged into his dashboard with: Username: bobJohnson02, Password: B0b$P@ssw0rd2U$e, API Key: AKIAIOSFODNN7EXAMPLE2."
+  "Restaurant XYZ - Date: 09/06/2023. 2x Pasta Alfredo - $40, 1x Tiramisu - $8, Total: $48. Paid via VISA ending in 4321."
+
+define flow
+  user ask pii question
+  bot provide response
