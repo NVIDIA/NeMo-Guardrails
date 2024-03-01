@@ -1,0 +1,75 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo
+rails:
+    config:
+        autoguard:
+            parameters:
+                endpoint: "https://nvidia.autoalign.ai/guardrail"
+            input:
+                guardrails_config:
+                    {
+                      "pii_fast": {
+                          "enabled_types": [
+                              "[BANK ACCOUNT NUMBER]",
+                              "[CREDIT CARD NUMBER]",
+                              "[DATE OF BIRTH]",
+                              "[DRIVER LICENSE NUMBER]",
+                              "[EMAIL ADDRESS]",
+                              "[IP ADDRESS]",
+                              "[ORGANIZATION]",
+                              "[PASSPORT NUMBER]",
+                              "[PASSWORD]",
+                              "[PERSON NAME]",
+                              "[PHONE NUMBER]",
+                              "[SOCIAL SECURITY NUMBER]",
+                              "[SECRET_KEY]",
+                              "[TRANSACTION_ID]"
+                          ],
+                        },
+                        "confidential_detection": {},
+                        "gender_bias_detection": {},
+                        "harm_detection": {},
+                        "text_toxicity_extraction": {},
+                        "racial_bias_detection": {},
+                        "tonal_detection": {"matching_scores": {"Negative Tones": 0.8}},
+                        "jailbreak_detection": {},
+                        "intellectual_property": {}
+                    }
+            output:
+                guardrails_config:
+                  {
+                      "pii_fast": {
+                          "enabled_types": [
+                              "[BANK ACCOUNT NUMBER]",
+                              "[CREDIT CARD NUMBER]",
+                              "[DATE OF BIRTH]",
+                              "[DRIVER LICENSE NUMBER]",
+                              "[EMAIL ADDRESS]",
+                              "[IP ADDRESS]",
+                              "[ORGANIZATION]",
+                              "[PASSPORT NUMBER]",
+                              "[PASSWORD]",
+                              "[PERSON NAME]",
+                              "[PHONE NUMBER]",
+                              "[SOCIAL SECURITY NUMBER]",
+                              "[SECRET_KEY]",
+                              "[TRANSACTION_ID]"
+                          ],
+                      },
+                      "confidential_detection": {},
+                      "gender_bias_detection": {},
+                      "harm_detection": {},
+                      "text_toxicity_extraction": {},
+                      "racial_bias_detection": {},
+                      "tonal_detection":{"matching_scores": {"Negative Tones": 0.8}},
+                      "jailbreak_detection": {},
+                      "intellectual_property": {}
+                  }
+    input:
+        flows:
+            - call autoguard input
+    output:
+        flows:
+            - call autoguard output

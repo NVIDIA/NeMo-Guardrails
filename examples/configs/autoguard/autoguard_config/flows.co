@@ -7,14 +7,10 @@ define subflow call autoguard output
         bot refuse to respond input autoguard
     if $output_result[0] == True
         bot refuse to respond output autoguard
-    else
-        bot respond autoguard
+        stop
 
 define bot refuse to respond input autoguard
   "$input_result[1] (User Input)"
 
 define bot refuse to respond output autoguard
   "$output_result[1] (LLM Response)"
-
-define bot respond autoguard
-  "$bot_message"
