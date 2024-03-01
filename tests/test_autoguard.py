@@ -308,7 +308,7 @@ async def test_toxic_input():
 
 @pytest.mark.asyncio
 async def test_pii_input():
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_pii"))
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
 
     chat = TestChat(
         config,
@@ -324,7 +324,7 @@ async def test_pii_input():
         ],
     )
 
-    async def mock_autoguard_pii_input_api(context: Optional[dict] = None, **kwargs):
+    async def mock_autoguard_input_api(context: Optional[dict] = None, **kwargs):
         query = context.get("user_message")
         if (
             query
@@ -342,7 +342,7 @@ async def test_pii_input():
         else:
             return False, None
 
-    chat.app.register_action(mock_autoguard_pii_input_api, "autoguard_pii_input_api")
+    chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
 
     (
         chat
@@ -361,7 +361,7 @@ async def test_pii_input():
 
 @pytest.mark.asyncio
 async def test_pii_contextual_input():
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_pii"))
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
 
     chat = TestChat(
         config,
@@ -378,7 +378,7 @@ async def test_pii_contextual_input():
         ],
     )
 
-    async def mock_autoguard_pii_input_api(context: Optional[dict] = None, **kwargs):
+    async def mock_autoguard_input_api(context: Optional[dict] = None, **kwargs):
         query = context.get("user_message")
         if (
             query
@@ -397,7 +397,7 @@ async def test_pii_contextual_input():
         else:
             return False, None
 
-    chat.app.register_action(mock_autoguard_pii_input_api, "autoguard_pii_input_api")
+    chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
 
     (
         chat
