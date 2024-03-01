@@ -14,4 +14,3 @@ define bot refuse to respond input autoguard
 
 define bot refuse to respond output autoguard
   "$output_result[1] (LLM Response)"
-
