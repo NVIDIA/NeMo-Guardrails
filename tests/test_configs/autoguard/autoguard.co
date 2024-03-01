@@ -1,15 +1,17 @@
 define subflow call autoguard input
-  $result = execute autoguard_input_api
-  if $result[0] == True
-    bot refuse to respond autoguard
-    stop
-
+    $input_result = execute autoguard_input_api
+    if $input_result[0] == True
+        bot refuse to respond input autoguard
+        stop
 
 define subflow call autoguard output
-  $result = execute autoguard_output_api
-  if $result[0] == True
-    bot refuse to respond autoguard
-    stop
+    $output_result = execute autoguard_output_api
+    if $output_result[0] == True
+        bot refuse to respond output autoguard
+        stop
 
-define bot refuse to respond autoguard
-  "$result[1]"
+define bot refuse to respond input autoguard
+  "$input_result[1]"
+
+define bot refuse to respond output autoguard
+  "$output_result[1]"

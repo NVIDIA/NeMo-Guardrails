@@ -1,8 +1,0 @@
-define subflow call autoguard pii
-    $pii_result = execute autoguard_pii_input_api
-    if $pii_result[0] == True
-      bot autoguard pii response
-      stop
-
-define bot autoguard pii response
-    "$pii_result[1]"

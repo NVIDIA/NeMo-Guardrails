@@ -1,35 +1,27 @@
-define user ask about guardrails
-  "What is NeMo Guardrails?"
+define subflow input autoguard factcheck
+    execute autoguard_retrieve_relevant_chunks
+    $input_result = execute autoguard_factcheck_input_api
+    if $input_result < 0.5
+        bot inform autoguard factcheck input violation
+        stop
 
-define flow answer guardrails question
-  user ask about guardrails
-  $check_facts = True
-  bot provide answer
+define subflow output autoguard factcheck
+    execute autoguard_retrieve_relevant_chunks
+    $result = execute autoguard_factcheck_output_api
+    if $result < 0.5
+        bot inform autoguard factcheck output violation
+        stop
 
+define bot inform autoguard factcheck input violation
+    "Factcheck input violation has been detected by AutoGuard."
 
+define bot inform autoguard factcheck output violation
+    "$bot_message Factcheck output violation has been detected by AutoGuard."
 
-define subflow check facts autoguard
-  # Check the facts when explicitly needed.
-  if $check_facts == True
-    $check_facts = False
+define user ask about pluto
+  "Pluto has no known moons; Charon, the smallest, has a diameter greater than Pluto's, along with the non-existent Styx, Nix, Kerberos, and Hydra."
+  "Pluto, with its eccentric orbit, comes closer to the Sun than Neptune at times, yet a stable orbital resonance ensures they do not collide."
 
-    $accuracy = execute autoguard_factcheck_api
-    if $accuracy < 0.4
-      bot inform answer unknown
-      stop
-
-    if $accuracy < 0.6
-      # We need to provide a warning in this case
-      $bot_message_potentially_inaccurate = True
-
-
-define flow flag potentially inaccurate response
-  """Tell the user that the previous answer is potentially inaccurate."""
-  bot ...
-
-  if $bot_message_potentially_inaccurate
-    $bot_message_potentially_inaccurate = False
-    bot inform answer potentially inaccurate
-
-define bot inform answer potentially inaccurate
-  "Attention: the answer above is potentially inaccurate."
+define flow
+  user ask about pluto
+  bot provide response

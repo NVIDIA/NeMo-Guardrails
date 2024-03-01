@@ -304,3 +304,112 @@ async def test_toxic_input():
     await chat.bot_async(
         "Gender bias, Toxicity in text, Negative tone has been detected by AutoGuard; Sorry, can't process."
     )
+
+
+@pytest.mark.asyncio
+async def test_pii_input():
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
+
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "  ask pii question",
+            "My name is Bob and my email is bob@gmail.com. Im from Toronto and I love rock music. My SIN number "
+            "76543235 was stolen by Tom Smith. In other words, Mr. Smith stole Bob's identity. Mr. Dylan's checking "
+            "account is 5432123, and his username is dylan123",
+            "PII redacted text: My name is [PERSON NAME] and my email is [EMAIL ADDRESS]. Im from [LOCATION] and I "
+            "love rock music. My SIN number [SOCIAL SECURITY NUMBER] was stolen by [PERSON NAME]. In other words, "
+            "[PERSON NAME] stole [PERSON NAME]'s identity. [PERSON NAME]'s checking account is [BANK ACCOUNT NUMBER], "
+            "and his username is [USERNAME]",
+        ],
+    )
+
+    async def mock_autoguard_input_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("user_message")
+        if (
+            query
+            == "My name is Bob and my email is bob@gmail.com. Im from Toronto and I love rock music. My SIN number "
+            "76543235 was stolen by Tom Smith. In other words, Mr. Smith stole Bob's identity. Mr. Dylan's "
+            "checking account is 5432123, and his username is dylan123"
+        ):
+            return (
+                True,
+                "PII redacted text: My name is [PERSON NAME] and my email is [EMAIL ADDRESS]. Im from [LOCATION] and "
+                "I love rock music. My SIN number [SOCIAL SECURITY NUMBER] was stolen by [PERSON NAME]. In other "
+                "words, [PERSON NAME] stole [PERSON NAME]'s identity. [PERSON NAME]'s checking account is [BANK "
+                "ACCOUNT NUMBER], and his username is [USERNAME]",
+            )
+        else:
+            return False, None
+
+    chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
+
+    (
+        chat
+        >> "My name is Bob and my email is bob@gmail.com. Im from Toronto and I love rock music. My SIN number "
+        "76543235 was stolen by Tom Smith. In other words, Mr. Smith stole Bob's identity. Mr. Dylan's checking "
+        "account is 5432123, and his username is dylan123"
+    )
+
+    await chat.bot_async(
+        "PII redacted text: My name is [PERSON NAME] and my email is [EMAIL ADDRESS]. Im from [LOCATION] and I love "
+        "rock music. My SIN number [SOCIAL SECURITY NUMBER] was stolen by [PERSON NAME]. In other words, "
+        "[PERSON NAME] stole [PERSON NAME]'s identity. [PERSON NAME]'s checking account is [BANK ACCOUNT NUMBER], "
+        "and his username is [USERNAME]"
+    )
+
+
+@pytest.mark.asyncio
+async def test_pii_contextual_input():
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard"))
+
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "  ask pii question",
+            "Alice recently set up her new application. She uses the following credentials:Username: aliceSmith01, "
+            "Password: Al!c3$ecretP@ss, API Key: AKIAIOSFODNN7EXAMPLE1Bob. Bob, working on a separate project, "
+            "logged into his dashboard with: Username: bobJohnson02, Password: B0b$P@ssw0rd2U$e, "
+            "API Key: AKIAIOSFODNN7EXAMPLE2.",
+            "PII redacted text: Alice recently set up her new application. She uses the following "
+            "credentials:Username: aliceSmith01, Password: Al!c3$ecretP@ss, API Key: AKIAIOSFODNN7EXAMPLE1Bob. Bob, "
+            "working on a separate project, logged into his dashboard with: Username: bobJohnson02, Password: "
+            "B0b$P@ssw0rd2U$e, API Key: AKIAIOSFODNN7EXAMPLE2.",
+        ],
+    )
+
+    async def mock_autoguard_input_api(context: Optional[dict] = None, **kwargs):
+        query = context.get("user_message")
+        if (
+            query
+            == "Alice recently set up her new application. She uses the following credentials:Username: aliceSmith01, "
+            "Password: Al!c3$ecretP@ss, API Key: AKIAIOSFODNN7EXAMPLE1Bob. Bob, working on a separate project, "
+            "logged into his dashboard with: Username: bobJohnson02, Password: B0b$P@ssw0rd2U$e, "
+            "API Key: AKIAIOSFODNN7EXAMPLE2."
+        ):
+            return (
+                True,
+                "PII redacted text: Alice recently set up her new application. She uses the following "
+                "credentials:Username: aliceSmith01, Password: Al!c3$ecretP@ss, API Key: AKIAIOSFODNN7EXAMPLE1Bob. "
+                "Bob, working on a separate project, logged into his dashboard with: Username: bobJohnson02, "
+                "Password: B0b$P@ssw0rd2U$e, API Key: AKIAIOSFODNN7EXAMPLE2.",
+            )
+        else:
+            return False, None
+
+    chat.app.register_action(mock_autoguard_input_api, "autoguard_input_api")
+
+    (
+        chat
+        >> "Alice recently set up her new application. She uses the following credentials:Username: aliceSmith01, "
+        "Password: Al!c3$ecretP@ss, API Key: AKIAIOSFODNN7EXAMPLE1Bob. Bob, working on a separate project, "
+        "logged into his dashboard with: Username: bobJohnson02, Password: B0b$P@ssw0rd2U$e, "
+        "API Key: AKIAIOSFODNN7EXAMPLE2."
+    )
+
+    await chat.bot_async(
+        "PII redacted text: Alice recently set up her new application. She uses the following credentials:Username: "
+        "aliceSmith01, Password: Al!c3$ecretP@ss, API Key: AKIAIOSFODNN7EXAMPLE1Bob. Bob, working on a separate "
+        "project, logged into his dashboard with: Username: bobJohnson02, Password: B0b$P@ssw0rd2U$e, "
+        "API Key: AKIAIOSFODNN7EXAMPLE2."
+    )
