@@ -1,0 +1,193 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo
+rails:
+    config:
+        autoguard:
+            parameters:
+                endpoint: "https://nvidia.autoalign.ai/guardrail"
+            input:
+                guardrails_config:
+                    {
+                      "pii_fast": {
+                          "enabled_types": [
+                              "[BANK ACCOUNT NUMBER]",
+                              "[CREDIT CARD NUMBER]",
+                              "[DATE OF BIRTH]",
+                              "[DRIVER LICENSE NUMBER]",
+                              "[EMAIL ADDRESS]",
+                              "[IP ADDRESS]",
+                              "[ORGANIZATION]",
+                              "[PASSPORT NUMBER]",
+                              "[PASSWORD]",
+                              "[PERSON NAME]",
+                              "[PHONE NUMBER]",
+                              "[SOCIAL SECURITY NUMBER]",
+                              "[SECRET_KEY]",
+                              "[TRANSACTION_ID]"
+                          ],
+                          "matching_scores": {
+                              "[BANK ACCOUNT NUMBER]": 0.5,
+                              "[CREDIT CARD NUMBER]": 0.5,
+                              "[DATE OF BIRTH]": 0.5,
+                              "[DRIVER LICENSE NUMBER]": 0.5,
+                              "[EMAIL ADDRESS]": 0.5,
+                              "[IP ADDRESS]": 0.5,
+                              "[ORGANIZATION]": 0.5,
+                              "[PASSPORT NUMBER]": 0.5,
+                              "[PASSWORD]": 0.5,
+                              "[PERSON NAME]": 0.5,
+                              "[PHONE NUMBER]": 0.5,
+                              "[SOCIAL SECURITY NUMBER]": 0.5,
+                              "[SECRET_KEY]": 0.5,
+                              "[TRANSACTION_ID]": 0.5,
+                          }
+                        },
+                        "confidential_detection": {
+                              "matching_scores": {
+                                  "No Confidential": 0.5,
+                                  "Legal Documents": 0.5,
+                                  "Business Strategies": 0.5,
+                                  "Medical Information": 0.5,
+                                  "Professional Records": 0.5
+                              }
+                        },
+                        "gender_bias_detection": {
+                              "matching_scores": {
+                                  "score": 0.5
+                              }
+                        },
+                        "harm_detection": {
+                              "matching_scores": {
+                                  "score": 0.9
+                              }
+                        },
+                        "text_toxicity_extraction": {
+                              "matching_scores": {
+                                  "score": 0.5
+                              }
+                        },
+                        "racial_bias_detection": {
+                              "matching_scores": {
+                                  "No Racial Bias": 0.5,
+                                  "Racial Bias": 0.5,
+                                  "Historical Racial Event": 0.5
+                              }
+                        },
+                        "tonal_detection": {
+                              "matching_scores": {
+                                  "Negative Tones": 0.8,
+                                  "Neutral Tones": 0.5,
+                                  "Professional Tone": 0.5,
+                                  "Thoughtful Tones": 0.5,
+                                  "Positive Tones": 0.5,
+                                  "Cautious Tones": 0.5
+                              }
+                        },
+                        "jailbreak_detection": {
+                              "matching_scores": {
+                                  "score": 0.5
+                              }
+                        },
+                        "intellectual_property": {
+                              "matching_scores": {
+                                  "score": 0.5
+                              }
+                        }
+                    }
+            output:
+                guardrails_config:
+                  {
+                      "pii_fast": {
+                          "enabled_types": [
+                              "[BANK ACCOUNT NUMBER]",
+                              "[CREDIT CARD NUMBER]",
+                              "[DATE OF BIRTH]",
+                              "[DRIVER LICENSE NUMBER]",
+                              "[EMAIL ADDRESS]",
+                              "[IP ADDRESS]",
+                              "[ORGANIZATION]",
+                              "[PASSPORT NUMBER]",
+                              "[PASSWORD]",
+                              "[PERSON NAME]",
+                              "[PHONE NUMBER]",
+                              "[SOCIAL SECURITY NUMBER]",
+                              "[SECRET_KEY]",
+                              "[TRANSACTION_ID]"
+                          ],
+                          "matching_scores": {
+                              "[BANK ACCOUNT NUMBER]": 0.5,
+                              "[CREDIT CARD NUMBER]": 0.5,
+                              "[DATE OF BIRTH]": 0.5,
+                              "[DRIVER LICENSE NUMBER]": 0.5,
+                              "[EMAIL ADDRESS]": 0.5,
+                              "[IP ADDRESS]": 0.5,
+                              "[ORGANIZATION]": 0.5,
+                              "[PASSPORT NUMBER]": 0.5,
+                              "[PASSWORD]": 0.5,
+                              "[PERSON NAME]": 0.5,
+                              "[PHONE NUMBER]": 0.5,
+                              "[SOCIAL SECURITY NUMBER]": 0.5,
+                              "[SECRET_KEY]": 0.5,
+                              "[TRANSACTION_ID]": 0.5,
+                          }
+                      },
+                      "confidential_detection": {
+                          "matching_scores": {
+                              "No Confidential": 0.5,
+                              "Legal Documents": 0.5,
+                              "Business Strategies": 0.5,
+                              "Medical Information": 0.5,
+                              "Professional Records": 0.5
+                          }
+                      },
+                      "gender_bias_detection": {
+                          "matching_scores": {
+                              "score": 0.9
+                          }
+                      },
+                      "harm_detection": {
+                          "matching_scores": {
+                              "score": 0.5
+                          }
+                      },
+                      "text_toxicity_extraction": {
+                          "matching_scores": {
+                              "score": 0.5
+                          }
+                      },
+                      "racial_bias_detection": {
+                          "matching_scores": {
+                              "No Racial Bias": 0.5,
+                              "Racial Bias": 0.5,
+                              "Historical Racial Event": 0.5
+                          }
+                      },
+                      "tonal_detection": {
+                          "matching_scores": {
+                              "Negative Tones": 0.8,
+                              "Neutral Tones": 0.5,
+                              "Professional Tone": 0.5,
+                              "Thoughtful Tones": 0.5,
+                              "Positive Tones": 0.5,
+                              "Cautious Tones": 0.5
+                          }
+                      },
+                      "jailbreak_detection": {
+                          "matching_scores": {
+                              "score": 0.5
+                          }
+                      },
+                      "intellectual_property": {
+                          "matching_scores": {
+                              "score": 0.5
+                          }
+                      }
+                  }
+    input:
+        flows:
+            - call autoguard input
+    output:
+        flows:
+            - call autoguard output
