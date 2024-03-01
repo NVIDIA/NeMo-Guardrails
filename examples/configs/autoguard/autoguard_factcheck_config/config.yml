@@ -1,0 +1,15 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo
+rails:
+  config:
+    autoguard:
+      parameters:
+        fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
+  input:
+    flows:
+      - input autoguard factcheck
+  output:
+    flows:
+      - output autoguard factcheck
