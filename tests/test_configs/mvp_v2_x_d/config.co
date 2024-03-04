@@ -121,7 +121,7 @@ flow fallback
 
   start_new_flow_instance:
 
-  $intent = await GenerateUserIntentAction(user_utterance=$event.arguments.final_transcript)
+  $intent = await GenerateUserIntentAction(user_utterance=$event.final_transcript)
   $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
 
   if $exists
@@ -143,13 +143,13 @@ flow handle undefined flow starts
 
   match UnhandledEvent(event="StartFlow") as $event
 
-  $exists = await CheckValidFlowExistsAction(flow_id=$event.arguments.flow_id)
+  $exists = await CheckValidFlowExistsAction(flow_id=$event.flow_id)
 
   start_new_flow_instance:
 
   if not $exists
-    $flow_id = $event.arguments.flow_id
-    log "'handle undefined flow starts' -> generate new flow '{{$event.arguments.flow_id}}'"
+    $flow_id = $event.flow_id
+    log "'handle undefined flow starts' -> generate new flow '{{$event.flow_id}}'"
     $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
     await AddFlowsAction(config=$flow_source)
     send StartFlow(flow_id=$flow_id)

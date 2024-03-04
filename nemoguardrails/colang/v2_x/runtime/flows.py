@@ -107,6 +107,17 @@ class Event:
         )
         return new_event
 
+    # Expose all event parameters as attributes of the event
+    def __getattr__(self, name):
+        if (
+            name not in self.__dict__
+            and "arguments" in self.__dict__
+            and name in self.__dict__["arguments"]
+        ):
+            return self.__dict__["arguments"][name]
+        else:
+            return object.__getattribute__(self, "params")[name]
+
 
 @dataclass
 class InternalEvent(Event):

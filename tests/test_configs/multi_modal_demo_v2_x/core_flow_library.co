@@ -8,38 +8,38 @@
 flow user said $text -> $transcript
   # meta: user action
   match UtteranceUserAction.Finished(final_transcript=$text) as $event
-  $transcript = $event.arguments.final_transcript
+  $transcript = $event.final_transcript
 
 flow user saying $text -> $transcript
   match UtteranceUserAction.TranscriptUpdated(interim_transcript=r"(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$") as $event
-  $transcript = $event.arguments.interim_transcript
+  $transcript = $event.interim_transcript
 
 flow user started saying something
   match UtteranceUserAction.Started() as $event
 
 flow user typing $text -> $inputs
   match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*({{$text}})((\s*\w+\s*){0,2})\W*$"}]) as $event
-  $inputs = $event.arguments.interim_inputs
+  $inputs = $event.interim_inputs
 
 flow user said something -> $transcript
   match UtteranceUserAction.Finished() as $event
-  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
-  $transcript = $event.arguments.final_transcript
+  send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id="user said something")
+  $transcript = $event.final_transcript
 
 flow user said something unexpected -> $transcript
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
-  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=None)
-  $transcript = $event.arguments.final_transcript
+  send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id=None)
+  $transcript = $event.final_transcript
 
 flow user saying something -> $transcript
   match UtteranceUserAction.TranscriptUpdated() as $event
-  #send UserActionLog(flow_id="user saying", parameter=$event.arguments.interim_transcript, intent_flow_id="user saying something")
-  $transcript = $event.arguments.interim_transcript
+  #send UserActionLog(flow_id="user saying", parameter=$event.interim_transcript, intent_flow_id="user saying something")
+  $transcript = $event.interim_transcript
 
 flow user selected choice $choice_id -> $choice
   # meta: user action
   match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
-  $choice = $event.arguments.current_choice
+  $choice = $event.current_choice
 
 flow user has selected choice $choice_id
   global $choice_selection_state
@@ -48,7 +48,7 @@ flow user has selected choice $choice_id
 
 flow unhandled user intent -> $intent
   match UnhandledEvent(event="FinishFlow", flow_id=r"^user ", loop_ids={$loop_id}) as $event
-  $intent = $event.arguments.flow_id
+  $intent = $event.flow_id
 
 flow user was silent $time_s
   """Triggers when user was silent for $time_s seconds."""
@@ -93,7 +93,7 @@ flow user interrupted bot talking $sentence_length=15
       log "Bot started talking..."
     while True
       when user saying something as $user_saying_ref
-        $transcript = $user_saying_ref.context.event.arguments.interim_transcript
+        $transcript = $user_saying_ref.context.event.interim_transcript
         log "User saying something: {{$transcript}}"
       orwhen user said something as $user_said_ref
         $transcript = $user_said_ref.context.transcript
@@ -122,45 +122,45 @@ flow bot said $text
 
 flow bot said something -> $text
   match FlowFinished(flow_id="_bot_say") as $event
-  $text = $event.arguments.text
+  $text = $event.text
 
 flow bot informed something -> $text
   match FlowFinished(flow_id="bot inform") as $event
-  $text = $event.arguments.text
+  $text = $event.text
 
 flow bot asked something -> $text
   match FlowFinished(flow_id="bot ask") as $event
-  $text = $event.arguments.text
+  $text = $event.text
 
 flow bot expressed something -> $text
   match FlowFinished(flow_id="bot express") as $event
-  $text = $event.arguments.text
+  $text = $event.text
 
 flow bot responded something -> $text
   match FlowFinished(flow_id="bot respond") as $event
-  $text = $event.arguments.text
+  $text = $event.text
 
 flow bot clarified something -> $text
   match FlowFinished(flow_id="bot clarify") as $event
-  $text = $event.arguments.text
+  $text = $event.text
 
 flow bot suggested something -> $text
   match FlowFinished(flow_id="bot suggest") as $event
-  $text = $event.arguments.text
+  $text = $event.text
 
 flow bot started gesture $gesture
   match FlowStarted(flow_id="bot gesture", gesture=$gesture) as $event
 
 flow bot started a gesture -> $gesture
   match FlowStarted(flow_id="bot gesture") as $event
-  $gesture = $event.arguments.gesture
+  $gesture = $event.gesture
 
 flow bot started posture $posture
   match FlowStarted(flow_id="bot posture", posture=$posture) as $event
 
 flow bot started a posture -> $posture
   match FlowStarted(flow_id="bot posture") as $event
-  $posture = $event.arguments.posture
+  $posture = $event.posture
 
 flow bot started an action -> $action
   # meta: bot action
@@ -290,8 +290,8 @@ flow track visual choice selection state
   when VisualChoiceSceneAction.Started()
     $choice_selection_state = None
   orwhen VisualChoiceSceneAction.ChoiceUpdated() as $event
-    if "{{len($event.arguments.current_choice) > 0}}" == "True"
-      $choice_selection_state = $event.arguments.current_choice[0]
+    if "{{len($event.current_choice) > 0}}" == "True"
+      $choice_selection_state = $event.current_choice[0]
     else
       $choice_selection_state = None
   orwhen VisualChoiceSceneAction.Finished()
@@ -327,23 +327,23 @@ flow catch colang errors
   """A flow to catch any runtime Colang errors"""
   # meta: loop_id=catch_colang_errors
   match ColangError() as $event
-  print "Colang error: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
+  print "Colang error: {{$event.error_type}} - {{escape($event.error)}}"
   bot say "Excuse me, what did you say?"
 
 flow catch undefined flows
   """A flow to catch the start of undefined flows."""
   priority 0.1
   match UnhandledEvent(event="StartFlow") as $event
-  print "Undefined flow: '{{$event.arguments.flow_id}}' {{$event.arguments.loop_ids}}"
+  print "Undefined flow: '{{$event.flow_id}}' {{$event.loop_ids}}"
   bot say "Excuse me, what did you say?"
   # We need to abort the flow that sent the FlowStart event since it might be waiting for it
-  send StopFlow(flow_instance_uid=$event.arguments.source_flow_instance_uid)
+  send StopFlow(flow_instance_uid=$event.source_flow_instance_uid)
 
 flow catch unexpected user utterance
   """A flow to catch unhandled user utterances."""
   priority 0.1
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
-  bot say "Warning: Unexpected user utterance '{{$event.arguments.final_transcript}}'"
+  bot say "Warning: Unexpected user utterance '{{$event.final_transcript}}'"
 
 flow repeating timer $timer_id $interval_s
   """Repeating timer."""
@@ -391,13 +391,13 @@ flow trigger user intent for unhandled user utterance
   global $bot_talking_state
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   if $bot_talking_state == False
-    $transcript = $event.arguments.final_transcript
+    $transcript = $event.final_transcript
     log "trigger user intent for unhandled user utterance: {{$transcript}}"
     $action = 'user said "{{$transcript}}"'
     $intent = await derive user intent from user action $action 20
 
   # We need to log the user action
-  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id=$intent)
+  send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id=$intent)
   # We need to add the generated user intent to the intent log
   send UserIntentLog(flow_id=$intent, parameter=None)
 
@@ -447,25 +447,25 @@ flow handle undefined flow starts
 
   start_new_flow_instance:
 
-  if "{{search('^user ',$event.arguments.flow_id)}}" == "True"
+  if "{{search('^user ',$event.flow_id)}}" == "True"
 
     # We have an undefined user intent, so we just fake it to be started by this fallback flow
-    send FlowStarted(flow_id=$event.arguments.flow_id, flow_start_uid=$event.arguments.flow_start_uid)
+    send FlowStarted(flow_id=$event.flow_id, flow_start_uid=$event.arguments.flow_start_uid)
     # Once this fallback flow receives the user intent it will finish and therefore also trigger the original matcher
-    match FlowFinished(flow_id=$event.arguments.flow_id)
+    match FlowFinished(flow_id=$event.flow_id)
 
   else
 
     # We have an undefined bot intent, let's generate a new flow for it
 
-    $flow_source = await GenerateFlowFromNameAction(name=$event.arguments.flow_id)
+    $flow_source = await GenerateFlowFromNameAction(name=$event.flow_id)
 
     await AddFlowsAction(config=$flow_source)
     $new_flow_start_uid = "{{uid()}}"
-    send StartFlow(flow_id=$event.arguments.flow_id, flow_start_uid=$new_flow_start_uid)
-    match FlowStarted(flow_id=$event.arguments.flow_id, flow_start_uid=$new_flow_start_uid) as $event_ref
+    send StartFlow(flow_id=$event.flow_id, flow_start_uid=$new_flow_start_uid)
+    match FlowStarted(flow_id=$event.flow_id, flow_start_uid=$new_flow_start_uid) as $event_ref
     match $event_ref.flow.Finished()
-    await RemoveFlowsAction(flow_ids=[$event.arguments.flow_id])
+    await RemoveFlowsAction(flow_ids=[$event.flow_id])
 
 flow execute llm instruction$instructions
   """This will create a new flow based on the provided instructions and start it."""

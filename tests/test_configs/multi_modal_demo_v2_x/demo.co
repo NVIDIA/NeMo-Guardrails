@@ -20,7 +20,7 @@ flow reaction bot question repetition for user silence $time_s $max_repetitions=
 
       start GenerateValueAction(var_name="new_question_variation", instructions="Make a different variation of the following question: '{{$question}}'. Never repeat the same question (see the logs above) and respond only with the question text and nothing else.") as $llm_request
       when $llm_request.Finished() as $llm_request_result
-        $prompt = $llm_request_result.arguments.return_value
+        $prompt = $llm_request_result.return_value
       orwhen user started saying something
         continue
 
