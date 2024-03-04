@@ -5,20 +5,20 @@ define subflow call autoguard output
   $pre_rail_bot_message = $bot_message
   $output_result = execute autoguard_output_api
   if $input_result[0] == True
-    bot respond autoguard input
+    bot refuse to respond autoguard input
   if $output_result[0] == True
-    bot respond autoguard output
+    bot refuse to respond autoguard output
     stop
   else
     bot respond llm
     stop
 
 
-define bot respond autoguard input
+define bot refuse to respond autoguard input
   "User Input: $input_result[1]"
 
 define bot respond llm
   "$pre_rail_bot_message"
 
-define bot respond autoguard output
+define bot refuse to respond autoguard output
   "LLM Response: $output_result[1]"
