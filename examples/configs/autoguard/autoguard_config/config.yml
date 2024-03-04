@@ -2,6 +2,8 @@ models:
   - type: main
     engine: openai
     model: gpt-3.5-turbo
+    parameters:
+      temperature: 0.0
 rails:
     config:
         autoguard:
@@ -33,7 +35,6 @@ rails:
                         "harm_detection": {},
                         "text_toxicity_extraction": {},
                         "racial_bias_detection": {},
-                        "tonal_detection": {"matching_scores": {"Negative Tones": 0.8}},
                         "jailbreak_detection": {},
                         "intellectual_property": {}
                     }
@@ -63,7 +64,6 @@ rails:
                       "harm_detection": {},
                       "text_toxicity_extraction": {},
                       "racial_bias_detection": {},
-                      "tonal_detection":{"matching_scores": {"Negative Tones": 0.8}},
                       "jailbreak_detection": {},
                       "intellectual_property": {}
                   }
