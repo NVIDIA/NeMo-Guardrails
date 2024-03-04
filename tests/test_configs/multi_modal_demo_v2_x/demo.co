@@ -197,7 +197,7 @@ flow check limitations with user
 
 
 flow showcase selector
-  activate track visual choice selection state
+  activate tracking of visual choice selection state
 
   $showcase_selection_ui = None
   global $bot_talking_state
@@ -278,12 +278,12 @@ flow showcase selector
 
 flow main
   # meta: exclude from llm
-  #activate catch unexpected user utterance
+  #activate catching of unexpected user utterance
   activate ignored_utterance_action_bugfix
-  activate catch undefined flows
-  activate catch colang errors
+  activate catching of undefined flows
+  activate catching of colang errors
   activate poll llm request response 1.0
-  activate track bot talking state
+  activate tracking of bot talking state
   #activate faq
 
   start scene show textual information $title="Welcome to the Tech Demo of Colang 2.0" $text="" $header_image="https://blogs.nvidia.com/wp-content/uploads/2023/04/NeMo-Guardrails-KV-x1280.jpg" as $welcome_ui

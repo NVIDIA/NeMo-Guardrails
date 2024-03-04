@@ -256,7 +256,7 @@ flow bot suggest $text
 # DON'T CHANGE! Currently, hard-wired with LLM prompt generation
 # -----------------------------------
 
-flow track bot talking state
+flow tracking of bot talking state
   # meta: loop_id=state_tracking
   global $bot_talking_state
   if $user_talking_state == None
@@ -266,7 +266,7 @@ flow track bot talking state
   await bot said something
   $bot_talking_state = False
 
-flow track user talking state
+flow tracking of user talking state
   # meta: loop_id=state_tracking
   global $user_talking_state
   if $user_talking_state == None
@@ -276,7 +276,7 @@ flow track user talking state
   await user said something
   $user_talking_state = False
 
-flow track unhandled user intent state
+flow tracking of unhandled user intent state
   # meta: loop_id=state_tracking
   global $user_intent_state
   when unhandled user intent as $flow
@@ -284,7 +284,7 @@ flow track unhandled user intent state
   orwhen FlowFinished(flow_id=r"^user ") as $event
     $unhandled_user_intent_state = None
 
-flow track visual choice selection state
+flow tracking of visual choice selection state
   # meta: loop_id=state_tracking
   global $choice_selection_state
   when VisualChoiceSceneAction.Started()
@@ -323,15 +323,15 @@ flow wait $time_s $timer_id="wait_timer_{{uid()}}"
   # meta: loop_id=NEW
   await TimerBotAction(timer_name=$timer_id, duration=$time_s)
 
-flow catch colang errors
-  """A flow to catch any runtime Colang errors"""
+flow catching of colang errors
+  """A flow to catching of any runtime Colang errors"""
   # meta: loop_id=catch_colang_errors
   match ColangError() as $event
   print "Colang error: {{$event.error_type}} - {{escape($event.error)}}"
   bot say "Excuse me, what did you say?"
 
-flow catch undefined flows
-  """A flow to catch the start of undefined flows."""
+flow catching of undefined flows
+  """A flow to catching of the start of undefined flows."""
   priority 0.1
   match UnhandledEvent(event="StartFlow") as $event
   print "Undefined flow: '{{$event.flow_id}}' {{$event.loop_ids}}"
@@ -339,8 +339,8 @@ flow catch undefined flows
   # We need to abort the flow that sent the FlowStart event since it might be waiting for it
   send StopFlow(flow_instance_uid=$event.source_flow_instance_uid)
 
-flow catch unexpected user utterance
-  """A flow to catch unhandled user utterances."""
+flow catching of unexpected user utterance
+  """A flow to catching of unhandled user utterances."""
   priority 0.1
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
   bot say "Warning: Unexpected user utterance '{{$event.final_transcript}}'"
