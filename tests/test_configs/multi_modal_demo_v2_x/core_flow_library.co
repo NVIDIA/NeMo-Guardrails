@@ -327,14 +327,14 @@ flow catch colang errors
   """A flow to catch any runtime Colang errors"""
   # meta: loop_id=catch_colang_errors
   match ColangError() as $event
-  log "Colang error: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
+  print "Colang error: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}"
   bot say "Excuse me, what did you say?"
 
 flow catch undefined flows
   """A flow to catch the start of undefined flows."""
   priority 0.1
   match UnhandledEvent(event="StartFlow") as $event
-  log "Undefined flow: '{{$event.arguments.flow_id}}' {{$event.arguments.loop_ids}}"
+  print "Undefined flow: '{{$event.arguments.flow_id}}' {{$event.arguments.loop_ids}}"
   bot say "Excuse me, what did you say?"
   # We need to abort the flow that sent the FlowStart event since it might be waiting for it
   send StopFlow(flow_instance_uid=$event.arguments.source_flow_instance_uid)
@@ -363,11 +363,9 @@ flow interruption handling bot talking $mode="inform"
   user interrupted bot talking
   if $mode == "interrupt"
     finish all bot actions
-    log "Bot talking stopped"
   elif $mode == "inform"
     start VisualInformationSceneAction(title="Please wait with talking!", support_prompts=["You should only talk after the avatar."], content=[])
     wait 3.0
-    log "Bot informed user not to talk"
   elif $mode == "ignore"
     log "Bot ignored user interruption"
 
@@ -418,7 +416,7 @@ flow generate interaction continuation -> $flow_name
   if $exists == False
     $flows = await AddFlowsAction(config=$flow_info.body)
     if "{{len($flows)}}" == "0"
-      log "LLM generated flow parsing failed!"
+      print "LLM generated flow parsing failed!"
       bot say "Sorry, what did you say?"
       return None
 
