@@ -148,7 +148,7 @@ async def autoguard_infer(
             if len(guardrails_triggered) > 0:
                 processed_response = process_autoguard_output(guardrails_triggered)
                 return [True] + processed_response
-    return False, None
+    return [False, "", ""]
 
 
 async def autoguard_factcheck_infer(
