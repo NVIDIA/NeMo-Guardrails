@@ -374,7 +374,7 @@ flow catching colang error
   """A flow to catching of any runtime Colang errors"""
   # meta: loop_id=catch_colang_errors
   match ColangError() as $event
-  print "Colang error: {{$event.error_type}} - {{escape($event.error)}}"
+  log "Colang error: {{$event.type}} - {{escape($event.error)}}"
   bot say "Excuse me, what did you say?"
 
 flow catching start of undefined flows

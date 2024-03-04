@@ -434,7 +434,7 @@ def test_match_colang_error_event():
     content = """
     flow catch colang errors
       match ColangError() as $event
-      await UtteranceBotAction(script="Warning: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}")
+      await UtteranceBotAction(script="Warning: {{$event.arguments.type}} - {{escape($event.arguments.error)}}")
 
     flow a
       match UtteranceUserAction.Finished(final_transcript="go") as $event
@@ -465,7 +465,7 @@ def test_match_colang_error_event():
         new_event = Event(
             name="ColangError",
             arguments={
-                "error_type": str(type(ex).__name__),
+                "type": str(type(ex).__name__),
                 "error": str(ex),
             },
         )

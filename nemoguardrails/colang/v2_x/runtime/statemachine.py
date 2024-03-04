@@ -825,7 +825,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
             colang_error_event = Event(
                 name="ColangError",
                 arguments={
-                    "error_type": str(type(e).__name__),
+                    "type": str(type(e).__name__),
                     "error": str(e),
                 },
             )

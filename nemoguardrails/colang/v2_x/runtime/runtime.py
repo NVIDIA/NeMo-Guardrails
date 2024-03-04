@@ -468,7 +468,7 @@ class RuntimeV2_x(Runtime):
                         new_event = Event(
                             name="ColangError",
                             arguments={
-                                "error_type": str(type(e).__name__),
+                                "type": str(type(e).__name__),
                                 "error": str(e),
                             },
                         )
