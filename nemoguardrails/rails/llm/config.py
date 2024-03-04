@@ -438,6 +438,7 @@ def _join_config(dest_config: dict, additional_config: dict):
             "actions_server_url",
             "sensitive_data_detection",
             "embedding_search_provider",
+            "import_paths",
         }
     )
 
