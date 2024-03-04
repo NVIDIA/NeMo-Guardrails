@@ -5,10 +5,13 @@ define flow call autoguard input
     stop
 
 define flow call autoguard output
+  $pre_rail_bot_message = $bot_message
   $output_result = execute autoguard_output_api
   if $output_result[0] == True
     bot refuse to respond autoguard output
     stop
+  else
+    bot respond to question
 
 
 define bot refuse to respond autoguard input
@@ -16,3 +19,6 @@ define bot refuse to respond autoguard input
 
 define bot refuse to respond autoguard output
   "LLM Response: $output_result[1]"
+
+define bot respond to question
+  "LLM Response: $pre_rail_bot_message"
