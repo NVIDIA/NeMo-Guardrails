@@ -94,9 +94,10 @@ def process_autoguard_output(responses: List[Any]):
                     "response": [GUARDRAIL_RESPONSE_TEXT[response["task"]], suffix],
                 }
             elif response["task"] == "pii_fast":
+                start_index = len("PII redacted text: ")
                 response_dict["pii_fast"] = {
                     "guarded": True,
-                    "response": response["response"],
+                    "response": response["response"][start_index:],
                 }
             else:
                 prefixes += [GUARDRAIL_RESPONSE_TEXT[response["task"]]]
