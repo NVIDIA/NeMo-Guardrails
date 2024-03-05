@@ -108,9 +108,12 @@ def process_autoguard_output(responses: List[Any]):
         else:
             response_dict[response["task"]] = {"guarded": False, "response": ""}
 
-    response_dict["combined_response"] = (
-        ", ".join(prefixes) + " has been detected by AutoGuard; Sorry, can't process."
-    )
+    response_dict["combined_response"] = ""
+    if len(prefixes) > 0:
+        response_dict["combined_response"] = (
+            ", ".join(prefixes)
+            + " has been detected by AutoGuard; Sorry, can't process."
+        )
     return response_dict
 
 
@@ -134,7 +137,7 @@ async def autoguard_infer(
             config[task].update(task_config[task])
     request_body = {"prompt": text, "config": config}
 
-    guardrails_triggered = []
+    guardrails_configured = []
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
@@ -151,11 +154,9 @@ async def autoguard_infer(
                 line_text = line.strip()
                 if len(line_text) > 0:
                     resp = json.loads(line_text)
-                    guardrails_triggered.append(resp)
-            if len(guardrails_triggered) > 0:
-                processed_response = process_autoguard_output(guardrails_triggered)
-                return processed_response
-    return dict()
+                    guardrails_configured.append(resp)
+            processed_response = process_autoguard_output(guardrails_configured)
+    return processed_response
 
 
 async def autoguard_factcheck_infer(
