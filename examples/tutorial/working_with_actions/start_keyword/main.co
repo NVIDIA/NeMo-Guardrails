@@ -3,3 +3,4 @@ flow main
     start UtteranceBotAction(script="Hello") as $ref_action
     match $ref_action.Finished()
     start GestureBotAction(gesture="Wave")
+    match RestartEvent()
