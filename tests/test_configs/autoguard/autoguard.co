@@ -1,17 +1,42 @@
-define subflow call autoguard input
-    $input_result = execute autoguard_input_api
-    if $input_result[0] == True
-        bot refuse to respond input autoguard
-        stop
+define flow call autoguard input
+  $input_result = execute autoguard_input_api
 
-define subflow call autoguard output
-    $output_result = execute autoguard_output_api
-    if $output_result[0] == True
-        bot refuse to respond output autoguard
-        stop
+  if $input_result["pii_fast"]["guarded"]
+    $pii_response_input = $input_result['pii_fast']['response']
+    bot respond pii input
+    stop
+  if $input_result["guardrails_triggered"]
+    $autoguard_input_response = $input_result['combined_response']
+    bot refuse to respond autoguard input
+    stop
 
-define bot refuse to respond input autoguard
-  "$input_result[1]"
+define flow call autoguard output
+  $pre_rail_bot_message = $bot_message
+  $output_result = execute autoguard_output_api
 
-define bot refuse to respond output autoguard
-  "$output_result[1]"
+  if $output_result["pii_fast"]["guarded"]
+    $pii_response_output = $output_result['pii_fast']['response']
+    bot respond pii output
+    stop
+  if $output_result["guardrails_triggered"]
+    $autoguard_output_response = $output_result['combined_response']
+    bot refuse to respond autoguard output
+    stop
+  else
+    bot respond to question
+
+
+define bot respond pii input
+  "$pii_response_input"
+
+define bot respond pii output
+  "$pii_response_output"
+
+define bot refuse to respond autoguard input
+  "User Input: $autoguard_input_response"
+
+define bot refuse to respond autoguard output
+  "LLM Response: $autoguard_output_response"
+
+define bot respond to question
+  "LLM Response: $pre_rail_bot_message"
