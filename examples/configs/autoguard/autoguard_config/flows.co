@@ -14,10 +14,11 @@ define flow call autoguard output
     $pii_response_input = $input_result['pii_fast']['response']
     bot respond pii input
 
+
   if $output_result["pii_fast"]["guarded"]
     $pii_response_output = $output_result['pii_fast']['response']
     bot respond pii output
-    stop
+
   if $output_result["guardrails_triggered"]
     $autoguard_output_response = $output_result['combined_response']
     bot refuse to respond autoguard output
@@ -27,10 +28,10 @@ define flow call autoguard output
 
 
 define bot respond pii input
-  "$pii_response_input"
+  "User Input: $pii_response_input"
 
 define bot respond pii output
-  "$pii_response_output"
+  "LLM Response: $pii_response_output"
 
 define bot refuse to respond autoguard input
   "User Input: $autoguard_input_response"
