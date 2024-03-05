@@ -16,8 +16,14 @@
 """Demo script."""
 import asyncio
 import logging
+from typing import Optional
+
+from langchain_core.language_models import BaseLLM
+from langchain_core.runnables import RunnableConfig
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.actions import action
+from nemoguardrails.context import streaming_handler_var
 from nemoguardrails.streaming import StreamingHandler
 
 logging.basicConfig(level=logging.INFO)
@@ -78,7 +84,70 @@ async def demo_hf_pipeline():
         # Or do something else with the token
 
 
+async def demo_streaming_from_custom_action():
+    """Demo of using the streaming of chunks from custom actions."""
+    config = RailsConfig.from_content(
+        yaml_content="""
+            models:
+              - type: main
+                engine: openai
+                model: gpt-4
+
+            # We're not interested in the user message canonical forms, since we
+            # are only using a generic flow with `user ...`. So, we compute it purely
+            # based on the embedding, without any additional LLM call.
+            rails:
+                dialog:
+                    user_messages:
+                        embeddings_only: True
+
+            streaming: True
+        """,
+        colang_content="""
+            # We need to have at least on canonical form to enable dialog rails.
+            define user ask question
+                "..."
+
+            define flow
+                user ...
+                # Here we call the custom action which will
+                $result = execute call_llm(user_query=$user_message)
+
+                # In this case, we also return the result as the final message.
+                # This is optional.
+                bot $result
+        """,
+    )
+    app = LLMRails(config, verbose=True)
+
+    @action(is_system_action=True)
+    async def call_llm(user_query: str, llm: Optional[BaseLLM]) -> str:
+        call_config = RunnableConfig(callbacks=[streaming_handler_var.get()])
+        response = await llm.ainvoke(user_query, config=call_config)
+        return response.content
+
+    app.register_action(call_llm)
+
+    history = [{"role": "user", "content": "Write a short paragraph about France."}]
+
+    streaming_handler = StreamingHandler()
+    streaming_handler_var.set(streaming_handler)
+
+    async def process_tokens():
+        async for chunk in streaming_handler:
+            print(f"CHUNK: {chunk}")
+            # Or do something else with the token
+
+    asyncio.create_task(process_tokens())
+
+    result = await app.generate_async(
+        messages=history, streaming_handler=streaming_handler
+    )
+    print(result)
+
+
 if __name__ == "__main__":
     asyncio.run(demo_1())
     asyncio.run(demo_2())
     # asyncio.run(demo_hf_pipeline())
+    asyncio.run(demo_streaming_from_custom_action())
