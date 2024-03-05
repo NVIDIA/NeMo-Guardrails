@@ -272,33 +272,58 @@ The config for the guardrails has to be defined separately for both input and ou
 The colang file has to be in the following format:
 
 ```colang
-define subflow call autoguard input
-    $input_result = execute autoguard_input_api
+define flow call autoguard input
+  $input_result = execute autoguard_input_api
+  if $input_result["pii_fast"]["guarded"]
+    $pii_response_input = $input_result['pii_fast']['response']
+    bot respond pii input
+    stop
+  if $input_result["guardrails_triggered"]
+    $autoguard_input_response = $input_result['combined_response']
+    bot refuse to respond autoguard input
+    stop
 
-define subflow call autoguard output
-    $output_result = execute autoguard_output_api
-    if $input_result[0] == True
-        bot refuse to respond input autoguard
-    if $output_result[0] == True
-        bot refuse to respond output autoguard
-    else
-        bot respond autoguard
+define flow call autoguard output
+  $pre_rail_bot_message = $bot_message
+  $output_result = execute autoguard_output_api
+  if $output_result["pii_fast"]["guarded"]
+    $pii_response_output = $output_result['pii_fast']['response']
+    bot respond pii output
+    stop
+  if $output_result["guardrails_triggered"]
+    $autoguard_output_response = $output_result['combined_response']
+    bot refuse to respond autoguard output
+    stop
+  else
+    bot respond to question
 
-define bot refuse to respond input autoguard
-  "$input_result[1]"
 
-define bot refuse to respond output autoguard
-  "$output_result[1]"
+define bot respond pii input
+  "$pii_response_input"
 
-define bot respond autoguard
-  "$bot_message"
+define bot respond pii output
+  "$pii_response_output"
+
+define bot refuse to respond autoguard input
+  "User Input: $autoguard_input_response"
+
+define bot refuse to respond autoguard output
+  "LLM Response: $autoguard_output_response"
+
+define bot respond to question
+  "LLM Response: $pre_rail_bot_message"
+
 ```
 
-The result obtained from `execute autoguard_input_api` or `execute autoguard_output_api` consists of 3 parts,
-the first part is bool flag which will provide information whether any guardrail got triggered or not, the second part
-is output string of the guardrail response which will provide information regarding which guardrails
-got triggered and the third part consists of a list of toxic words that were extracted, if the `text_toxicity_extraction`
-was configured, otherwise an empty string.
+The result obtained from `execute autoguard_input_api` or `execute autoguard_output_api` is a dictionary,
+where the keys are the guardrail names (there are some additional keys which we will describe later) and
+values are again a dictionary with `guarded` and `response` keys. The value of `guarded` key is a bool which
+tells us whether the guardrail got triggered or not and value of `response` contains the AutoGuard response.
+
+Now coming to the additional keys, one of the key `guardrails_triggered` whose value is a bool which tells
+us whether any guardrail apart from PII got triggered or not. Another key is `combined_response` whose value
+provides a combined guardrail message for all the guardrails that got triggered.
+
 
 ### Gender bias detection
 
@@ -416,26 +441,56 @@ For text toxicity detection, the matching score has to be following format:
 Can extract toxic phrases by changing the colang file a bit:
 
 ```colang
-define subflow call autoguard input
-    $input_result = execute autoguard_input_api
+define flow call autoguard input
+  $input_result = execute autoguard_input_api
 
-define subflow call autoguard output
-    $output_result = execute autoguard_output_api
-    if $input_result[0] == True
-        bot refuse to respond input autoguard
-    if $output_result[0] == True
-        bot refuse to respond output autoguard
-    else
-        bot respond autoguard
+  $toxic_phrases_input = ""
+  if $input_result['text_toxicity_extraction']['guarded']
+    $toxic_phrases_input = $input_result['text_toxicity_extraction']['response'][1]
+  if $input_result["pii_fast"]["guarded"]
+    $pii_response_input = $input_result['pii_fast']['response']
+    bot respond pii input
+    stop
+  if $input_result["guardrails_triggered"]
+    $autoguard_input_response = $input_result['combined_response']
+    bot refuse to respond autoguard input
+    stop
 
-define bot refuse to respond input autoguard
-  "$input_result[1] $input_result[2]"
+define flow call autoguard output
+  $pre_rail_bot_message = $bot_message
+  $output_result = execute autoguard_output_api
 
-define bot refuse to respond output autoguard
-  "$output_result[1] $output_result[2]"
+  $toxic_phrases_output = ""
 
-define bot respond autoguard
-  "$bot_message"
+  if $output_result['text_toxicity_extraction']['guarded']
+    $toxic_phrases_output = $output_result['text_toxicity_extraction']['response'][1]
+
+  if $output_result["pii_fast"]["guarded"]
+    $pii_response_output = $output_result['pii_fast']['response']
+    bot respond pii output
+    stop
+  if $output_result["guardrails_triggered"]
+    $autoguard_output_response = $output_result['combined_response']
+    bot refuse to respond autoguard output
+    stop
+  else
+    bot respond to question
+
+
+define bot respond pii input
+  "$pii_response_input"
+
+define bot respond pii output
+  "$pii_response_output"
+
+define bot refuse to respond autoguard input
+  "User Input: $autoguard_input_response $toxic_phrases_input"
+
+define bot refuse to respond autoguard output
+  "LLM Response: $autoguard_output_response $toxic_phrases_output"
+
+define bot respond to question
+  "LLM Response: $pre_rail_bot_message"
 ```
 
 
