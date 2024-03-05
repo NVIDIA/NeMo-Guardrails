@@ -1,9 +1,6 @@
 define flow call autoguard input
   $input_result = execute autoguard_input_api
 
-  if $input_result["pii_fast"]["guarded"]
-    $pii_response_input = $input_result['pii_fast']['response']
-    bot respond pii input
   if $input_result["guardrails_triggered"]
     $autoguard_input_response = $input_result['combined_response']
     bot refuse to respond autoguard input
@@ -12,6 +9,10 @@ define flow call autoguard input
 define flow call autoguard output
   $pre_rail_bot_message = $bot_message
   $output_result = execute autoguard_output_api
+
+  if $input_result["pii_fast"]["guarded"]
+    $pii_response_input = $input_result['pii_fast']['response']
+    bot respond pii input
 
   if $output_result["pii_fast"]["guarded"]
     $pii_response_output = $output_result['pii_fast']['response']
