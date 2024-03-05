@@ -81,29 +81,41 @@ DEFAULT_CONFIG = {
 def process_autoguard_output(responses: List[Any]):
     """Processes the output provided AutoGuard API"""
 
-    prefix = []
-    suffix = []
-    pii_response = ""
-    output_str = ""
-    suffix_str = ""
+    response_dict = {"guardrails_triggered": False}
+    prefixes = []
     for response in responses:
-        if response["task"] == "text_toxicity_extraction":
-            suffix += response["output_data"]
-
-        if response["task"] == "pii_fast":
-            pii_response = response["response"]
+        if response["guarded"]:
+            if response["task"] == "text_toxicity_extraction":
+                response_dict["guardrails_triggered"] = True
+                prefixes += [GUARDRAIL_RESPONSE_TEXT[response["task"]]]
+                suffix = " Toxic phrases: " + ", ".join(response["output_data"])
+                response_dict[response["task"]] = {
+                    "guarded": True,
+                    "response": [GUARDRAIL_RESPONSE_TEXT[response["task"]], suffix],
+                }
+            elif response["task"] == "pii_fast":
+                start_index = len("PII redacted text: ")
+                response_dict["pii_fast"] = {
+                    "guarded": True,
+                    "response": response["response"][start_index:],
+                }
+            else:
+                prefixes += [GUARDRAIL_RESPONSE_TEXT[response["task"]]]
+                response_dict["guardrails_triggered"] = True
+                response_dict[response["task"]] = {
+                    "guarded": True,
+                    "response": GUARDRAIL_RESPONSE_TEXT[response["task"]],
+                }
         else:
-            prefix += [GUARDRAIL_RESPONSE_TEXT[response["task"]]]
+            response_dict[response["task"]] = {"guarded": False, "response": ""}
 
-    if len(prefix) > 0:
-        output_str = (
-            ", ".join(prefix) + " has been detected by AutoGuard; Sorry, can't process."
+    response_dict["combined_response"] = ""
+    if len(prefixes) > 0:
+        response_dict["combined_response"] = (
+            ", ".join(prefixes)
+            + " has been detected by AutoGuard; Sorry, can't process."
         )
-    if len(suffix) > 0:
-        suffix_str += " Toxic phrases: " + ", ".join(suffix)
-    if len(pii_response) > 0:
-        output_str = pii_response + "\n" + output_str
-    return [output_str, suffix_str]
+    return response_dict
 
 
 async def autoguard_infer(
@@ -126,7 +138,7 @@ async def autoguard_infer(
             config[task].update(task_config[task])
     request_body = {"prompt": text, "config": config}
 
-    guardrails_triggered = []
+    guardrails_configured = []
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
@@ -143,12 +155,9 @@ async def autoguard_infer(
                 line_text = line.strip()
                 if len(line_text) > 0:
                     resp = json.loads(line_text)
-                    if resp["guarded"]:
-                        guardrails_triggered.append(resp)
-            if len(guardrails_triggered) > 0:
-                processed_response = process_autoguard_output(guardrails_triggered)
-                return [True] + processed_response
-    return False, None
+                    guardrails_configured.append(resp)
+            processed_response = process_autoguard_output(guardrails_configured)
+    return processed_response
 
 
 async def autoguard_factcheck_infer(
