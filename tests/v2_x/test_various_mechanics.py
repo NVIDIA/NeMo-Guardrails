@@ -825,7 +825,7 @@ def test_regular_expressions_action_parameters():
 
     content = """
     flow main
-      match UtteranceUserAction.Finished(final_transcript=r"\\bmatch\\b")
+      match UtteranceUserAction.Finished(final_transcript=regex("\\\\bmatch\\\\b"))
       send StartUtteranceBotAction(script="Success")
     """
 
@@ -861,7 +861,7 @@ def test_regular_expressions_flow_parameters():
       match UtteranceUserAction.Finished(final_transcript=$transcript)
 
     flow main
-      user said r"\\bmatch\\b"
+      user said (regex("\\\\bmatch\\\\b"))
       send StartUtteranceBotAction(script="Success")
     """
 
@@ -936,4 +936,4 @@ def test_generate_value_with_NLD():
 
 
 if __name__ == "__main__":
-    test_mixed_multimodal_group_actions()
+    test_regular_expressions_flow_parameters()

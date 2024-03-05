@@ -43,14 +43,14 @@ flow user said $text -> $transcript
   $transcript = $event.final_transcript
 
 flow user saying $text -> $transcript
-  match UtteranceUserAction.TranscriptUpdated(interim_transcript=r"(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$") as $event
+  match UtteranceUserAction.TranscriptUpdated(interim_transcript=regex("(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$")) as $event
   $transcript = $event.interim_transcript
 
 flow user started saying something
   match UtteranceUserAction.Started() as $event
 
 flow user typing $text -> $inputs
-  match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": r".*({{$text}})((\s*\w+\s*){0,2})\W*$"}]) as $event
+  match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": regex(".*({{$text}})((\s*\w+\s*){0,2})\W*$")}]) as $event
   $inputs = $event.interim_inputs
 
 flow user said something -> $transcript
@@ -79,7 +79,7 @@ flow user has selected choice $choice_id
     match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
 
 flow unhandled user intent -> $intent
-  match UnhandledEvent(event="FinishFlow", flow_id=r"^user ", loop_ids={$loop_id}) as $event
+  match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$loop_id}) as $event
   $intent = $event.flow_id
 
 flow user was silent $time_s
@@ -318,7 +318,7 @@ flow tracking unhandled user intent state
   global $user_intent_state
   when unhandled user intent as $flow
     $unhandled_user_intent_state = $flow.context.flow_name
-  orwhen FlowFinished(flow_id=r"^user ") as $event
+  orwhen FlowFinished(flow_id=regex("^user ")) as $event
     $unhandled_user_intent_state = None
 
 flow tracking visual choice selection state

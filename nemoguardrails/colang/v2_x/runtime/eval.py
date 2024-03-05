@@ -121,26 +121,33 @@ def eval_expression(expr: str, context: dict) -> Any:
     # Finally, just evaluate the expression
     try:
         # TODO: replace this with something even more restrictive.
+        functions = {
+            "len": len,
+            "flow": system_functions.flow,
+            "action": system_functions.action,
+            "regex": _create_regex,
+            "search": _regex_search,
+            "findall": _regex_findall,
+            "uid": new_uid,
+            "str": _to_str,
+            "escape": _escape_string,
+            "isint": _is_int,
+            "isfloat": _is_float,
+            "isbool": _is_bool,
+            "isstr": _is_str,
+        }
+        # TODO: replace this with something even more restrictive.
         s = EvalWithCompoundTypes(
-            functions={
-                "len": len,
-                "flow": system_functions.flow,
-                "action": system_functions.action,
-                "search": _regex_search,
-                "findall": _regex_findall,
-                "uid": new_uid,
-                "str": _to_str,
-                "escape": _escape_string,
-                "is_int": _is_int,
-                "is_float": _is_float,
-                "is_bool": _is_bool,
-                "is_str": _is_str,
-            },
+            functions=functions,
             names=expr_locals,
         )
         return s.eval(updated_expr)
-    except Exception as ex:
-        raise ColangValueError(f"Error evaluating '{expr}': {str(ex)}")
+    except Exception as e:
+        raise ColangValueError(f"Error evaluating '{expr}'") from e
+
+
+def _create_regex(pattern: str) -> re.Pattern:
+    return re.compile(pattern)
 
 
 def _regex_search(pattern: str, string: str) -> bool:

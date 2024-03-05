@@ -751,7 +751,7 @@ def test_event_set_parameter_match():
     flow main
       match Event1(param={"a"})
       start UtteranceBotAction(script="OK1")
-      match Event1(param={r".*"})
+      match Event1(param={regex(".*")})
       start UtteranceBotAction(script="OK2")
       match Event1(param={"c","a"})
       await UtteranceBotAction(script="OK3")
@@ -853,7 +853,7 @@ def test_event_list_parameter_match():
       start UtteranceBotAction(script="OK1")
       match Event1(param=[1,2])
       start UtteranceBotAction(script="OK2")
-      match Event1(param=[r".*",2])
+      match Event1(param=[regex(".*"),2])
       await UtteranceBotAction(script="OK3")
     """
     state = run_to_completion(_init_state(content), start_main_flow_event)
@@ -972,7 +972,7 @@ def test_event_custom_regex_parameter_match():
     content = """
     flow main
       while True
-        when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": r"\\bemail\\b", "value": r".*"}]) as $e
+        when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": regex("\\\\bemail\\\\b"), "value": regex(".*")}]) as $e
           start UtteranceBotAction(script="Success")
     """
     state = run_to_completion(_init_state(content), start_main_flow_event)
@@ -1031,7 +1031,7 @@ def test_event_corner_cases_regex_parameter_match():
     content = """
     flow main
       while True
-        when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id" : "ter", "r": 'r"[ab]+"', "value": r"^[r'a]+$"}]) as $e
+        when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id" : "ter", "r": regex("[ab]+"), "value": regex("^[r'a]+$")}]) as $e
           start UtteranceBotAction(script="Success")
     """
 
@@ -1044,9 +1044,7 @@ def test_event_corner_cases_regex_parameter_match():
         state,
         {
             "type": "VisualFormSceneActionInputUpdated",
-            "interim_inputs": [
-                {"id": "ter", "r": 'r"[ab]+"', "value": "rar'araaaaarr"}
-            ],
+            "interim_inputs": [{"id": "ter", "r": "abbbaa", "value": "rar'araaaaarr"}],
         },
     )
     assert is_data_in_events(
@@ -1062,9 +1060,7 @@ def test_event_corner_cases_regex_parameter_match():
         state,
         {
             "type": "VisualFormSceneActionInputUpdated",
-            "interim_inputs": [
-                {"id": "ter", "r": 'r"[ab]+"', "value": 'rar"araaaaarr'}
-            ],
+            "interim_inputs": [{"id": "ter", "r": "abbbaa", "value": 'rar"araaaaarr'}],
         },
     )
     assert is_data_in_events(
@@ -1215,4 +1211,4 @@ def test_match_internal_event():
 
 
 if __name__ == "__main__":
-    test_match_internal_event()
+    test_event_custom_regex_parameter_match()

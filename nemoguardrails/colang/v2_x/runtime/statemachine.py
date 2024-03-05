@@ -607,6 +607,7 @@ def _handle_event_matching(
             _start_flow(state, flow_state, event.arguments)
         elif event.name == InternalEvents.FLOW_STARTED:
             # Add started flow to active scopes
+            # TODO: Make this independent from matching to FlowStarted event since otherwise it could be added elsewhere
             for scope_uid in head.scope_uids:
                 if scope_uid in flow_state.scopes:
                     flow_state.scopes[scope_uid][0].append(

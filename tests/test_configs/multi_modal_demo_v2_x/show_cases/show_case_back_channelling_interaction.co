@@ -71,9 +71,9 @@ flow bot asks email address
   start VisualFormSceneAction(prompt="Enter valid email",inputs=[{"id": "email", "description": "email address", "value" : ""}]) as $action
 
   while True
-    when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : r"@$"}])
+    when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : regex("@$")}])
         bot say "And now only the domain missing!"
-    orwhen VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : r"^[-\w\.]+@([\w-]+\.)+[\w-]{2,4}$"}])
+    orwhen VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : regex("^[-\w\.]+@([\w-]+\.)+[\w-]{2,4}$")}])
         bot say "Looks like a valid email address to me, just click ok to confirm" and bot gesture "success"
     orwhen VisualFormSceneAction.ConfirmationUpdated(confirmation_status="confirm")
         bot say "Thank you" and bot gesture "bowing"
