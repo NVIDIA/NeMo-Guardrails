@@ -24,6 +24,7 @@ from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.taskmanager import LLMTaskManager
+from nemoguardrails.logging.verbose import Styles
 
 log = logging.getLogger(__name__)
 
@@ -112,8 +113,7 @@ def process_autoguard_output(responses: List[Any]):
     response_dict["combined_response"] = ""
     if len(prefixes) > 0:
         response_dict["combined_response"] = (
-            ", ".join(prefixes)
-            + " has been detected by AutoGuard; Sorry, can't process."
+            ", ".join(prefixes) + " has been detected by AutoGuard."
         )
     return response_dict
 
@@ -194,7 +194,9 @@ async def autoguard_factcheck_infer(
 
 @action(name="autoguard_input_api")
 async def autoguard_input_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+    llm_task_manager: LLMTaskManager,
+    context: Optional[dict] = None,
+    show_autoguard_message: bool = True,
 ):
     """Calls AutoGuard API for the user message and guardrail configuration provided"""
     user_message = context.get("user_message")
@@ -205,14 +207,29 @@ async def autoguard_input_api(
     task_config = getattr(autoguard_config.input, "guardrails_config")
     if not task_config:
         raise ValueError("Provide the guardrails and their configuration")
-    prompt = user_message
+    text = user_message
 
-    return await autoguard_infer(autoguard_api_url, prompt, task_config)
+    autoguard_response = await autoguard_infer(autoguard_api_url, text, task_config)
+    if autoguard_response["guardrails_triggered"] and show_autoguard_message:
+        print(
+            Styles.YELLOW,
+            f"AutoGuard on Input: {autoguard_response['combined_response']}",
+        )
+    else:
+        if autoguard_response["pii_fast"]["guarded"] and show_autoguard_message:
+            print(
+                Styles.YELLOW,
+                f"AutoGuard on Input: {autoguard_response['pii_fast']['response']}",
+            )
+
+    return autoguard_response
 
 
 @action(name="autoguard_output_api")
 async def autoguard_output_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+    llm_task_manager: LLMTaskManager,
+    context: Optional[dict] = None,
+    show_autoguard_message: bool = True,
 ):
     """Calls AutoGuard API for the bot message and guardrail configuration provided"""
     bot_message = context.get("bot_message")
@@ -224,9 +241,15 @@ async def autoguard_output_api(
     if not task_config:
         raise ValueError("Provide the guardrails and their configuration")
 
-    prompt = bot_message
+    text = bot_message
+    autoguard_response = await autoguard_infer(autoguard_api_url, text, task_config)
+    if autoguard_response["guardrails_triggered"] and show_autoguard_message:
+        print(
+            Styles.YELLOW,
+            f"AutoGuard on LLM Response: {autoguard_response['combined_response']}",
+        )
 
-    return await autoguard_infer(autoguard_api_url, prompt, task_config)
+    return autoguard_response
 
 
 @action(name="autoguard_factcheck_input_api")
