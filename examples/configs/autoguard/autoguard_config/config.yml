@@ -30,7 +30,6 @@ rails:
                               "[TRANSACTION_ID]"
                           ],
                         },
-                        "confidential_detection": {},
                         "gender_bias_detection": {},
                         "harm_detection": {},
                         "text_toxicity_extraction": {},
@@ -59,7 +58,6 @@ rails:
                               "[TRANSACTION_ID]"
                           ],
                       },
-                      "confidential_detection": {},
                       "gender_bias_detection": {},
                       "harm_detection": {},
                       "text_toxicity_extraction": {},
