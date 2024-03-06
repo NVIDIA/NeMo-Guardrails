@@ -18,6 +18,7 @@ from typing import Optional
 
 from langchain.llms.base import BaseLLM
 
+from nemoguardrails import RailsConfig
 from nemoguardrails.actions import action
 from nemoguardrails.actions.llm.utils import llm_call
 from nemoguardrails.context import llm_call_info_var
@@ -34,6 +35,7 @@ async def self_check_output(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
+    config: Optional[RailsConfig] = None,
 ):
     """Checks if the output from the bot.
 
@@ -62,7 +64,7 @@ async def self_check_output(
         # Initialize the LLMCallInfo object
         llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_OUTPUT.value))
 
-        with llm_params(llm, temperature=0.0):
+        with llm_params(llm, temperature=config.lowest_temperature):
             response = await llm_call(llm, prompt, stop=stop)
 
         response = response.lower().strip()
