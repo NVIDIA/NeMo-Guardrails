@@ -82,12 +82,12 @@ def process_autoguard_output(responses: List[Any]):
     """Processes the output provided AutoGuard API"""
 
     response_dict = {"guardrails_triggered": False}
-    prefixes = []
+    prefixes = set()
     for response in responses:
         if response["guarded"]:
             if response["task"] == "text_toxicity_extraction":
                 response_dict["guardrails_triggered"] = True
-                prefixes += [GUARDRAIL_RESPONSE_TEXT[response["task"]]]
+                prefixes.add(GUARDRAIL_RESPONSE_TEXT[response["task"]])
                 suffix = " Toxic phrases: " + ", ".join(response["output_data"])
                 response_dict[response["task"]] = {
                     "guarded": True,
@@ -100,7 +100,7 @@ def process_autoguard_output(responses: List[Any]):
                     "response": response["response"][start_index:],
                 }
             else:
-                prefixes += [GUARDRAIL_RESPONSE_TEXT[response["task"]]]
+                prefixes.add(GUARDRAIL_RESPONSE_TEXT[response["task"]])
                 response_dict["guardrails_triggered"] = True
                 response_dict[response["task"]] = {
                     "guarded": True,
