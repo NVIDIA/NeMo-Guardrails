@@ -18,6 +18,5 @@ from nemoguardrails.llm.providers import register_llm_provider
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
 def init(llm_rails: LLMRails):
-    config = llm_rails.config
-    
     register_llm_provider("nvidia_ai_endpoints", ChatNVIDIA)
+    
