@@ -685,6 +685,10 @@ class State:
     )
 
 
+class ColangParsingError(Exception):
+    """Raised when there is invalid Colang syntax detected."""
+
+
 class ColangSyntaxError(Exception):
     """Raised when there is invalid Colang syntax detected."""
 

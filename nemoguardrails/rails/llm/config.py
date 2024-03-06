@@ -24,6 +24,7 @@ from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
+from nemoguardrails.colang.v2_x.runtime.flows import ColangParsingError
 
 log = logging.getLogger(__name__)
 
@@ -716,11 +717,16 @@ class RailsConfig(BaseModel):
             # these in reverse order.
             for file, full_path in reversed(colang_files):
                 with open(full_path, "r", encoding="utf-8") as f:
-                    _raw_config = parse_colang_file(
-                        file, content=f.read(), version=colang_version
-                    )
-                    _join_config(raw_config, _raw_config)
-
+                    try:
+                        _raw_config = parse_colang_file(
+                            file, content=f.read(), version=colang_version
+                        )
+                        _join_config(raw_config, _raw_config)
+                    except Exception as e:
+                        print(e)
+                        raise ColangParsingError(
+                            f"Error while parsing Colang file: {full_path}"
+                        ) from e
         else:
             raise ValueError(f"Invalid config path {config_path}.")
 
