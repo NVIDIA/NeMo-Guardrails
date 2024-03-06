@@ -113,7 +113,7 @@ def process_autoguard_output(responses: List[Any]):
     response_dict["combined_response"] = ""
     if len(prefixes) > 0:
         response_dict["combined_response"] = (
-            ", ".join(prefixes) + " has been detected by AutoGuard."
+            ", ".join(prefixes) + " detected by AutoGuard."
         )
     return response_dict
 
