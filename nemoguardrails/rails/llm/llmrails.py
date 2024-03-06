@@ -337,6 +337,8 @@ class LLMRails:
                         "trt_llm",
                     ]:
                         kwargs["model_name"] = llm_config.model
+                    elif llm_config.engine == "gen_ai_hub":
+                        kwargs["model"] = llm_config.model
                     else:
                         # The `__fields__` attribute is computed dynamically by pydantic.
                         if "model" in provider_cls.__fields__:
