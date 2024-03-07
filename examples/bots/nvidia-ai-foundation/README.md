@@ -1,4 +1,4 @@
-# ABC Bot with Llama2-70b and LangChain-NVIDIA AI Endpoints
+# ABC Bot with Llama2-70b SteerLM CHat model via LangChain-NVIDIA AI Endpoints
 
 This configuration is an advanced iteration of the ABC bot, originally showcased in the [ABC Bot](../abc/).
 
@@ -12,7 +12,7 @@ To integrate the ABC bot with model and connect to NVIDIA AI Foundation Endpoint
 
 ### Installation
 
-1. **Install the langchain-nvidia-ai-endpoints Package**: This package enables the ABC bot to connect with NVIDIA AI Foundation Endpoints, providing access to powerful AI models like llama2.
+**Install the langchain-nvidia-ai-endpoints Package**: This package enables the ABC bot to connect with NVIDIA AI Foundation Endpoints, providing access to powerful AI models like llama2.
 
     ```python
     pip install -U langchain-nvidia-ai-endpoints
@@ -39,15 +39,20 @@ To integrate the ABC bot with model and connect to NVIDIA AI Foundation Endpoint
     os.environ["NVIDIA_API_KEY"] = "nvapi-XXXXXXXXXXXXXXXXXXXXXXXXXX"
     ```
 
-4. **Run the bot**: You can use the `nemoguardrails chat --config=.` command to start an interactive chat session. Ensure you specify the correct path to your configuration file
+4. **Run the bot**: You can use the `nemoguardrails chat --config=.` command to start an interactive chat session. Ensure you specify the correct path to your configuration file:
 
-5. **Changing the Model `config.yml`**: To change the model used by the bot, you need to modify the `model` variable within the `models` section of the `config.yml` file. Ensure that the new model is supported by NVIDIA AI Foundation Endpoints and that you have access to it. For example, to switch to a different model (Ex: Mixtral8x7b), you might change it to:
-    ```yaml
-    models:
-      - type: main
-        engine: nvidia_ai_endpoints
-        model: playground_mixtral_8x7b
+5. **Changing the Model Configuration**: To switch between different models, you need to modify the model configuration in the `config.py` script. The `ChatNVIDIA` class from the langchain_nvidia_ai_endpoints package is used to specify the model you want to connect to. Here's how you can change the model:
+
+    ```python
+    # To use Mixtral model
+    mixtral = ChatNVIDIA(model="playground_mixtral_8x7b")
     ```
+
+    ```python
+    # To use LLama 2 SteerLM Chat model
+    mixtral = ChatNVIDIA(model="playground_steerlm_llama_70b")
+    ```    
+
 
 
     
