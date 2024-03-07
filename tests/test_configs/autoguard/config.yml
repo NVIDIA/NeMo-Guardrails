@@ -144,6 +144,7 @@ rails:
                   ],
                 "contextual_rules":
                   [
+                    ["[PERSON NAME]", "[ORGANIZATION]"],
                     ["[PERSON NAME]", "[EMAIL ADDRESS]", "[LOCATION]"],
                     [
                       "[PERSON NAME]",

@@ -24,6 +24,7 @@ from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.taskmanager import LLMTaskManager
+from nemoguardrails.logging.verbose import Styles
 
 log = logging.getLogger(__name__)
 
@@ -78,11 +79,15 @@ DEFAULT_CONFIG = {
 }
 
 
-def process_autoguard_output(responses: List[Any]):
+def process_autoguard_output(responses: List[Any], show_toxic_phrases: bool = False):
     """Processes the output provided AutoGuard API"""
 
-    response_dict = {"guardrails_triggered": False}
+    response_dict = {
+        "guardrails_triggered": False,
+        "pii_fast": {"guarded": False, "response": ""},
+    }
     prefixes = set()
+    suffix = ""
     for response in responses:
         if response["guarded"]:
             if response["task"] == "text_toxicity_extraction":
@@ -111,10 +116,13 @@ def process_autoguard_output(responses: List[Any]):
 
     response_dict["combined_response"] = ""
     if len(prefixes) > 0:
-        response_dict["combined_response"] = (
-            ", ".join(prefixes)
-            + " has been detected by AutoGuard; Sorry, can't process."
-        )
+        response_dict["combined_response"] = ", ".join(prefixes) + " detected."
+        if (
+            "text_toxicity_extraction" in response_dict.keys()
+            and response_dict["text_toxicity_extraction"]["guarded"]
+            and show_toxic_phrases
+        ):
+            response_dict["combined_response"] += suffix
     return response_dict
 
 
@@ -122,6 +130,7 @@ async def autoguard_infer(
     request_url: str,
     text: str,
     task_config: Optional[Dict[Any, Any]] = None,
+    show_toxic_phrases: bool = False,
 ):
     """Checks whether the given text passes through the applied guardrails."""
     api_key = os.environ.get("AUTOGUARD_API_KEY")
@@ -156,7 +165,9 @@ async def autoguard_infer(
                 if len(line_text) > 0:
                     resp = json.loads(line_text)
                     guardrails_configured.append(resp)
-            processed_response = process_autoguard_output(guardrails_configured)
+            processed_response = process_autoguard_output(
+                guardrails_configured, show_toxic_phrases
+            )
     return processed_response
 
 
@@ -194,7 +205,10 @@ async def autoguard_factcheck_infer(
 
 @action(name="autoguard_input_api")
 async def autoguard_input_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+    llm_task_manager: LLMTaskManager,
+    context: Optional[dict] = None,
+    show_autoguard_message: bool = True,
+    show_toxic_phrases: bool = False,
 ):
     """Calls AutoGuard API for the user message and guardrail configuration provided"""
     user_message = context.get("user_message")
@@ -205,14 +219,32 @@ async def autoguard_input_api(
     task_config = getattr(autoguard_config.input, "guardrails_config")
     if not task_config:
         raise ValueError("Provide the guardrails and their configuration")
-    prompt = user_message
+    text = user_message
 
-    return await autoguard_infer(autoguard_api_url, prompt, task_config)
+    autoguard_response = await autoguard_infer(
+        autoguard_api_url, text, task_config, show_toxic_phrases
+    )
+    if autoguard_response["guardrails_triggered"] and show_autoguard_message:
+        print(
+            Styles.YELLOW,
+            f"AutoGuard on Input: {autoguard_response['combined_response']}",
+        )
+    else:
+        if autoguard_response["pii_fast"]["guarded"] and show_autoguard_message:
+            print(
+                Styles.YELLOW,
+                f"AutoGuard on Input: {autoguard_response['pii_fast']['response']}",
+            )
+
+    return autoguard_response
 
 
 @action(name="autoguard_output_api")
 async def autoguard_output_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+    llm_task_manager: LLMTaskManager,
+    context: Optional[dict] = None,
+    show_autoguard_message: bool = True,
+    show_toxic_phrases: bool = False,
 ):
     """Calls AutoGuard API for the bot message and guardrail configuration provided"""
     bot_message = context.get("bot_message")
@@ -224,9 +256,17 @@ async def autoguard_output_api(
     if not task_config:
         raise ValueError("Provide the guardrails and their configuration")
 
-    prompt = bot_message
+    text = bot_message
+    autoguard_response = await autoguard_infer(
+        autoguard_api_url, text, task_config, show_toxic_phrases
+    )
+    if autoguard_response["guardrails_triggered"] and show_autoguard_message:
+        print(
+            Styles.YELLOW,
+            f"AutoGuard on LLM Response: {autoguard_response['combined_response']}",
+        )
 
-    return await autoguard_infer(autoguard_api_url, prompt, task_config)
+    return autoguard_response
 
 
 @action(name="autoguard_factcheck_input_api")
