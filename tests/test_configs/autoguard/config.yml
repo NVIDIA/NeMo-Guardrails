@@ -1,7 +1,9 @@
 models:
   - type: main
-    engine: nemollm
-    model: gpt-43b-002
+    engine: openai
+    model: gpt-3.5-turbo
+    parameters:
+      temperature: 0.0
 
 rails:
   config:
@@ -144,6 +146,7 @@ rails:
                   ],
                 "contextual_rules":
                   [
+                    ["[PERSON NAME]", "[ORGANIZATION]"],
                     ["[PERSON NAME]", "[EMAIL ADDRESS]", "[LOCATION]"],
                     [
                       "[PERSON NAME]",
