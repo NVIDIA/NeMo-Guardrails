@@ -692,9 +692,9 @@ def _resolve_action_conflicts(
                                 isinstance(context_variable, Action)
                                 and context_variable.uid == competing_event.action_uid
                             ):
-                                competing_flow_state.context[key] = state.actions[
-                                    winning_event.action_uid
-                                ]
+                                action = state.actions[winning_event.action_uid]
+                                action.flow_scope_count += 1
+                                competing_flow_state.context[key] = action
                         index = competing_flow_state.action_uids.index(
                             competing_event.action_uid
                         )
@@ -1190,9 +1190,11 @@ def slide(
                     action.status == ActionStatus.STARTING
                     or action.status == ActionStatus.STARTED
                 ):
-                    action_event = action.stop_event({})
-                    action.status = ActionStatus.STOPPING
-                    _generate_umim_event(state, action_event)
+                    action.flow_scope_count -= 1
+                    if action.flow_scope_count == 0:
+                        action_event = action.stop_event({})
+                        action.status = ActionStatus.STOPPING
+                        _generate_umim_event(state, action_event)
 
             # Remove scope from all heads
             for h in flow_state.heads.values():
@@ -1268,9 +1270,11 @@ def _abort_flow(
             action.status == ActionStatus.STARTING
             or action.status == ActionStatus.STARTED
         ):
-            action_event = action.stop_event({})
-            action.status = ActionStatus.STOPPING
-            _generate_umim_event(state, action_event)
+            action.flow_scope_count -= 1
+            if action.flow_scope_count == 0:
+                action_event = action.stop_event({})
+                action.status = ActionStatus.STOPPING
+                _generate_umim_event(state, action_event)
 
     # Cleanup all head from flow
     for head in flow_state.heads.values():
@@ -1331,9 +1335,11 @@ def _finish_flow(
             action.status == ActionStatus.STARTING
             or action.status == ActionStatus.STARTED
         ):
-            action_event = action.stop_event({})
-            action.status = ActionStatus.STOPPING
-            _generate_umim_event(state, action_event)
+            action.flow_scope_count -= 1
+            if action.flow_scope_count == 0:
+                action_event = action.stop_event({})
+                action.status = ActionStatus.STOPPING
+                _generate_umim_event(state, action_event)
 
     # Cleanup all head from flow
     for head in flow_state.heads.values():

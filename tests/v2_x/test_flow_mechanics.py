@@ -1066,5 +1066,87 @@ def test_action_event_requeuing():
     chat << "8"
 
 
+def test_concurrent_flows_with_actions():
+    """Test if an activated flow is fully stopped when parent has finished."""
+
+    content = """
+    flow a
+      match UtteranceUserAction().Finished(final_transcript="One")
+      start UtteranceBotAction(script="One")
+      match UtteranceUserAction().Finished(final_transcript="Two")
+      match UtteranceUserAction().Finished(final_transcript="Three")
+
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="One")
+      start UtteranceBotAction(script="One")
+      start UtteranceBotAction(script="Two")
+      match UtteranceUserAction().Finished(final_transcript="Two")
+
+    flow c
+      match UtteranceUserAction().Finished(final_transcript="One")
+      start UtteranceBotAction(script="One")
+      start UtteranceBotAction(script="Two")
+
+    flow main
+      await a and b and c
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "One",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "One",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Two",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Two",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Three",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_child_flow_abort()
+    test_concurrent_flows_with_actions()

@@ -212,6 +212,9 @@ class Action:
         # The arguments that will be used for the start event
         self.start_event_arguments = arguments
 
+        # Number of flows where this action is still active
+        self.flow_scope_count = 0
+
     # Process an event
     def process_event(self, event: ActionEvent) -> None:
         """Processes event and updates action accordingly."""
@@ -225,9 +228,11 @@ class Action:
             elif "ActionFinished" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.FINISHED
+                self.flow_scope_count = 0
             elif "Start" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.STARTING
+                self.flow_scope_count = 1
             elif "Stop" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.STOPPING
