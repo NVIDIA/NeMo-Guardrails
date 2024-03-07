@@ -86,20 +86,6 @@ NeMo Guardrails is under active development and the main branch always contains 
    pip install -e .
    ```
 
-## Optional dependencies
-
-To use OpenAI, install the **openai** package with the latest version supported by Nemo Guardrails as shown below.
-Make sure the `OPENAI_API_KEY` environment variable is set,
-as shown in the following example, where *YOUR_KEY* is your OpenAI key.
-
- ```bash
- > pip install openai
- > export OPENAI_API_KEY=YOUR_KEY
- ```
-
-Some NeMo Guardrails LLMs and features have specific installation requirements, including a more complex set of steps. For example, [AlignScore](../user_guides/advanced/align_score_deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md) requires two additional packages.
-For each feature or LLM example, check the readme file associated with it.
-
 ## Extra dependencies
 
 The `nemoguardrails` package also defines the following extra dependencies:
@@ -115,6 +101,20 @@ To keep the footprint of `nemoguardrails` as small as possible, these are not in
 ```bash
 > pip install nemoguardrails[dev]
 ```
+
+## Optional dependencies
+
+To use OpenAI, just use the `openai` extra dependency that ensures that all required packages are installed.
+Make sure the `OPENAI_API_KEY` environment variable is set,
+as shown in the following example, where *YOUR_KEY* is your OpenAI key.
+
+ ```bash
+ > pip install nemoguardrails[openai]
+ > export OPENAI_API_KEY=YOUR_KEY
+ ```
+
+Some NeMo Guardrails LLMs and features have specific installation requirements, including a more complex set of steps. For example, [AlignScore](../user_guides/advanced/align_score_deployment.md) fact-checking, using [Llama-2](../../examples/configs/llm/hf_pipeline_llama2/README.md) requires two additional packages.
+For each feature or LLM example, check the readme file associated with it.
 
 ## Using Docker
 

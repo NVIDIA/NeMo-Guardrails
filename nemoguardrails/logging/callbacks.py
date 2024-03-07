@@ -87,21 +87,25 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
             llm_call_info = LLMCallInfo()
             llm_call_info_var.set(llm_call_info)
 
-        prompt = "\n" + "\n".join(
-            [
-                Styles.CYAN
-                + (
-                    "User"
-                    if msg.type == "human"
-                    else "Bot"
-                    if msg.type == "ai"
-                    else "System"
-                )
-                + Styles.PROMPT
-                + "\n"
-                + msg.content
-                for msg in messages[0] + Styles.RESET_ALL
-            ]
+        prompt = (
+            "\n"
+            + "\n".join(
+                [
+                    Styles.CYAN
+                    + (
+                        "User"
+                        if msg.type == "human"
+                        else "Bot"
+                        if msg.type == "ai"
+                        else "System"
+                    )
+                    + Styles.PROMPT
+                    + "\n"
+                    + msg.content
+                    for msg in messages[0]
+                ]
+            )
+            + Styles.RESET_ALL
         )
 
         log.info("Invocation Params :: %s", kwargs.get("invocation_params", {}))
