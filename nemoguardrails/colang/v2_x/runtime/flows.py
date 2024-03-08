@@ -301,6 +301,17 @@ class Action:
             name=f"{self.name}Finished", arguments=arguments, action_uid=self.uid
         )
 
+    # Expose all action parameters as attributes
+    def __getattr__(self, name):
+        if (
+            name not in self.__dict__
+            and "context" in self.__dict__
+            and name in self.__dict__["context"]
+        ):
+            return self.__dict__["context"][name]
+        else:
+            return object.__getattribute__(self, "params")[name]
+
 
 class InteractionLoopType(Enum):
     """The type of the interaction loop."""
