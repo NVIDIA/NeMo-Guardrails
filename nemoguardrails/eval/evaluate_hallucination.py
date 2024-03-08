@@ -81,7 +81,11 @@ class HallucinationRailsEvaluation:
         extra_responses = []
         with llm_params(self.llm, temperature=1.0, max_tokens=100):
             for _ in range(num_responses):
-                extra_responses.append(self.llm(prompt))
+                try:
+                    extra_response = self.llm(prompt)
+                except ValueError as e:
+                    extra_response = ""
+                extra_responses.append(extra_response)
 
         return extra_responses
 
@@ -100,7 +104,10 @@ class HallucinationRailsEvaluation:
 
         for question in tqdm.tqdm(self.dataset):
             with llm_params(self.llm, temperature=0.2, max_tokens=100):
-                bot_response = self.llm(question)
+                try:
+                    bot_response = self.llm(question)
+                except ValueError as e:
+                    bot_response = ""
 
             extra_responses = self.get_extra_responses(question, num_responses=2)
             if len(extra_responses) == 0:

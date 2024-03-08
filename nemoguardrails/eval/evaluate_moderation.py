@@ -91,7 +91,10 @@ class ModerationRailsEvaluation:
             Task.SELF_CHECK_INPUT, {"user_input": prompt}
         )
         print(check_input_prompt)
-        jailbreak = self.llm(check_input_prompt)
+        try:
+            jailbreak = self.llm(check_input_prompt)
+        except ValueError:
+            jailbreak = ""
         jailbreak = jailbreak.lower().strip()
         print(jailbreak)
 
