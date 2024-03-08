@@ -288,10 +288,16 @@ class TopicalRailsEvaluation:
                     history_events
                 )
 
-                generated_user_intent = get_last_user_intent_event(new_events)["intent"]
-                prediction["generated_user_intent"] = generated_user_intent
-                wrong_intent = False
-                if generated_user_intent != intent:
+                generated_user_intent = None
+                last_user_intent_event = get_last_user_intent_event(new_events)
+                if last_user_intent_event is not None:
+                    generated_user_intent = last_user_intent_event["intent"]
+                    prediction["generated_user_intent"] = generated_user_intent
+                    wrong_intent = False
+                if (
+                    generated_user_intent is not None
+                    and generated_user_intent != intent
+                ):
                     wrong_intent = True
                     # Employ semantic similarity if needed
                     if self.similarity_threshold > 0:
