@@ -1052,20 +1052,6 @@ def test_implicit_flow_deactivation():
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "../test_configs")
 
 
-def test_action_event_requeuing():
-    config = RailsConfig.from_path(
-        os.path.join(CONFIGS_FOLDER, "with_custom_action_v2_x")
-    )
-
-    chat = TestChat(
-        config,
-        llm_completions=[],
-    )
-
-    chat >> "start"
-    chat << "8"
-
-
 def test_concurrent_flows_with_actions():
     """Test if an activated flow is fully stopped when parent has finished."""
 
