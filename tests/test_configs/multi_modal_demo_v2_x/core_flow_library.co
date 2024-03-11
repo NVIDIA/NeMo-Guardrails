@@ -293,7 +293,7 @@ flow bot suggest $text
 # DON'T CHANGE! Currently, hard-wired with LLM prompt generation
 # -----------------------------------
 
-flow tracking of bot talking state
+flow tracking bot talking state
   # meta: loop_id=state_tracking
   global $bot_talking_state
   if $user_talking_state == None
@@ -303,7 +303,7 @@ flow tracking of bot talking state
   await bot said something
   $bot_talking_state = False
 
-flow tracking of user talking state
+flow tracking user talking state
   # meta: loop_id=state_tracking
   global $user_talking_state
   if $user_talking_state == None
@@ -313,7 +313,7 @@ flow tracking of user talking state
   await user said something
   $user_talking_state = False
 
-flow tracking of unhandled user intent state
+flow tracking unhandled user intent state
   # meta: loop_id=state_tracking
   global $user_intent_state
   when unhandled user intent as $flow
@@ -321,7 +321,7 @@ flow tracking of unhandled user intent state
   orwhen FlowFinished(flow_id=r"^user ") as $event
     $unhandled_user_intent_state = None
 
-flow tracking of visual choice selection state
+flow tracking visual choice selection state
   # meta: loop_id=state_tracking
   global $choice_selection_state
   when VisualChoiceSceneAction.Started()
@@ -334,7 +334,7 @@ flow tracking of visual choice selection state
   orwhen VisualChoiceSceneAction.Finished()
     $choice_selection_state = None
 
-flow tracking of user utterance state
+flow tracking user utterance state
   # meta: loop_id=state_tracking
   global $last_user_transcript
   global $last_user_message
@@ -370,14 +370,14 @@ flow wait $time_s $timer_id="wait_timer_{{uid()}}"
   # meta: loop_id=NEW
   await TimerBotAction(timer_name=$timer_id, duration=$time_s)
 
-flow catching of colang errors
+flow catching colang error
   """A flow to catching of any runtime Colang errors"""
   # meta: loop_id=catch_colang_errors
   match ColangError() as $event
   print "Colang error: {{$event.error_type}} - {{escape($event.error)}}"
   bot say "Excuse me, what did you say?"
 
-flow catching of undefined flows
+flow catching start of undefined flows
   """A flow to catching of the start of undefined flows."""
   priority 0.1
   match UnhandledEvent(event="StartFlow") as $event
@@ -386,7 +386,7 @@ flow catching of undefined flows
   # We need to abort the flow that sent the FlowStart event since it might be waiting for it
   send StopFlow(flow_instance_uid=$event.source_flow_instance_uid)
 
-flow catching of unexpected user utterance
+flow catching unexpected user utterance
   """A flow to catching of unhandled user utterances."""
   priority 0.1
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
@@ -404,7 +404,7 @@ flow await_flow_by_name $flow_name
   match FlowStarted(flow_id=$flow_name, flow_start_uid=$new_flow_start_uid) as $event_ref
   match $event_ref.flow.Finished()
 
-flow interruption handling bot talking $mode="inform"
+flow handling bot talking interruption $mode="inform"
   """Handling the bot talking interruption reaction."""
   # meta: loop_id=bot_interruption
   user interrupted bot talking
@@ -420,7 +420,7 @@ flow interruption handling bot talking $mode="inform"
 # LLM mechanics
 # ----------------------------------
 
-flow poll llm request response $interval
+flow polling llm request response $interval
   # meta: loop_id=llm_response_polling
   match StartGenerateUserIntentAction() as $event_ref
     or StartGenerateFlowContinuationAction() as $event_ref
@@ -433,13 +433,13 @@ flow poll llm request response $interval
   send $polling_timer.Stop()
   send $posture.Stop()
 
-flow trigger user intent for unhandled user utterance
+flow generating user intent for unhandled user utterance
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   global $bot_talking_state
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   if $bot_talking_state == False
     $transcript = $event.final_transcript
-    log "trigger user intent for unhandled user utterance: {{$transcript}}"
+    log "generating user intent for unhandled user utterance: {{$transcript}}"
     $action = 'user said "{{$transcript}}"'
     $intent = await derive user intent from user action $action 20
 
@@ -480,14 +480,14 @@ flow generate then continue interaction
 # Experimental flows
 # ----------------------------------
 
-flow respond to unhandled user intent
+flow responding to unhandled user intent
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   await unhandled user intent
   $flow_name = await generate interaction continuation
   await await_flow_by_name $flow_name
   await RemoveFlowsAction(flow_ids=[$flow_name])
 
-flow handle undefined flow starts
+flow handling start of undefined flow
   """We want to start an undefined flow."""
 
   match UnhandledEvent(event="StartFlow") as $event
@@ -541,20 +541,20 @@ flow custom instructions
 # --------------------------------------
 # Posture Management Flows
 # --------------------------------------
-flow manage listening posture
-  # meta: loop_id=manage listening posture
+flow managing listening posture
+  # meta: loop_id=managing listening posture
   user started saying something
   start bot posture "listening"
   match UtteranceUserAction.Finished()
 
-flow manage talking posture
-  # meta: loop_id=manage talking posture
+flow managing talking posture
+  # meta: loop_id=managing talking posture
   bot started saying something
   start bot posture "talking"
   bot said something
 
-flow manage thinking posture
-  # meta: loop_id=manage thinking posture
+flow managing thinking posture
+  # meta: loop_id=managing thinking posture
   global $bot_talking_state
 
   match UtteranceUserAction.Finished()
@@ -564,11 +564,11 @@ flow manage thinking posture
     start bot posture "thinking"
     bot started saying something
 
-flow manage bot postures
-  # meta: loop_id=manage bot postures
+flow managing bot postures
+  # meta: loop_id=managing bot postures
   activate track bot talking state
-  activate manage listening posture
-  activate manage thinking posture
-  activate manage talking posture
+  activate managing listening posture
+  activate managing thinking posture
+  activate managing talking posture
   start bot posture "attentive"
   wait indefinitely

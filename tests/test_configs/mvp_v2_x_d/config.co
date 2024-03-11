@@ -137,7 +137,7 @@ flow fallback
     match FlowStarted(flow_id=$flow_info['name']) as $event_ref
     match $event_ref.flow.Finished()
 
-flow handle undefined flow starts
+flow handling start of undefined flow
   """If we reach a point where we need to start a flow that does not exist, we generate it."""
   # meta: exclude from llm
 
@@ -149,7 +149,7 @@ flow handle undefined flow starts
 
   if not $exists
     $flow_id = $event.flow_id
-    log "'handle undefined flow starts' -> generate new flow '{{$event.flow_id}}'"
+    log "'handling start of undefined flow' -> generate new flow '{{$event.flow_id}}'"
     $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
     await AddFlowsAction(config=$flow_source)
     send StartFlow(flow_id=$flow_id)
@@ -175,7 +175,7 @@ flow main
   activate custom instructions
   activate unknown intent
   activate fallback
-  activate handle undefined flow starts
+  activate handling start of undefined flow
   # activate question
   # activate tell the user the weather
 
