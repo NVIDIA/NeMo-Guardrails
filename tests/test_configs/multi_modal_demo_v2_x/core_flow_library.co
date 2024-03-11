@@ -1,5 +1,37 @@
 # meta: exclude from llm
 
+################################################################
+# COLANG 2.0 CORE LIBRARY (CCL)
+# VERSION 0.2.0
+#---------------------------------------------------------------
+# CHANGELOG
+#-------
+# 0.1.0 (2/14/2024)
+#  - Added
+#    - Initial version of library
+#-------
+# 0.1.1 (2/27/2024)
+#  - Fixed
+#    - Posture management no longer interferes with LLM prompting
+#    - Last user utterance tracking can be activated separately and works independently of user said flows
+#-------
+# 0.1.2 (3/4/2024)
+#  - Fixed
+#    - Bug in state tracking flows that caused the llm mechanism to not do anything if the bot_talking_state was not set before
+#-------
+# 0.2.0 (3/11/2024)
+#  - Expose event/action/flow parameters as attributes
+#  - Replace r"<REGEX>" notation with regex("<REGEX>")
+#  - Replace double curly brackets notation for expression evaluation in strings with single curly brackets
+#  - Add missing flow out parameters
+#  - Adapt flow names to tracking/managing/handling/catching of ... convention
+#  - Adapt to parameter renaming:
+#    - UnhandledEvent: error_type -> type
+#    - Internal events: new_flow_start_uid -> new_flow_instance_uid
+#  - Cleanup and improvements of certain log and print statements
+#-------
+################################################################
+
 # -----------------------------------
 # User UMIM event wrapper flows
 # DON'T CHANGE! Currently, hard-wired with LLM prompt generation
@@ -194,6 +226,11 @@ flow bot gesture $gesture
   # meta: bot action
   await GestureBotAction(gesture=$gesture) as $action
 
+flow bot gesture with delay $gesture $delay
+  # meta: bot action
+  wait $delay
+  bot gesture $gesture
+
 flow bot posture $posture
   # meta: bot action
   await PostureBotAction(posture=$posture) as $action
@@ -296,6 +333,16 @@ flow tracking of visual choice selection state
       $choice_selection_state = None
   orwhen VisualChoiceSceneAction.Finished()
     $choice_selection_state = None
+
+flow tracking of user utterance state
+  # meta: loop_id=state_tracking
+  global $last_user_transcript
+  global $last_user_message
+
+  match UtteranceUserAction.Finished() as $event
+  print "last user utterance = {$event.final_transcript}"
+  $last_user_transcript = $event.final_transcript
+  $last_user_message = $event.final_transcript
 
 # ----------------------------------
 # Utility flows
@@ -467,7 +514,7 @@ flow handle undefined flow starts
     match $event_ref.flow.Finished()
     await RemoveFlowsAction(flow_ids=[$event.flow_id])
 
-flow execute llm instruction$instructions
+flow execute llm instruction $instructions
   """This will create a new flow based on the provided instructions and start it."""
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
 
@@ -489,3 +536,39 @@ flow custom instructions
   user requested a task
   $instructions = await GetLastUserMessageAction()
   execute llm instruction $instructions
+
+
+# --------------------------------------
+# Posture Management Flows
+# --------------------------------------
+flow manage listening posture
+  # meta: loop_id=manage listening posture
+  user started saying something
+  start bot posture "listening"
+  match UtteranceUserAction.Finished()
+
+flow manage talking posture
+  # meta: loop_id=manage talking posture
+  bot started saying something
+  start bot posture "talking"
+  bot said something
+
+flow manage thinking posture
+  # meta: loop_id=manage thinking posture
+  global $bot_talking_state
+
+  match UtteranceUserAction.Finished()
+  if $bot_talking_state
+    log "Donot switch to thinking posture because bot is talking"
+  else
+    start bot posture "thinking"
+    bot started saying something
+
+flow manage bot postures
+  # meta: loop_id=manage bot postures
+  activate track bot talking state
+  activate manage listening posture
+  activate manage thinking posture
+  activate manage talking posture
+  start bot posture "attentive"
+  wait indefinitely
