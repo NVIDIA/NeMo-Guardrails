@@ -259,12 +259,15 @@ rails:
 ```
 We also have to add the autoguard's endpoint in parameters.
 
-One of the advanced configs is matching score which is a threshold that determines whether the guardrail will block the input/output or not.
+One of the advanced configs is matching score (ranging between 0 to 1) which is a threshold that determines whether the guardrail will block the input/output or not.
+If the matching score is higher (i.e. close to 1) then the guardrail will be more strict.
 Some guardrails have very different format of `matching_scores` config,
 in each guardrail's description we have added an example to show how `matching_scores`
 has been implemented for that guardrail.
 PII has some more advanced config like `contextual_rules` and `enabled_types`, more details can be read in the PII section
 given below.
+
+**Please note that** all the additional configs such as `matching_scores`, `contextual_rules`, and `enabled_types` are optiona; if they are not specified then the default valus will be applied.
 
 The config for the guardrails has to be defined separately for both input and output side, as shown in the above example.
 
@@ -471,13 +474,15 @@ define bot refuse to respond
 ### PII
 
 To use AutoGuard's PII (Personal Identifiable Information) module, you have to list the entities that you wish to redact
-in `enabled_types` in the dictionary of `guardrails_config` under the key of `pii_fast`.
+in `enabled_types` in the dictionary of `guardrails_config` under the key of `pii_fast`; if not listed then all PII types will be redacted.
 
-The above provided sample shows all PII entities that is currently being supported by AutoGuard.
+The above sample shows all PII entities that is currently being supported by AutoGuard.
 
 One of the advanced configs is matching score which is a threshold that determines whether the guardrail will mask the entity in text or not.
+This is optional, and not specified then the default matching score (0.5) will be applied.
 
-Another config is contextual rules which determine when PII redaction will be active, PII redaction will take place only when one of the contextual rule will be satisfied.
+Another config is contextual rules which determines when PII types must be present in text in order for the redaction to take place.
+PII redaction will take place only when one of the contextual rule will be satisfied.
 
 You have to define the config for output and input side separately based on where the guardrail is applied upon.
 
@@ -540,8 +545,8 @@ Example PII config:
 }
 ```
 
-### Factcheck
-
+### Factcheck or Groundness Check
+The factcheck needs an input statement (represented as ‘prompt’) as a list of evidence documents.
 To use AutoGuard's factcheck module, you have to modify the `config.yml` in the following format:
 
 ```yaml
