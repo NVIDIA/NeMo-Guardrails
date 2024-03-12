@@ -25,7 +25,7 @@ from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
 from nemoguardrails.logging import verbose
 from nemoguardrails.logging.verbose import Styles, set_verbose_llm_calls
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import new_event_dict
+from nemoguardrails.utils import new_event_dict, new_uid
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -505,11 +505,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 user_message: str = await session.prompt_async("> ")
                 waiting_user_input = False
                 if user_message == "":
-                    input_events = [
-                        {
-                            "type": "CheckLocalAsync",
-                        }
-                    ]
+                    input_events = [new_event_dict("CheckLocalAsync")]
                 elif user_message.startswith("/"):
                     # Non-UtteranceBotAction actions
                     event_input = user_message.lstrip("/")
@@ -524,10 +520,12 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         input_events = [event]
                 else:
                     input_events = [
-                        {
-                            "type": "UtteranceUserActionFinished",
-                            "final_transcript": user_message,
-                        }
+                        new_event_dict(
+                            "UtteranceUserActionFinished",
+                            final_transcript=user_message,
+                            action_uid=new_uid(),
+                            is_success=True,
+                        )
                     ]
 
             await _process_input_events()
