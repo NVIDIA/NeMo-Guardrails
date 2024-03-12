@@ -19,6 +19,15 @@ AutoGuard comes with a library of built-in guardrails that you can easily use:
 Note: Factcheck is implemented a bit differently, compared to other guardrails.
 Please have a look at its description within this document to understand its usage.
 
+
+## AutoGuard API KEY
+
+In order to use AutoGuard's guardrails you need to set `AUTOGUARD_API_KEY` as an environment variable in your system,
+with the API key as its value.
+
+Please contact [hello@autoalign.ai](mailto:hello@autoalign.ai) for your own API key.
+
+
 ## Usage (AutoGuard)
 
 To use the autoguard's guardrails:
