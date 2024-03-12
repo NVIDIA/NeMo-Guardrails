@@ -19,9 +19,9 @@ sample_conversation: |
 models:
   - type: main
     engine: nvidia_ai_endpoints
-    model: playground_steerlm_llama_70b
+    model: playground_llama2_70b
     parameters:
-        temperature: 0.2
+        temperature: 1
 
 rails:
   input:

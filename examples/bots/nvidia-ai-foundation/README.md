@@ -20,13 +20,13 @@ To integrate the ABC bot with model and connect to NVIDIA AI Foundation Endpoint
 
 ### Setup and Authentication
 
-2. **Create a Free NVIDIA NGC Account**: Sign up at the NVIDIA NGC website to access AI Foundation Models.
+1. **Create a Free NVIDIA NGC Account**: Sign up at the NVIDIA NGC website to access AI Foundation Models.
 
-3. **Generate an API Key**:
+2. **Generate an API Key**:
     - Navigate to **Catalog > AI Foundation Models > (Model with API endpoint)** on the NVIDIA NGC website.
     - Select **API** and generate an API key (`NVIDIA_API_KEY`).
 
-4. **Export the NVIDIA API Key**: Ensure your application can access the API key by exporting it as an environment variable.
+3. **Export the NVIDIA API Key**: Ensure your application can access the API key by exporting it as an environment variable.
 
     ```python
     export NVIDIA_API_KEY=nvapi-XXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -39,9 +39,15 @@ To integrate the ABC bot with model and connect to NVIDIA AI Foundation Endpoint
     os.environ["NVIDIA_API_KEY"] = "nvapi-XXXXXXXXXXXXXXXXXXXXXXXXXX"
     ```
 
-5. **Run the bot**: You can use the `nemoguardrails chat --config=.` command to start an interactive chat session. Ensure you specify the correct path to your configuration file:
+4. **Run the bot**: You can use the `nemoguardrails chat --config=.` command to start an interactive chat session. Ensure you specify the correct path to your configuration file
 
-
+5. **Changing the Model `config.yml`**: To change the model used by the bot, you need to modify the `model` variable within the `models` section of the `config.yml` file. Ensure that the new model is supported by NVIDIA AI Foundation Endpoints and that you have access to it. For example, to switch to a different model (Ex: Mixtral8x7b), you might change it to:
+    ```yaml
+    models:
+      - type: main
+        engine: nvidia_ai_endpoints
+        model: playground_mixtral_8x7b
+    ```
 
 
     
