@@ -4,7 +4,7 @@ This configuration is an advanced iteration of the ABC bot, originally showcased
 
 ## Overview
 
-This example leverages the Llama2-70B SteerLM Chat model from AI Foundation Endpoints via the [langchain-nvidia-ai-endpoints](https://github.com/langchain-ai/langchain/tree/master/libs/partners/nvidia-ai-endpoints) package.
+This example leverages the Llama2-70B model from AI Foundation Endpoints via the [langchain-nvidia-ai-endpoints](https://github.com/langchain-ai/langchain/tree/master/libs/partners/nvidia-ai-endpoints) package.
 
 ## Installation and Setup
 
