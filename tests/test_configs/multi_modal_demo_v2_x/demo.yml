@@ -5,6 +5,9 @@ models:
       engine: openai
       model: gpt-3.5-turbo-instruct
 
+import_paths:
+    - nemoguardrails/colang/v2_x/library/core
+
 instructions:
     - type: "general"
       content: |
