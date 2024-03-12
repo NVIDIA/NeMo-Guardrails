@@ -47,6 +47,18 @@ class FlowParamDef:
 
 @dataclass_json
 @dataclass
+class DecoratorDef:
+    """The definition for a flow decorator.
+
+    Explicit typing is not yet supported.
+    """
+
+    name: str
+    parameters: dict = field(default_factory=dict)
+
+
+@dataclass_json
+@dataclass
 class FlowReturnMemberDef:
     """The definition for a flow return member.
 
@@ -126,6 +138,7 @@ class Flow(Element):
     """Element that represents a flow."""
 
     name: str = ""
+    decorators: List[DecoratorDef] = field(default_factory=list)
     parameters: List[FlowParamDef] = field(default_factory=list)
     return_members: List[FlowReturnMemberDef] = field(default_factory=list)
     elements: List[Element] = field(default_factory=list)

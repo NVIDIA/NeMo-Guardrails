@@ -8,7 +8,10 @@ suite: _NEWLINE _INDENT (stmt+) _DEDENT
 
 // Flow definition and calling
 ?def_stmt: flow_def
-flow_def: _FLOW spec_name [flow_params_def] ["->" return_members_def] suite
+decorators: (decorator _NEWLINE)*
+decorator: "@" decorator_name ["(" decorator_parameters ")"]
+decorator_parameters: _argvalues*
+flow_def: decorators _FLOW spec_name [flow_params_def] ["->" return_members_def] suite
 ?flow_params_def: flow_params_def_classic | flow_params_def_simple
 flow_params_def_classic: "(" (flow_param_def ("," flow_param_def)*) ")"
 flow_params_def_simple: (flow_param_def)+
@@ -174,6 +177,7 @@ spec_name: name+
 
 name: NAME
 attr_name: NAME
+decorator_name: NAME
 var_name: VAR_NAME
 comment: COMMENT
 
