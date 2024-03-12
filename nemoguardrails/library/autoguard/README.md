@@ -1,6 +1,6 @@
 # AutoGuard
 
-This package implements the AutoGuard API integration.
+This package implements the AutoGuard API integration - a comprehensive guardrail library by AutoAlign AI (https://autoalign.ai/).
 
 AutoGuard comes with a library of built-in guardrails that you can easily use:
 
@@ -25,7 +25,7 @@ Please have a look at its description within this document to understand its usa
 In order to use AutoGuard's guardrails you need to set `AUTOGUARD_API_KEY` as an environment variable in your system,
 with the API key as its value.
 
-Please contact [hello@autoalign.ai](mailto:hello@autoalign.ai) for your own API key.
+Please contact [hello@autoalign.ai](mailto:hello@autoalign.ai) for your own API key. Please mention NeMo and AutoGuard in the subject line in order to receive quick responses fron the AutoAlign team.
 
 
 ## Usage (AutoGuard)
