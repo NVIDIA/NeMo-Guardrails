@@ -15,6 +15,7 @@ AutoGuard comes with a library of built-in guardrails that you can easily use:
 8. [PII](#pii)
 9. [Factcheck](#factcheck)
 
+You need to have the `AUTOGUARD_API_KEY` environment variable set in order to use AutoGuard guardrails.
 
 Note: Factcheck is implemented a bit differently, compared to other guardrails.
 Please have a look at its description within this document to understand its usage.
