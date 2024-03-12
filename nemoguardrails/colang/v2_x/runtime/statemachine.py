@@ -350,7 +350,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> State
                     heads_matching, key=lambda x: x.matching_scores, reverse=True
                 )
 
-                _handle_internal_event_matching(state, event, heads_matching)
+                _handle_event_matching(state, event, heads_matching)
 
                 if isinstance(event, ActionEvent):
                     # Update actions status in all active flows by current action event
@@ -568,7 +568,7 @@ def _get_all_head_candidates(state: State, event: Event) -> List[Tuple[str, str]
     return sorted_head_candidates
 
 
-def _handle_internal_event_matching(
+def _handle_event_matching(
     state: State, event: Event, heads_matching: List[FlowHead]
 ) -> None:
     for head in heads_matching:
@@ -698,9 +698,9 @@ def _resolve_action_conflicts(
                         index = competing_flow_state.action_uids.index(
                             competing_event.action_uid
                         )
-                        competing_flow_state.action_uids[
-                            index
-                        ] = winning_event.action_uid
+                        competing_flow_state.action_uids[index] = (
+                            winning_event.action_uid
+                        )
                         del state.actions[competing_event.action_uid]
 
                     advancing_heads.append(head)
@@ -861,23 +861,23 @@ def slide(
 
         if isinstance(element, SpecOp):
             if element.op == "send":
-                action_event = get_event_from_element(state, flow_state, element)
+                event = get_event_from_element(state, flow_state, element)
 
-                if action_event.name not in InternalEvents.ALL:
+                if event.name not in InternalEvents.ALL:
                     # It's an action event and we need to stop
                     break
 
                 # Add source flow information to event
-                action_event.arguments.update(
+                event.arguments.update(
                     {
                         "source_flow_instance_uid": head.flow_state_uid,
                         "source_head_uid": head.uid,
                     }
                 )
 
-                if action_event.name == InternalEvents.START_FLOW:
+                if event.name == InternalEvents.START_FLOW:
                     # Add flow hierarchy information to event
-                    action_event.arguments.update(
+                    event.arguments.update(
                         {
                             "flow_hierarchy_position": flow_state.hierarchy_position
                             + f".{head.position}",
@@ -885,7 +885,7 @@ def slide(
                     )
 
                 new_event = create_internal_event(
-                    action_event.name, action_event.arguments, head.matching_scores
+                    event.name, event.arguments, head.matching_scores
                 )
                 _push_internal_event(state, new_event)
                 head.position += 1
