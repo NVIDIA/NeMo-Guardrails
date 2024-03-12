@@ -41,6 +41,8 @@ priority_stmt: "priority" expr _NEWLINE
 label_stmt: NAME":" _NEWLINE
 global_stmt: "global" var_name _NEWLINE
 
+// --------------------------------
+
 // A "spec" is a unifying concept for flows, actions, events
 spec_operator: "match" -> match_spec
              | "await" -> await_spec
@@ -95,18 +97,20 @@ simple_arguments: simple_argvalue+
 // Compound statements
 ?compound_stmt: if_stmt | while_stmt | when_stmt
 while_stmt: "while" test suite
-if_stmt: "if" test suite elifs ["else" suite]
+if_stmt: _IF test suite elifs ["else" suite]
 elifs: elif_*
 elif_: _ELSE_IF test suite
 when_stmt: "when" spec_expr suite orwhens ["else" suite]
 orwhens: orwhen_*
 orwhen_: _OR_WHEN spec_expr suite
 
+// --------------------------------
+
 // Test expression (used both for conditions and assignment)
 test: or_test
 ?or_test: and_test (_OR and_test)*
 ?and_test: not_test_ (_AND not_test_)*
-?not_test_: "not" not_test_ -> not_test
+?not_test_: _NOT not_test_ -> not_test
          | comparison
 ?comparison: expr (comp_op expr)*
 star_expr: "*" expr
@@ -124,12 +128,12 @@ expr: or_expr
 !_add_op: "+"|"-"
 !_shift_op: "<<"|">>"
 !_mul_op: "*"|"@"|"/"|"%"|"//"
-!comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="|"in"|"not" "in"|"is"|"is" "not"
+!comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="|_IN|_NOT _IN|_IS|_IS _NOT
 
 ?power: atom_expr ("**" factor)?
-?atom_expr: func_name "(" [arguments] ")"    -> funccall
+?atom_expr: name "(" [arguments] ")"    -> funccall
           | atom_expr "[" subscriptlist "]"  -> getitem
-          | atom_expr "." name               -> getattr
+          | atom_expr "." attr_name          -> getattr
           | "[" _exprlist? "]"  -> list
           | "{" _dict_exprlist? "}" -> dict
           | "{" _exprlist "}" -> set
@@ -166,9 +170,10 @@ sliceop: ":" [test]
 spec_name: name+
          | "(" name+ ")"
 
-func_name: FUNC_NAME
+// --------------------------------
 
 name: NAME
+attr_name: NAME
 var_name: VAR_NAME
 comment: COMMENT
 
@@ -179,25 +184,33 @@ number: DEC_NUMBER | FLOAT_NUMBER
 string: STRING
 doc_string: LONG_STRING
 
+// --------------------------------
+
 // LEXER rules below
 
-_ELSE_IF.1: /(elif|else\s+if)/
-
-_OR_WHEN.1: /(orwhen)/
-
-COMMENT: /#[^\n]*/
-
-_AND.1: /(and[ \t]|(\r?\n[\t ]*)+and[ \t])/
-_OR.1: /(or[ \t]|(\r?\n[\t ]*)+or[ \t])/
+// High priority keywords
 
 // TODO: Create a positive lookbehind for whitespace characters: e.g. with /(?<=\s)
 _FLOW.1: /(?<!\.)flow(?!(\s*\(|[a-zA-Z0-9_]))/
 
+_IF.1: /if/
+_ELSE_IF.1: /(elif|else\s+if)/
+_OR_WHEN.1: /(orwhen)/
+_AND.1: /(and[ \t]|(\r?\n[\t ]*)+and[ \t])/
+_OR.1: /(or[ \t]|(\r?\n[\t ]*)+or[ \t])/
+_IS.1: /is/
+_IN.1: /in/
+_NOT.1: /not/
+
+// Names
+
 NAME: /[^\W\d]\w*/
 VAR_NAME: /\$[^\W\d]\w*/
-FUNC_NAME: /(?<![a-zA-Z]\s)(flow|action)(?=\()/
 
+COMMENT: /#[^\n]*/
 _NEWLINE: (/\r?\n[\t ]*/)+
+
+// Primitive values
 
 STRING: /r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
 LONG_STRING: /(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
