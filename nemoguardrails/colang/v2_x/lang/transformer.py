@@ -365,6 +365,13 @@ class ColangTransformer(Transformer):
         else:
             raise Exception(f"Invalid element '{children[2]['_type']}'")
 
+    def _expr_stmt(self, children: list, meta: Meta) -> Assignment:
+        return Assignment(
+            key="_",
+            expression=children[0]["elements"][0],
+            _source=self.__source(meta),
+        )
+
     def _while_stmt(self, children: list, meta: Meta) -> While:
         assert len(children) == 2
         return While(
