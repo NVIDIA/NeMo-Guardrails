@@ -132,6 +132,7 @@ class RuntimeV2_x(Runtime):
             self.flow_configs[flow_id] = FlowConfig(
                 id=flow_id,
                 elements=flow.elements,
+                decorators={decorator.name: decorator for decorator in flow.decorators},
                 parameters=flow.parameters,
                 return_members=flow.return_members,
                 source_code=flow.source_code,
