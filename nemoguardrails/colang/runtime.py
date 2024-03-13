@@ -32,7 +32,10 @@ class Runtime:
         self.verbose = verbose
 
         # Register the actions with the dispatcher.
-        self.action_dispatcher = ActionDispatcher(config_path=config.config_path)
+        self.action_dispatcher = ActionDispatcher(
+            config_path=config.config_path,
+            import_paths=list(config.imported_paths.values()),
+        )
 
         # The list of additional parameters that can be passed to the actions.
         self.registered_action_params: dict = {}

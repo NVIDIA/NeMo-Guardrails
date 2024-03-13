@@ -669,6 +669,10 @@ class RailsConfig(BaseModel):
         description="A list of additional paths from which configuration elements (colang flows, .yml files, actions)"
         " should be loaded.",
     )
+    imported_paths: Optional[Dict[str, str]] = Field(
+        default_factory=dict,
+        description="The mapping between the imported paths and the actual full path to which they were resolved.",
+    )
 
     # Some tasks need to be as deterministic as possible. The lowest possible temperature
     # will be used for those tasks. Models like dolly don't allow for a temperature of 0.0,

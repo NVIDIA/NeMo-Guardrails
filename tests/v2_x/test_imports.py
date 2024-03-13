@@ -16,6 +16,7 @@
 import os
 
 from nemoguardrails import RailsConfig
+from nemoguardrails.rails.llm.config import colang_path_dirs
 from tests.utils import TestChat
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "../test_configs")
@@ -52,3 +53,28 @@ def test_2():
 
     chat >> "hi"
     chat << "Hello there, it's working!"
+
+
+def test_3():
+    # This config just imports another one, to check that actions are correctly
+    # loaded.
+    colang_path_dirs.append(
+        os.path.join(os.path.dirname(__file__), "..", "test_configs")
+    )
+
+    config = RailsConfig.from_content(
+        colang_content="""
+            import with_custom_action_v2_x
+        """,
+        config={"colang_version": "2.x"},
+    )
+
+    chat = TestChat(
+        config,
+        llm_completions=[],
+    )
+
+    chat >> "start"
+    chat << "8"
+
+    colang_path_dirs.pop()
