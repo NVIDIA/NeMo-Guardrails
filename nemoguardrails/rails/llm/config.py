@@ -35,7 +35,7 @@ with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
 # Extract the COLANGPATH directories.
 colang_path_dirs = [
     _path.strip()
-    for _path in os.environ.get("COLANGPATH", "").split(os.path.sep)
+    for _path in os.environ.get("COLANGPATH", "").split(os.pathsep)
     if _path.strip() != ""
 ]
 
