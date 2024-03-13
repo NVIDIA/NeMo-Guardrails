@@ -121,7 +121,7 @@ flow fallback
 
   start_new_flow_instance:
 
-  $intent = await GenerateUserIntentAction(user_utterance=$event.arguments.final_transcript)
+  $intent = await GenerateUserIntentAction(user_utterance=$event.final_transcript)
   $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
 
   if $exists
@@ -137,19 +137,19 @@ flow fallback
     match FlowStarted(flow_id=$flow_info['name']) as $event_ref
     match $event_ref.flow.Finished()
 
-flow handle undefined flow starts
+flow handling start of undefined flow
   """If we reach a point where we need to start a flow that does not exist, we generate it."""
   # meta: exclude from llm
 
   match UnhandledEvent(event="StartFlow") as $event
 
-  $exists = await CheckValidFlowExistsAction(flow_id=$event.arguments.flow_id)
+  $exists = await CheckValidFlowExistsAction(flow_id=$event.flow_id)
 
   start_new_flow_instance:
 
   if not $exists
-    $flow_id = $event.arguments.flow_id
-    log "'handle undefined flow starts' -> generate new flow '{{$event.arguments.flow_id}}'"
+    $flow_id = $event.flow_id
+    log "'handling start of undefined flow' -> generate new flow '{{$event.flow_id}}'"
     $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
     await AddFlowsAction(config=$flow_source)
     send StartFlow(flow_id=$flow_id)
@@ -175,7 +175,7 @@ flow main
   activate custom instructions
   activate unknown intent
   activate fallback
-  activate handle undefined flow starts
+  activate handling start of undefined flow
   # activate question
   # activate tell the user the weather
 

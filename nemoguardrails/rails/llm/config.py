@@ -24,6 +24,7 @@ from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
+from nemoguardrails.colang.v2_x.runtime.flows import ColangParsingError
 
 log = logging.getLogger(__name__)
 
@@ -452,6 +453,7 @@ def _join_config(dest_config: dict, additional_config: dict):
             "actions_server_url",
             "sensitive_data_detection",
             "embedding_search_provider",
+            "import_paths",
         }
     )
 
@@ -583,9 +585,15 @@ def _parse_colang_files_recursively(
         current_file, current_path = colang_files[len(parsed_colang_files)]
 
         with open(current_path, "r", encoding="utf-8") as f:
-            _parsed_config = parse_colang_file(
-                current_file, content=f.read(), version=colang_version
-            )
+            try:
+                _parsed_config = parse_colang_file(
+                    current_file, content=f.read(), version=colang_version
+                )
+            except Exception as e:
+                print(e)
+                raise ColangParsingError(
+                    f"Error while parsing Colang file: {current_path}"
+                ) from e
 
             # We join only the "import_paths" field in the config for now
             _join_config(

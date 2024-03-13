@@ -1,12 +1,26 @@
 # Using OpenAI
 colang_version: "2.x"
+
 models:
     - type: main
       engine: openai
       model: gpt-3.5-turbo-instruct
 
-import_paths:
-    - nemoguardrails/colang/v2_x/library/core
+prompts:
+    - task: my_custom_prompt
+      content: |-
+          """
+          {{ general_instructions }}
+          """
+
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
+
+          # This were the previous questions
+          {{ questions }}
+
+          # {{ instructions }}
+          ${{ var_name }} =
 
 instructions:
     - type: "general"
