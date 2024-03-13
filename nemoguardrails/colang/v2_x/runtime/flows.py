@@ -28,6 +28,7 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 from dataclasses_json import dataclass_json
 
 from nemoguardrails.colang.v2_x.lang.colang_ast import (
+    Decorator,
     ElementType,
     FlowParamDef,
     FlowReturnMemberDef,
@@ -106,6 +107,17 @@ class Event:
             [(key, event[key]) for key in event if key not in ["type"]]
         )
         return new_event
+
+    # Expose all event parameters as attributes of the event
+    def __getattr__(self, name):
+        if (
+            name not in self.__dict__
+            and "arguments" in self.__dict__
+            and name in self.__dict__["arguments"]
+        ):
+            return self.__dict__["arguments"][name]
+        else:
+            return object.__getattribute__(self, "params")[name]
 
 
 @dataclass
@@ -201,6 +213,9 @@ class Action:
         # The arguments that will be used for the start event
         self.start_event_arguments = arguments
 
+        # Number of flows where this action is still active
+        self.flow_scope_count = 0
+
     # Process an event
     def process_event(self, event: ActionEvent) -> None:
         """Processes event and updates action accordingly."""
@@ -214,9 +229,11 @@ class Action:
             elif "ActionFinished" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.FINISHED
+                self.flow_scope_count = 0
             elif "Start" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.STARTING
+                self.flow_scope_count = 1
             elif "Stop" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.STOPPING
@@ -285,6 +302,17 @@ class Action:
             name=f"{self.name}Finished", arguments=arguments, action_uid=self.uid
         )
 
+    # Expose all action parameters as attributes
+    def __getattr__(self, name):
+        if (
+            name not in self.__dict__
+            and "context" in self.__dict__
+            and name in self.__dict__["context"]
+        ):
+            return self.__dict__["context"][name]
+        else:
+            return object.__getattribute__(self, "params")[name]
+
 
 class InteractionLoopType(Enum):
     """The type of the interaction loop."""
@@ -306,6 +334,11 @@ class FlowConfig:
 
     # The flow parameters
     parameters: List[FlowParamDef]
+
+    # The decorators for the flow.
+    # Maps the name of the applied decorators to the arguments.
+    # If positional arguments are provided, then the "$0", "$1", ... are used as the keys.
+    decorators: Dict[str, Decorator] = field(default_factory=dict)
 
     # The flow return member variables
     return_members: List[FlowReturnMemberDef] = field(default_factory=list)
@@ -672,6 +705,10 @@ class State:
     event_matching_heads_reverse_map: Dict[Tuple[str, str], str] = field(
         default_factory=dict
     )
+
+
+class ColangParsingError(Exception):
+    """Raised when there is invalid Colang syntax detected."""
 
 
 class ColangSyntaxError(Exception):

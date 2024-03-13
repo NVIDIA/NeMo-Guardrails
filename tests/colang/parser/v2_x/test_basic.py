@@ -44,6 +44,7 @@ def test_1():
         {
             "_source": None,
             "_type": "flow",
+            "decorators": [],
             "elements": [
                 {
                     "_source": None,
@@ -122,6 +123,7 @@ def test_2():
         {
             "_source": None,
             "_type": "flow",
+            "decorators": [],
             "elements": [
                 {
                     "_source": None,
@@ -223,6 +225,7 @@ def test_3():
         {
             "_source": None,
             "_type": "flow",
+            "decorators": [],
             "elements": [
                 {
                     "_source": None,
@@ -348,6 +351,7 @@ def test_4():
     assert flows == [
         {
             "_type": "flow",
+            "decorators": [],
             "_source": None,
             "name": "test",
             "parameters": [],
@@ -888,6 +892,7 @@ def test_flow_return_values():
     assert flow == [
         {
             "_type": "flow",
+            "decorators": [],
             "_source": None,
             "name": "a",
             "parameters": [{"name": "param", "default_value_expr": None}],
@@ -917,6 +922,7 @@ def test_flow_return_values():
         },
         {
             "_type": "flow",
+            "decorators": [],
             "_source": None,
             "name": "b",
             "parameters": [],
@@ -946,6 +952,7 @@ def test_flow_return_values():
         },
         {
             "_type": "flow",
+            "decorators": [],
             "_source": None,
             "name": "c",
             "parameters": [],
@@ -978,6 +985,7 @@ def test_flow_return_values():
         },
         {
             "_type": "flow",
+            "decorators": [],
             "_source": None,
             "name": "c",
             "parameters": [],
