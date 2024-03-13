@@ -117,10 +117,15 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             if colang_flow:
                 assert isinstance(flow, Flow)
                 # Check if we need to exclude this flow.
-                # TODO: Implement this better, e.g. as a flow declarator
+                # TODO: deprecate the use of the "# meta: " comment in favor of
+                #   @meta(llm_exclude=True)
                 if "# meta: exclude from llm" in colang_flow or (
                     "exclude_from_llm" not in flow.file_info
                     or flow.file_info["exclude_from_llm"]
+                    or (
+                        "meta" in flow.decorators
+                        and flow.decorators["meta"].parameters.get("llm_exclude")
+                    )
                 ):
                     continue
 

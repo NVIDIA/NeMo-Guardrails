@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import re
+from ast import literal_eval
 from typing import Any, Dict, List, Optional, Union
 
 from lark import Token, Transformer
@@ -24,11 +25,13 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     Assignment,
     Break,
     Continue,
+    Decorator,
     Flow,
     FlowParamDef,
     FlowReturnMemberDef,
     Global,
     If,
+    Import,
     Label,
     Log,
     Print,
@@ -114,13 +117,35 @@ class ColangTransformer(Transformer):
 
     def _flow_def(self, children: dict, meta: Meta) -> Flow:
         """Processing for `flow` tree nodes."""
-        assert children[0]["_type"] == "spec_name"
-        assert children[3]["_type"] == "suite"
+        assert children[0]["_type"] == "decorators"
+        assert children[1]["_type"] == "spec_name"
+        assert children[4]["_type"] == "suite"
 
-        name = children[0]["elements"][0]
-        parameters = children[1]
-        return_members = children[2]
-        elements = children[3]["elements"]
+        decorators = children[0]["elements"]
+        name = children[1]["elements"][0]
+        parameters = children[2]
+        return_members = children[3]
+        elements = children[4]["elements"]
+
+        decorator_defs = []
+        for decorator in decorators:
+            name_el = decorator["elements"][0]
+            assert name_el["_type"] == "decorator_name"
+            decorator_name = name_el["elements"][0]["elements"][0]
+            decorator_parameters = {}
+
+            if len(decorator["elements"]) > 1:
+                arg_elements = decorator["elements"][1]
+                if arg_elements:
+                    decorator_parameters = self.__parse_classical_arguments(
+                        arg_elements["elements"]
+                    )
+                    for k in decorator_parameters:
+                        decorator_parameters[k] = literal_eval(decorator_parameters[k])
+
+            decorator_defs.append(
+                Decorator(name=decorator_name, parameters=decorator_parameters)
+            )
 
         param_defs = []
         if parameters:
@@ -176,6 +201,7 @@ class ColangTransformer(Transformer):
         return Flow(
             name=name,
             elements=elements,
+            decorators=decorator_defs,
             parameters=param_defs,
             return_members=return_member_defs,
             _source=self.__source(meta),
@@ -339,6 +365,28 @@ class ColangTransformer(Transformer):
             return spec_op
         else:
             raise Exception(f"Invalid element '{children[2]['_type']}'")
+
+    def _expr_stmt(self, children: list, meta: Meta) -> Assignment:
+        return Assignment(
+            key="_",
+            expression=children[0]["elements"][0],
+            _source=self.__source(meta),
+        )
+
+    def _import_stmt(self, children: list, meta: Meta) -> Import:
+        path = None
+        package = None
+
+        if children[0]["_type"] == "package_name":
+            package = ".".join(el["elements"][0] for el in children[0]["elements"])
+        else:
+            path = children[0]["elements"][0]["elements"][0]
+
+        return Import(
+            path=path,
+            package=package,
+            _source=self.__source(meta),
+        )
 
     def _while_stmt(self, children: list, meta: Meta) -> While:
         assert len(children) == 2

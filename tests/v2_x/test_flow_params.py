@@ -118,3 +118,39 @@ def test_2_2(config_2):
 
     chat >> "I need help"
     chat << "I'm not sure what to do next."
+
+
+def test_3():
+    config = RailsConfig.from_content(
+        colang_content="""
+        flow user said $text
+          match UtteranceUserActionFinished(final_transcript=$text)
+
+        flow bot say $text
+          await UtteranceBotAction(script=$text)
+
+        flow user express greeting
+          user said "hi"
+
+        flow bot express greeting
+          bot say "Hello world!"
+
+        flow main
+          $a = [1,2,3]
+          user express greeting
+
+          bot say $text = str(len($a))
+          bot say (str(len($a)))
+        """,
+        yaml_content="""
+        colang_version: "2.x"
+        """,
+    )
+
+    chat = TestChat(
+        config,
+        llm_completions=[],
+    )
+
+    chat >> "hi"
+    chat << "3\n3"

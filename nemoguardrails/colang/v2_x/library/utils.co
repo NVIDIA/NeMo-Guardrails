@@ -1,0 +1,8 @@
+flow wait indefinitely
+  """Little helper flow to wait indefinitely."""
+  match NeverComingEvent()
+
+flow wait $time_s $timer_id="wait_timer_{{uid()}}"
+  """Wait the specified number of seconds before continuing."""
+  # meta: loop_id=NEW
+  await TimerBotAction(timer_name=$timer_id, duration=$time_s)
