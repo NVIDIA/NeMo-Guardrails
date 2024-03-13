@@ -6,7 +6,7 @@ This user guide will help you set up and use the ABC Bot with the Llama2-70b mod
 
 Before you begin, ensure you have the following prerequisites in place:
 
-1. The langchain-nvidia-ai-endpoints package installed:
+1. The [langchain-nvidia-ai-endpoints](https://github.com/langchain-ai/langchain-nvidia/tree/main/libs/ai-endpoints) package installed:
 
 ```bash
 pip install -U langchain-nvidia-ai-endpoints
@@ -47,12 +47,12 @@ awk '/^models:/{flag=1; next} /^[a-zA-Z]+:/{flag=0} flag' ./config/config.yml
 
 To change the model used by the bot, update the `model` variable within the models section of the `config.yml` file to the desired model supported by NVIDIA AI Foundation Endpoints.
 
-    ```yaml
+```yaml
 models:
   - type: main
     engine: nvidia_ai_endpoints
     model: playground_llama2_70b
-    ```
+```
 
 ## Registering ChatNVIDIA as a New Provider
 
@@ -67,10 +67,6 @@ register_llm_provider("nvidia_ai_endpoints", ChatNVIDIA)
 
 config = RailsConfig.from_path("./config")
 rails = LLMRails(config)
-```
-
-```
-Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]
 ```
 
 ## Testing the Bot
