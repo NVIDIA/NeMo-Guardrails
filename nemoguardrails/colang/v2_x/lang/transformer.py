@@ -25,12 +25,13 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     Assignment,
     Break,
     Continue,
-    DecoratorDef,
+    Decorator,
     Flow,
     FlowParamDef,
     FlowReturnMemberDef,
     Global,
     If,
+    Import,
     Label,
     Log,
     Print,
@@ -143,7 +144,7 @@ class ColangTransformer(Transformer):
                         decorator_parameters[k] = literal_eval(decorator_parameters[k])
 
             decorator_defs.append(
-                DecoratorDef(name=decorator_name, parameters=decorator_parameters)
+                Decorator(name=decorator_name, parameters=decorator_parameters)
             )
 
         param_defs = []
@@ -369,6 +370,21 @@ class ColangTransformer(Transformer):
         return Assignment(
             key="_",
             expression=children[0]["elements"][0],
+            _source=self.__source(meta),
+        )
+
+    def _import_stmt(self, children: list, meta: Meta) -> Import:
+        path = None
+        package = None
+
+        if children[0]["_type"] == "package_name":
+            package = ".".join(el["elements"][0] for el in children[0]["elements"])
+        else:
+            path = children[0]["elements"][0]["elements"][0]
+
+        return Import(
+            path=path,
+            package=package,
             _source=self.__source(meta),
         )
 

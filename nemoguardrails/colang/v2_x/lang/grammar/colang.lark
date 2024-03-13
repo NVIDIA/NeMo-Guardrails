@@ -22,7 +22,7 @@ return_member_def: var_name ("=" test)?
 
 
 // Simple statements
-?simple_stmt: set_stmt | return_stmt | abort_stmt | break_stmt | continue_stmt | pass_stmt | log_stmt | print_stmt | priority_stmt | label_stmt | global_stmt | expr_stmt
+?simple_stmt: set_stmt | return_stmt | abort_stmt | break_stmt | continue_stmt | pass_stmt | log_stmt | print_stmt | priority_stmt | label_stmt | global_stmt | expr_stmt | import_stmt
 set_stmt: var_name set_op set_right_side _NEWLINE
 ?set_right_side: test | spec_op
 
@@ -43,6 +43,7 @@ print_stmt: "print" expr _NEWLINE
 priority_stmt: "priority" expr _NEWLINE
 label_stmt: NAME":" _NEWLINE
 global_stmt: "global" var_name _NEWLINE
+import_stmt: "import" (package_name | string) _NEWLINE
 expr_stmt: "(" test ")"
 
 // --------------------------------
@@ -182,6 +183,7 @@ attr_name: NAME
 decorator_name: NAME
 method_name: NAME
 var_name: VAR_NAME
+package_name: NAME ("." NAME)*
 comment: COMMENT
 
 // Primitive types
