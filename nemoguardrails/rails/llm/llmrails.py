@@ -165,7 +165,9 @@ class LLMRails:
 
         # We check if the configuration or any of the imported ones have config.py modules.
         config_modules = []
-        for _path in self.config.import_paths + [self.config.config_path]:
+        for _path in list(self.config.imported_paths.values()) + [
+            self.config.config_path
+        ]:
             if _path:
                 filepath = os.path.join(_path, "config.py")
                 if os.path.exists(filepath):

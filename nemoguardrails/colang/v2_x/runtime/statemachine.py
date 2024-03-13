@@ -106,10 +106,23 @@ def initialize_flow(state: State, flow_config: FlowConfig) -> None:
     flow_config.elements = expand_elements(flow_config.elements, state.flow_configs)
 
     # Extract flow loop id if available
+    # TODO: deprecate this convention in the favor of the `@loop("some_id")` decorator.
     if flow_config.source_code:
         match = re.search(r"#\W*meta:\W*loop_id\W*=\W*(\w*)", flow_config.source_code)
         if match:
             flow_config.loop_id = match.group(1)
+
+    # Extract loop id from decorator if available
+    if "loop" in flow_config.decorators:
+        decorator = flow_config.decorators["loop"]
+        if "id" in decorator.parameters:
+            flow_config.loop_id = decorator.parameters["id"]
+        elif "$0" in decorator.parameters:
+            flow_config.loop_id = decorator.parameters["$0"]
+        else:
+            raise ValueError(
+                f"No loop id specified for @loop decorator for flow `{flow_config.id}`"
+            )
 
     # Extract all the label elements
     for idx, element in enumerate(flow_config.elements):

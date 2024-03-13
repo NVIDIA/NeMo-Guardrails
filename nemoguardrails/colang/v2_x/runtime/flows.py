@@ -28,6 +28,7 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
 from dataclasses_json import dataclass_json
 
 from nemoguardrails.colang.v2_x.lang.colang_ast import (
+    Decorator,
     ElementType,
     FlowParamDef,
     FlowReturnMemberDef,
@@ -306,6 +307,11 @@ class FlowConfig:
 
     # The flow parameters
     parameters: List[FlowParamDef]
+
+    # The decorators for the flow.
+    # Maps the name of the applied decorators to the arguments.
+    # If positional arguments are provided, then the "$0", "$1", ... are used as the keys.
+    decorators: Dict[str, Decorator] = field(default_factory=dict)
 
     # The flow return member variables
     return_members: List[FlowReturnMemberDef] = field(default_factory=list)
