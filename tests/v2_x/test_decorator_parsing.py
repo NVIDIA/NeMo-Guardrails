@@ -29,6 +29,7 @@ def test_1():
         flow some flow
           return
 
+        @meta(llm_exclude=True)
         @loop(id="bla")
         flow some other flow
           return
@@ -50,3 +51,4 @@ def test_1():
 
     assert flows["some flow"].loop_id == "bla"
     assert flows["some other flow"].loop_id == "bla"
+    assert flows["some other flow"].decorators["meta"].parameters["llm_exclude"]
