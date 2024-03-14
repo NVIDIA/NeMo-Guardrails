@@ -611,9 +611,9 @@ def _expand_activate_element(
 def _expand_assignment_stmt_element(element: Assignment) -> List[ElementType]:
     new_elements: List[ElementType] = []
 
-    # Check if the expression is an NLD
-    nld_pattern = r"\"\"\"(.*?)\"\"\"|'''(.*?)'''"
-    match = re.search(nld_pattern, element.expression)
+    # Check if the expression is an NLD instruction
+    nld_instruction_pattern = r"^\s*i\"(.*)\"|^\s*i'(.*)'"
+    match = re.search(nld_instruction_pattern, element.expression)
 
     if match:
         # Replace the assignment with the GenerateValueAction system action

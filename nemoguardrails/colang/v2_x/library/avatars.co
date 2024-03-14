@@ -261,7 +261,7 @@ flow bot say $text
   await _bot_say $text
 
 flow bot say something like $text
-  $variation = """Return a single string that is a new variation of: {$text}"""
+  $variation = i"Return a single string that is a new variation of: {$text}"
   await bot say $variation
 
 flow bot inform $text
