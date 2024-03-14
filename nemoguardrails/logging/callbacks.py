@@ -181,9 +181,10 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
 
         # Finally, we append the LLM call log to the processing log
         processing_log = processing_log_var.get()
-        processing_log.append(
-            {"type": "llm_call_info", "timestamp": time(), "data": llm_call_info}
-        )
+        if processing_log:
+            processing_log.append(
+                {"type": "llm_call_info", "timestamp": time(), "data": llm_call_info}
+            )
 
     async def on_llm_error(
         self,
