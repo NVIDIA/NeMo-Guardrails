@@ -80,7 +80,9 @@ class RuntimeV2_x(Runtime):
                 include_source_mapping=True,
             )
         except Exception as e:
-            print("Failed parsing a generated flow\n%s\n%s", flow_content, e)
+            warning = f"Failed parsing a generated flow\n{flow_content}\n{e}"
+            log.warning(warning)
+            print(warning)
             return []
             # Alternatively, we could through an exceptions
             # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
@@ -88,7 +90,9 @@ class RuntimeV2_x(Runtime):
         added_flows: List[str] = []
         for flow in parsed_flow["flows"]:
             if flow.name in state.flow_configs:
-                print("Flow '%s' already exists! Not loaded!", flow.name)
+                warning = "Flow '{flow.name}' already exists! Not loaded!"
+                log.warning(warning)
+                print(warning)
                 break
 
             flow_config = FlowConfig(

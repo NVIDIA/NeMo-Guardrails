@@ -1089,14 +1089,20 @@ def slide(
                 break
 
         elif isinstance(element, Assignment):
-            # We need to first evaluate the expression
-            expr_val = eval_expression(
-                element.expression, _get_eval_context(state, flow_state)
-            )
-            if element.key in flow_state.global_variables:
-                state.context.update({element.key: expr_val})
+            # Check if we have a conflict with flow attribute
+            if element.key in flow_state.__dict__:
+                warning = f"Reserved flow attribute name '{element.key}' cannot be used as variable!"
+                log.warning(warning)
+                print(warning)
             else:
-                flow_state.context.update({element.key: expr_val})
+                # We need to first evaluate the expression
+                expr_val = eval_expression(
+                    element.expression, _get_eval_context(state, flow_state)
+                )
+                if element.key in flow_state.global_variables:
+                    state.context.update({element.key: expr_val})
+                else:
+                    flow_state.context.update({element.key: expr_val})
             head.position += 1
 
         elif isinstance(element, Return):
