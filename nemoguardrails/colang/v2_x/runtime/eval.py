@@ -92,39 +92,12 @@ def eval_expression(expr: str, context: dict) -> Any:
         else:
             return _match.group(0)
 
-    # If the expression contains the pattern r"(.*?)" it is considered a regular expression
-    expr_locals = {}
-    # This pattern first tries to match escaped quotes, then it matches any string enclosed by quotes
-    # finally it tries to match (and capture in a group) the r"" strings. At this point we know that we
-    # are not within a quote. We are doing this for both quoting styles ' and " separately
-    # Regular expressions are found if a match contains either non-empty group 1 or group 3
-    regex_pattern = (
-        r'\\"|"(?:\\"|[^"])*"|(r\"(.*?)\")|\\\'|\'(?:\\\'|[^\'])*\'|(r\'(.*?)\')'
-    )
-    regular_expressions = [
-        exp for exp in re.findall(regex_pattern, expr) if exp[1] or exp[3]
-    ]
-    updated_expr = re.sub(regex_pattern, partial(replace_with_index, "regex"), expr)
-
-    for idx, regular_expression in enumerate(regular_expressions):
-        try:
-            regex = (
-                regular_expression[1]
-                if regular_expression[1] != ""
-                else regular_expression[3]
-            )
-            compiled_regex = re.compile(regex)
-            expr_locals[f"regex_{idx}"] = compiled_regex
-        except Exception as ex:
-            raise ColangValueError(
-                f"Error in compiling regular expression '{expr}'"
-            ) from ex
-
     # We search for all variable names starting with $, remove the $ and add
     # the value in the dict for eval
+    expr_locals = {}
     regex_pattern = r"\$([a-zA-Z_][a-zA-Z0-9_]*)"
-    var_names = re.findall(regex_pattern, updated_expr)
-    updated_expr = re.sub(regex_pattern, r"var_\1", updated_expr)
+    var_names = re.findall(regex_pattern, expr)
+    updated_expr = re.sub(regex_pattern, r"var_\1", expr)
 
     for var_name in var_names:
         # if we've already computed the value, we skip
