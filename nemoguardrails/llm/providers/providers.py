@@ -34,8 +34,6 @@ from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain.schema.output import GenerationChunk
 from langchain_community import llms
 
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
-
 from nemoguardrails.rails.llm.config import Model
 
 from .nemollm import NeMoLLM
