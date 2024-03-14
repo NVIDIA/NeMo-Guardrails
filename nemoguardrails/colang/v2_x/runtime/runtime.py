@@ -41,6 +41,7 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     initialize_state,
     run_to_completion,
 )
+from nemoguardrails.colang.v2_x.runtime.utils import create_flow_configs_from_flow_list
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
 
@@ -123,21 +124,7 @@ class RuntimeV2_x(Runtime):
 
     def _init_flow_configs(self) -> None:
         """Initializes the flow configs based on the config."""
-        self.flow_configs = {}
-
-        for flow in self.config.flows:
-            assert isinstance(flow, Flow)
-            # if flow.name in self.flow_configs:
-            #     # Check which flow is overriding the other
-            #     flow.decorators
-            self.flow_configs[flow.name] = FlowConfig(
-                id=flow.name,
-                elements=flow.elements,
-                decorators={decorator.name: decorator for decorator in flow.decorators},
-                parameters=flow.parameters,
-                return_members=flow.return_members,
-                source_code=flow.source_code,
-            )
+        self.flow_configs = create_flow_configs_from_flow_list(self.config.flows)
 
     async def generate_events(self, events: List[dict]) -> List[dict]:
         raise NotImplementedError("Stateless API not supported for Colang 2.x, yet.")

@@ -1281,5 +1281,71 @@ def test_interaction_loop_with_new():
     )
 
 
+def test_flow_overriding():
+    """Test that flows in different interaction loops don't interfere."""
+
+    content = """
+    @override
+    flow a
+      match UtteranceUserAction().Finished(final_transcript="One")
+      await UtteranceBotAction(script="One")
+
+    flow a
+      match UtteranceUserAction().Finished(final_transcript="One")
+      await UtteranceBotAction(script="Two")
+
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="Two")
+      await UtteranceBotAction(script="One")
+
+    @override
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="Two")
+      await UtteranceBotAction(script="Two")
+
+    flow main
+      start a and b
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "One",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "One",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Two",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Two",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_interaction_loops()
+    test_flow_overriding()

@@ -375,6 +375,12 @@ class FlowConfig:
         else:
             return InteractionLoopType.PARENT
 
+    @property
+    def is_override(self) -> True:
+        """Return True if flow is marked as override."""
+        return "override" in self.decorators
+
+
 class FlowHeadStatus(Enum):
     """The status of a flow head."""
 
