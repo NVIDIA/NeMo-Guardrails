@@ -1,0 +1,12 @@
+models:
+    - type: main
+      engine: vertexai
+      model: gemini-1.0-pro
+
+rails:
+    input:
+        flows:
+            - self check input
+    output:
+        flows:
+            - self check output

@@ -274,6 +274,7 @@ class TopicalRailsEvaluation:
         num_bot_intent_errors = 0
         num_bot_utterance_errors = 0
         topical_predictions = []
+        num_user_intent_errors_from_empty_intent = 0
 
         for intent, samples in self.test_set.items():
             for sample in samples:
@@ -294,13 +295,16 @@ class TopicalRailsEvaluation:
                     generated_user_intent = last_user_intent_event["intent"]
                     prediction["generated_user_intent"] = generated_user_intent
                     wrong_intent = False
-                if (
-                    generated_user_intent is not None
-                    and generated_user_intent != intent
-                ):
+                if generated_user_intent is None:
+                    num_user_intent_errors_from_empty_intent += 1
+                    print("Error!: Generated empty user intent")
+                if generated_user_intent is None or generated_user_intent != intent:
                     wrong_intent = True
                     # Employ semantic similarity if needed
-                    if self.similarity_threshold > 0:
+                    if (
+                        generated_user_intent is not None
+                        and self.similarity_threshold > 0
+                    ):
                         sim_user_intent = self._get_most_similar_intent(
                             generated_user_intent
                         )
