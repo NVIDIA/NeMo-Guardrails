@@ -2,7 +2,7 @@
 
 Some LLM guardrail scenarios require invoking a guardrail configuration to check only the input or the output (which was generated through other methods). In other words, the interaction with the LLM will not happen **through** the guardrails layer but rather externally, and the guardrails layer is only invoked to check the input/output.
 
-> NOTE: Version `0.8.0` will add support in the Python API to invoke only the input/output rails. Until then, the patterns below can be used.
+> NOTE: Version `0.8.0` added support in the Python API to invoke only the input/output rails. The patterns below are deprecated.
 
 To invoke only the input rails, you can use the following pattern in your `config.yml`/`config.co`:
 

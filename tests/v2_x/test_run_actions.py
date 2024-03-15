@@ -103,7 +103,7 @@ def test_3():
 
         flow main
           match UtteranceUserActionFinished(final_transcript="hi")
-          $information = FetchDictionaryAction()
+          $information = await FetchDictionaryAction()
           $response_to_user = '''Summarize the result from the AddItemAction call to the user: {{$information}}'''
           bot say $response_to_user
         """,
