@@ -337,6 +337,7 @@ class LLMRails:
                         "nlpcloud",
                         "petals",
                         "trt_llm",
+                        "vertexai",
                     ]:
                         kwargs["model_name"] = llm_config.model
                     elif llm_config.engine == "nvidia_ai_endpoints":

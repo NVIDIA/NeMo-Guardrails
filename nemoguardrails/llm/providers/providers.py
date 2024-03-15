@@ -43,7 +43,11 @@ log = logging.getLogger(__name__)
 
 # Initialize the providers with the default ones, for now only NeMo LLM.
 # We set nvidia_ai_endpoints provider to None because it's only supported if `langchain_nvidia_ai_endpoints` is installed.
-_providers: Dict[str, Type[BaseLanguageModel]] = {"nemollm": NeMoLLM, "trt_llm": TRTLLM, "nvidia_ai_endpoints": None}
+_providers: Dict[str, Type[BaseLanguageModel]] = {
+    "nemollm": NeMoLLM,
+    "trt_llm": TRTLLM,
+    "nvidia_ai_endpoints": None,
+}
 
 
 class HuggingFacePipelineCompatible(HuggingFacePipeline):
@@ -242,6 +246,19 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
             raise ImportError(
                 "Could not import langchain_nvidia_ai_endpoints, please install it with "
                 "`pip install langchain-nvidia-ai-endpoints`."
+            )
+
+    elif model_config.engine == "vertexai":
+        # To avoid a LangChainDeprecationWarning with the default langchain_community.llms.vertexai.VertexAI which  is
+        # deprecated in langchain-community 0.0.12 and will be removed in 0.2.0.
+        try:
+            from langchain_google_vertexai import VertexAI
+
+            return VertexAI
+        except ImportError:
+            raise ImportError(
+                "Could not import langchain_google_vertexai, please install it with "
+                "`pip install langchain-google-vertexai`."
             )
 
     else:
