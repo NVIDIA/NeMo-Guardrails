@@ -1,0 +1,10 @@
+define user express greeting
+    "hi there"
+    "how are you"
+
+define flow happy
+    if $user
+        bot express greeting
+        user express fairwal
+    else
+        user express dadwal
