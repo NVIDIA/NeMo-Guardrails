@@ -1,55 +1,98 @@
 # Using LLMs hosted on Vertex AI
 
-This guide shows an example that queries LLMs hosted on Vertex AI. This guide includes an example GuardRails configuration that is a variation of the ABC bot defined in the the [Getting Started Guide](../../../getting_started/README.md). The only change is that this changes the model being used `gemini-1.0-pro` using the `vertexai` engine.
+This guide teaches you how to use NeMo Guardrails with LLMs hosted on Vertex AI. It uses the [ABC Bot configuration](../../../../examples/bots/abc) and changes the model to `gemini-1.0-pro`.
 
-This guide assumes you have configured and tested direct programmatic querying of Vertex AI models. If not, refer to [this guide](../../advanced/vertexai-setup.md).
+This guide assumes you have configured and tested working with Vertex AI models. If not, refer to [this guide](../../advanced/vertexai-setup.md).
 
-The following additional python libraries are needed to use Vertex AI with GuardRails.
+## Prerequisites
+
+You need to install the following Python libraries:
+
+1. Install the `google-cloud-aiplatform` and `langchain-google-vertexai` packages:
 
 ```bash
-pip install google-cloud-aiplatform>=1.38.0
-pip install langchain-google-vertexai==0.1.0
+pip install --quiet "google-cloud-aiplatform>=1.38.0" langchain-google-vertexai==0.1.0
 ```
 
-Copy the ABC bot into a subdirectory called `config`
+2. Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS # Replace with your own key
+```
+
+3. If you're running this inside a notebook, patch the AsyncIO loop.
+
+```python
+import nest_asyncio
+nest_asyncio.apply()
+```
+
+## Configuration
+
+To get started, copy the ABC bot configuration into a subdirectory called `config`:
 
 ```bash
 cp -r ../../../../examples/bots/abc config
 ```
 
-Open `config/config.yml` and edit the `models` portion as follows:
+Update the `config/config.yml` file to use the `gemini-1.0-pro` model with the `vertexai` provider:
 
-```yaml
+```
+...
+
 models:
   - type: main
     engine: vertexai
     model: gemini-1.0-pro
+
+...
 ```
 
-Test the model with ABC rails in place.
+Load the guardrails configuration:
 
 ```python
-import nest_asyncio
-nest_asyncio.apply()
-
 from nemoguardrails import RailsConfig
 from nemoguardrails import LLMRails
 
-config_path = "config"
-config = RailsConfig.from_path(config_path)
-
+config = RailsConfig.from_path("./config")
 rails = LLMRails(config)
-user_utt = "Hi, who are you?"
-response = rails.generate(messages=[{"role": "user", "content": user_utt}])
-print("User:", user_utt)
-print("Bot: ", response)
+```
+
+Test that it works:
+
+```python
+response = rails.generate(messages=[{
+    "role": "user",
+    "content": "Hi! How are you?"
+}])
+print(response)
+```
+
+```yaml
+{'role': 'assistant', 'content': "I'm doing great! Thank you for asking. I'm here to help you with any questions you may have about the ABC Company."}
+```
+
+You can see that the bot responds correctly. To see in more detail what LLM calls have been made, you can use the `print_llm_calls_summary` method as follows:
+
+```python
+info = rails.explain()
+info.print_llm_calls_summary()
 ```
 
 ```
-    Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]
+Summary: 5 LLM call(s) took 3.99 seconds .
 
-    User: Hi, who are you?
-    Bot:  {'role': 'assistant', 'content': "I'm the ABC Bot, a virtual assistant designed to answer your questions about the ABC Company. I'm here to help you with any inquiries you may have about our policies, benefits, and more. How can I assist you today?"}
+1. Task `self_check_input` took 0.58 seconds .
+2. Task `generate_user_intent` took 1.19 seconds .
+3. Task `generate_next_steps` took 0.71 seconds .
+4. Task `generate_bot_message` took 0.88 seconds .
+5. Task `self_check_output` took 0.63 seconds .
 ```
 
-Note that the bot follows the provided rails and responds as the ABC bot.
+## Evaluation
+
+The `gemini-1.0-pro` and `text-bison` models have been evaluated for topical rails, and `gemini-1.0-pro` has also been evaluated as a self-checking model for hallucination and content moderation. Evaluation results can be found [here](../../../../docs/evaluation/README.md).
+
+## Conclusion
+
+In this guide, you learned how to connect a NeMo Guardrails configuration to a Vertex AI LLM model. This guide uses `gemini-1.0-pro`, however, you can connect any other model following the same steps.

@@ -229,7 +229,7 @@ class ModerationRailsEvaluation:
             )
             if jailbreak_error > 0:
                 print(
-                    f"% of samples where model or rail errored out: {jailbreak_error/len(self.dataset) * 100}"
+                    f"% of samples where jailbreak model or rail errored out: {jailbreak_error/len(self.dataset) * 100}"
                 )
             print("\n")
             print("*" * 50)
@@ -244,7 +244,7 @@ class ModerationRailsEvaluation:
             )
             if check_output_error > 0:
                 print(
-                    f"% of samples correctly flagged by output moderation rail: {check_output_error/len(self.dataset) * 100}"
+                    f"% of samples where output moderation model or rail errored out: {check_output_error/len(self.dataset) * 100}"
                 )
             print("\n")
             print(

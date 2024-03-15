@@ -87,10 +87,10 @@ Results on _chit-chat_ dataset, metric used is accuracy.
 | `vicuna-7b-v1.3, k=all`                | 0.62                   | 0.75                   | 0.69                  | 0.77                  | 0.71                   | 0.79                   |
 | `mpt-7b-instruct, k=all`               | 0.73                   | 0.81                   | 0.78                  | 0.82                  | 0.80                   | 0.82                   |
 | `falcon-7b-instruct, k=all`            | 0.81                   | 0.81                   | 0.81                  | 0.82                  | 0.82                   | 0.82                   |
-| `gemini-1.0-pro`                       | 0.79                   | 0.79                   | 0.80                  | 0.80                  | 0.80                   | 0.80
-| `gemini-1.0-pro, single call`          | 0.76                   | 0.76                   | 0.78                  | 0.77                  | 0.78                   | 0.77
-| `text-bison`                           | 0.63                   | 0.75                   | 0.67                  | 0.78                  | 0.70                   | 0.79
-| `text-bison, single call`              | 0.65                   | 0.75                   | 0.71                  | 0.77                  | 0.73                   | 0.80
+| `gemini-1.0-pro`                       | 0.79                   | 0.79                   | 0.80                  | 0.80                  | 0.80                   | 0.80                   |
+| `gemini-1.0-pro, single call`          | 0.76                   | 0.76                   | 0.78                  | 0.77                  | 0.78                   | 0.77                   |
+| `text-bison`                           | 0.63                   | 0.75                   | 0.67                  | 0.78                  | 0.70                   | 0.79                   |
+| `text-bison, single call`              | 0.65                   | 0.75                   | 0.71                  | 0.77                  | 0.73                   | 0.80                   |
 
 Results on _banking_ dataset, metric used is accuracy.
 
@@ -244,12 +244,12 @@ We want the models to block as many harmful prompts as possible and allow as man
 These results are using the _Simple_ prompt defined in the LLM Self-Checking method. For more details, see the [Guardrails library](./../../docs/user_guides/guardrails-library.md).
 
 | Model                  | % of harmful prompts blocked | % harmful prompts triggering model errors | % of helpful prompts allowed |
-|------------------------|------------------------|------------------------------|------------------------------|
-| gpt-3.5-turbo-instruct | 78 | 0                          | 97                           |
-| gpt-3.5-turbo          | 70  | 0                         | 100                          |
-| text-davinci-003       | 80    | 0                       | 97                           |
-| nemollm-43b            | 88    | 0                       | 84                           |
-| gemini-1.0-pro         | 63 | 36<sup>*</sup>               | 97                           |
+|------------------------|------------------------------|-------------------------------------------|------------------------------|
+| gpt-3.5-turbo-instruct | 78                           | 0                                         | 97                           |
+| gpt-3.5-turbo          | 70                           | 0                                         | 100                          |
+| text-davinci-003       | 80                           | 0                                         | 97                           |
+| nemollm-43b            | 88                           | 0                                         | 84                           |
+| gemini-1.0-pro         | 63                           | 36<sup>*</sup>                            | 97                           |
 
 <sup>*</sup> Note that as of Mar 13, 2024 `gemini-1.0-pro` when queried via the Vertex AI API occasionally produces [this error](https://github.com/GoogleCloudPlatform/generative-ai/issues/344). Note that this occurs with a self check prompt, that is when the model is given an input where it is asked to give a yes / no answer to whether it should respond to a particular input. We report these separately since this behavior is triggered by the self check prompt itself in which case it is debatable whether this behavior should be treated as effective moderation or being triggered by a false positive.
 
@@ -263,6 +263,7 @@ Below, we evaluate Llama Guard and compare it to the self-checking approach with
 Results on the OpenAI Moderation test set
 Dataset size: 1,680
 Number of user inputs labeled harmful: 552 (31.1%)
+
 | Main LLM               | Input Rail               | Accuracy | Precision | Recall | F1 score |
 |------------------------|--------------------------|----------|-----------|--------|----------|
 | gpt-3.5-turbo-instruct | self check input         | 65.9%    | 0.47      | 0.88   | 0.62     |
@@ -271,6 +272,7 @@ Number of user inputs labeled harmful: 552 (31.1%)
 Results on the ToxicChat dataset:
 Dataset size: 10,165
 Number of user inputs labeled harmful: 730 (7.2%)
+
 | Main LLM               | Input Rail               | Accuracy | Precision | Recall | F1 score |
 |------------------------|--------------------------|----------|-----------|--------|----------|
 | gpt-3.5-turbo-instruct | self check input         | 66.5%    | 0.16      | 0.85   | 0.27     |
@@ -326,11 +328,11 @@ We breakdown the performance into the following metrics:
 - % of questions that are intercepted by the model, i.e., % of questions where the model detects are not answerable
 - % of questions that are intercepted by model + hallucination rail, i.e., % of questions where the either the model detects are not answerable or the hallucination rail detects that the model is making up facts
 
-| Model              | % intercepted - model | % intercepted - model + hallucination rail | % model errored out |
-|--------------------|-----------------------|--------------------------------------------|------|
-| text-davinci-003   | 0                     | 70  | 0 |                                       |
-| gpt-3.5-turbo      | 65                    | 90 | 0  |                                       |
-| gemini-1.0-pro     | 60                    | 80                                       | 6.7<sup>*</sup>  |
+| Model            | % intercepted - model | % intercepted - model + hallucination rail | % model errored out |
+|------------------|-----------------------|--------------------------------------------|---------------------|
+| text-davinci-003 | 0                     | 70                                         | 0                   |                                       |
+| gpt-3.5-turbo    | 65                    | 90                                         | 0                   |                                       |
+| gemini-1.0-pro   | 60                    | 80                                         | 6.7<sup>*</sup>     |
 
 We find that gpt-3.5-turbo is able to intercept 65% of the questions and identify them as not answerable on its own. Adding the hallucination rail helps intercepts 25% more questions and prevents the model from making up facts.
 
