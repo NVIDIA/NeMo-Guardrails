@@ -15,7 +15,6 @@
 
 """Test the core flow mechanics"""
 import logging
-import os
 
 from rich.logging import RichHandler
 
@@ -23,8 +22,7 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     InternalEvent,
     run_to_completion,
 )
-from nemoguardrails.rails.llm.config import RailsConfig
-from tests.utils import TestChat, _init_state, is_data_in_events
+from tests.utils import _init_state, is_data_in_events
 
 FORMAT = "%(message)s"
 logging.basicConfig(
@@ -38,7 +36,7 @@ start_main_flow_event = InternalEvent(name="StartFlow", arguments={"flow_id": "m
 
 
 def test_child_flow_abort():
-    """Test start a child flow two times"""
+    """Test to match failure of child flow."""
 
     content = """
     flow a
@@ -75,7 +73,7 @@ def test_child_flow_abort():
 
 
 def test_conflicting_actions_v_a():
-    """Test the action conflict resolution"""
+    """Test the action conflict resolution where main flow wins."""
 
     content = """
     flow a
@@ -121,7 +119,7 @@ def test_conflicting_actions_v_a():
 
 
 def test_conflicting_actions_v_b():
-    """Test the action conflict resolution"""
+    """Test the action conflict resolution where flow a wins."""
 
     content = """
     flow a
@@ -167,7 +165,7 @@ def test_conflicting_actions_v_b():
 
 
 def test_conflicting_actions_with_flow_priorities():
-    """Test the action conflict resolution"""
+    """Test the action conflict resolution based on priorities."""
 
     content = """
     flow a $p
@@ -240,7 +238,7 @@ def test_conflicting_actions_with_flow_priorities():
 
 
 def test_conflicting_actions_branching_length():
-    """Test the action conflict resolution"""
+    """Test the action conflict resolution with event branching of different lengths."""
 
     content = """
     flow a
@@ -289,7 +287,7 @@ def test_conflicting_actions_branching_length():
 
 
 def test_conflicting_actions_reference_sharing():
-    """Test the action conflict resolution"""
+    """Test the action conflict resolution action reference sharing."""
 
     content = """
     flow a
@@ -370,7 +368,7 @@ def test_conflicting_actions_reference_sharing():
 
 
 def test_flow_parameters_action_wrapper():
-    """Test flow parameter action wrapper mechanic"""
+    """Test flow parameter action wrapper mechanic."""
 
     content = """
     flow bot say $script
@@ -393,7 +391,7 @@ def test_flow_parameters_action_wrapper():
 
 
 def test_flow_parameters_event_wrapper():
-    """Test flow parameter event wrapper mechanic"""
+    """Test flow parameter event wrapper mechanic."""
 
     content = """
     flow user said $transcript
@@ -428,7 +426,7 @@ def test_flow_parameters_event_wrapper():
 
 
 def test_flow_parameters_positional_parameter():
-    """Test positional flow parameters"""
+    """Test positional flow parameters."""
 
     content = """
     flow bot say $script
@@ -451,7 +449,7 @@ def test_flow_parameters_positional_parameter():
 
 
 def test_flow_parameters_default_parameter():
-    """Test default flow parameters"""
+    """Test default flow parameters."""
 
     content = """
     flow bot say $script="Howdy"
@@ -473,8 +471,8 @@ def test_flow_parameters_default_parameter():
     )
 
 
-def test_distributed_flow_matching():
-    """Test flow default parameters."""
+def test_flow_started_matching():
+    """Test matching to flow started events."""
 
     content = """
     flow user said $transcript
@@ -520,7 +518,7 @@ def test_distributed_flow_matching():
 
 
 def test_activate_flow_mechanism():
-    """Test the activate a flow mechanism"""
+    """Test the activate a flow mechanism."""
 
     content = """
     flow a
@@ -597,8 +595,79 @@ def test_activate_flow_mechanism():
     )
 
 
-def test_stop_activate_flow_mechanism():
-    """Test the activate a flow mechanism"""
+def test_activate_and_grouping():
+    """Test and-grouping with activate statement."""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="A")
+      match UtteranceUserAction().Finished(final_transcript="a")
+
+    flow b
+      start UtteranceBotAction(script="B")
+      match UtteranceUserAction().Finished(final_transcript="b")
+
+    flow main
+        activate a and b
+        match UtteranceUserAction().Finished(final_transcript="end")
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "a",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "b",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+        ],
+    )
+
+
+def test_stop_activated_flow_mechanism():
+    """Test to stop an activated flow."""
 
     content = """
     flow a
@@ -633,7 +702,7 @@ def test_stop_activate_flow_mechanism():
 
 
 def test_finish_flow_event():
-    """Test the FinishFlow event that will immediately finish a flow"""
+    """Test the FinishFlow event that will immediately finish a flow."""
 
     content = """
     flow a
@@ -682,8 +751,8 @@ def test_finish_flow_event():
     )
 
 
-def test_match_specificity_mechanic():
-    """Test the FinishFlow event that will immediately finish a flow"""
+def test_match_event_specificity_mechanic():
+    """Test flow conflict resolution based on event specificity."""
 
     content = """
     flow user said something
@@ -784,7 +853,7 @@ def test_match_specificity_mechanic():
 
 def test_match_failure_flow_abort():
     """Test the mechanism where a match statement FlowFinished/FlowFailed will abort the flow
-    if it fails to be satisfied"""
+    if it is impossible to be satisfied."""
 
     content = """
     flow a
@@ -1049,11 +1118,8 @@ def test_implicit_flow_deactivation():
     )
 
 
-CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "../test_configs")
-
-
 def test_concurrent_flows_with_actions():
-    """Test if an activated flow is fully stopped when parent has finished."""
+    """Check basic concurrent flow mechanism."""
 
     content = """
     flow a
@@ -1206,7 +1272,7 @@ def test_interaction_loops():
 
 
 def test_interaction_loop_with_new():
-    """Test that flows in different interaction loops don't interfere."""
+    """Test that flows in different interaction loops don't interfere using NEW as loop id."""
 
     content = """
     @loop("NEW")
@@ -1282,7 +1348,7 @@ def test_interaction_loop_with_new():
 
 
 def test_flow_overriding():
-    """Test that flows in different interaction loops don't interfere."""
+    """Test flow overriding mechanic."""
 
     content = """
     @override

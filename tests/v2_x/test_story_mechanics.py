@@ -19,7 +19,7 @@ import logging
 
 from rich.logging import RichHandler
 
-from nemoguardrails.colang.v2_x.runtime.flows import ActionStatus, Event
+from nemoguardrails.colang.v2_x.runtime.flows import Event
 from nemoguardrails.colang.v2_x.runtime.statemachine import (
     InternalEvent,
     run_to_completion,
@@ -38,7 +38,7 @@ start_main_flow_event = InternalEvent(name="StartFlow", arguments={"flow_id": "m
 
 
 def test_when_else_deep_hierarchy_case_match():
-    """"""
+    """Test when else mechanism with deep flow hierarchies."""
 
     content = """
     flow user said $transcript
@@ -123,7 +123,7 @@ def test_when_else_deep_hierarchy_case_match():
 
 
 def test_when_conflict_issue():
-    """"""
+    """Test some when construct edge case."""
 
     content = """
     flow user said something
@@ -200,7 +200,7 @@ def test_when_conflict_issue():
 
 
 def test_flow_event_competition():
-    """"""
+    """Test flow conflict resolution based on internal event matching."""
 
     content = """
     flow a
@@ -237,7 +237,7 @@ def test_flow_event_competition():
 
 
 def test_flow_bot_question_repetition():
-    """"""
+    """Test a complex use case where the bot repeats a question when user was silent."""
 
     content = """
     flow _bot_say $text
@@ -344,7 +344,7 @@ def test_flow_bot_question_repetition():
 
 
 def test_multi_level_head_merging():
-    """"""
+    """Test a complex use case for posture management."""
 
     content = """
     flow bot say $text
@@ -429,12 +429,12 @@ def test_multi_level_head_merging():
 
 
 def test_match_colang_error_event():
-    """"""
+    """Test handling colang errors."""
 
     content = """
     flow catch colang errors
       match ColangError() as $event
-      await UtteranceBotAction(script="Warning: {$event.arguments.type} - {escape($event.arguments.error)}")
+      await UtteranceBotAction(script="Warning: {$event.type} - {escape($event.error)}")
 
     flow a
       match UtteranceUserAction.Finished(final_transcript="go") as $event

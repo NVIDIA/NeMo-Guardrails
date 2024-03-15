@@ -30,6 +30,7 @@ logging.basicConfig(
 
 
 def test_add_new_flow_action():
+    """Test of action that adds a new flow during runtime."""
     new_flow_content = """
     flow test message a
       start UtteranceBotAction(script="message a!")
@@ -68,6 +69,7 @@ def test_add_new_flow_action():
 
 
 def test_check_for_active_flow_finished_match_action():
+    """Test of action that checks for active flow finished matches."""
     config = RailsConfig.from_content(
         colang_content="""
         flow a
