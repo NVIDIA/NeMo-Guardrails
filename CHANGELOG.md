@@ -3,6 +3,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2024-03-15
+
+### Added
+
+- [#377](https://github.com/NVIDIA/NeMo-Guardrails/pull/377) Add example for streaming from custom action.
+
+### Changed
+
+- [#380](https://github.com/NVIDIA/NeMo-Guardrails/pull/380) Update installation guide for OpenAI usage.
+- [#401](https://github.com/NVIDIA/NeMo-Guardrails/pull/401) Replace YAML import with new import statement in multi-modal example.
+
+### Fixed
+
+- [#398](https://github.com/NVIDIA/NeMo-Guardrails/pull/398) Colang parser fixes and improvements.
+- [#394](https://github.com/NVIDIA/NeMo-Guardrails/pull/394) Fixes and improvements for Colang 2.0 runtime.
+- [#381](https://github.com/NVIDIA/NeMo-Guardrails/pull/381) Fix typo by @serhatgktp.
+- [#379](https://github.com/NVIDIA/NeMo-Guardrails/pull/379) Fix missing prompt in verbose mode for chat models.
+- [#400](https://github.com/NVIDIA/NeMo-Guardrails/pull/400) Fix Authorization header showing up in logs for NeMo LLM.
+
 ## [0.8.0] - 2024-02-28
 
 ### Added
