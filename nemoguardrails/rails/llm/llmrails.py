@@ -340,6 +340,8 @@ class LLMRails:
                         "vertexai",
                     ]:
                         kwargs["model_name"] = llm_config.model
+                    elif llm_config.engine == "nvidia_ai_endpoints":
+                        kwargs["model"] = llm_config.model
                     else:
                         # The `__fields__` attribute is computed dynamically by pydantic.
                         if "model" in provider_cls.__fields__:
