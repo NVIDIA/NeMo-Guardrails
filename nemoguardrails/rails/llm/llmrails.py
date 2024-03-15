@@ -165,7 +165,9 @@ class LLMRails:
 
         # We check if the configuration or any of the imported ones have config.py modules.
         config_modules = []
-        for _path in self.config.import_paths + [self.config.config_path]:
+        for _path in list(self.config.imported_paths.values()) + [
+            self.config.config_path
+        ]:
             if _path:
                 filepath = os.path.join(_path, "config.py")
                 if os.path.exists(filepath):
@@ -335,8 +337,11 @@ class LLMRails:
                         "nlpcloud",
                         "petals",
                         "trt_llm",
+                        "vertexai",
                     ]:
                         kwargs["model_name"] = llm_config.model
+                    elif llm_config.engine == "nvidia_ai_endpoints":
+                        kwargs["model"] = llm_config.model
                     else:
                         # The `__fields__` attribute is computed dynamically by pydantic.
                         if "model" in provider_cls.__fields__:

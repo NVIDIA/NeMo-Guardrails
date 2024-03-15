@@ -1,0 +1,3 @@
+flow main
+  if len($a) > 10
+    bot say "hi"

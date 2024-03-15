@@ -49,6 +49,7 @@ def test_basic():
     assert d == {
         "_source": None,
         "_type": "flow",
+        "decorators": [],
         "elements": [
             {
                 "_source": None,

@@ -64,7 +64,7 @@ The following subsections describe all the configuration options you can use in 
 
 ### The LLM Model
 
-To configure the main LLM model that will is used by the guardrails configuration, you set the `models` key as shown below:
+To configure the main LLM model that will be used by the guardrails configuration, you set the `models` key as shown below:
 
 ```yaml
 models:

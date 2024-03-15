@@ -106,10 +106,23 @@ def initialize_flow(state: State, flow_config: FlowConfig) -> None:
     flow_config.elements = expand_elements(flow_config.elements, state.flow_configs)
 
     # Extract flow loop id if available
+    # TODO: deprecate this convention in the favor of the `@loop("some_id")` decorator.
     if flow_config.source_code:
         match = re.search(r"#\W*meta:\W*loop_id\W*=\W*(\w*)", flow_config.source_code)
         if match:
             flow_config.loop_id = match.group(1)
+
+    # Extract loop id from decorator if available
+    if "loop" in flow_config.decorators:
+        decorator = flow_config.decorators["loop"]
+        if "id" in decorator.parameters:
+            flow_config.loop_id = decorator.parameters["id"]
+        elif "$0" in decorator.parameters:
+            flow_config.loop_id = decorator.parameters["$0"]
+        else:
+            raise ValueError(
+                f"No loop id specified for @loop decorator for flow `{flow_config.id}`"
+            )
 
     # Extract all the label elements
     for idx, element in enumerate(flow_config.elements):
@@ -350,7 +363,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> State
                     heads_matching, key=lambda x: x.matching_scores, reverse=True
                 )
 
-                _handle_internal_event_matching(state, event, heads_matching)
+                _handle_event_matching(state, event, heads_matching)
 
                 if isinstance(event, ActionEvent):
                     # Update actions status in all active flows by current action event
@@ -568,7 +581,7 @@ def _get_all_head_candidates(state: State, event: Event) -> List[Tuple[str, str]
     return sorted_head_candidates
 
 
-def _handle_internal_event_matching(
+def _handle_event_matching(
     state: State, event: Event, heads_matching: List[FlowHead]
 ) -> None:
     for head in heads_matching:
@@ -692,9 +705,9 @@ def _resolve_action_conflicts(
                                 isinstance(context_variable, Action)
                                 and context_variable.uid == competing_event.action_uid
                             ):
-                                competing_flow_state.context[key] = state.actions[
-                                    winning_event.action_uid
-                                ]
+                                action = state.actions[winning_event.action_uid]
+                                action.flow_scope_count += 1
+                                competing_flow_state.context[key] = action
                         index = competing_flow_state.action_uids.index(
                             competing_event.action_uid
                         )
@@ -861,23 +874,23 @@ def slide(
 
         if isinstance(element, SpecOp):
             if element.op == "send":
-                action_event = get_event_from_element(state, flow_state, element)
+                event = get_event_from_element(state, flow_state, element)
 
-                if action_event.name not in InternalEvents.ALL:
+                if event.name not in InternalEvents.ALL:
                     # It's an action event and we need to stop
                     break
 
                 # Add source flow information to event
-                action_event.arguments.update(
+                event.arguments.update(
                     {
                         "source_flow_instance_uid": head.flow_state_uid,
                         "source_head_uid": head.uid,
                     }
                 )
 
-                if action_event.name == InternalEvents.START_FLOW:
+                if event.name == InternalEvents.START_FLOW:
                     # Add flow hierarchy information to event
-                    action_event.arguments.update(
+                    event.arguments.update(
                         {
                             "flow_hierarchy_position": flow_state.hierarchy_position
                             + f".{head.position}",
@@ -885,7 +898,7 @@ def slide(
                     )
 
                 new_event = create_internal_event(
-                    action_event.name, action_event.arguments, head.matching_scores
+                    event.name, event.arguments, head.matching_scores
                 )
                 _push_internal_event(state, new_event)
                 head.position += 1
@@ -1190,9 +1203,11 @@ def slide(
                     action.status == ActionStatus.STARTING
                     or action.status == ActionStatus.STARTED
                 ):
-                    action_event = action.stop_event({})
-                    action.status = ActionStatus.STOPPING
-                    _generate_umim_event(state, action_event)
+                    action.flow_scope_count -= 1
+                    if action.flow_scope_count == 0:
+                        action_event = action.stop_event({})
+                        action.status = ActionStatus.STOPPING
+                        _generate_umim_event(state, action_event)
 
             # Remove scope from all heads
             for h in flow_state.heads.values():
@@ -1268,9 +1283,11 @@ def _abort_flow(
             action.status == ActionStatus.STARTING
             or action.status == ActionStatus.STARTED
         ):
-            action_event = action.stop_event({})
-            action.status = ActionStatus.STOPPING
-            _generate_umim_event(state, action_event)
+            action.flow_scope_count -= 1
+            if action.flow_scope_count == 0:
+                action_event = action.stop_event({})
+                action.status = ActionStatus.STOPPING
+                _generate_umim_event(state, action_event)
 
     # Cleanup all head from flow
     for head in flow_state.heads.values():
@@ -1331,9 +1348,11 @@ def _finish_flow(
             action.status == ActionStatus.STARTING
             or action.status == ActionStatus.STARTED
         ):
-            action_event = action.stop_event({})
-            action.status = ActionStatus.STOPPING
-            _generate_umim_event(state, action_event)
+            action.flow_scope_count -= 1
+            if action.flow_scope_count == 0:
+                action_event = action.stop_event({})
+                action.status = ActionStatus.STOPPING
+                _generate_umim_event(state, action_event)
 
     # Cleanup all head from flow
     for head in flow_state.heads.values():
