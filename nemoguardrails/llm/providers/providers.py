@@ -22,6 +22,7 @@ Additional providers can be registered using the `register_llm_provider` functio
 """
 import asyncio
 import logging
+from functools import partial
 from typing import Any, Dict, List, Optional, Type
 
 from langchain.base_language import BaseLanguageModel
@@ -42,7 +43,12 @@ from .trtllm.llm import TRTLLM
 log = logging.getLogger(__name__)
 
 # Initialize the providers with the default ones, for now only NeMo LLM.
-_providers: Dict[str, Type[BaseLanguageModel]] = {"nemollm": NeMoLLM, "trt_llm": TRTLLM}
+_providers: Dict[str, Type[BaseLanguageModel]] = {
+    "nemollm": NeMoLLM,
+    "trt_llm": TRTLLM,
+    # We set this to None because it's only supported if `generative-ai-hub-sdk` is installed.
+    "gen_ai_hub": None,
+}
 
 
 class HuggingFacePipelineCompatible(HuggingFacePipeline):
@@ -182,7 +188,11 @@ def discover_langchain_providers():
     # We also do some monkey patching to make sure that all LLM providers have async support
     for provider_cls in _providers.values():
         # If the "_acall" method is not defined, we add it.
-        if issubclass(provider_cls, LLM) and "_acall" not in provider_cls.__dict__:
+        if (
+            provider_cls
+            and issubclass(provider_cls, LLM)
+            and "_acall" not in provider_cls.__dict__
+        ):
             log.debug("Adding async support to %s", provider_cls.__name__)
             provider_cls._acall = _acall
 
@@ -227,6 +237,18 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
             raise ImportError(
                 "Could not import langchain_openai, please install it with "
                 "`pip install langchain-openai`."
+            )
+    elif model_config.engine == "gen_ai_hub":
+        try:
+            from gen_ai_hub.proxy.langchain.init_models import init_llm
+
+            # We need to bind the model name as an arg (no option to do kwargs)
+            return partial(init_llm, model_config.model)
+
+        except ImportError:
+            raise ValueError(
+                "Generative AI Hub SDK not installed. "
+                "Please install using `pip install generative-ai-hub-sdk`."
             )
     else:
         return _providers[model_config.engine]
