@@ -228,6 +228,20 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
                 "Could not import langchain_openai, please install it with "
                 "`pip install langchain-openai`."
             )
+
+    elif model_config.engine == "vertexai":
+        # To avoid a LangChainDeprecationWarning with the default langchain_community.llms.vertexai.VertexAI which  is
+        # deprecated in langchain-community 0.0.12 and will be removed in 0.2.0.
+        try:
+            from langchain_google_vertexai import VertexAI
+
+            return VertexAI
+        except ImportError:
+            raise ImportError(
+                "Could not import langchain_google_vertexai, please install it with "
+                "`pip install langchain-google-vertexai`."
+            )
+
     else:
         return _providers[model_config.engine]
 
