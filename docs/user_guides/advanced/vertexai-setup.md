@@ -9,7 +9,7 @@ In order to use Vertex AI, you need to perform some initial setup with the Googl
 3. Create a service account following [this guide](https://cloud.google.com/iam/docs/service-accounts-create) and grant it the role of `Vertex AI Service Agent`.
 4. Create and download a service account key for the service account ([guide](https://cloud.google.com/iam/docs/keys-create-delete)).
 5. Enable the Vertex AI API ([guide](https://cloud.google.com/vertex-ai/docs/start/cloud-environment#:~:text=Enable%20Vertex%20AI%20APIs,-In%20the%20Google&text=Click%20Enable%20All%20Recommended%20APIs,the%20APIs%20are%20being%20enabled.))
-6. Install additional python libraries needed to call Vertex AI using `pip install google-cloud-aiplatform>=1.38.0`
+6. Install additional python libraries needed to call Vertex AI using `pip install "google-cloud-aiplatform>=1.38.0"`
 
 Test that you are successfully able to call VertexAI APIs using the following snippet:
 
