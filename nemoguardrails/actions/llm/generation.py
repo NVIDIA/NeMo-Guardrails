@@ -610,7 +610,7 @@ class LLMGenerationActions:
                 # If we have a parsing error, we try to reduce size of the flow, potentially
                 # up to a single step.
                 lines = result.split("\n")
-                while True:
+                while lines:
                     try:
                         parse_colang_file("dynamic.co", content="\n".join(lines))
                         break
