@@ -15,8 +15,8 @@
 
 import logging
 import re
-from functools import partial
-from typing import Any, List
+from abc import ABC, abstractmethod
+from typing import Any, Callable, List
 
 from simpleeval import EvalWithCompoundTypes
 
@@ -26,6 +26,27 @@ from nemoguardrails.colang.v2_x.runtime.utils import AttributeDict
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
+
+
+class ComparisonExpression:
+    """An expression to compare to values."""
+
+    def __init__(self, operator: Callable[[Any], bool], value: Any) -> None:
+        if not isinstance(value, (int, float)):
+            raise ColangValueError(
+                f"Comparison operators don't support values of type '{type(value)}'"
+            )
+        self.value = value
+        self.operator = operator
+
+    def compare(self, value: Any) -> bool:
+        """Compare given value with the expression's value."""
+        if not isinstance(value, type(self.value)):
+            raise ColangValueError(
+                "Comparing variables of different types is not supported!"
+            )
+
+        return self.operator(value)
 
 
 def eval_expression(expr: str, context: dict) -> Any:
@@ -81,17 +102,6 @@ def eval_expression(expr: str, context: dict) -> Any:
             expr,
         )
 
-    index_counter = 0
-
-    def replace_with_index(name, _match):
-        nonlocal index_counter
-        if _match.group(1) or _match.group(3):
-            replacement = f"{name}_{index_counter}"
-            index_counter += 1
-            return replacement
-        else:
-            return _match.group(0)
-
     # We search for all variable names starting with $, remove the $ and add
     # the value in the dict for eval
     expr_locals = {}
@@ -130,6 +140,11 @@ def eval_expression(expr: str, context: dict) -> Any:
             "isfloat": _is_float,
             "isbool": _is_bool,
             "isstr": _is_str,
+            "LESS_THAN": _less_than_operator,
+            "EQUAL_LESS_THAN": _equal_or_less_than_operator,
+            "GREATER_THAN": _greater_than_operator,
+            "EQUAL_GREATER_THAN": _equal_or_greater_than_operator,
+            "NOT_EQUAL_TO": _not_equal_to_operator,
         }
         # TODO: replace this with something even more restrictive.
         s = EvalWithCompoundTypes(
@@ -180,3 +195,28 @@ def _is_bool(val: Any) -> bool:
 def _is_str(val: Any) -> bool:
     """Check if it is an integer."""
     return isinstance(val, str)
+
+
+def _less_than_operator(v_ref: Any) -> ComparisonExpression:
+    """Create less then comparison expression."""
+    return ComparisonExpression(lambda val, v_ref=v_ref: val < v_ref, v_ref)
+
+
+def _equal_or_less_than_operator(v_ref: Any) -> ComparisonExpression:
+    """Create equal or less than comparison expression."""
+    return ComparisonExpression(lambda val, val_ref=v_ref: val <= val_ref, v_ref)
+
+
+def _greater_than_operator(v_ref: Any) -> ComparisonExpression:
+    """Create less then comparison expression."""
+    return ComparisonExpression(lambda val, val_ref=v_ref: val > val_ref, v_ref)
+
+
+def _equal_or_greater_than_operator(v_ref: Any) -> ComparisonExpression:
+    """Create equal or less than comparison expression."""
+    return ComparisonExpression(lambda val, val_ref=v_ref: val >= val_ref, v_ref)
+
+
+def _not_equal_to_operator(v_ref: Any) -> ComparisonExpression:
+    """Create a not equal comparison expression."""
+    return ComparisonExpression(lambda val, val_ref=v_ref: val != val_ref, v_ref)

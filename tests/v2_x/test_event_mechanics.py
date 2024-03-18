@@ -1315,5 +1315,142 @@ def test_match_hierarchy_of_internal_events():
     )
 
 
+def test_event_number_parameter_comparison():
+    """Test to match events based on numeric parameters."""
+
+    content = """
+    flow main
+      match Event(p=LESS_THAN(5))
+      start UtteranceBotAction(script="success")
+      match Event(p=EQUAL_LESS_THAN(5))
+      start UtteranceBotAction(script="success")
+      match Event(p=GREATER_THAN(10.1))
+      start UtteranceBotAction(script="success")
+      match Event(p=EQUAL_GREATER_THAN(10.1))
+      start UtteranceBotAction(script="success")
+      match Event(p=NOT_EQUAL_TO(100))
+      start UtteranceBotAction(script="success")
+      match Event()
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 6,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 3,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 5,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 10.0,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 10.2,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 10.1,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 100,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 99,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_event_custom_regex_parameter_match()
+    test_event_number_parameter_comparison()

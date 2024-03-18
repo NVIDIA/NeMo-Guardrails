@@ -47,7 +47,10 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     WaitForHeads,
 )
 from nemoguardrails.colang.v2_x.lang.expansion import expand_elements
-from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
+from nemoguardrails.colang.v2_x.runtime.eval import (
+    ComparisonExpression,
+    eval_expression,
+)
 from nemoguardrails.colang.v2_x.runtime.flows import (
     Action,
     ActionEvent,
@@ -1805,6 +1808,8 @@ def _compute_arguments_dict_matching_score(args: Any, ref_args: Any) -> float:
         args = str(args)
         if not ref_args.search(args):
             return 0.0
+    elif isinstance(ref_args, ComparisonExpression):
+        return ref_args.compare(args)
     elif not isinstance(ref_args, type(args)):
         return 0.0
     elif isinstance(ref_args, dict):
