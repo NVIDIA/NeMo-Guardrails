@@ -29,7 +29,7 @@
                 {
                     "name": "keyword.control.flow.colang",
                     "comment": "Must be the first word in the line.",
-                    "match": "(^[ \t]*)\\b(send|start|match|await|activate|abort|while|if|else|elif|when|orwhen|or when|break|continue|return|priority|global|print|log)\\b"
+                    "match": "(?<=(^|=)[ \t]*)\\b(send|start|match|await|activate|abort|while|if|else|elif|when|orwhen|or when|break|continue|return|priority|global|print|log)\\b"
                 },
                 {
                     "name": "keyword.control.flow.colang",
@@ -52,7 +52,7 @@
                 },
                 {
                     "comment": "Highlight actions and events that use the brackets notation.",
-                    "begin": "([[:alpha:]][[:word:]]*)(?:\\.|\\w)*(\\()",
+                    "begin": "([[:alpha:]][[:word:]]*(?:\\.|\\w)*)(\\()",
                     "end": "(\\))",
                     "beginCaptures": {
                         "1": {
