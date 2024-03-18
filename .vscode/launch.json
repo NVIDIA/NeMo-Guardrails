@@ -38,8 +38,9 @@
             "args": [
                 "chat",
                 "--config=${fileDirname}",
-                "--verbose",
-                "--verbose-llm-calls"
+                "--verbose-simplify",
+                "--verbose-llm-calls",
+                "--debug-level=INFO"
             ],
             "justMyCode": true,
             "env": {
