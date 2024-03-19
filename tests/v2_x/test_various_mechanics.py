@@ -728,5 +728,34 @@ def test_generate_value_with_NLD():
     )
 
 
+def test_flow_states_info():
+    """Test the generation of flow states info."""
+
+    content = """
+    flow a
+        match Event1()
+
+    flow main
+      activate a
+      $fs = flow_states()
+      if $self.uid in $fs
+        await UtteranceBotAction(script="Success")
+      else
+        await UtteranceBotAction(script="Failed")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_regular_expressions_flow_parameters()
+    test_flow_states_info()

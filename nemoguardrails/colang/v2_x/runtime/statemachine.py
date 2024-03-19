@@ -143,6 +143,8 @@ def create_flow_instance(
         },
     )
 
+    # Add self reference to context
+    flow_state.context["self"] = flow_state
     # Add all the flow parameters
     for idx, param in enumerate(flow_config.parameters):
         flow_state.arguments.append(param.name)
@@ -2216,4 +2218,6 @@ def _get_eval_context(state: State, flow_state: FlowState) -> dict:
             context.update({var: state.context[var]})
         else:
             context.update({var: None})
+    # Add state as _state
+    context.update({"_state": state})
     return context

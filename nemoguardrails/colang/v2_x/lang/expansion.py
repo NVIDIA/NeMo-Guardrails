@@ -24,6 +24,7 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     Break,
     CatchPatternFailure,
     Continue,
+    Element,
     ElementType,
     EndScope,
     ForkHead,
@@ -89,6 +90,13 @@ def expand_elements(
                     element.label = continue_break_labels[1]
 
             if len(expanded_elements) > 0:
+                # Map new elements to source
+                for expanded_element in expanded_elements:
+                    if isinstance(expanded_element, Element) and isinstance(
+                        element, Element
+                    ):
+                        expanded_element._source = element._source
+                # Add new elements
                 new_elements.extend(expanded_elements)
                 elements_changed = True
             else:

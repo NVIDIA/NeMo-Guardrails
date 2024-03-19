@@ -13,15 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import re
-from typing import Any, Callable, List
+from functools import partial
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from simpleeval import EvalWithCompoundTypes
 
+from nemoguardrails.colang.v2_x.lang.colang_ast import Element
 from nemoguardrails.colang.v2_x.runtime import system_functions
-from nemoguardrails.colang.v2_x.runtime.flows import ColangValueError
+from nemoguardrails.colang.v2_x.runtime.flows import ColangValueError, FlowState, State
 from nemoguardrails.colang.v2_x.runtime.utils import AttributeDict
+from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
@@ -125,7 +129,7 @@ def eval_expression(expr: str, context: dict) -> Any:
     # Finally, just evaluate the expression
     try:
         # TODO: replace this with something even more restrictive.
-        functions = {
+        functions: Dict[str, Callable] = {
             "len": len,
             "flow": system_functions.flow,
             "action": system_functions.action,
@@ -134,6 +138,7 @@ def eval_expression(expr: str, context: dict) -> Any:
             "find_all": _regex_findall,
             "uid": new_uid,
             "str": _to_str,
+            "simple_str": _simple_str,
             "escape": _escape_string,
             "is_int": _is_int,
             "is_float": _is_float,
@@ -146,6 +151,9 @@ def eval_expression(expr: str, context: dict) -> Any:
             "equal_greater_than": _equal_or_greater_than_operator,
             "not_equal_to": _not_equal_to_operator,
         }
+        if "_state" in context:
+            functions.update({"flow_states": partial(_flow_states, context["_state"])})
+
         # TODO: replace this with something even more restrictive.
         s = EvalWithCompoundTypes(
             functions=functions,
@@ -169,6 +177,15 @@ def _regex_findall(pattern: str, string: str) -> List[str]:
 
 
 def _to_str(data: Any) -> str:
+    if isinstance(data, (dict, list, set)):
+        return json.dumps(data, indent=4)
+    return str(data)
+
+
+def _simple_str(data: Any) -> str:
+    if isinstance(data, (dict, list, set)):
+        string = json.dumps(data, indent=4)
+        return SimplifyFormatter().format(string)
     return str(data)
 
 
@@ -225,3 +242,47 @@ def _equal_or_greater_than_operator(v_ref: Any) -> ComparisonExpression:
 def _not_equal_to_operator(v_ref: Any) -> ComparisonExpression:
     """Create a not equal comparison expression."""
     return ComparisonExpression(lambda val, val_ref=v_ref: val != val_ref, v_ref)
+
+
+def _flow_states(state: State, flow_instance_uid: Optional[str] = None) -> dict:
+    """Return a summary of the provided state, or all states by default."""
+    if flow_instance_uid is not None and flow_instance_uid in state.flow_states:
+        summary = {"flow_instance_uid": flow_instance_uid}
+        summary.update(
+            _flow_state_related_to_source(state, state.flow_states[flow_instance_uid])
+        )
+
+        return summary
+    else:
+        summary = {}
+        for flow_state in state.flow_states.values():
+            summary.update(
+                {flow_state.uid: _flow_state_related_to_source(state, flow_state)}
+            )
+        return summary
+
+
+def _flow_state_related_to_source(state: State, flow_state: FlowState):
+    flow_config = state.flow_configs[flow_state.flow_id]
+    flow_head_source_lines: Set[int] = set()
+    for head in flow_state.heads.values():
+        element = flow_config.elements[head.position]
+        if isinstance(element, Element) and element._source is not None:
+            flow_head_source_lines.add(element._source.line)
+    summary: dict = {
+        "flow_id": flow_state.flow_id,
+        "loop_id": flow_state.loop_id,
+        "status": flow_state.status.value,
+        "active_source_lines": list(flow_head_source_lines),
+    }
+
+    if flow_state.action_uids:
+        summary.update({"action_uids": flow_state.action_uids})
+
+    if flow_state.parent_uid:
+        summary.update({"parent_flow_uid": flow_state.parent_uid})
+
+    if flow_state.child_flow_uids:
+        summary.update({"child_flow_uids": flow_state.child_flow_uids})
+
+    return summary
