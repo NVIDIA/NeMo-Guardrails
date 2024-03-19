@@ -1320,15 +1320,15 @@ def test_event_number_parameter_comparison():
 
     content = """
     flow main
-      match Event(p=LESS_THAN(5))
+      match Event(p=less_than(5))
       start UtteranceBotAction(script="success")
-      match Event(p=EQUAL_LESS_THAN(5))
+      match Event(p=equal_less_than(5))
       start UtteranceBotAction(script="success")
-      match Event(p=GREATER_THAN(10.1))
+      match Event(p=greater_than(10.1))
       start UtteranceBotAction(script="success")
-      match Event(p=EQUAL_GREATER_THAN(10.1))
+      match Event(p=equal_greater_than(10.1))
       start UtteranceBotAction(script="success")
-      match Event(p=NOT_EQUAL_TO(100))
+      match Event(p=not_equal_to(100))
       start UtteranceBotAction(script="success")
       match Event()
     """

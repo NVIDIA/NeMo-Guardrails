@@ -15,7 +15,6 @@
 
 import logging
 import re
-from abc import ABC, abstractmethod
 from typing import Any, Callable, List
 
 from simpleeval import EvalWithCompoundTypes
@@ -132,19 +131,20 @@ def eval_expression(expr: str, context: dict) -> Any:
             "action": system_functions.action,
             "regex": _create_regex,
             "search": _regex_search,
-            "findall": _regex_findall,
+            "find_all": _regex_findall,
             "uid": new_uid,
             "str": _to_str,
             "escape": _escape_string,
-            "isint": _is_int,
-            "isfloat": _is_float,
-            "isbool": _is_bool,
-            "isstr": _is_str,
-            "LESS_THAN": _less_than_operator,
-            "EQUAL_LESS_THAN": _equal_or_less_than_operator,
-            "GREATER_THAN": _greater_than_operator,
-            "EQUAL_GREATER_THAN": _equal_or_greater_than_operator,
-            "NOT_EQUAL_TO": _not_equal_to_operator,
+            "is_int": _is_int,
+            "is_float": _is_float,
+            "is_bool": _is_bool,
+            "is_str": _is_str,
+            "is_regex": _is_regex,
+            "less_than": _less_than_operator,
+            "equal_less_than": _equal_or_less_than_operator,
+            "greater_than": _greater_than_operator,
+            "equal_greater_than": _equal_or_greater_than_operator,
+            "not_equal_to": _not_equal_to_operator,
         }
         # TODO: replace this with something even more restrictive.
         s = EvalWithCompoundTypes(
@@ -195,6 +195,11 @@ def _is_bool(val: Any) -> bool:
 def _is_str(val: Any) -> bool:
     """Check if it is an integer."""
     return isinstance(val, str)
+
+
+def _is_regex(val: Any) -> bool:
+    """Check if it is an integer."""
+    return isinstance(val, re.Pattern)
 
 
 def _less_than_operator(v_ref: Any) -> ComparisonExpression:

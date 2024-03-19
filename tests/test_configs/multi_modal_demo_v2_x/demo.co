@@ -26,7 +26,7 @@ flow reaction bot question repetition for user silence $time_s $max_repetitions=
       orwhen user started saying something
         continue
 
-      if "{isstr($prompt)}" == "False"
+      if "{is_str($prompt)}" == "False"
         $prompt = "So, what do you think?"
       bot ask $prompt
       $repetition = $repetition + 1
