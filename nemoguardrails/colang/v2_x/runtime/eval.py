@@ -117,7 +117,12 @@ def eval_expression(expr: str, context: dict) -> Any:
         if f"var_{var_name}" in expr_locals:
             continue
 
-        val = context.get(var_name, None)
+        # Check if it is a global variable
+        global_var_name = f"_global_{var_name}"
+        if global_var_name in context:
+            val = context.get(global_var_name, None)
+        else:
+            val = context.get(var_name, None)
 
         # We transform dicts to AttributeDict so we can access their keys as attributes
         # e.g. write things like $speaker.name

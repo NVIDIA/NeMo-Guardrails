@@ -143,8 +143,6 @@ def create_flow_instance(
         },
     )
 
-    # Add self reference to context
-    flow_state.context["self"] = flow_state
     # Add all the flow parameters
     for idx, param in enumerate(flow_config.parameters):
         flow_state.arguments.append(param.name)
@@ -1104,7 +1102,7 @@ def slide(
                 expr_val = eval_expression(
                     element.expression, _get_eval_context(state, flow_state)
                 )
-                if element.key in flow_state.global_variables:
+                if f"_global_{element.key}" in flow_state.context:
                     state.context.update({element.key: expr_val})
                 else:
                     flow_state.context.update({element.key: expr_val})
@@ -1157,7 +1155,10 @@ def slide(
             head.position += 1
 
         elif isinstance(element, Global):
-            flow_state.global_variables.add(element.name.lstrip("$"))
+            var_name = element.name.lstrip('$')
+            flow_state.context[f"_global_{var_name}"] = None
+            if var_name not in state.context:
+                state.context[var_name] = None
             head.position += 1
 
         elif isinstance(element, CatchPatternFailure):
@@ -2213,11 +2214,10 @@ def create_umim_event(event: Event, event_args: Dict[str, Any]) -> Dict[str, Any
 def _get_eval_context(state: State, flow_state: FlowState) -> dict:
     context = flow_state.context.copy()
     # Link global variables
-    for var in flow_state.global_variables:
-        if var in state.context:
-            context.update({var: state.context[var]})
-        else:
-            context.update({var: None})
+    for var in flow_state.context.keys():
+        if var.startswith("_global_"):
+            context.update({var: state.context[var[8:]]})
     # Add state as _state
     context.update({"_state": state})
+    context.update({"self": flow_state})
     return context

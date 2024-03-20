@@ -530,9 +530,6 @@ class FlowState:
     # All the arguments of a flow (e.g. flow bot say $utterance -> arguments = ["$utterance"])
     arguments: List[str] = field(default_factory=list)
 
-    # Variables in the flow that are defined as global
-    global_variables: Set[str] = field(default_factory=set)
-
     # Parent flow id
     parent_uid: Optional[str] = None
 
