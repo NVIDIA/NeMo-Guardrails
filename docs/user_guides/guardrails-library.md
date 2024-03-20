@@ -708,6 +708,15 @@ rails:
       - gotitai rag truthcheck
 ```
 
+To trigger the fact-checking rail, you have to set the `$check_facts` context variable to `True` before a bot message that requires fact-checking, e.g.:
+
+```colang
+define flow
+  user ask about report
+  $check_facts = True
+  bot provide report answer
+```
+
 ## Other
 
 ### Jailbreak Detection Heuristics

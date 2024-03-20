@@ -31,10 +31,10 @@ GOTITAI_API_URL = "https://api.got-it.ai/api/v1/hallucination-manager/truthcheck
 async def retrieve_relevant_chunks():
     """Retrieve relevant chunks from the knowledge base and add them to the context."""
     context_updates = {}
-    context_updates["relevant_chunks"] = ["Shipping takes at least 3 days."]
+    context_updates["relevant_chunks_sep"] = ["Shipping takes at least 3 days."]
 
     return ActionResult(
-        return_value=context_updates["relevant_chunks"],
+        return_value=context_updates["relevant_chunks_sep"],
         context_updates=context_updates,
     )
 
@@ -88,3 +88,28 @@ async def test_not_hallucination(monkeypatch):
 
         chat >> "Do you ship within 2 days?"
         await chat.bot_async("No, shipping takes at least 3 days.")
+
+
+@pytest.mark.asyncio
+async def test_no_context(monkeypatch):
+    monkeypatch.setenv("GOTITAI_API_KEY", "xxx")
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "gotitai_truthchecker"))
+    chat = TestChat(
+        config,
+        llm_completions=[
+            # "  express greeting",
+            "user ask general question",  # user intent
+            "Yes, shipping can be done in 2 days.",  # bot response that will not be intercepted
+        ],
+    )
+
+    with aioresponses() as m:
+        m.post(
+            GOTITAI_API_URL,
+            payload={
+                "hallucination": None,
+            },
+        )
+
+        chat >> "Do you ship within 2 days?"
+        await chat.bot_async("Yes, shipping can be done in 2 days.")

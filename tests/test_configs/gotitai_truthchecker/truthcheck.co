@@ -3,6 +3,7 @@ define user ask general question
 
 define flow
   user ask general question
+  $check_facts = True
   bot provide answer
 
 define bot inform answer unknown

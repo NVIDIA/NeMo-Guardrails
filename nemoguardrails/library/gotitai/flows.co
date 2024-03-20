@@ -1,7 +1,10 @@
 define subflow gotitai rag truthcheck
   """Guardrail based on the maximum risk score."""
-  $result = execute call gotitai truthchecker api
+  if $check_facts == True
+    $check_facts = False
 
-  if $result.hallucination == "yes"
-    bot inform answer unknown
-    stop
+    $result = execute call gotitai truthchecker api
+
+    if $result.hallucination == "yes"
+        bot inform answer unknown
+        stop

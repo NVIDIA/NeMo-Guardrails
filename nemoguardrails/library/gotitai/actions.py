@@ -38,13 +38,21 @@ async def call_gotitai_truthchecker_api(context: Optional[dict] = None):
 
     user_message = context.get("user_message", "")
     response = context.get("bot_message", "")
-    knowledge = context.get("relevant_chunks", [])
+    knowledge = context.get("relevant_chunks_sep", [])
+
+    retval = {"hallucination": None}  # in case the api call is skipped
 
     if not isinstance(knowledge, list):
-        raise ValueError("`relevant_chunks` must be a list of knowledge.")
+        log.error(
+            "Could not run Got It AI Truthchecker. `relevant_chunks_sep` must be a list of knowledge."
+        )
+        return retval
 
     if not knowledge:
-        raise ValueError("At least 1 relevant chunk is required.")
+        log.error(
+            "Could not run Got It AI Truthchecker. At least 1 relevant chunk is required."
+        )
+        return retval
 
     url = "https://api.got-it.ai/api/v1/hallucination-manager/truthchecker"
     headers = {
@@ -73,12 +81,13 @@ async def call_gotitai_truthchecker_api(context: Optional[dict] = None):
             json=data,
         ) as response:
             if response.status != 200:
-                raise ValueError(
+                log.error(
                     f"GotItAI TruthChecking call failed with status code {response.status}.\n"
                     f"Details: {await response.json()}"
                 )
             response_json = await response.json()
             log.info(json.dumps(response_json, indent=True))
             hallucination = response_json["hallucination"]
+            retval = {"hallucination": hallucination}
 
-            return {"hallucination": hallucination}
+            return retval
