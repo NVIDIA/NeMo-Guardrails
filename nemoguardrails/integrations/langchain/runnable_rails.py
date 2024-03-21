@@ -39,17 +39,19 @@ class RunnableRails(Runnable[Input, Output]):
         runnable: Optional[Runnable] = None,
         input_key: str = "input",
         output_key: str = "output",
+        verbose: bool = False,
     ) -> None:
         self.llm = llm
         self.passthrough = passthrough
         self.passthrough_runnable = runnable
         self.passthrough_user_input_key = input_key
         self.passthrough_bot_output_key = output_key
+        self.verbose = verbose
 
         # We override the config passthrough.
         config.passthrough = passthrough
 
-        self.rails = LLMRails(config=config, llm=llm)
+        self.rails = LLMRails(config=config, llm=llm, verbose=verbose)
 
         if tools:
             # When tools are used, we disable the passthrough mode.
