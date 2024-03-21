@@ -56,8 +56,8 @@ def test_when_else_deep_hierarchy_case_match():
     flow bot ask $text
       await bot say $text
 
+    @loop("observer")
     flow observer
-      # meta: loop_id=observer
       while True
         when bot asked something
           start GestureBotAction(gesture="Case 1")
@@ -135,8 +135,8 @@ def test_when_conflict_issue():
     flow bot said something
       match UtteranceBotAction().Finished()
 
+    @loop("observer")
     flow observer
-      # meta: loop_id=observer
       while True
         when bot said something or user said something
           start GestureBotAction(gesture="test")

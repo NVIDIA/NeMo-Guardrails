@@ -92,7 +92,6 @@ class RuntimeV2_x(Runtime):
 
             flow_config = FlowConfig(
                 id=flow.name,
-                loop_id=None,
                 elements=expand_elements(flow.elements, state.flow_configs),
                 parameters=flow.parameters,
                 source_code=flow.source_code,
@@ -128,9 +127,11 @@ class RuntimeV2_x(Runtime):
 
         for flow in self.config.flows:
             assert isinstance(flow, Flow)
-            flow_id = flow.name
-            self.flow_configs[flow_id] = FlowConfig(
-                id=flow_id,
+            # if flow.name in self.flow_configs:
+            #     # Check which flow is overriding the other
+            #     flow.decorators
+            self.flow_configs[flow.name] = FlowConfig(
+                id=flow.name,
                 elements=flow.elements,
                 decorators={decorator.name: decorator for decorator in flow.decorators},
                 parameters=flow.parameters,

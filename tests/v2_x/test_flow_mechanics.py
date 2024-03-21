@@ -1134,5 +1134,152 @@ def test_concurrent_flows_with_actions():
     )
 
 
+def test_interaction_loops():
+    """Test that flows in different interaction loops don't interfere."""
+
+    content = """
+    @loop("a")
+    flow a
+      match UtteranceUserAction().Finished()
+      start GestureBotAction(script="Smile 1")
+      match UtteranceUserAction().Finished()
+      start UtteranceBotAction(script="Two")
+      match UtteranceUserAction().Finished()
+
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="One")
+      start UtteranceBotAction(script="One")
+      match UtteranceUserAction().Finished(final_transcript="Two")
+      start GestureBotAction(script="Smile 2")
+      match UtteranceUserAction().Finished(final_transcript="Three")
+
+    flow main
+      start a and b
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "One",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "One",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "script": "Smile 1",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Two",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "script": "Smile 2",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Two",
+            },
+        ],
+    )
+
+
+def test_interaction_loop_with_new():
+    """Test that flows in different interaction loops don't interfere."""
+
+    content = """
+    @loop("NEW")
+    flow a
+      match UtteranceUserAction().Finished()
+      start GestureBotAction(script="Smile 1")
+      match UtteranceUserAction().Finished()
+      start UtteranceBotAction(script="Two")
+      match UtteranceUserAction().Finished()
+
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="One")
+      start UtteranceBotAction(script="One")
+      start a
+      match UtteranceUserAction().Finished(final_transcript="Two")
+      start GestureBotAction(script="Smile 2")
+      match UtteranceUserAction().Finished(final_transcript="Three")
+
+    flow main
+      start a and b
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "One",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "One",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "script": "Smile 1",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Two",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "script": "Smile 2",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Two",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "script": "Smile 1",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_concurrent_flows_with_actions()
+    test_interaction_loops()

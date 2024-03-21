@@ -82,9 +82,9 @@ flow unhandled user intent -> $intent
   match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$loop_id}) as $event
   $intent = $event.flow_id
 
+@loop("user_was_silent")
 flow user was silent $time_s
   """Triggers when user was silent for $time_s seconds."""
-  # meta: loop_id=user_was_silent
   # meta: user intent
   while True
     start wait $time_s as $timer_ref
@@ -96,9 +96,9 @@ flow user was silent $time_s
     orwhen UtteranceUserAction.Finished()
       send $timer_ref.Stop()
 
+@loop("user_did_not_respond")
 flow user didnt respond $time_s
   """Triggers when user was silent for $time_s seconds while bot was silent."""
-  # meta: loop_id=user_did_not_respond
   # meta: user intent
   while True
     start wait $time_s as $timer_ref
@@ -200,8 +200,8 @@ flow bot started an action -> $action
     or bot started a gesture as $action
     or bot started a posture as $action
 
+@loop("bot_was_silent")
 flow bot was silent $time_s
-  # meta: loop_id=bot_was_silent
   # meta: bot intent
   while True
     start wait $time_s as $timer_ref
@@ -293,8 +293,8 @@ flow bot suggest $text
 # DON'T CHANGE! Currently, hard-wired with LLM prompt generation
 # -----------------------------------
 
+@loop("state_tracking")
 flow tracking bot talking state
-  # meta: loop_id=state_tracking
   global $bot_talking_state
   if $user_talking_state == None
     $bot_talking_state = False
@@ -303,8 +303,8 @@ flow tracking bot talking state
   await bot said something
   $bot_talking_state = False
 
+@loop("state_tracking")
 flow tracking user talking state
-  # meta: loop_id=state_tracking
   global $user_talking_state
   if $user_talking_state == None
     $user_talking_state = False
@@ -313,16 +313,16 @@ flow tracking user talking state
   await user said something
   $user_talking_state = False
 
+@loop("state_tracking")
 flow tracking unhandled user intent state
-  # meta: loop_id=state_tracking
   global $user_intent_state
   when unhandled user intent as $flow
     $unhandled_user_intent_state = $flow.context.flow_name
   orwhen FlowFinished(flow_id=regex("^user ")) as $event
     $unhandled_user_intent_state = None
 
+@loop("state_tracking")
 flow tracking visual choice selection state
-  # meta: loop_id=state_tracking
   global $choice_selection_state
   when VisualChoiceSceneAction.Started()
     $choice_selection_state = None
@@ -334,8 +334,8 @@ flow tracking visual choice selection state
   orwhen VisualChoiceSceneAction.Finished()
     $choice_selection_state = None
 
+@loop("state_tracking")
 flow tracking user utterance state
-  # meta: loop_id=state_tracking
   global $last_user_transcript
   global $last_user_message
 
@@ -365,14 +365,14 @@ flow wait indefinitely
   """Little helper flow to wait indefinitely."""
   match NeverComingEvent()
 
+@loop("NEW")
 flow wait $time_s $timer_id="wait_timer_{uid()}"
   """Wait the specified number of seconds before continuing."""
-  # meta: loop_id=NEW
   await TimerBotAction(timer_name=$timer_id, duration=$time_s)
 
+@loop("catch_colang_errors")
 flow catching colang error
   """A flow to catching of any runtime Colang errors"""
-  # meta: loop_id=catch_colang_errors
   match ColangError() as $event
   print "Colang error: {$event.type} - {escape($event.error)}"
   bot say "Excuse me, what did you say?"
@@ -404,9 +404,9 @@ flow await_flow_by_name $flow_name
   match FlowStarted(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
   match $event_ref.flow.Finished()
 
+@loop("bot_interruption")
 flow handling bot talking interruption $mode="inform"
   """Handling the bot talking interruption reaction."""
-  # meta: loop_id=bot_interruption
   user interrupted bot talking
   if $mode == "interrupt"
     finish all bot actions
@@ -420,8 +420,8 @@ flow handling bot talking interruption $mode="inform"
 # LLM mechanics
 # ----------------------------------
 
+@loop("llm_response_polling")
 flow polling llm request response $interval
-  # meta: loop_id=llm_response_polling
   match StartGenerateUserIntentAction() as $event_ref
     or StartGenerateFlowContinuationAction() as $event_ref
     or StartGenerateFlowFromNameAction() as $event_ref
@@ -541,20 +541,20 @@ flow custom instructions
 # --------------------------------------
 # Posture Management Flows
 # --------------------------------------
+@loop("managing_listening_posture")
 flow managing listening posture
-  # meta: loop_id=managing listening posture
   user started saying something
   start bot posture "listening"
   match UtteranceUserAction.Finished()
 
+@loop("managing_talking_posture")
 flow managing talking posture
-  # meta: loop_id=managing talking posture
   bot started saying something
   start bot posture "talking"
   bot said something
 
+@loop("managing_thinking_posture")
 flow managing thinking posture
-  # meta: loop_id=managing thinking posture
   global $bot_talking_state
 
   match UtteranceUserAction.Finished()
@@ -564,8 +564,8 @@ flow managing thinking posture
     start bot posture "thinking"
     bot started saying something
 
+@loop("managing_bot_postures")
 flow managing bot postures
-  # meta: loop_id=managing bot postures
   activate track bot talking state
   activate managing listening posture
   activate managing thinking posture

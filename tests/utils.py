@@ -27,6 +27,7 @@ from langchain.llms.base import LLM
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.colang import parse_colang_file
+from nemoguardrails.colang.v2_x.lang.colang_ast import Decorator
 from nemoguardrails.colang.v2_x.runtime.flows import FlowConfig, State
 from nemoguardrails.colang.v2_x.runtime.statemachine import initialize_state
 from nemoguardrails.utils import EnhancedJsonEncoder, new_event_dict
@@ -303,7 +304,9 @@ def convert_parsed_colang_to_flow_config(
                 flow["name"],
                 FlowConfig(
                     id=flow["name"],
-                    loop_id=None,
+                    decorators={
+                        decorator.name: decorator for decorator in flow["decorators"]
+                    },
                     elements=flow["elements"],
                     parameters=flow["parameters"],
                     return_members=flow["return_members"],

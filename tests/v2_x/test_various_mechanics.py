@@ -570,8 +570,8 @@ def test_independent_flow_loop_mechanics():
     """"""
 
     content = """
+    @loop("NEW")
     flow bot say $script
-      # meta: loop_id=NEW
       await UtteranceBotAction(script=$script)
 
     flow main

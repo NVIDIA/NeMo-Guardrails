@@ -303,9 +303,9 @@ flow main
   #showcase proactive turn taking
   wait indefinitely
 
+@loop("ignored_action_bugfix")
 flow ignored_utterance_action_bugfix
   # meta: exclude from llm
-  # meta: loop_id=ignored_action_bugfix
   global $number_of_failed_utterance_actions
   if $number_of_failed_utterance_actions == None
     $number_of_failed_utterance_actions = 0
