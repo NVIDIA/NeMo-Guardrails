@@ -834,7 +834,7 @@ class LLMRails:
 
         took = time.time() - t0
         # Small tweak, disable this when there were no events (or it was just too fast).
-        if took > 0.01:
+        if took > 0.1:
             log.info("--- :: Total processing took %.2f seconds." % took)
             log.info("--- :: Stats: %s" % llm_stats)
 
