@@ -17,17 +17,21 @@ import os
 from typing import Dict, List, Optional
 
 import aiohttp
-from prompt_toolkit import PromptSession
+from prompt_toolkit import HTML, PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit.styles import Style
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
 from nemoguardrails.logging import verbose
-from nemoguardrails.logging.verbose import Styles, set_verbose_llm_calls
+from nemoguardrails.logging.verbose import console
 from nemoguardrails.streaming import StreamingHandler
 from nemoguardrails.utils import new_event_dict, new_uid
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+enable_input = asyncio.Event()
+enable_input.set()
 
 
 async def _run_chat_v1_0(
@@ -55,7 +59,7 @@ async def _run_chat_v1_0(
         rails_config = RailsConfig.from_path(config_path)
         rails_app = LLMRails(rails_config, verbose=verbose)
         if streaming and not rails_config.streaming_supported:
-            print(
+            console.print(
                 f"WARNING: The config `{config_path}` does not support streaming. "
                 "Falling back to normal mode."
             )
@@ -66,7 +70,7 @@ async def _run_chat_v1_0(
     history = []
     # And go into the default listening loop.
     while True:
-        print("")
+        console.print("")
         user_message = input("> ")
 
         history.append({"role": "user", "content": user_message})
@@ -84,7 +88,7 @@ async def _run_chat_v1_0(
 
             if not streaming or not rails_app.main_llm_supports_streaming:
                 # We print bot messages in green.
-                print(Styles.GREEN + f"{bot_message['content']}" + Styles.RESET_ALL)
+                console.print("[green]" + f"{bot_message['content']}" + "[/]")
         else:
             data = {
                 "config_id": config_id,
@@ -101,9 +105,9 @@ async def _run_chat_v1_0(
                         bot_message_text = ""
                         async for chunk in response.content.iter_any():
                             chunk = chunk.decode("utf-8")
-                            print(Styles.GREEN + f"{chunk}" + Styles.RESET_ALL, end="")
+                            console.print("[green]" + f"{chunk}" + "[/]", end="")
                             bot_message_text += chunk
-                        print("")
+                        console.print("")
 
                         bot_message = {"role": "assistant", "content": bot_message_text}
                     else:
@@ -111,11 +115,7 @@ async def _run_chat_v1_0(
                         bot_message = result["messages"][0]
 
                         # We print bot messages in green.
-                        print(
-                            Styles.GREEN
-                            + f"{bot_message['content']}"
-                            + Styles.RESET_ALL
-                        )
+                        console.print("[green]" + f"{bot_message['content']}" + "[/]")
 
         history.append(bot_message)
 
@@ -130,18 +130,19 @@ async def _run_chat_v2_x(rails_app: LLMRails):
     output_state = None
 
     session: PromptSession = PromptSession()
+    status = console.status("[bold green]Working ...[/]")
 
     # Start an asynchronous timer
     async def _start_timer(timer_name: str, delay_seconds: float, action_uid: str):
         nonlocal input_events
-        # print(
-        #     Styles.GREY + f"timer (start): {timer_name}/{action_uid}" + Styles.RESET_ALL
+        # console.print(
+        #     Styles.GREY + f"timer (start): {timer_name}/{action_uid}" + "[/]"
         # )
         await asyncio.sleep(delay_seconds)
-        # print(
+        # console.print(
         #     Styles.GREY
         #     + f"timer (finished): {timer_name}/{action_uid}"
-        #     + Styles.RESET_ALL
+        #     + "[/]"
         # )
         input_events.append(
             new_event_dict(
@@ -168,14 +169,16 @@ async def _run_chat_v2_x(rails_app: LLMRails):
             if event["type"] == "StartUtteranceBotAction":
                 # We print bot messages in green.
                 if not verbose.verbose_mode_enabled:
-                    print(Styles.GREEN + f"\n{event['script']}\n" + Styles.RESET_ALL)
+                    console.print(f"\n[green]{event['script']}[/]\n")
                 else:
-                    print(
-                        Styles.BLACK
-                        + Styles.GREEN_BACKGROUND
-                        + f"bot utterance: {event['script']}"
-                        + Styles.RESET_ALL
-                    )
+                    if not verbose.debug_mode_enabled:
+                        console.print(f"\n[#f0f0f0 on #008800]{event['script']}[/]\n")
+                    else:
+                        console.print(
+                            "[black on #008800]"
+                            + f"bot utterance: {event['script']}"
+                            + "[/]"
+                        )
 
                 input_events.append(
                     new_event_dict(
@@ -194,18 +197,12 @@ async def _run_chat_v2_x(rails_app: LLMRails):
             elif event["type"] == "StartGestureBotAction":
                 # We print gesture messages in green.
                 if not verbose.verbose_mode_enabled:
-                    print(
-                        Styles.BLACK
-                        + Styles.BLUE_BACKGROUND
-                        + f"Gesture: {event['gesture']}"
-                        + Styles.RESET_ALL
+                    console.print(
+                        "[black on blue]" + f"Gesture: {event['gesture']}" + "[/]"
                     )
                 else:
-                    print(
-                        Styles.BLACK
-                        + Styles.BLUE_BACKGROUND
-                        + f"bot gesture: {event['gesture']}"
-                        + Styles.RESET_ALL
+                    console.print(
+                        "[black on blue]" + f"bot gesture: {event['gesture']}" + "[/]"
                     )
 
                 input_events.append(
@@ -225,18 +222,14 @@ async def _run_chat_v2_x(rails_app: LLMRails):
             elif event["type"] == "StartPostureBotAction":
                 # We print posture messages in green.
                 if not verbose.verbose_mode_enabled:
-                    print(
-                        Styles.BLACK
-                        + Styles.BLUE_BACKGROUND
-                        + f"Posture: {event['posture']}."
-                        + Styles.RESET_ALL
+                    console.print(
+                        "[black on blue]" + f"Posture: {event['posture']}." + "[/]"
                     )
                 else:
-                    print(
-                        Styles.BLACK
-                        + Styles.BLUE_BACKGROUND
+                    console.print(
+                        "[black on blue]"
                         + f"bot posture (start): (posture={event['posture']}, action_uid={event['action_uid']}))"
-                        + Styles.RESET_ALL
+                        + "[/]"
                     )
                 input_events.append(
                     new_event_dict(
@@ -247,11 +240,10 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
             elif event["type"] == "StopPostureBotAction":
                 if verbose.verbose_mode_enabled:
-                    print(
-                        Styles.BLACK
-                        + Styles.BLUE_BACKGROUND
+                    console.print(
+                        "[black on blue]"
                         + f"bot posture (stop): (action_uid={event['action_uid']})"
-                        + Styles.RESET_ALL
+                        + "[/]"
                     )
 
                 input_events.append(
@@ -266,18 +258,16 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 # We print scene messages in green.
                 if not verbose.verbose_mode_enabled:
                     options = extract_scene_text_content(event["content"])
-                    print(
-                        Styles.BLACK
-                        + Styles.MAGENTA_BACKGROUND
+                    console.print(
+                        "[black on magenta]"
                         + f"Scene information: {event['title']}{options}"
-                        + Styles.RESET_ALL
+                        + "[/]"
                     )
                 else:
-                    print(
-                        Styles.BLACK
-                        + Styles.MAGENTA_BACKGROUND
+                    console.print(
+                        "[black on magenta]"
                         + f"scene information (start): (title={event['title']}, action_uid={event['action_uid']}, content={event['content']})"
-                        + Styles.RESET_ALL
+                        + "[/]"
                     )
 
                 input_events.append(
@@ -289,11 +279,10 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
             elif event["type"] == "StopVisualInformationSceneAction":
                 if verbose.verbose_mode_enabled:
-                    print(
-                        Styles.BLACK
-                        + Styles.MAGENTA_BACKGROUND
+                    console.print(
+                        "[black on magenta]"
                         + f"scene information (stop): (action_uid={event['action_uid']})"
-                        + Styles.RESET_ALL
+                        + "[/]"
                     )
 
                 input_events.append(
@@ -307,18 +296,14 @@ async def _run_chat_v2_x(rails_app: LLMRails):
             elif event["type"] == "StartVisualFormSceneAction":
                 # We print scene messages in green.
                 if not verbose.verbose_mode_enabled:
-                    print(
-                        Styles.BLACK
-                        + Styles.MAGENTA_BACKGROUND
-                        + f"Scene form: {event['prompt']}"
-                        + Styles.RESET_ALL
+                    console.print(
+                        "[black on magenta]" + f"Scene form: {event['prompt']}" + "[/]"
                     )
                 else:
-                    print(
-                        Styles.BLACK
-                        + Styles.MAGENTA_BACKGROUND
+                    console.print(
+                        "[black on magenta]"
                         + f"scene form (start): (prompt={event['prompt']}, action_uid={event['action_uid']}, inputs={event['inputs']})"
-                        + Styles.RESET_ALL
+                        + "[/]"
                     )
                 input_events.append(
                     new_event_dict(
@@ -329,11 +314,10 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
             elif event["type"] == "StopVisualFormSceneAction":
                 if verbose.verbose_mode_enabled:
-                    print(
-                        Styles.BLACK
-                        + Styles.MAGENTA_BACKGROUND
+                    console.print(
+                        "[black on magenta]"
                         + f"scene form (stop): (action_uid={event['action_uid']})"
-                        + Styles.RESET_ALL
+                        + "[/]"
                     )
                 input_events.append(
                     new_event_dict(
@@ -347,18 +331,16 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 # We print scene messages in green.
                 if not verbose.verbose_mode_enabled:
                     options = extract_scene_text_content(event["options"])
-                    print(
-                        Styles.BLACK
-                        + Styles.MAGENTA_BACKGROUND
+                    console.print(
+                        "[black on magenta]"
                         + f"Scene choice: {event['prompt']}{options}"
-                        + Styles.RESET_ALL
+                        + "[/]"
                     )
                 else:
-                    print(
-                        Styles.BLACK
-                        + Styles.MAGENTA_BACKGROUND
+                    console.print(
+                        "[black on magenta]"
                         + f"scene choice (start): (prompt={event['prompt']}, action_uid={event['action_uid']}, options={event['options']})"
-                        + Styles.RESET_ALL
+                        + "[/]"
                     )
                 input_events.append(
                     new_event_dict(
@@ -369,11 +351,10 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
             elif event["type"] == "StopVisualChoiceSceneAction":
                 if verbose.verbose_mode_enabled:
-                    print(
-                        Styles.BLACK
-                        + Styles.MAGENTA_BACKGROUND
+                    console.print(
+                        "[black on magenta]"
                         + f"scene choice (stop): (action_uid={event['action_uid']})"
-                        + Styles.RESET_ALL
+                        + "[/]"
                     )
                 input_events.append(
                     new_event_dict(
@@ -385,11 +366,11 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
             elif event["type"] == "StartTimerBotAction":
                 if verbose.verbose_mode_enabled:
-                    print(
-                        Styles.BLACK
-                        + Styles.GREY
+                    console.print(
+                        "[#555555]"
                         + f"timer (start): {event['timer_name']} {event['duration']}"
-                        + Styles.RESET_ALL
+                        + "[/]",
+                        highlight=False,
                     )
                 action_uid = event["action_uid"]
                 timer = _start_timer(event["timer_name"], event["duration"], action_uid)
@@ -406,10 +387,9 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
             elif event["type"] == "StopTimerBotAction":
                 if verbose.verbose_mode_enabled:
-                    print(
-                        Styles.GREY
-                        + f"timer (stop): {event['action_uid']}"
-                        + Styles.RESET_ALL
+                    console.print(
+                        "[#555555]" + f"timer (stop): {event['action_uid']}" + "[/]",
+                        highlight=False,
                     )
                 action_uid = event["action_uid"]
                 if action_uid in running_timer_tasks:
@@ -418,23 +398,24 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
             elif event["type"] == "TimerBotActionFinished":
                 if verbose.verbose_mode_enabled:
-                    print(
-                        Styles.GREY
+                    console.print(
+                        "[#555555]"
                         + f"timer (finished): {event['action_uid']}"
-                        + Styles.RESET_ALL
+                        + "[/]",
+                        highlight=False,
                     )
                 action_uid = event["action_uid"]
                 if action_uid in running_timer_tasks:
                     running_timer_tasks[action_uid].cancel()
                     running_timer_tasks.pop(action_uid)
             elif event["type"] == "LocalAsyncCounter":
-                if verbose.verbose_mode_enabled:
-                    print(Styles.GREY + f"Event: {event}" + Styles.RESET_ALL)
+                # if verbose.verbose_mode_enabled:
+                #     console.print(Styles.GREY + f"Event: {event}" + "[/]")
+                pass
             else:
-                if not verbose.verbose_mode_enabled:
-                    print(f"Event: {event['type']}")
-                else:
-                    print(f"Event: {event['type']}: {event}")
+                if event["type"] not in ["LocalAsyncCounter"]:
+                    if not verbose.verbose_mode_enabled:
+                        console.print(f"Event: {event['type']}")
 
         # TODO: deserialize the output state
         # state = State.from_dict(output_state)
@@ -471,6 +452,8 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 # If there are no pending actions, we stop
                 check_task.cancel()
                 check_task = None
+                status.stop()
+                enable_input.set()
                 return
 
             output_events.clear()
@@ -502,7 +485,19 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 input_events = []
             else:
                 waiting_user_input = True
-                user_message: str = await session.prompt_async("> ")
+                await enable_input.wait()
+
+                user_message: str = await session.prompt_async(
+                    HTML("<prompt>\n> </prompt>"),
+                    style=Style.from_dict(
+                        {
+                            "prompt": "fg:#ffff00",
+                            "": "fg:#ffff00",
+                        }
+                    ),
+                )
+                enable_input.clear()
+                status.start()
                 waiting_user_input = False
                 if user_message == "":
                     input_events = [new_event_dict("CheckLocalAsync")]
@@ -511,10 +506,8 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                     event_input = user_message.lstrip("/")
                     event = parse_events_inputs(event_input)
                     if event is None:
-                        print(
-                            Styles.RED
-                            + f"Invalid event: {event_input}"
-                            + Styles.RESET_ALL
+                        console.print(
+                            "[white on red]" + f"Invalid event: {event_input}" + "[/]"
                         )
                     else:
                         input_events = [event]
@@ -619,22 +612,16 @@ def run_chat(
         server_url (Optional[str]): The URL of the chat server. Defaults to None.
         config_id (Optional[str]): The configuration ID. Defaults to None.
     """
-    # If the `--verbose-llm-calls` mode is used, we activate the verbose mode.
-    # This means that the user doesn't have to use both options at the same time.
-    verbose = verbose or verbose_llm_calls
-
     rails_config = RailsConfig.from_path(config_path)
     rails_app = LLMRails(rails_config, verbose=verbose)
 
-    set_verbose_llm_calls(verbose_llm_calls)
-
-    if verbose and not verbose_llm_calls:
-        print(
-            "NOTE: use the `--verbose-llm-calls` option to include the LLM prompts "
-            "and completions in the log.\n"
+    if verbose and verbose_llm_calls:
+        console.print(
+            "NOTE: use the `--verbose-no-llm` option to exclude the LLM prompts "
+            "and completions from the log.\n"
         )
 
-    print("Starting the chat (Press Ctrl + C twice to quit) ...")
+    console.print("Starting the chat (Press Ctrl + C twice to quit) ...")
 
     if rails_config.colang_version == "1.0":
         asyncio.run(

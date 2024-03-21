@@ -56,19 +56,7 @@ class SimplifyFormatter(logging.Formatter):
         # Hide Object references
         text = re.sub(r"<[^>]* object at [^>]*>", "<>", text)
 
-        # Emphasize certain bits
-        pattern = re.compile(r"('final_transcript': '[^']*')")
-        text = pattern.sub(lambda m: ":thumbs_up:" + m.group(0) + ":thumbs_up:", text)
-
         # Remove certain bits
         text = text.replace("Process internal event: ", "")
-
-        # Hide completely the line with "Processing event"
-        if text.startswith("Processing event"):
-            text = ""
-
-        # Hide lines with special formatting from the VerboseHandler
-        if " :: " in text:
-            text = ""
 
         return text

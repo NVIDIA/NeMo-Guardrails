@@ -27,7 +27,6 @@ from nemoguardrails.context import explain_info_var, llm_call_info_var, llm_stat
 from nemoguardrails.logging.explain import LLMCallInfo
 from nemoguardrails.logging.processing_log import processing_log_var
 from nemoguardrails.logging.stats import LLMStats
-from nemoguardrails.logging.verbose import Styles
 
 log = logging.getLogger(__name__)
 
@@ -87,25 +86,22 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
             llm_call_info = LLMCallInfo()
             llm_call_info_var.set(llm_call_info)
 
-        prompt = (
-            "\n"
-            + "\n".join(
-                [
-                    Styles.CYAN
-                    + (
-                        "User"
-                        if msg.type == "human"
-                        else "Bot"
-                        if msg.type == "ai"
-                        else "System"
-                    )
-                    + Styles.PROMPT
-                    + "\n"
-                    + msg.content
-                    for msg in messages[0]
-                ]
-            )
-            + Styles.RESET_ALL
+        prompt = "\n" + "\n".join(
+            [
+                "[cyan]"
+                + (
+                    "User"
+                    if msg.type == "human"
+                    else "Bot"
+                    if msg.type == "ai"
+                    else "System"
+                )
+                + "[/][black on white]"
+                + "\n"
+                + msg.content
+                + "[/]"
+                for msg in messages[0]
+            ]
         )
 
         log.info("Invocation Params :: %s", kwargs.get("invocation_params", {}))
