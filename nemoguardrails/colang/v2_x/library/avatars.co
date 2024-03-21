@@ -43,14 +43,14 @@ flow user said $text -> $transcript
   $transcript = $event.final_transcript
 
 flow user saying $text -> $transcript
-  match UtteranceUserAction.TranscriptUpdated(interim_transcript=regex("(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$")) as $event
+  match UtteranceUserAction.TranscriptUpdated(interim_transcript=regex("(?i).*({$text})((\s*\w+\s*){0,2})\W*$")) as $event
   $transcript = $event.interim_transcript
 
 flow user started saying something
   match UtteranceUserAction.Started() as $event
 
 flow user typing $text -> $inputs
-  match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": regex(".*({{$text}})((\s*\w+\s*){0,2})\W*$")}]) as $event
+  match VisualFormSceneAction.InputUpdated(interim_inputs=[{"value": regex(".*({$text})((\s*\w+\s*){0,2})\W*$")}]) as $event
   $inputs = $event.interim_inputs
 
 flow user said something -> $transcript
@@ -126,16 +126,16 @@ flow user interrupted bot talking $sentence_length=15
     while True
       when user saying something as $user_saying_ref
         $transcript = $user_saying_ref.context.event.interim_transcript
-        log "User saying something: {{$transcript}}"
+        log "User saying something: {$transcript}"
       orwhen user said something as $user_said_ref
         $transcript = $user_said_ref.context.transcript
-        log "User said something: {{$transcript}}"
+        log "User said something: {$transcript}"
       orwhen bot said something
         log "Bot finished talking without interruption"
         break
 
-      if "{{len($transcript) > $sentence_length}}" == "True"
-        log "Bot interrupted by user with: {{$transcript}}"
+      if "{len($transcript) > $sentence_length}" == "True"
+        log "Bot interrupted by user with: {$transcript}"
         return
 
 # ----------------------------------
@@ -261,7 +261,7 @@ flow bot say $text
   await _bot_say $text
 
 flow bot say something like $text
-  $variation = """Return a single string that is a new variation of: {{$text}}"""
+  $variation = """Return a single string that is a new variation of: {$text}"""
   await bot say $variation
 
 flow bot inform $text
@@ -327,7 +327,7 @@ flow tracking visual choice selection state
   when VisualChoiceSceneAction.Started()
     $choice_selection_state = None
   orwhen VisualChoiceSceneAction.ChoiceUpdated() as $event
-    if "{{len($event.current_choice) > 0}}" == "True"
+    if "{len($event.current_choice) > 0}" == "True"
       $choice_selection_state = $event.current_choice[0]
     else
       $choice_selection_state = None
@@ -365,7 +365,7 @@ flow wait indefinitely
   """Little helper flow to wait indefinitely."""
   match NeverComingEvent()
 
-flow wait $time_s $timer_id="wait_timer_{{uid()}}"
+flow wait $time_s $timer_id="wait_timer_{uid()}"
   """Wait the specified number of seconds before continuing."""
   # meta: loop_id=NEW
   await TimerBotAction(timer_name=$timer_id, duration=$time_s)
@@ -374,14 +374,14 @@ flow catching colang error
   """A flow to catching of any runtime Colang errors"""
   # meta: loop_id=catch_colang_errors
   match ColangError() as $event
-  log "Colang error: {{$event.type}} - {{escape($event.error)}}"
+  print "Colang error: {$event.type} - {escape($event.error)}"
   bot say "Excuse me, what did you say?"
 
 flow catching start of undefined flows
   """A flow to catching of the start of undefined flows."""
   priority 0.1
   match UnhandledEvent(event="StartFlow") as $event
-  print "Undefined flow: '{{$event.flow_id}}' {{$event.loop_ids}}"
+  print "Undefined flow: '{$event.flow_id}' {$event.loop_ids}"
   bot say "Excuse me, what did you say?"
   # We need to abort the flow that sent the FlowStart event since it might be waiting for it
   send StopFlow(flow_instance_uid=$event.source_flow_instance_uid)
@@ -390,7 +390,7 @@ flow catching unexpected user utterance
   """A flow to catching of unhandled user utterances."""
   priority 0.1
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
-  bot say "Warning: Unexpected user utterance '{{$event.final_transcript}}'"
+  bot say "Warning: Unexpected user utterance '{$event.final_transcript}'"
 
 flow repeating timer $timer_id $interval_s
   """Repeating timer."""
@@ -399,7 +399,7 @@ flow repeating timer $timer_id $interval_s
     # await TimerBotAction(timer_name=$timer_id, duration=$interval_s)
 
 flow await_flow_by_name $flow_name
-  $new_flow_instance_uid = "{{uid()}}"
+  $new_flow_instance_uid = "{uid()}"
   send StartFlow(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid)
   match FlowStarted(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
   match $event_ref.flow.Finished()
@@ -439,8 +439,8 @@ flow generating user intent for unhandled user utterance
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
   if $bot_talking_state == False
     $transcript = $event.final_transcript
-    log "generating user intent for unhandled user utterance: {{$transcript}}"
-    $action = 'user said "{{$transcript}}"'
+    log "generating user intent for unhandled user utterance: {$transcript}"
+    $action = 'user said "{$transcript}"'
     $intent = await derive user intent from user action $action 20
 
   # We need to log the user action
@@ -462,7 +462,7 @@ flow generate interaction continuation -> $flow_name
   $exists = await CheckValidFlowExistsAction(flow_id=$flow_info.name)
   if $exists == False
     $flows = await AddFlowsAction(config=$flow_info.body)
-    if "{{len($flows)}}" == "0"
+    if "{len($flows)}" == "0"
       print "LLM generated flow parsing failed!"
       bot say "Sorry, what did you say?"
       return None
@@ -494,7 +494,7 @@ flow handling start of undefined flow
 
   start_new_flow_instance:
 
-  if "{{search('^user ',$event.flow_id)}}" == "True"
+  if "{search('^user ',$event.flow_id)}" == "True"
 
     # We have an undefined user intent, so we just fake it to be started by this fallback flow
     send FlowStarted(flow_id=$event.flow_id, flow_instance_uid=$event.arguments.flow_instance_uid)
@@ -508,7 +508,7 @@ flow handling start of undefined flow
     $flow_source = await GenerateFlowFromNameAction(name=$event.flow_id)
 
     await AddFlowsAction(config=$flow_source)
-    $new_flow_instance_uid = "{{uid()}}"
+    $new_flow_instance_uid = "{uid()}"
     send StartFlow(flow_id=$event.flow_id, flow_instance_uid=$new_flow_instance_uid)
     match FlowStarted(flow_id=$event.flow_id, flow_instance_uid=$new_flow_instance_uid) as $event_ref
     match $event_ref.flow.Finished()
@@ -520,7 +520,7 @@ flow execute llm instruction $instructions
 
   await AddFlowsAction(config=$flow_info.body)
 
-  $new_flow_instance_uid = "{{uid()}}"
+  $new_flow_instance_uid = "{uid()}"
   send StartFlow(flow_id=$flow_info.name, flow_instance_uid=$new_flow_instance_uid)
   match FlowStarted(flow_id=$flow_info.name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
   match $event_ref.flow.Finished()

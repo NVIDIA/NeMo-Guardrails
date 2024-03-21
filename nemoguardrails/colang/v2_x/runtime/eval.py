@@ -39,23 +39,45 @@ def eval_expression(expr: str, context: dict) -> Any:
 
         return expr
 
-    # We search for all inner expressions marked by double curly brackets and evaluate them first
-    inner_expression_pattern = r"\{\{(.*?)\}\}"
-    inner_expressions = re.findall(inner_expression_pattern, expr)
-    if inner_expressions:
-        inner_expression_values = []
-        for inner_expression in inner_expressions:
-            try:
-                value = eval_expression(inner_expression, context)
-            except Exception as ex:
-                raise ColangValueError(
-                    f"Error evaluating inner expression: '{expr}'"
-                ) from ex
-            value = str(value).replace('"', '\\"').replace("'", "\\'")
-            inner_expression_values.append(value)
+    # We search for all expressions in strings within curly brackets and evaluate them first
+    # Find first all strings
+    string_pattern = r'("(?:\\"|[^"])*?")|(\'(?:\\\'|[^\'])*?\')'
+    string_expressions_matches = re.findall(string_pattern, expr)
+    string_expression_values = []
+    for string_expression_match in string_expressions_matches:
+        string_expression = (
+            string_expression_match[0]
+            if string_expression_match[0]
+            else string_expression_match[1]
+        )
+        if string_expression:
+            # Find expressions within curly brackets, ignoring double curly brackets
+            expression_pattern = r"{(?!\{)([^{}]+)\}(?!\})"
+            inner_expressions = re.findall(expression_pattern, string_expression)
+            if inner_expressions:
+                inner_expression_values = []
+                for inner_expression in inner_expressions:
+                    try:
+                        value = eval_expression(inner_expression, context)
+                    except Exception as ex:
+                        raise ColangValueError(
+                            f"Error evaluating inner expression: '{inner_expression}'"
+                        ) from ex
+                    value = str(value).replace('"', '\\"').replace("'", "\\'")
+                    inner_expression_values.append(value)
+                string_expression = re.sub(
+                    expression_pattern,
+                    lambda x: inner_expression_values.pop(0),
+                    string_expression,
+                )
+                string_expression = string_expression.replace("{{", "{").replace(
+                    "}}", "}"
+                )
+            string_expression_values.append(string_expression)
+    if string_expression_values:
         expr = re.sub(
-            inner_expression_pattern,
-            lambda x: inner_expression_values.pop(0),
+            string_pattern,
+            lambda x: string_expression_values.pop(0),
             expr,
         )
 

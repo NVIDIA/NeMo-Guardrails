@@ -357,13 +357,14 @@ def test_flow_references_member_access():
     )
 
 
-def test_values_in_strings():
+def test_expressions_in_strings():
     """"""
 
     content = """
     flow main
       start UtteranceBotAction(script="Roger") as $ref
-      start UtteranceBotAction(script="Hi {{$ref.start_event_arguments.script}}!")
+      start UtteranceBotAction(script="It's {{->}} \\"{$ref.start_event_arguments.script}!\\"")
+      start UtteranceBotAction(script='It"s {{->}} \\'{$ref.start_event_arguments.script}!\\'')
     """
 
     config = _init_state(content)
@@ -377,7 +378,14 @@ def test_values_in_strings():
             },
             {
                 "type": "StartUtteranceBotAction",
-                "script": "Hi Roger!",
+                "script": 'It\'s {->} "Roger!"',
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "It\"s {->} 'Roger!'",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
             {
                 "type": "StopUtteranceBotAction",
@@ -407,7 +415,7 @@ def test_flow_return_values():
       $result_a = await a
       $result_b = await b
       $result_c = await c
-      start UtteranceBotAction(script="{{$result_a}} {{$result_b}} {{$result_c}}")
+      start UtteranceBotAction(script="{$result_a} {$result_b} {$result_c}")
     """
 
     config = _init_state(content)
@@ -434,14 +442,14 @@ def test_break_continue_statement_a():
       $count = -1
       while True
         $count = $count + 1
-        start UtteranceBotAction(script="S:{{$count}}")
+        start UtteranceBotAction(script="S:{$count}")
         if $count < 1
           $count = $count
         elif $count < 3
           continue
         elif $count == 3
           break
-        start UtteranceBotAction(script="E:{{$count}}")
+        start UtteranceBotAction(script="E:{$count}")
       start UtteranceBotAction(script="Done")
     """
 
@@ -542,7 +550,6 @@ def test_break_continue_statement_b():
     )
 
 
-# TODO: Stop actions/flows from cases that did not trigger in 'when' structure
 def test_when_or_core_mechanics():
     """"""
 
@@ -1063,7 +1070,7 @@ def test_public_flow_attributes():
 
     flow main
       start a as $ref
-      start UtteranceBotAction(script="{{$ref.result_1}} {{$ref.result_2}}")
+      start UtteranceBotAction(script="{$ref.result_1} {$ref.result_2}")
       match WaitEvent()
     """
 
@@ -1081,4 +1088,4 @@ def test_public_flow_attributes():
 
 
 if __name__ == "__main__":
-    test_public_flow_attributes()
+    test_expressions_in_strings()

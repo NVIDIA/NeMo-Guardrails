@@ -20,13 +20,13 @@ flow reaction bot question repetition for user silence $time_s $max_repetitions=
     when user was silent $time_s
       $question = $ref.text
 
-      start GenerateValueAction(var_name="new_question_variation", instructions="Make a different variation of the following question: '{{$question}}'. Never repeat the same question (see the logs above) and respond only with the question text and nothing else.") as $llm_request
+      start GenerateValueAction(var_name="new_question_variation", instructions="Make a different variation of the following question: '{$question}'. Never repeat the same question (see the logs above) and respond only with the question text and nothing else.") as $llm_request
       when $llm_request.Finished() as $llm_request_result
         $prompt = $llm_request_result.return_value
       orwhen user started saying something
         continue
 
-      if "{{isstr($prompt)}}" == "False"
+      if "{isstr($prompt)}" == "False"
         $prompt = "So, what do you think?"
       bot ask $prompt
       $repetition = $repetition + 1
@@ -224,7 +224,7 @@ flow showcase selector
           log "user said something during bot thinking (user silent llm response generation)"
 
     orwhen unhandled user intent as $intent_ref
-      log "unhandled user intent: '{{$intent_ref.intent}}'"
+      log "unhandled user intent: '{$intent_ref.intent}'"
       generate then continue interaction
       log "unhandled user intent response done"
 
@@ -310,7 +310,7 @@ flow ignored_utterance_action_bugfix
   if $number_of_failed_utterance_actions == None
     $number_of_failed_utterance_actions = 0
   match StartUtteranceBotAction() as $event
-  log "Event StartUtteranceBotAction {{$event.action_uid}}"
+  log "Event StartUtteranceBotAction {$event.action_uid}"
   start_new_flow_instance:
   start wait 3.0 as $timer_ref
   when $timer_ref.Finished()
@@ -318,7 +318,7 @@ flow ignored_utterance_action_bugfix
     if $number_of_failed_utterance_actions < 3
       send UtteranceBotActionFinished(action_uid=$event.action_uid, final_script="", is_success=False, failure_reason="ActionStarted event timeout")
     $number_of_failed_utterance_actions = $number_of_failed_utterance_actions + 1
-    log "action_started_timer triggered {{$event.action_uid}}"
+    log "action_started_timer triggered {$event.action_uid}"
   orwhen UtteranceBotActionStarted(action_uid=$event.action_uid)
     $number_of_failed_utterance_actions = 0
-    log "Event UtteranceBotActionStarted {{$event.action_uid}}"
+    log "Event UtteranceBotActionStarted {$event.action_uid}"

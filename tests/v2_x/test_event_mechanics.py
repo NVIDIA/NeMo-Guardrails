@@ -1099,9 +1099,9 @@ def test_update_context():
     flow main
       global $test
       match UtteranceUserAction.Finished(final_transcript="step1")
-      start UtteranceBotAction(script="{{$test}}")
+      start UtteranceBotAction(script="{$test}")
       match UtteranceUserAction.Finished(final_transcript="step2")
-      start UtteranceBotAction(script="{{$test}}")
+      start UtteranceBotAction(script="{$test}")
     """
     state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(

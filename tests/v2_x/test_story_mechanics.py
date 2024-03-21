@@ -434,11 +434,11 @@ def test_match_colang_error_event():
     content = """
     flow catch colang errors
       match ColangError() as $event
-      await UtteranceBotAction(script="Warning: {{$event.arguments.type}} - {{escape($event.arguments.error)}}")
+      await UtteranceBotAction(script="Warning: {$event.arguments.type} - {escape($event.arguments.error)}")
 
     flow a
       match UtteranceUserAction.Finished(final_transcript="go") as $event
-      start UtteranceBotAction(script="{{$test[0]}}")
+      start UtteranceBotAction(script="{$test[0]}")
 
     flow main
       activate catch colang errors

@@ -5,7 +5,7 @@ flow showcase proactive turn taking
 
   while True
     $question = """Ask a random question that can be answered with just yes or no."""
-    if "{{isstr($question)}}" == "False"
+    if "{isstr($question)}" == "False"
       $question = "Do you like Avatars?"
     bot ask $question
     when user said something

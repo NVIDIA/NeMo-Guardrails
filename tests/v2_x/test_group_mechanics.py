@@ -297,9 +297,9 @@ def test_when_or_cases_with_same_references():
     flow main
       while True
         when user said "A" as $ref
-          start UtteranceBotAction(script="case A:{{$ref.context.transcript}}")
+          start UtteranceBotAction(script="case A:{$ref.context.transcript}")
         orwhen user said "B" as $ref
-          start UtteranceBotAction(script="case B:{{$ref.context.transcript}}")
+          start UtteranceBotAction(script="case B:{$ref.context.transcript}")
     """
 
     state = run_to_completion(_init_state(content), start_main_flow_event)
