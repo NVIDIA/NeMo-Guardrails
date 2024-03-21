@@ -23,7 +23,8 @@ from simpleeval import EvalWithCompoundTypes
 
 from nemoguardrails.colang.v2_x.lang.colang_ast import Element
 from nemoguardrails.colang.v2_x.runtime import system_functions
-from nemoguardrails.colang.v2_x.runtime.flows import ColangValueError, FlowState, State
+from nemoguardrails.colang.v2_x.runtime.errors import ColangValueError
+from nemoguardrails.colang.v2_x.runtime.flows import FlowState, State
 from nemoguardrails.colang.v2_x.runtime.utils import AttributeDict
 from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
 from nemoguardrails.utils import new_uid

@@ -27,11 +27,11 @@ from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
-from nemoguardrails.colang.v2_x.runtime.flows import (
+from nemoguardrails.colang.v2_x.runtime.errors import (
     ColangRuntimeError,
-    Event,
-    FlowStatus,
+    ColangSyntaxError,
 )
+from nemoguardrails.colang.v2_x.runtime.flows import Event, FlowStatus
 from nemoguardrails.colang.v2_x.runtime.statemachine import (
     FlowConfig,
     InternalEvent,
@@ -41,7 +41,6 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     initialize_state,
     run_to_completion,
 )
-from nemoguardrails.colang.v2_x.runtime.utils import create_flow_configs_from_flow_list
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
 
@@ -604,3 +603,44 @@ class RuntimeV2_x(Runtime):
             "context_updates": context_updates,
             "start_action_event": start_action_event,
         }
+
+
+def create_flow_configs_from_flow_list(flows: List[Flow]) -> Dict[str, FlowConfig]:
+    """Create a flow config dictionary and resolves flow overriding."""
+    flow_configs: Dict[str, FlowConfig] = {}
+    override_flows: Dict[str, FlowConfig] = {}
+
+    # Create two dictionaries with normal and override flows
+    for flow in flows:
+        assert isinstance(flow, Flow)
+        config = FlowConfig(
+            id=flow.name,
+            elements=flow.elements,
+            decorators={decorator.name: decorator for decorator in flow.decorators},
+            parameters=flow.parameters,
+            return_members=flow.return_members,
+            source_code=flow.source_code,
+        )
+
+        if config.is_override:
+            if flow.name in override_flows:
+                raise ColangSyntaxError(
+                    f"Multiple override flows with name '{flow.name}' detected! There can only be one!"
+                )
+            override_flows[flow.name] = config
+        elif flow.name in flow_configs:
+            raise ColangSyntaxError(
+                f"Multiple non-overriding flows with name '{flow.name}' detected! There can only be one!"
+            )
+        else:
+            flow_configs[flow.name] = config
+
+    # Override normal flows
+    for override_flow in override_flows.values():
+        if override_flow.id not in flow_configs:
+            raise ColangSyntaxError(
+                f"Override flow with name '{override_flow.id}' does not override any flow with that name!"
+            )
+        flow_configs[override_flow.id] = override_flow
+
+    return flow_configs

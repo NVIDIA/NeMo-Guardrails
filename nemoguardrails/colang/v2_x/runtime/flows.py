@@ -23,7 +23,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Deque, Dict, List, Optional, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
@@ -33,6 +33,8 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     FlowParamDef,
     FlowReturnMemberDef,
 )
+from nemoguardrails.colang.v2_x.runtime.errors import ColangSyntaxError
+from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
@@ -729,23 +731,3 @@ class State:
     event_matching_heads_reverse_map: Dict[Tuple[str, str], str] = field(
         default_factory=dict
     )
-
-
-class ColangParsingError(Exception):
-    """Raised when there is invalid Colang syntax detected."""
-
-
-class ColangSyntaxError(Exception):
-    """Raised when there is invalid Colang syntax detected."""
-
-
-class ColangValueError(Exception):
-    """Raised when there is an invalid value detected in a Colang expression."""
-
-
-class ColangRuntimeError(Exception):
-    """Raised when there is a Colang related runtime exception."""
-
-
-class LlmResponseError(Exception):
-    """Raised when there is an issue with the lmm response."""

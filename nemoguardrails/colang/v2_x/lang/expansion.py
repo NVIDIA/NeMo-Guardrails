@@ -39,11 +39,8 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     When,
     While,
 )
-from nemoguardrails.colang.v2_x.runtime.flows import (
-    ColangSyntaxError,
-    FlowConfig,
-    InternalEvents,
-)
+from nemoguardrails.colang.v2_x.runtime.errors import ColangSyntaxError
+from nemoguardrails.colang.v2_x.runtime.flows import FlowConfig, InternalEvents
 from nemoguardrails.colang.v2_x.runtime.utils import new_var_uid
 
 
