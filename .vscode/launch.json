@@ -12,7 +12,7 @@
             }
         },
         {
-            "name": "Debug story (current directory)",
+            "name": "Debug story very verbose (current directory)",
             "type": "debugpy",
             "request": "launch",
             "console": "integratedTerminal",
@@ -30,7 +30,25 @@
             }
         },
         {
-            "name": "Run story verbose (current directory)",
+            "name": "Debug story verbose (current directory)",
+            "type": "debugpy",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "nemoguardrails",
+            "args": [
+                "chat",
+                "--config=${fileDirname}",
+                "--verbose",
+                "--verbose-llm-calls",
+                "--debug-level=INFO"
+            ],
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
+            }
+        },
+        {
+            "name": "Debug story (current directory)",
             "type": "debugpy",
             "request": "launch",
             "console": "integratedTerminal",
@@ -42,6 +60,18 @@
                 "--verbose-llm-calls",
                 "--debug-level=INFO"
             ],
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
+            }
+        },
+        {
+            "name": "Run story verbose (current directory)",
+            "type": "debugpy",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "nemoguardrails",
+            "args": ["chat", "--config=${fileDirname}", "--verbose-llm-calls"],
             "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
