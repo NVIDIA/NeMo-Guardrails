@@ -586,7 +586,7 @@ def _expand_activate_element(
                 {
                     "flow_id": f"'{element.spec.name}'",
                     "flow_instance_uid": f"'{new_var_uid()}'",
-                    "activated": "True",
+                    "activated": True,
                 }
             )
             new_elements.append(

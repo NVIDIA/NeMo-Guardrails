@@ -484,7 +484,7 @@ def _process_internal_events_without_default_matchers(
                             state,
                             flow_state,
                             event.matching_scores,
-                            event.arguments.get("deactivate", "False"),
+                            event.arguments.get("deactivate", False),
                         )
                         assert flow_state.loop_id
                         handled_event_loops.add(flow_state.loop_id)
