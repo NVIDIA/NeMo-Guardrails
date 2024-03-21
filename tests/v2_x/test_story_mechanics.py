@@ -188,12 +188,12 @@ def test_when_conflict_issue():
         state.outgoing_events,
         [
             {
-                "type": "StartGestureBotAction",
-                "gesture": "test",
-            },
-            {
                 "type": "StartUtteranceBotAction",
                 "script": "Ok",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "test",
             },
         ],
     )

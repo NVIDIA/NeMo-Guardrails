@@ -125,8 +125,9 @@ def test_multi_level_member_match_from_reference():
       match UtteranceUserAction.Finished(final_transcript="Done")
 
     flow main
-      send StartFlow(flow_id="a")
-      match FlowStarted(flow_id="a") as $event_ref
+      $flow_instance_uid = "(a){uid()}"
+      send StartFlow(flow_id="a", flow_instance_uid=$flow_instance_uid)
+      match FlowStarted(flow_id="a", flow_instance_uid=$flow_instance_uid) as $event_ref
       match $event_ref.flow.Finished()
       start UtteranceBotAction(script="End")
     """

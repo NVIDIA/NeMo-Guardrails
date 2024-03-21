@@ -166,11 +166,19 @@ def _expand_start_element(
         # Single element
         if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
-            # send StartFlow(flow_id="FLOW_NAME")
+            # $_instance_<uid> = (<flow_id>)<uid>
+            instance_uid_variable_name = f"_instance_uid_{new_var_uid()}"
+            new_elements.append(
+                Assignment(
+                    key=instance_uid_variable_name,
+                    expression=f"'({element.spec.name}){{uid()}}'",
+                )
+            )
+            # send StartFlow(flow_id=<flow_id>, flow_instance_uid=$_instance_<uid>)
             element.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
-                    "flow_instance_uid": f"'{new_var_uid()}'",
+                    "flow_instance_uid": f"'{{${instance_uid_variable_name}}}'",
                 }
             )
             new_elements.append(
@@ -579,10 +587,18 @@ def _expand_activate_element(
             element_copy = copy.deepcopy(element)
             # TODO: Remove assert once SpecOp type is refactored
             assert isinstance(element_copy.spec, Spec)
+            # $_instance_<uid> = (<flow_id>)<uid>
+            instance_uid_variable_name = f"_instance_uid_{new_var_uid()}"
+            new_elements.append(
+                Assignment(
+                    key=instance_uid_variable_name,
+                    expression=f"'({element.spec.name}){{uid()}}'",
+                )
+            )
             element_copy.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
-                    "flow_instance_uid": f"'{new_var_uid()}'",
+                    "flow_instance_uid": f"'{{${instance_uid_variable_name}}}'",
                     "activated": "True",
                 }
             )

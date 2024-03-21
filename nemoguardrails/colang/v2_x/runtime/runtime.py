@@ -69,7 +69,10 @@ class RuntimeV2_x(Runtime):
     async def _add_flows_action(self, state: "State", **args: dict) -> List[str]:
         log.info("Start AddFlowsAction! %s", args)
         flow_content = args["config"]
-        assert isinstance(flow_content, str)
+        if not isinstance(flow_content, str):
+            raise ColangRuntimeError(
+                "Parameter 'config' in AddFlowsAction is not of type 'str'!"
+            )
         # Parse new flow
         try:
             parsed_flow = parse_colang_file(

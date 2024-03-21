@@ -521,13 +521,13 @@ def test_activate_flow_mechanism():
     """Test the activate a flow mechanism."""
 
     content = """
-    flow a
-      start UtteranceBotAction(script="Start")
+    flow a $text
+      start UtteranceBotAction(script=$text)
       match UtteranceUserAction().Finished(final_transcript="Hi")
       start UtteranceBotAction(script="End")
 
     flow main
-      activate a
+      activate a "Start"
       match WaitAction().Finished()
     """
 
@@ -1413,5 +1413,39 @@ def test_flow_overriding():
     )
 
 
+def test_flow_parameter_await_mechanism():
+    """Test flow overriding mechanic."""
+
+    content = """
+    flow a $text $test
+      $text = "bye"
+      $test = 32
+      start UtteranceBotAction(script="{$text} {$test}")
+
+    flow main
+      await a "hi" $test=123
+      await UtteranceBotAction(script="Success")
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "bye 32",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_flow_overriding()
+    test_flow_parameter_await_mechanism()
