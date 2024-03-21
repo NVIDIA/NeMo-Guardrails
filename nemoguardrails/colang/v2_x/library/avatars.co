@@ -30,6 +30,9 @@
 #    - Internal events: new_flow_start_uid -> new_flow_instance_uid
 #  - Cleanup and improvements of certain log and print statements
 #-------
+# 0.2.1 (3/20/2024)
+#  - Introduce $self variable to access flow attributes like loop_id
+#-------
 ################################################################
 
 # -----------------------------------
@@ -59,7 +62,7 @@ flow user said something -> $transcript
   $transcript = $event.final_transcript
 
 flow user said something unexpected -> $transcript
-  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
+  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
   send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id=None)
   $transcript = $event.final_transcript
 
@@ -79,7 +82,7 @@ flow user has selected choice $choice_id
     match VisualChoiceSceneAction.ChoiceUpdated(current_choice=[$choice_id]) as $event
 
 flow unhandled user intent -> $intent
-  match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$loop_id}) as $event
+  match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$self.loop_id}) as $event
   $intent = $event.flow_id
 
 @loop("user_was_silent")
@@ -399,7 +402,7 @@ flow repeating timer $timer_id $interval_s
     # await TimerBotAction(timer_name=$timer_id, duration=$interval_s)
 
 flow await_flow_by_name $flow_name
-  $new_flow_instance_uid = "{uid()}"
+  $new_flow_instance_uid = "($flow_name){uid()}"
   send StartFlow(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid)
   match FlowStarted(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
   match $event_ref.flow.Finished()
@@ -436,7 +439,7 @@ flow polling llm request response $interval
 flow generating user intent for unhandled user utterance
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
   global $bot_talking_state
-  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$loop_id}) as $event
+  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
   if $bot_talking_state == False
     $transcript = $event.final_transcript
     log "generating user intent for unhandled user utterance: {$transcript}"
@@ -497,7 +500,7 @@ flow handling start of undefined flow
   if "{search('^user ',$event.flow_id)}" == "True"
 
     # We have an undefined user intent, so we just fake it to be started by this fallback flow
-    send FlowStarted(flow_id=$event.flow_id, flow_instance_uid=$event.arguments.flow_instance_uid)
+    send FlowStarted(flow_id=$event.flow_id, flow_instance_uid=$event.flow_instance_uid)
     # Once this fallback flow receives the user intent it will finish and therefore also trigger the original matcher
     match FlowFinished(flow_id=$event.flow_id)
 
@@ -508,7 +511,7 @@ flow handling start of undefined flow
     $flow_source = await GenerateFlowFromNameAction(name=$event.flow_id)
 
     await AddFlowsAction(config=$flow_source)
-    $new_flow_instance_uid = "{uid()}"
+    $new_flow_instance_uid = "($event.flow_id){uid()}"
     send StartFlow(flow_id=$event.flow_id, flow_instance_uid=$new_flow_instance_uid)
     match FlowStarted(flow_id=$event.flow_id, flow_instance_uid=$new_flow_instance_uid) as $event_ref
     match $event_ref.flow.Finished()
@@ -520,7 +523,7 @@ flow execute llm instruction $instructions
 
   await AddFlowsAction(config=$flow_info.body)
 
-  $new_flow_instance_uid = "{uid()}"
+  $new_flow_instance_uid = "($flow_info.name){uid()}"
   send StartFlow(flow_id=$flow_info.name, flow_instance_uid=$new_flow_instance_uid)
   match FlowStarted(flow_id=$flow_info.name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
   match $event_ref.flow.Finished()
