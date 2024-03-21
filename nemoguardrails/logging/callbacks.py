@@ -86,6 +86,11 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
             llm_call_info = LLMCallInfo()
             llm_call_info_var.set(llm_call_info)
 
+        # We also add it to the explain object
+        explain_info = explain_info_var.get()
+        if explain_info:
+            explain_info.llm_calls.append(llm_call_info)
+          
         prompt = "\n" + "\n".join(
             [
                 "[cyan]"
