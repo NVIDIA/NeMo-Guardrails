@@ -134,6 +134,10 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             instruction_flows
         )
 
+        # If we don't have an instruction_flows_index, we fall back to using the main one
+        if self.instruction_flows_index is None:
+            self.instruction_flows_index = self.flows_index
+
     @action(name="GetLastUserMessageAction", is_system_action=True)
     async def get_last_user_message(
         self, events: List[dict], llm: Optional[BaseLLM] = None
