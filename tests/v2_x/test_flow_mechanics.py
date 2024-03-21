@@ -1447,5 +1447,58 @@ def test_flow_parameter_await_mechanism():
     )
 
 
+def test_flow_context_sharing():
+    """Test how a parent flow can share its context with a child flow."""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="{$test1}")
+      $test0 = "pong"
+      $test1 = "bye"
+      $test2 = 55
+
+    flow b
+      global $test0
+      start UtteranceBotAction(script="{$test0}")
+
+    flow main
+      global $test0
+      $test0 = "ping"
+      $test1 = "hi"
+      $instance_uid = uid()
+      send StartFlow(flow_id="a", flow_instance_uid=$instance_uid, context=$self.context)
+      match FlowStarted(flow_instance_uid=$instance_uid)
+      match FlowFinished(flow_instance_uid=$instance_uid)
+      start UtteranceBotAction(script="{$test1} {$test2}")
+      start b
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "hi",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "bye 55",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "pong",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_flow_parameter_await_mechanism()
+    test_flow_context_sharing()

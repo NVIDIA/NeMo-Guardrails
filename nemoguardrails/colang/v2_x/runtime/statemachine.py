@@ -146,6 +146,14 @@ def create_flow_instance(
         },
     )
 
+    if "context" in event_arguments:
+        if flow_config.parameters:
+            raise ColangRuntimeError(
+                f"Context cannot be shared to flows with parameters: '{flow_config.id}'"
+            )
+        # Replace local context with context from parent flow (shared flow context)
+        flow_state.context = event_arguments["context"]
+
     # Add all the flow parameters
     for idx, param in enumerate(flow_config.parameters):
         if param.name in event_arguments:
