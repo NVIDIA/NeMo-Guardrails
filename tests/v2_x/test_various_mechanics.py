@@ -687,8 +687,7 @@ def test_expr_func_search():
 
     content = """
     flow main
-      $test = "{search('\\\\bmatch\\\\b', 'dsfkjdsfhds match sfsd')}"
-      if $test == "True"
+      if search('\\\\bmatch\\\\b', 'dsfkjdsfhds match sfsd')
         send StartUtteranceBotAction(script="Success")
     """
 
