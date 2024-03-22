@@ -780,7 +780,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
 
             all_heads_are_waiting = False
             if not flow_finished and not flow_aborted:
-                # Check if all all flow heads are waiting at a 'match' or a 'wait_for_heads' element
+                # Check if all flow heads are waiting at a 'match' or a 'wait_for_heads' element
                 all_heads_are_waiting = True
                 for temp_head in flow_state.active_heads.values():
                     element = flow_config.elements[temp_head.position]
@@ -798,6 +798,11 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
                         InternalEvents.FLOW_STARTED, flow_state, head.matching_scores
                     )
                     _push_internal_event(state, event)
+
+                    # Avoid an activated flow that was just started from finishing
+                    # since this would end in an infinite loop
+                    if flow_finished and flow_state.activated:
+                        flow_finished = False
             elif not flow_aborted:
                 elem = get_element_from_head(state, head)
                 if elem and is_action_op_element(elem):
@@ -921,11 +926,18 @@ def slide(
 
         elif isinstance(element, Label):
             if element.name == "start_new_flow_instance":
-                new_event = _create_restart_flow_internal_event(
-                    flow_state, head.matching_scores
-                )
-                _push_left_internal_event(state, new_event)
-                flow_state.new_instance_started = True
+                if flow_state.status is not FlowStatus.STARTED:
+                    log.warning(
+                        "Did not restart flow '%s' at"
+                        " label 'start_new_flow_instance' since this would have created an infinite loop!",
+                        flow_state.flow_id,
+                    )
+                else:
+                    new_event = _create_restart_flow_internal_event(
+                        flow_state, head.matching_scores
+                    )
+                    _push_left_internal_event(state, new_event)
+                    flow_state.new_instance_started = True
             head.position += 1
 
         elif isinstance(element, Goto):
