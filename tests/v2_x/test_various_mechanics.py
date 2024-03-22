@@ -736,7 +736,7 @@ def test_flow_states_info():
 
     flow main
       activate a
-      $fs = flow_states()
+      $fs = flows_info()
       if $self.uid in $fs
         await UtteranceBotAction(script="Success")
       else

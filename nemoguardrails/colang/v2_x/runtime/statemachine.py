@@ -1642,7 +1642,7 @@ def _get_flow_state_hierarchy(state: State, flow_state_uid: str) -> List[str]:
         return []
     flow_state = state.flow_states[flow_state_uid]
     if flow_state.parent_uid is None:
-        return []
+        return [flow_state.uid]
     else:
         result = _get_flow_state_hierarchy(state, flow_state.parent_uid)
         result.append(flow_state.uid)
