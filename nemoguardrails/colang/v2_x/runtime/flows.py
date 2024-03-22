@@ -338,7 +338,7 @@ class FlowConfig:
     # The decorators for the flow.
     # Maps the name of the applied decorators to the arguments.
     # If positional arguments are provided, then the "$0", "$1", ... are used as the keys.
-    decorators: Dict[str, Decorator] = field(default_factory=dict)
+    decorators: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
     # The flow return member variables
     return_members: List[FlowReturnMemberDef] = field(default_factory=list)
@@ -353,11 +353,11 @@ class FlowConfig:
     def loop_id(self) -> Optional[str]:
         """Return the interaction loop id if set."""
         if "loop" in self.decorators:
-            decorator = self.decorators["loop"]
-            if "id" in decorator.parameters:
-                return decorator.parameters["id"]
-            elif "$0" in decorator.parameters:
-                return decorator.parameters["$0"]
+            parameters = self.decorators["loop"]
+            if "id" in parameters:
+                return parameters["id"]
+            elif "$0" in parameters:
+                return parameters["$0"]
             else:
                 log.warning(
                     "No loop id specified for @loop decorator for flow `%s`", self.id
@@ -376,9 +376,20 @@ class FlowConfig:
             return InteractionLoopType.PARENT
 
     @property
-    def is_override(self) -> True:
+    def is_override(self) -> bool:
         """Return True if flow is marked as override."""
         return "override" in self.decorators
+
+    def has_meta_tag(self, tag_name: str) -> bool:
+        """Return True if flow is marked with given meta tag, e.g. `@meta(llm_exclude=True)`."""
+        return "meta" in self.decorators and tag_name in self.decorators["meta"]
+
+    def meta_tag(self, tag_name: str) -> Optional[Any]:
+        """Return the parameter of the meta tag or None if it does not exist."""
+        if not self.has_meta_tag(tag_name):
+            return None
+        else:
+            return self.decorators["meta"][tag_name]
 
 
 class FlowHeadStatus(Enum):

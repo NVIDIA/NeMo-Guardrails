@@ -117,15 +117,9 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             if colang_flow:
                 assert isinstance(flow, Flow)
                 # Check if we need to exclude this flow.
-                # TODO: deprecate the use of the "# meta: " comment in favor of
-                #   @meta(llm_exclude=True)
-                if "# meta: exclude from llm" in colang_flow or (
-                    "exclude_from_llm" not in flow.file_info
-                    or flow.file_info["exclude_from_llm"]
-                    or (
-                        "meta" in flow.decorators
-                        and flow.decorators["meta"].parameters.get("llm_exclude")
-                    )
+                if flow.file_info.get("exclude_from_llm") or (
+                    "meta" in flow.decorators
+                    and flow.decorators["meta"].parameters.get("llm_exclude")
                 ):
                     continue
 
@@ -197,7 +191,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 if isinstance(flow_id, str) and (
                     flow_config is None
                     or (
-                        "# meta: user intent" in flow_config.source_code
+                        flow_config.has_meta_tag("user_intent")
                         and flow_id not in potential_user_intents
                     )
                 ):
@@ -456,8 +450,8 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         return {
             "name": flow_name,
             "parameters": flow_parameters,
-            "body": f"flow {flow_name}\n"
-            + f'  # meta: bot intent = "{intent}"\n'
+            "body": f'@meta(bot_intent="{intent}")\n'
+            + f"flow {flow_name}\n"
             + "\n".join(["  " + l.strip(" ") for l in lines]),
         }
 

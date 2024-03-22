@@ -26,7 +26,6 @@ from langchain.chains.base import Chain
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
-from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
 from nemoguardrails.colang.v2_x.runtime.flows import (
     ColangRuntimeError,
     Event,
@@ -41,7 +40,10 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     initialize_state,
     run_to_completion,
 )
-from nemoguardrails.colang.v2_x.runtime.utils import create_flow_configs_from_flow_list
+from nemoguardrails.colang.v2_x.runtime.utils import (
+    convert_decorator_list_to_dictionary,
+    create_flow_configs_from_flow_list,
+)
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
 
@@ -98,7 +100,9 @@ class RuntimeV2_x(Runtime):
             flow_config = FlowConfig(
                 id=flow.name,
                 elements=expand_elements(flow.elements, state.flow_configs),
+                decorators=convert_decorator_list_to_dictionary(flow.decorators),
                 parameters=flow.parameters,
+                return_members=flow.return_members,
                 source_code=flow.source_code,
             )
 
