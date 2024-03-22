@@ -96,17 +96,34 @@ class VerboseHandler(logging.StreamHandler):
                                 "Action"
                             ):
                                 console.print(
-                                    f"[magenta][bold]{event_type[5:-6]}[/][/]"
+                                    f"[magenta][bold]Start[/]{event_type[5:]}[/]"
                                 )
-                                msg = f" - [magenta]start:[/] {body}"
+                            elif event_type.startswith("Stop") and event_type.endswith(
+                                "Action"
+                            ):
+                                console.print(
+                                    f"[magenta][bold]Stop[/]{event_type[4:]}[/]"
+                                )
+                            elif event_type.endswith("ActionUpdated"):
+                                console.print(
+                                    f"[magenta]{event_type[:-7]}[bold]Updated[/][/]"
+                                )
                             elif event_type.endswith("ActionFinished"):
-                                msg = f" - [magenta]finished:[/] {body}"
                                 if event_type == "UtteranceUserActionFinished":
                                     console.print(
-                                        f"\n[magenta][bold]{event_type[:-14]}[/][/]"
+                                        f"\n[magenta]{event_type[:-8]}[bold]Finished[/][/]"
                                     )
+                                else:
+                                    console.print(
+                                        f"[magenta]{event_type[:-8]}[bold]Finished[/][/]"
+                                    )
+                            elif event_type.endswith("ActionFailed"):
+                                console.print(
+                                    f"[magenta{event_type[:-6]}][bold]Failed[/][/]"
+                                )
                             else:
-                                msg = f"[blue]{event_type}[/] {body}"
+                                console.print(f"[magenta]{event_type}[/]")
+                            msg = f"{body}"
                         else:
                             skip_print = True
                     except Exception:
