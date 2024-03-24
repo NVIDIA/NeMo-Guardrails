@@ -133,8 +133,10 @@ class VerboseHandler(logging.StreamHandler):
     def emit(self, record) -> None:
         msg = self.format(record)
 
-        # We check if we're using the spacial syntax with "::" which denotes a title.
-        if "::" in msg:
+        # We check if we're using the spacial syntax with " :: " which denotes a title.
+        # Note that there are leading and trailing spaces around "::", it should work well
+        # for splunk queries as well.
+        if " :: " in msg:
             title, body = msg.split(" :: ", 1)
             title = title.strip()
 
