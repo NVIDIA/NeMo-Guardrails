@@ -33,11 +33,8 @@ from nemoguardrails.actions.llm.utils import (
 )
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
 from nemoguardrails.colang.v2_x.lang.utils import new_uuid
-from nemoguardrails.colang.v2_x.runtime.flows import (
-    ActionEvent,
-    InternalEvent,
-    LlmResponseError,
-)
+from nemoguardrails.colang.v2_x.runtime.errors import LlmResponseError
+from nemoguardrails.colang.v2_x.runtime.flows import ActionEvent, InternalEvent
 from nemoguardrails.colang.v2_x.runtime.statemachine import (
     Event,
     InternalEvents,

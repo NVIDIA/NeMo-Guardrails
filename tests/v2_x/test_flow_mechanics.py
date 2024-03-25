@@ -521,13 +521,13 @@ def test_activate_flow_mechanism():
     """Test the activate a flow mechanism."""
 
     content = """
-    flow a
-      start UtteranceBotAction(script="Start")
+    flow a $text
+      start UtteranceBotAction(script=$text)
       match UtteranceUserAction().Finished(final_transcript="Hi")
       start UtteranceBotAction(script="End")
 
     flow main
-      activate a
+      activate a "Start"
       match WaitAction().Finished()
     """
 
@@ -590,6 +590,75 @@ def test_activate_flow_mechanism():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Start",
+            },
+        ],
+    )
+
+
+def test_infinite_loops_avoidance_for_activate_flows():
+    """Test that activated flows don't loop infinitely if not match statement is present."""
+
+    content = """
+    flow a
+      # Comment
+      activate b
+      $test = "Hello"
+      start UtteranceBotAction(script=$test)
+
+    flow b
+      await GestureBotAction(gesture="smile")
+
+    flow main
+      activate a
+      match WaitAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "smile",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+        ],
+    )
+
+
+def test_infinite_loops_avoidance_for_early_restart_labels():
+    """Test that flows don't loop infinitely if when the `start_new_flow_instance` label comes to early."""
+
+    content = """
+    flow a
+      activate b
+      $test = "Hello"
+      start UtteranceBotAction(script=$test)
+      start_new_flow_instance:
+      match Event()
+
+    flow b
+      await GestureBotAction(gesture="smile")
+
+    flow main
+      activate a
+      match WaitAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "smile",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
             },
         ],
     )
@@ -1456,6 +1525,92 @@ def test_meta_decorators():
             },
             {
                 "type": "Success2",
+            },
+        ],
+    )
+
+
+def test_flow_parameter_await_mechanism():
+    """Test flow overriding mechanic."""
+
+    content = """
+    flow a $text $test
+      $text = "bye"
+      $test = 32
+      start UtteranceBotAction(script="{$text} {$test}")
+
+    flow main
+      await a "hi" $test=123
+      await UtteranceBotAction(script="Success")
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "bye 32",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
+
+
+def test_flow_context_sharing():
+    """Test how a parent flow can share its context with a child flow."""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="{$test1}")
+      $test0 = "pong"
+      $test1 = "bye"
+      $test2 = 55
+
+    flow b
+      global $test0
+      start UtteranceBotAction(script="{$test0}")
+
+    flow main
+      global $test0
+      $test0 = "ping"
+      $test1 = "hi"
+      $instance_uid = uid()
+      send StartFlow(flow_id="a", flow_instance_uid=$instance_uid, context=$self.context)
+      match FlowStarted(flow_instance_uid=$instance_uid)
+      match FlowFinished(flow_instance_uid=$instance_uid)
+      start UtteranceBotAction(script="{$test1} {$test2}")
+      start b
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "hi",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "bye 55",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "pong",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )

@@ -12,10 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import json
 import logging
-import threading
-import time
+from ast import literal_eval
+
+from rich.logging import RichHandler
+from rich.text import Text
+
+from nemoguardrails.logging.simplify_formatter import SimplifyFormatter
+from nemoguardrails.utils import console
 
 # Global state variable to track if the verbose mode has already been enabled
 verbose_mode_enabled = False
@@ -23,104 +28,8 @@ verbose_mode_enabled = False
 # Whether to log the LLM calls verbosely.
 verbose_llm_calls = False
 
-
-class Styles:
-    """The set of standard colors."""
-
-    # Foreground colors
-    BLACK = "\033[30m"
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    BLUE = "\033[34m"
-    MAGENTA = "\033[35m"
-    CYAN = "\033[36m"
-    WHITE = "\033[37m"
-    GREY = "\033[38;5;246m"
-
-    # Background colors
-    BLACK_BACKGROUND = "\033[40m"
-    RED_BACKGROUND = "\033[41m"
-    GREEN_BACKGROUND = "\033[42m"
-    YELLOW_BACKGROUND = "\033[43m"
-    BLUE_BACKGROUND = "\033[44m"
-    MAGENTA_BACKGROUND = "\033[45m"
-    CYAN_BACKGROUND = "\033[46m"
-    WHITE_BACKGROUND = "\033[47m"
-    GREY_BACKGROUND = "\033[48;5;246m"
-
-    # Presets
-    WHITE_ON_GREEN = "\033[42m\033[97m"
-
-    PROMPT = "\033[38;5;232m\033[48;5;254m"
-    COMPLETION = "\033[38;5;236m\033[48;5;84m"
-    COMPLETION_GREEN = "\033[48;5;84m"
-    COMPLETION_RED = "\033[48;5;196m"
-    EVENT_NAME = "\033[38;5;32m"
-
-    RESET = "\033[38m"
-    RESET_ALL = "\033[0m"
-
-
-# Mapping of colors associated with various sections
-SECTION_COLOR = {
-    "Phase 1": {"title": Styles.GREEN},
-    "Phase 2": {"title": Styles.GREEN},
-    "Phase 3": {"title": Styles.GREEN},
-    "Event": {"title": Styles.CYAN},
-    "Executing action": {"title": Styles.CYAN},
-    "Prompt": {
-        "title": Styles.BLUE,
-        "body": Styles.PROMPT,
-    },
-    "Prompt Messages": {
-        "title": Styles.BLUE,
-        "body": Styles.PROMPT,
-    },
-    "Completion": {"title": Styles.BLUE, "body": Styles.COMPLETION},
-    "---": {"title": Styles.GREY, "body": Styles.GREY},
-}
-
-
-class BlinkingCursor:
-    """Helper class for a blinking cursor."""
-
-    def __init__(self):
-        self._stop_event = threading.Event()
-        self._thread = threading.Thread(target=self._blink, daemon=True)
-
-    def _blink(self):
-        first = True
-        cursors = [f"{Styles.COMPLETION_RED} ", f"{Styles.COMPLETION_GREEN} "]
-        i = 0
-        while not self._stop_event.is_set():
-            i += 1
-            if first:
-                first = False
-            else:
-                print("\b", end="", flush=True)
-
-            print(f"{cursors[i%2]}", end="", flush=True)
-
-            for _ in range(25):
-                time.sleep(0.01)
-                if self._stop_event.is_set():
-                    break
-
-        print("\b \b", end="", flush=True)
-
-    def start(self):
-        if self._thread.is_alive():
-            return
-        self._stop_event.clear()
-        self._thread = threading.Thread(target=self._blink)
-        self._thread.start()
-
-    def stop(self):
-        if not self._thread.is_alive():
-            return
-        self._stop_event.set()
-        self._thread.join()
+# Whether the debug mode is enabled or not.
+debug_mode_enabled = False
 
 
 class VerboseHandler(logging.StreamHandler):
@@ -128,7 +37,6 @@ class VerboseHandler(logging.StreamHandler):
 
     def __init__(self, *args, **kwargs):
         super(VerboseHandler, self).__init__(*args, **kwargs)
-        self.blinking_cursor = BlinkingCursor()
 
     def emit(self, record) -> None:
         msg = self.format(record)
@@ -138,50 +46,134 @@ class VerboseHandler(logging.StreamHandler):
             title, body = msg.split(" :: ", 1)
             title = title.strip()
 
-            title_style = SECTION_COLOR.get(title, {}).get("title", "")
-            body_style = SECTION_COLOR.get(title, {}).get("body", "")
-
             # We remove the title for completion messages and stop the blinking cursor.
             if title == "Completion":
                 if verbose_llm_calls:
-                    self.blinking_cursor.stop()
-                    print(body_style + body + Styles.RESET_ALL)
+                    for line in body.split("\n"):
+                        text = Text(line, style="black on #006600", end="\n")
+                        text.pad_right(console.width)
+                        console.print(text)
+
+                    console.print("")
 
             # For prompts, we also start the blinking cursor.
             elif title == "Prompt":
                 if verbose_llm_calls:
-                    msg = (
-                        title_style
-                        + title
-                        + Styles.RESET_ALL
-                        + "\n"
-                        + body_style
-                        + body
-                        + Styles.RESET_ALL
-                    )
-                    print(msg, end="")
-                    self.blinking_cursor.start()
+                    console.print(f"[cyan]{title}[/]")
+                    console.print("")
+                    for line in body.split("\n"):
+                        text = Text(line, style="black on #909090", end="\n")
+                        text.pad_right(console.width)
+                        console.print(text)
 
             elif title == "Event":
                 # For events, we also color differently the type of event.
                 event_name, body = body.split(" ", 1)
-                title = title_style + title + Styles.RESET_ALL
-                event_name = Styles.EVENT_NAME + event_name + Styles.RESET_ALL
-                body = body_style + body + Styles.RESET_ALL
-                msg = title + " " + event_name + " " + body
+                msg = f"[blue]{title}[/] [bold]{event_name}[/] {body}"
 
-                print(msg)
+                console.print(msg, highlight=False)
             else:
-                title = title_style + title + Styles.RESET_ALL
-                body = body_style + body + Styles.RESET_ALL
-                msg = title + " " + body
+                skip_print = False
 
-                print(msg)
+                if title == "Processing event":
+                    try:
+                        event_dict = literal_eval(body)
+                        event_type = event_dict["type"]
+
+                        if "ActionStarted" in event_type:
+                            skip_print = True
+                        elif event_dict["type"] not in [
+                            "CheckLocalAsync",
+                            "LocalAsyncCounter",
+                        ]:
+                            del event_dict["type"]
+                            del event_dict["uid"]
+                            body = json.dumps(event_dict)
+
+                            # We're adding a new line before action events, to
+                            # make it more readable.
+                            if event_type.startswith("Start") and event_type.endswith(
+                                "Action"
+                            ):
+                                console.print(
+                                    f"[magenta][bold]Start[/]{event_type[5:]}[/]"
+                                )
+                            elif event_type.startswith("Stop") and event_type.endswith(
+                                "Action"
+                            ):
+                                console.print(
+                                    f"[magenta][bold]Stop[/]{event_type[4:]}[/]"
+                                )
+                            elif event_type.endswith("ActionUpdated"):
+                                console.print(
+                                    f"[magenta]{event_type[:-7]}[bold]Updated[/][/]"
+                                )
+                            elif event_type.endswith("ActionFinished"):
+                                if event_type == "UtteranceUserActionFinished":
+                                    console.print(
+                                        f"\n[magenta]{event_type[:-8]}[bold]Finished[/][/]"
+                                    )
+                                else:
+                                    console.print(
+                                        f"[magenta]{event_type[:-8]}[bold]Finished[/][/]"
+                                    )
+                            elif event_type.endswith("ActionFailed"):
+                                console.print(
+                                    f"[magenta{event_type[:-6]}][bold]Failed[/][/]"
+                                )
+                            else:
+                                console.print(f"[magenta]{event_type}[/]")
+                            msg = f"{body}"
+                        else:
+                            skip_print = True
+                    except Exception:
+                        msg = f"[red]{title}[/] {body}"
+                elif title == "Running action":
+                    skip_print = True
+                elif title == "Matching head":
+                    skip_print = True
+                    # TODO: activate this once the source line is sorted
+                    # flow_name = re.findall(r"flow='(.*?)'", body)[0]
+                    # flow_pos = re.findall(r"pos=(\d+)", body)[0]
+                    # msg = f"[yellow][bold]{flow_name}[/]:{flow_pos}[/]"
+                    #
+                    # ignored_flows = ["_bot_say", "await_flow_by_name"]
+                    # if flow_pos == "0" or flow_name in ignored_flows:
+                    #     skip_print = True
+                else:
+                    if title == "---":
+                        msg = f"[#555555]{body}[/]"
+                    else:
+                        msg = f"[#707070]{title}[/] [#555555]{body}[/]"
+
+                if not skip_print:
+                    console.print(msg, highlight=False)
 
 
-def set_verbose(verbose: bool):
-    """Configure the verbose mode."""
+def set_verbose(
+    verbose: bool,
+    llm_calls: bool = False,
+    debug: bool = False,
+    debug_level: str = "INFO",
+    simplify: bool = False,
+):
+    """Configure the verbose mode.
+
+    The verbose mode is meant to be user-friendly. It provides additional information
+    about what is happening under the hood.
+
+    The verbose debug mode provides detailed logs, and it's meant for debugging purposes.
+
+    Args:
+        verbose: Whether the verbose mode should be enabled or not.
+        llm_calls: Whether to log the prompt and response from the LLM calls (default False).
+        debug: Whether the debug mode should be enabled or not (default False).
+        debug_level: The log level to be used for debug mode (default INFO).
+        simplify: Whether the output should be simplified to optimize for readability.
+    """
     global verbose_mode_enabled
+    global debug_mode_enabled
+    global verbose_llm_calls
 
     if verbose and not verbose_mode_enabled:
         root_logger = logging.getLogger()
@@ -195,20 +187,28 @@ def set_verbose(verbose: bool):
             if isinstance(handler, logging.StreamHandler):
                 handler.setLevel(logging.WARNING)
 
-        # Next, we also add an instance of the VerboseHandler.
-        verbose_handler = VerboseHandler()
-        verbose_handler.setLevel(logging.INFO)
-        root_logger.addHandler(verbose_handler)
+        # In debug mode we add the RichHandler, otherwise we add the VerboseHandler.
+        if debug:
+            root_logger = logging.getLogger()
+            rich_handler = RichHandler(markup=True)
+
+            # If needed, simplify further the verbose output
+            if simplify:
+                rich_handler.setFormatter(SimplifyFormatter())
+
+            root_logger.addHandler(rich_handler)
+            root_logger.setLevel(debug_level)
+        else:
+            # Next, we also add an instance of the VerboseHandler.
+            verbose_handler = VerboseHandler()
+            verbose_handler.setLevel(logging.INFO)
+            verbose_handler.setFormatter(SimplifyFormatter())
+            root_logger.addHandler(verbose_handler)
 
         # Also, we make sure the sentence_transformers log level is set to WARNING.
         logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
 
         verbose_mode_enabled = True
+        verbose_llm_calls = llm_calls
+        debug_mode_enabled = debug
         print("Entered verbose mode.")
-
-
-def set_verbose_llm_calls(verbose: bool):
-    """Configure the verbose LLM calls mode."""
-    global verbose_llm_calls
-
-    verbose_llm_calls = verbose

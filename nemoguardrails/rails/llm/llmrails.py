@@ -84,7 +84,7 @@ class LLMRails:
         self.verbose = verbose
 
         if self.verbose:
-            set_verbose(True)
+            set_verbose(True, llm_calls=True)
 
         # We allow the user to register additional embedding search providers, so we keep
         # an index of them.

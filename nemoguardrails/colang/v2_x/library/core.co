@@ -1,16 +1,16 @@
 @meta(user_action='user said "{$transcript}"')
 flow user said $text -> $transcript
   match UtteranceUserAction.Finished(final_transcript=$text) as $event
-  $transcript = $event.arguments.final_transcript
+  $transcript = $event.final_transcript
 
 flow user said something -> $transcript
   match UtteranceUserAction.Finished() as $event
-  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
-  $transcript = $event.arguments.final_transcript
+  send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id="user said something")
+  $transcript = $event.final_transcript
 
 flow unhandled user intent -> $intent
-  match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$loop_id}) as $event
-  $intent = $event.arguments.flow_id
+  match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$self.loop_id}) as $event
+  $intent = $event.flow_id
 
 flow _bot_say $text
   """It's an internal helper for higher semantic level flows"""

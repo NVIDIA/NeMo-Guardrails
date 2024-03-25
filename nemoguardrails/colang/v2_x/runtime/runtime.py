@@ -26,11 +26,12 @@ from langchain.chains.base import Chain
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
-from nemoguardrails.colang.v2_x.runtime.flows import (
+from nemoguardrails.colang.v2_x.lang.colang_ast import Decorator, Flow
+from nemoguardrails.colang.v2_x.runtime.errors import (
     ColangRuntimeError,
-    Event,
-    FlowStatus,
+    ColangSyntaxError,
 )
+from nemoguardrails.colang.v2_x.runtime.flows import Event, FlowStatus
 from nemoguardrails.colang.v2_x.runtime.statemachine import (
     FlowConfig,
     InternalEvent,
@@ -39,10 +40,6 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     initialize_flow,
     initialize_state,
     run_to_completion,
-)
-from nemoguardrails.colang.v2_x.runtime.utils import (
-    convert_decorator_list_to_dictionary,
-    create_flow_configs_from_flow_list,
 )
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
@@ -72,7 +69,10 @@ class RuntimeV2_x(Runtime):
     async def _add_flows_action(self, state: "State", **args: dict) -> List[str]:
         log.info("Start AddFlowsAction! %s", args)
         flow_content = args["config"]
-        assert isinstance(flow_content, str)
+        if not isinstance(flow_content, str):
+            raise ColangRuntimeError(
+                "Parameter 'config' in AddFlowsAction is not of type 'str'!"
+            )
         # Parse new flow
         try:
             parsed_flow = parse_colang_file(
@@ -244,7 +244,7 @@ class RuntimeV2_x(Runtime):
                 ):
                     kwargs["llm"] = self.registered_action_params[f"{action_name}_llm"]
 
-                log.info("Executing action :: %s", action_name)
+                log.info("Running action :: %s", action_name)
                 result, status = await self.action_dispatcher.execute_action(
                     action_name, kwargs
                 )
@@ -442,7 +442,7 @@ class RuntimeV2_x(Runtime):
         # we continue the processing.
         while input_events or local_running_actions:
             for event in input_events:
-                log.info("Processing event %s", event)
+                log.info("Processing event :: %s", event)
 
                 event_name = event["type"] if isinstance(event, dict) else event.name
 
@@ -608,3 +608,58 @@ class RuntimeV2_x(Runtime):
             "context_updates": context_updates,
             "start_action_event": start_action_event,
         }
+
+
+def convert_decorator_list_to_dictionary(
+    decorators: List[Decorator],
+) -> Dict[str, Dict[str, Any]]:
+    """Convert list of decorators to a dictionary merging the parameters of decorators with same name."""
+    decorator_dict: Dict[str, Dict[str, Any]] = {}
+    for decorator in decorators:
+        item = decorator_dict.get(decorator.name, None)
+        if item:
+            item.update(decorator.parameters)
+        else:
+            decorator_dict[decorator.name] = decorator.parameters
+    return decorator_dict
+
+
+def create_flow_configs_from_flow_list(flows: List[Flow]) -> Dict[str, FlowConfig]:
+    """Create a flow config dictionary and resolves flow overriding."""
+    flow_configs: Dict[str, FlowConfig] = {}
+    override_flows: Dict[str, FlowConfig] = {}
+
+    # Create two dictionaries with normal and override flows
+    for flow in flows:
+        assert isinstance(flow, Flow)
+        config = FlowConfig(
+            id=flow.name,
+            elements=flow.elements,
+            decorators=convert_decorator_list_to_dictionary(flow.decorators),
+            parameters=flow.parameters,
+            return_members=flow.return_members,
+            source_code=flow.source_code,
+        )
+
+        if config.is_override:
+            if flow.name in override_flows:
+                raise ColangSyntaxError(
+                    f"Multiple override flows with name '{flow.name}' detected! There can only be one!"
+                )
+            override_flows[flow.name] = config
+        elif flow.name in flow_configs:
+            raise ColangSyntaxError(
+                f"Multiple non-overriding flows with name '{flow.name}' detected! There can only be one!"
+            )
+        else:
+            flow_configs[flow.name] = config
+
+    # Override normal flows
+    for override_flow in override_flows.values():
+        if override_flow.id not in flow_configs:
+            raise ColangSyntaxError(
+                f"Override flow with name '{override_flow.id}' does not override any flow with that name!"
+            )
+        flow_configs[override_flow.id] = override_flow
+
+    return flow_configs
