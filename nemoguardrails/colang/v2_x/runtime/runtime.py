@@ -240,7 +240,7 @@ class RuntimeV2_x(Runtime):
                 ):
                     kwargs["llm"] = self.registered_action_params[f"{action_name}_llm"]
 
-                log.info("Executing action :: %s", action_name)
+                log.info("Running action :: %s", action_name)
                 result, status = await self.action_dispatcher.execute_action(
                     action_name, kwargs
                 )
@@ -438,7 +438,7 @@ class RuntimeV2_x(Runtime):
         # we continue the processing.
         while input_events or local_running_actions:
             for event in input_events:
-                log.info("Processing event %s", event)
+                log.info("Processing event :: %s", event)
 
                 event_name = event["type"] if isinstance(event, dict) else event.name
 

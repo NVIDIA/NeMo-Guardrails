@@ -69,7 +69,7 @@ from nemoguardrails.colang.v2_x.runtime.flows import (
     State,
 )
 from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
-from nemoguardrails.utils import new_event_dict, new_uid
+from nemoguardrails.utils import console, new_event_dict, new_uid
 
 log = logging.getLogger(__name__)
 
@@ -312,7 +312,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> State
                                 assert flow_state.loop_id
                                 handled_event_loops.add(flow_state.loop_id)
                             log.info(
-                                "Matching head: %s context=%s",
+                                "Matching head :: %s context=%s",
                                 head,
                                 _context_log(flow_state),
                             )
@@ -1154,7 +1154,9 @@ def slide(
             head.position += 1
 
         elif isinstance(element, Print):
-            print(eval_expression(element.info, _get_eval_context(state, flow_state)))
+            console.print(
+                eval_expression(element.info, _get_eval_context(state, flow_state))
+            )
             head.position += 1
 
         elif isinstance(element, Priority):
