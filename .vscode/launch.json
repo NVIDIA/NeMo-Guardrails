@@ -12,35 +12,12 @@
             }
         },
         {
-            "name": "Debug story very verbose (current directory)",
-            "type": "debugpy",
-            "request": "launch",
-            "console": "integratedTerminal",
-            "module": "nemoguardrails",
-            "args": [
-                "chat",
-                "--config=${fileDirname}",
-                "--verbose",
-                "--debug-level=DEBUG"
-            ],
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
-            }
-        },
-        {
             "name": "Debug story verbose (current directory)",
             "type": "debugpy",
             "request": "launch",
             "console": "integratedTerminal",
             "module": "nemoguardrails",
-            "args": [
-                "chat",
-                "--config=${fileDirname}",
-                "--verbose",
-                "--verbose-llm-calls",
-                "--debug-level=INFO"
-            ],
+            "args": ["chat", "--config=${fileDirname}", "--debug-level=DEBUG"],
             "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
@@ -52,7 +29,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "nemoguardrails",
-            "args": ["chat", "--config=${fileDirname}", "--verbose"],
+            "args": ["chat", "--config=${fileDirname}", "--debug-level=INFO"],
             "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
@@ -64,7 +41,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "nemoguardrails",
-            "args": ["chat", "--config=${fileDirname}", "--verbose-llm-calls"],
+            "args": ["chat", "--config=${fileDirname}", "--verbose"],
             "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"

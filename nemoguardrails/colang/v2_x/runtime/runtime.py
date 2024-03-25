@@ -26,7 +26,7 @@ from langchain.chains.base import Chain
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
-from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
+from nemoguardrails.colang.v2_x.lang.colang_ast import Decorator, Flow
 from nemoguardrails.colang.v2_x.runtime.errors import (
     ColangRuntimeError,
     ColangSyntaxError,
@@ -100,7 +100,9 @@ class RuntimeV2_x(Runtime):
             flow_config = FlowConfig(
                 id=flow.name,
                 elements=expand_elements(flow.elements, state.flow_configs),
+                decorators=convert_decorator_list_to_dictionary(flow.decorators),
                 parameters=flow.parameters,
+                return_members=flow.return_members,
                 source_code=flow.source_code,
             )
 
@@ -608,6 +610,20 @@ class RuntimeV2_x(Runtime):
         }
 
 
+def convert_decorator_list_to_dictionary(
+    decorators: List[Decorator],
+) -> Dict[str, Dict[str, Any]]:
+    """Convert list of decorators to a dictionary merging the parameters of decorators with same name."""
+    decorator_dict: Dict[str, Dict[str, Any]] = {}
+    for decorator in decorators:
+        item = decorator_dict.get(decorator.name, None)
+        if item:
+            item.update(decorator.parameters)
+        else:
+            decorator_dict[decorator.name] = decorator.parameters
+    return decorator_dict
+
+
 def create_flow_configs_from_flow_list(flows: List[Flow]) -> Dict[str, FlowConfig]:
     """Create a flow config dictionary and resolves flow overriding."""
     flow_configs: Dict[str, FlowConfig] = {}
@@ -619,7 +635,7 @@ def create_flow_configs_from_flow_list(flows: List[Flow]) -> Dict[str, FlowConfi
         config = FlowConfig(
             id=flow.name,
             elements=flow.elements,
-            decorators={decorator.name: decorator for decorator in flow.decorators},
+            decorators=convert_decorator_list_to_dictionary(flow.decorators),
             parameters=flow.parameters,
             return_members=flow.return_members,
             source_code=flow.source_code,
