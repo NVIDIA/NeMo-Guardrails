@@ -113,6 +113,11 @@ flow user didnt respond $time_s
     orwhen UtteranceUserAction.Finished() or UtteranceBotAction.Finished()
       send $timer_ref.Stop()
 
+@meta(user_action=True)
+flow user became present -> $user_id
+  match PresenceUserAction.Finished() as $event
+  $user_id = $event.user_id
+
 flow user interrupted bot talking $sentence_length=15
   """Triggers when the user talked while bot is speaking."""
   # meta: user intent
@@ -559,7 +564,7 @@ flow managing thinking posture
 
   match UtteranceUserAction.Finished()
   if $bot_talking_state
-    log "Donot switch to thinking posture because bot is talking"
+    log "Do not switch to thinking posture because bot is talking"
   else
     start bot posture "thinking"
     bot started saying something
