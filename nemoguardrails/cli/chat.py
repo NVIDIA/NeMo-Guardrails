@@ -135,15 +135,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
     # Start an asynchronous timer
     async def _start_timer(timer_name: str, delay_seconds: float, action_uid: str):
         nonlocal input_events
-        # console.print(
-        #     Styles.GREY + f"timer (start): {timer_name}/{action_uid}" + "[/]"
-        # )
         await asyncio.sleep(delay_seconds)
-        # console.print(
-        #     Styles.GREY
-        #     + f"timer (finished): {timer_name}/{action_uid}"
-        #     + "[/]"
-        # )
         input_events.append(
             new_event_dict(
                 "TimerBotActionFinished",
@@ -365,13 +357,6 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 )
 
             elif event["type"] == "StartTimerBotAction":
-                if verbose.verbose_mode_enabled:
-                    console.print(
-                        "[#555555]"
-                        + f"timer (start): {event['timer_name']} {event['duration']}"
-                        + "[/]",
-                        highlight=False,
-                    )
                 action_uid = event["action_uid"]
                 timer = _start_timer(event["timer_name"], event["duration"], action_uid)
                 # Manage timer tasks
@@ -386,24 +371,12 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 )
 
             elif event["type"] == "StopTimerBotAction":
-                if verbose.verbose_mode_enabled:
-                    console.print(
-                        "[#555555]" + f"timer (stop): {event['action_uid']}" + "[/]",
-                        highlight=False,
-                    )
                 action_uid = event["action_uid"]
                 if action_uid in running_timer_tasks:
                     running_timer_tasks[action_uid].cancel()
                     running_timer_tasks.pop(action_uid)
 
             elif event["type"] == "TimerBotActionFinished":
-                if verbose.verbose_mode_enabled:
-                    console.print(
-                        "[#555555]"
-                        + f"timer (finished): {event['action_uid']}"
-                        + "[/]",
-                        highlight=False,
-                    )
                 action_uid = event["action_uid"]
                 if action_uid in running_timer_tasks:
                     running_timer_tasks[action_uid].cancel()
