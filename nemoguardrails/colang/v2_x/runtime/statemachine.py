@@ -1466,8 +1466,8 @@ def _finish_flow(
             elif intent_flow_config.has_meta_tag("user_intent"):
                 intent = intent_flow_config.meta_tag("user_intent")
 
-        if not isinstance(intent, str):
-            intent = flow_state.flow_id
+            if not isinstance(intent, str):
+                intent = flow_state.flow_id
 
         # Create event based on meta tag
         if isinstance(meta_tag_parameters, str):
