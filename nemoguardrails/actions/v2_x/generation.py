@@ -239,6 +239,11 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         """Return True if a flow with the provided flow_id exists."""
         return flow_id in state.flow_id_states
 
+    @action(name="CheckFlowDefinedAction", is_system_action=True)
+    async def check_if_flow_defined(self, state: "State", flow_id: str) -> bool:
+        """Return True if a flow with the provided flow_id is defined."""
+        return flow_id in state.flow_configs
+
     @action(name="CheckForActiveEventMatchAction", is_system_action=True)
     async def check_for_active_flow_finished_match(
         self, state: "State", event_name: str, **arguments: Any
@@ -551,13 +556,17 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         docstrings = re.findall(r'"""(.*?)"""', flow_config.source_code, re.DOTALL)
         assert len(docstrings) > 0
 
+        render_context = {}
+        render_context.update(state.context)
+        render_context.update(state.flow_id_states[triggering_flow_id][0].context)
+
         # TODO: add the context of the flow
         prompt = self.llm_task_manager._render_string(
-            docstrings[0], context=state.context, events=events
+            docstrings[0], context=render_context, events=events
         )
 
         # We make this call with temperature 0 to have it as deterministic as possible.
-        with llm_params(llm):
+        with llm_params(llm, temperature=self.config.lowest_temperature):
             result = await llm_call(llm, prompt)
 
         lines = _remove_leading_empty_lines(result).split("\n")
