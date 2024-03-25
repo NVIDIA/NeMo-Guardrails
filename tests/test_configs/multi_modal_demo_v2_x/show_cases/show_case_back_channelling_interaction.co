@@ -34,9 +34,9 @@ flow bot reacts to user said something
   user said something with pause 1.0
   bot say "Hmm?"
 
+@meta(exclude_from_llm=True)
+@meta(user_intent=True)
 flow user said something with pause $time_s
-  # meta: exclude from llm
-  # meta: user intent
   while True
     match UtteranceUserAction.Finished() as $event
     start wait $time_s as $timer_ref

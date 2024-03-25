@@ -17,12 +17,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "nemoguardrails",
-            "args": [
-                "chat",
-                "--config=${fileDirname}",
-                "--verbose",
-                "--debug-level=DEBUG"
-            ],
+            "args": ["chat", "--config=${fileDirname}", "--debug-level=DEBUG"],
             "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"

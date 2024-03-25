@@ -1482,6 +1482,54 @@ def test_flow_overriding():
     )
 
 
+def test_meta_decorators():
+    """Test the meta decorator statement."""
+
+    content = """
+    @meta(bot_action=True)
+    flow bot say $text
+      start UtteranceBotAction(script=$text)
+
+    @meta(bot_intent=True)
+    flow bot greet
+      start bot say "Hi" or bot say "Hello"
+
+    @loop("observer_1")
+    flow observer_1
+        match BotActionLog(flow_id="bot say", intent_flow_id="bot say")
+        send Success1()
+
+    @loop("observer_2")
+    flow observer_2
+        match BotIntentLog(flow_id="bot greet")
+        send Success2()
+
+    flow main
+      activate observer_1 and observer_2
+      await bot greet
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "Success1",
+            },
+            {
+                "type": "Success2",
+            },
+        ],
+    )
+
+
 def test_flow_parameter_await_mechanism():
     """Test flow overriding mechanic."""
 
@@ -1494,7 +1542,6 @@ def test_flow_parameter_await_mechanism():
     flow main
       await a "hi" $test=123
       await UtteranceBotAction(script="Success")
-      match Event()
     """
 
     state = run_to_completion(_init_state(content), start_main_flow_event)
@@ -1511,7 +1558,7 @@ def test_flow_parameter_await_mechanism():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Success",
-            },
+            }
         ],
     )
 
@@ -1570,4 +1617,4 @@ def test_flow_context_sharing():
 
 
 if __name__ == "__main__":
-    test_flow_context_sharing()
+    test_meta_decorators()

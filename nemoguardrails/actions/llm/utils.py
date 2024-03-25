@@ -173,8 +173,19 @@ def get_colang_history(
         action_group: List[InternalEvent] = []
         current_intent: Optional[str] = None
 
+        previous_event = None
         for event in events:
             if not isinstance(event, InternalEvent):
+                # Skip non-internal events
+                continue
+
+            if (
+                event.name == InternalEvents.USER_ACTION_LOG
+                and previous_event
+                and events_to_dialog_history([previous_event])
+                == events_to_dialog_history([event])
+            ):
+                # Remove duplicated user action log events that stem from the same user event as the previous event
                 continue
 
             if (
@@ -191,6 +202,8 @@ def get_colang_history(
 
                 action_group.append(event)
                 current_intent = event.arguments["intent_flow_id"]
+
+                previous_event = event
             elif (
                 event.name == InternalEvents.BOT_INTENT_LOG
                 or event.name == InternalEvents.USER_INTENT_LOG
@@ -214,6 +227,8 @@ def get_colang_history(
                 # Start a new group
                 action_group.clear()
                 current_intent = None
+
+                previous_event = event
 
         if action_group:
             new_history.append(events_to_dialog_history(action_group))
