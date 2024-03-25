@@ -36,7 +36,7 @@ start_main_flow_event = InternalEvent(name="StartFlow", arguments={"flow_id": "m
 
 
 def test_while_loop_mechanic():
-    """"""
+    """Test the while loop statement mechanic."""
 
     content = """
     flow main
@@ -82,114 +82,8 @@ def test_while_loop_mechanic():
     )
 
 
-def test_await_multimodal_action():
-    """"""
-
-    content = """
-    flow bot say $text
-      await UtteranceBotAction(script=$text) as $action
-
-    flow bot gesture $gesture
-      await GestureBotAction(gesture=$gesture) as $action
-
-    flow bot express $text
-      await bot say $text
-
-    flow main
-        start bot express "Hi"
-        start bot gesture "Wave"
-        match UtteranceUserAction().Finished()
-    """
-
-    state = run_to_completion(_init_state(content), start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Hi",
-            },
-            {
-                "type": "StartGestureBotAction",
-                "gesture": "Wave",
-            },
-        ],
-    )
-
-
-def test_activate_and_grouping():
-    """"""
-
-    content = """
-    flow a
-      start UtteranceBotAction(script="A")
-      match UtteranceUserAction().Finished(final_transcript="a")
-
-    flow b
-      start UtteranceBotAction(script="B")
-      match UtteranceUserAction().Finished(final_transcript="b")
-
-    flow main
-        activate a and b
-        match UtteranceUserAction().Finished(final_transcript="end")
-    """
-
-    state = run_to_completion(_init_state(content), start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "A",
-            },
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "B",
-            },
-        ],
-    )
-    state = run_to_completion(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "a",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "A",
-            },
-        ],
-    )
-    state = run_to_completion(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "final_transcript": "b",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "B",
-            },
-        ],
-    )
-
-
 def test_if_branching_mechanic():
-    """"""
+    """Test if branching statement mechanism."""
 
     content = """
     flow main
@@ -255,7 +149,7 @@ def test_if_branching_mechanic():
 
 
 def test_event_reference_member_access():
-    """"""
+    """Test accessing a event reference member."""
 
     content = """
     flow main
@@ -291,7 +185,7 @@ def test_event_reference_member_access():
 
 
 def test_action_reference_member_access():
-    """"""
+    """Test accessing a action reference member."""
 
     content = """
     flow main
@@ -323,7 +217,7 @@ def test_action_reference_member_access():
 
 
 def test_flow_references_member_access():
-    """"""
+    """Test accessing a flow reference member."""
 
     content = """
     flow bot say $text
@@ -357,13 +251,14 @@ def test_flow_references_member_access():
     )
 
 
-def test_values_in_strings():
-    """"""
+def test_expressions_in_strings():
+    """Test string expression evaluation."""
 
     content = """
     flow main
       start UtteranceBotAction(script="Roger") as $ref
-      start UtteranceBotAction(script="Hi {{$ref.start_event_arguments.script}}!")
+      start UtteranceBotAction(script="It's {{->}} \\"{$ref.start_event_arguments.script}!\\"")
+      start UtteranceBotAction(script='It"s {{->}} \\'{$ref.start_event_arguments.script}!\\'')
     """
 
     config = _init_state(content)
@@ -377,7 +272,14 @@ def test_values_in_strings():
             },
             {
                 "type": "StartUtteranceBotAction",
-                "script": "Hi Roger!",
+                "script": 'It\'s {->} "Roger!"',
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "It\"s {->} 'Roger!'",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
             {
                 "type": "StopUtteranceBotAction",
@@ -390,7 +292,7 @@ def test_values_in_strings():
 
 
 def test_flow_return_values():
-    """"""
+    """Test flow return value handling."""
 
     content = """
     flow a
@@ -407,7 +309,7 @@ def test_flow_return_values():
       $result_a = await a
       $result_b = await b
       $result_c = await c
-      start UtteranceBotAction(script="{{$result_a}} {{$result_b}} {{$result_c}}")
+      start UtteranceBotAction(script="{$result_a} {$result_b} {$result_c}")
     """
 
     config = _init_state(content)
@@ -427,21 +329,21 @@ def test_flow_return_values():
 
 
 def test_break_continue_statement_a():
-    """"""
+    """Test break and continue statements within while loop."""
 
     content = """
     flow main
       $count = -1
       while True
         $count = $count + 1
-        start UtteranceBotAction(script="S:{{$count}}")
+        start UtteranceBotAction(script="S:{$count}")
         if $count < 1
           $count = $count
         elif $count < 3
           continue
         elif $count == 3
           break
-        start UtteranceBotAction(script="E:{{$count}}")
+        start UtteranceBotAction(script="E:{$count}")
       start UtteranceBotAction(script="Done")
     """
 
@@ -497,7 +399,7 @@ def test_break_continue_statement_a():
 
 
 def test_break_continue_statement_b():
-    """"""
+    """Test break and continue statements within while loop."""
 
     content = """
     flow main
@@ -542,9 +444,8 @@ def test_break_continue_statement_b():
     )
 
 
-# TODO: Stop actions/flows from cases that did not trigger in 'when' structure
 def test_when_or_core_mechanics():
-    """"""
+    """Test when / or when statement mechanics."""
 
     content = """
     flow user said $transcript
@@ -627,7 +528,7 @@ def test_when_or_core_mechanics():
 
 
 def test_when_or_bot_action_mechanics():
-    """"""
+    """Test when / or when statement mechanics with actions."""
 
     content = """
     flow main
@@ -699,7 +600,7 @@ def test_when_or_bot_action_mechanics():
 
 
 def test_when_or_group_mechanics():
-    """"""
+    """Test when / or when statement mechanics with or-grouping."""
 
     content = """
     flow user said $transcript
@@ -793,7 +694,7 @@ def test_when_or_group_mechanics():
 
 
 def test_when_or_competing_events_mechanics():
-    """"""
+    """Test when / or when statement mechanics with events."""
 
     content = """
     flow user said something
@@ -879,7 +780,7 @@ def test_when_or_competing_events_mechanics():
 
 
 def test_when_or_with_references():
-    """"""
+    """Test when / or when statement mechanics with references."""
 
     content = """
     flow user said something
@@ -916,7 +817,7 @@ def test_when_or_with_references():
 
 
 def test_inside_when_failure_handling():
-    """"""
+    """Test when / or when statement failure handling mechanics."""
 
     content = """
     flow a
@@ -967,7 +868,7 @@ def test_inside_when_failure_handling():
 
 
 def test_abort_flow():
-    """"""
+    """Test abort keyword mechanics."""
 
     content = """
     flow a
@@ -1009,7 +910,7 @@ def test_abort_flow():
 
 
 def test_global_statement():
-    """"""
+    """Test global variables."""
 
     content = """
     flow a
@@ -1054,8 +955,8 @@ def test_global_statement():
     )
 
 
-def test_public_flow_attributes():
-    """"""
+def test_out_flow_variables():
+    """Test the out variables flow mechanics."""
 
     content = """
     flow a -> $result_1 = 1, $result_2 = 2
@@ -1063,7 +964,7 @@ def test_public_flow_attributes():
 
     flow main
       start a as $ref
-      start UtteranceBotAction(script="{{$ref.result_1}} {{$ref.result_2}}")
+      start UtteranceBotAction(script="{$ref.result_1} {$ref.result_2}")
       match WaitEvent()
     """
 
@@ -1081,4 +982,4 @@ def test_public_flow_attributes():
 
 
 if __name__ == "__main__":
-    test_public_flow_attributes()
+    test_expressions_in_strings()

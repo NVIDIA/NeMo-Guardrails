@@ -346,12 +346,39 @@ class FlowConfig:
     # All the label element positions in the flow
     element_labels: Dict[str, int] = field(default_factory=dict)
 
-    # Interaction loop
-    loop_id: Optional[str] = None
-    loop_type: InteractionLoopType = InteractionLoopType.PARENT
-
     # The actual source code, if available
     source_code: Optional[str] = None
+
+    @property
+    def loop_id(self) -> Optional[str]:
+        """Return the interaction loop id if set."""
+        if "loop" in self.decorators:
+            decorator = self.decorators["loop"]
+            if "id" in decorator.parameters:
+                return decorator.parameters["id"]
+            elif "$0" in decorator.parameters:
+                return decorator.parameters["$0"]
+            else:
+                log.warning(
+                    "No loop id specified for @loop decorator for flow `%s`", self.id
+                )
+        return None
+
+    @property
+    def loop_type(self) -> InteractionLoopType:
+        """Return the interaction loop type."""
+        loop_id = self.loop_id
+        if loop_id == "NEW":
+            return InteractionLoopType.NEW
+        elif loop_id is not None:
+            return InteractionLoopType.NAMED
+        else:
+            return InteractionLoopType.PARENT
+
+    @property
+    def is_override(self) -> True:
+        """Return True if flow is marked as override."""
+        return "override" in self.decorators
 
 
 class FlowHeadStatus(Enum):
@@ -625,8 +652,8 @@ class FlowState:
     def _create_event(self, event_type: str, args: dict) -> InternalEvent:
         arguments = args.copy()
         arguments["flow_id"] = self.flow_id
-        if "flow_start_uid" in self.context:
-            arguments["flow_start_uid"] = self.context["flow_start_uid"]
+        if "flow_instance_uid" in self.context:
+            arguments["flow_instance_uid"] = self.context["flow_instance_uid"]
         arguments.update(
             dict(
                 [

@@ -20,13 +20,13 @@ flow reaction bot question repetition for user silence $time_s $max_repetitions=
     when user was silent $time_s
       $question = $ref.text
 
-      start GenerateValueAction(var_name="new_question_variation", instructions="Make a different variation of the following question: '{{$question}}'. Never repeat the same question (see the logs above) and respond only with the question text and nothing else.") as $llm_request
+      start GenerateValueAction(var_name="new_question_variation", instructions="Make a different variation of the following question: '{$question}'. Never repeat the same question (see the logs above) and respond only with the question text and nothing else.") as $llm_request
       when $llm_request.Finished() as $llm_request_result
         $prompt = $llm_request_result.return_value
       orwhen user started saying something
         continue
 
-      if "{{is_str($prompt)}}" == "False"
+      if not is_str($prompt)
         $prompt = "So, what do you think?"
       bot ask $prompt
       $repetition = $repetition + 1
@@ -91,7 +91,7 @@ flow user expressed greeting
 
 flow user expressed done
   # meta: user intent
-  user said r"(?i).*done.*|.*end.*showcase.*|.*exit.*"
+  user said (regex("(?i).*done.*|.*end.*showcase.*|.*exit.*"))
 
 flow user asked how are you
   # meta: user intent
@@ -104,7 +104,7 @@ flow user picked number guessing game showcase
     or user said "Show me the game"
     or user said "showcase A"
     or user said "First showcase"
-    or user said r"(?i)guessing game"
+    or user said (regex("(?i)guessing game"))
 
 flow user picked multimodality showcase
    """User picked the multimodality showcase (B)."""
@@ -113,7 +113,7 @@ flow user picked multimodality showcase
      or user said "multimodality"
      or user said "showcase B"
      or user said "Second showcase"
-     or user said r"(?i)multimodality"
+     or user said (regex("(?i)multimodality"))
 
 flow user picked backchanneling showcase
   """User picked the backchanneling showcase (C)."""
@@ -122,7 +122,7 @@ flow user picked backchanneling showcase
     or user said "backchanneling"
     or user said "showcase C"
     or user said "Third showcase"
-    or user said r"(?i)channeling|back channel"
+    or user said (regex("(?i)channeling|back channel"))
 
 flow user picked posture showcase
   """User picked the posture showcase (D)."""
@@ -132,7 +132,7 @@ flow user picked posture showcase
     or user said "showcase D"
     or user said "Fourth showcase"
     or user said "Second last showcase"
-    or user said r"(?i)posture"
+    or user said (regex("(?i)posture"))
 
 flow user picked proactive showcase
   """User picked the proactive showcase (E)."""
@@ -142,7 +142,7 @@ flow user picked proactive showcase
     or user said "showcase E"
     or user said "Fifth showcase"
     or user said "Last showcase"
-    or user said r"(?i)pro\s*active|turn\s*tak[ie]"
+    or user said (regex("(?i)pro\s*active|turn\s*tak[ie]"))
 
 flow user wanted to end conversation
   """User wants to end the open conversation"""
@@ -157,7 +157,7 @@ flow user confirmed limitations
   user said "I understand the limitations"
     or user said "I am OK with the limitations"
     or user said "Understood. Let's continue"
-    or user said r"(?i)confirm|ok|go|understand|limitation|start|understood|clear|okay"
+    or user said (regex("(?i)confirm|ok|go|understand|limitation|start|understood|clear|okay"))
 
 flow bot start the number guessing game
   """Bot starts the number guessing game"""
@@ -224,7 +224,7 @@ flow showcase selector
           log "user said something during bot thinking (user silent llm response generation)"
 
     orwhen unhandled user intent as $intent_ref
-      log "unhandled user intent: '{{$intent_ref.intent}}'"
+      log "unhandled user intent: '{$intent_ref.intent}'"
       generate then continue interaction
       log "unhandled user intent response done"
 
@@ -303,14 +303,14 @@ flow main
   #showcase proactive turn taking
   wait indefinitely
 
+@loop("ignored_action_bugfix")
 flow ignored_utterance_action_bugfix
   # meta: exclude from llm
-  # meta: loop_id=ignored_action_bugfix
   global $number_of_failed_utterance_actions
   if $number_of_failed_utterance_actions == None
     $number_of_failed_utterance_actions = 0
   match StartUtteranceBotAction() as $event
-  log "Event StartUtteranceBotAction {{$event.action_uid}}"
+  log "Event StartUtteranceBotAction {$event.action_uid}"
   start_new_flow_instance:
   start wait 3.0 as $timer_ref
   when $timer_ref.Finished()
@@ -318,7 +318,7 @@ flow ignored_utterance_action_bugfix
     if $number_of_failed_utterance_actions < 3
       send UtteranceBotActionFinished(action_uid=$event.action_uid, final_script="", is_success=False, failure_reason="ActionStarted event timeout")
     $number_of_failed_utterance_actions = $number_of_failed_utterance_actions + 1
-    log "action_started_timer triggered {{$event.action_uid}}"
+    log "action_started_timer triggered {$event.action_uid}"
   orwhen UtteranceBotActionStarted(action_uid=$event.action_uid)
     $number_of_failed_utterance_actions = 0
-    log "Event UtteranceBotActionStarted {{$event.action_uid}}"
+    log "Event UtteranceBotActionStarted {$event.action_uid}"

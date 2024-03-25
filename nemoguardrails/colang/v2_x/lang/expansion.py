@@ -24,6 +24,7 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     Break,
     CatchPatternFailure,
     Continue,
+    Element,
     ElementType,
     EndScope,
     ForkHead,
@@ -89,6 +90,13 @@ def expand_elements(
                     element.label = continue_break_labels[1]
 
             if len(expanded_elements) > 0:
+                # Map new elements to source
+                for expanded_element in expanded_elements:
+                    if isinstance(expanded_element, Element) and isinstance(
+                        element, Element
+                    ):
+                        expanded_element._source = element._source
+                # Add new elements
                 new_elements.extend(expanded_elements)
                 elements_changed = True
             else:
@@ -165,7 +173,7 @@ def _expand_start_element(
             element.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
-                    "flow_start_uid": f"'{new_var_uid()}'",
+                    "flow_instance_uid": f"'{new_var_uid()}'",
                 }
             )
             new_elements.append(
@@ -577,8 +585,8 @@ def _expand_activate_element(
             element_copy.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
-                    "flow_start_uid": f"'{new_var_uid()}'",
-                    "activated": "True",
+                    "flow_instance_uid": f"'{new_var_uid()}'",
+                    "activated": True,
                 }
             )
             new_elements.append(
@@ -611,9 +619,9 @@ def _expand_activate_element(
 def _expand_assignment_stmt_element(element: Assignment) -> List[ElementType]:
     new_elements: List[ElementType] = []
 
-    # Check if the expression is an NLD
-    nld_pattern = r"\"\"\"(.*?)\"\"\"|'''(.*?)'''"
-    match = re.search(nld_pattern, element.expression)
+    # Check if the expression is an NLD instruction
+    nld_instruction_pattern = r"^\s*i\"(.*)\"|^\s*i'(.*)'"
+    match = re.search(nld_instruction_pattern, element.expression)
 
     if match:
         # Replace the assignment with the GenerateValueAction system action
@@ -674,9 +682,11 @@ def _expand_if_element(
     elements.append(
         Goto(
             expression=f"not({element.expression})",
-            label=if_end_label_name
-            if not element.else_elements
-            else if_else_body_label_name,
+            label=(
+                if_end_label_name
+                if not element.else_elements
+                else if_else_body_label_name
+            ),
         )
     )
     elements.extend(expand_elements(element.then_elements, flow_configs))
@@ -888,9 +898,11 @@ def normalize_element_groups(group: Union[Spec, dict]) -> dict:
             {
                 "_type": "spec_or",
                 "elements": [
-                    normalize_element_groups(elem)
-                    if isinstance(elem, dict)
-                    else {"_type": "spec_and", "elements": [elem]}
+                    (
+                        normalize_element_groups(elem)
+                        if isinstance(elem, dict)
+                        else {"_type": "spec_and", "elements": [elem]}
+                    )
                     for elem in group["elements"]
                 ],
             }
