@@ -1282,6 +1282,12 @@ def test_match_hierarchy_of_internal_events():
     flow _bot_say $text
       await UtteranceBotAction(script=$text) as $action
 
+    flow bot say $text
+      await _bot_say $text
+
+    flow bot started saying something
+      match FlowStarted(flow_id="_bot_say") as $event
+
     flow bot express $text
       await _bot_say $text
 
@@ -1289,12 +1295,9 @@ def test_match_hierarchy_of_internal_events():
       await bot express "hi"
         or bot express "hello"
 
-    flow bot started saying something
-      match FlowStarted(flow_id="_bot_say") as $event
-
     flow a
       await bot started saying something
-      _bot_say "test"
+      bot say "test"
 
     flow main
       activate a
