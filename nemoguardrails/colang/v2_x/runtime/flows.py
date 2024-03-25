@@ -28,7 +28,6 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Tuple, Union
 from dataclasses_json import dataclass_json
 
 from nemoguardrails.colang.v2_x.lang.colang_ast import (
-    Decorator,
     ElementType,
     FlowParamDef,
     FlowReturnMemberDef,
