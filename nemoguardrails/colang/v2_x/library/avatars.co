@@ -114,6 +114,11 @@ flow user didnt respond $time_s
       send $timer_ref.Stop()
 
 @meta(user_action=True)
+flow user gestured $gesture -> $final_gesture
+  match GestureUserAction.Finished(gesture=$gesture) as $event
+  $final_gesture = $event.gesture
+
+@meta(user_action=True)
 flow user became present -> $user_id
   match PresenceUserAction.Finished() as $event
   $user_id = $event.user_id
