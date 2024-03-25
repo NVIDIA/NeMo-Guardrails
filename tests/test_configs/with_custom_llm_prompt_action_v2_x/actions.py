@@ -27,11 +27,6 @@ from nemoguardrails.llm.types import Task
 from nemoguardrails.logging.explain import LLMCallInfo
 
 
-@action(name="CustomTestAction")
-async def custom_test(context: dict, param: int):
-    return param + context["value"]
-
-
 @action(name="CustomLlmRequestAction", is_system_action=True, execute_async=True)
 async def custom_llm_request(
     llm_task_manager: LLMTaskManager,

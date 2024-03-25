@@ -9,7 +9,7 @@ flow user said something -> $transcript
   $transcript = $event.arguments.final_transcript
 
 flow unhandled user intent -> $intent
-  match UnhandledEvent(event="FinishFlow", flow_id=r"^user ", loop_ids={$loop_id}) as $event
+  match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$loop_id}) as $event
   $intent = $event.arguments.flow_id
 
 flow _bot_say $text

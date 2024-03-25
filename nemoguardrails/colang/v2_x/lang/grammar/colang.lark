@@ -38,8 +38,8 @@ abort_stmt: "abort" _NEWLINE
 break_stmt: "break" _NEWLINE
 continue_stmt: "continue" _NEWLINE
 pass_stmt: "pass" _NEWLINE
-log_stmt: "log" expr _NEWLINE
-print_stmt: "print" expr _NEWLINE
+log_stmt: "log" (expr | "(" expr ")") _NEWLINE
+print_stmt: "print" (expr | "(" expr ")") _NEWLINE
 priority_stmt: "priority" expr _NEWLINE
 label_stmt: NAME":" _NEWLINE
 global_stmt: "global" var_name _NEWLINE
@@ -221,7 +221,7 @@ _NEWLINE: (/\r?\n[\t ]*/)+
 
 // Primitive values
 
-STRING: /r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
+STRING: /i?("(?!"").*?(?<!\\)(\\\\)*?"|i?'(?!'').*?(?<!\\)(\\\\)*?')/i
 LONG_STRING: /(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
 _SPECIAL_DEC: "0".."9"        ("_"?  "0".."9"                       )*

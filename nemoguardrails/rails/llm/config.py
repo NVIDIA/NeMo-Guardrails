@@ -590,7 +590,6 @@ def _parse_colang_files_recursively(
                     current_file, content=f.read(), version=colang_version
                 )
             except Exception as e:
-                print(e)
                 raise ColangParsingError(
                     f"Error while parsing Colang file: {current_path}"
                 ) from e

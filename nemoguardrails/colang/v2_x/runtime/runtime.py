@@ -41,6 +41,7 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     initialize_state,
     run_to_completion,
 )
+from nemoguardrails.colang.v2_x.runtime.utils import create_flow_configs_from_flow_list
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
 
@@ -79,7 +80,9 @@ class RuntimeV2_x(Runtime):
                 include_source_mapping=True,
             )
         except Exception as e:
-            print("Failed parsing a generated flow\n%s\n%s", flow_content, e)
+            warning = f"Failed parsing a generated flow\n{flow_content}\n{e}"
+            log.warning(warning)
+            print(warning)
             return []
             # Alternatively, we could through an exceptions
             # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
@@ -87,12 +90,13 @@ class RuntimeV2_x(Runtime):
         added_flows: List[str] = []
         for flow in parsed_flow["flows"]:
             if flow.name in state.flow_configs:
-                print("Flow '%s' already exists! Not loaded!", flow.name)
+                warning = "Flow '{flow.name}' already exists! Not loaded!"
+                log.warning(warning)
+                print(warning)
                 break
 
             flow_config = FlowConfig(
                 id=flow.name,
-                loop_id=None,
                 elements=expand_elements(flow.elements, state.flow_configs),
                 parameters=flow.parameters,
                 source_code=flow.source_code,
@@ -124,19 +128,7 @@ class RuntimeV2_x(Runtime):
 
     def _init_flow_configs(self) -> None:
         """Initializes the flow configs based on the config."""
-        self.flow_configs = {}
-
-        for flow in self.config.flows:
-            assert isinstance(flow, Flow)
-            flow_id = flow.name
-            self.flow_configs[flow_id] = FlowConfig(
-                id=flow_id,
-                elements=flow.elements,
-                decorators={decorator.name: decorator for decorator in flow.decorators},
-                parameters=flow.parameters,
-                return_members=flow.return_members,
-                source_code=flow.source_code,
-            )
+        self.flow_configs = create_flow_configs_from_flow_list(self.config.flows)
 
     async def generate_events(self, events: List[dict]) -> List[dict]:
         raise NotImplementedError("Stateless API not supported for Colang 2.x, yet.")
@@ -468,7 +460,7 @@ class RuntimeV2_x(Runtime):
                         new_event = Event(
                             name="ColangError",
                             arguments={
-                                "error_type": str(type(e).__name__),
+                                "type": str(type(e).__name__),
                                 "error": str(e),
                             },
                         )
