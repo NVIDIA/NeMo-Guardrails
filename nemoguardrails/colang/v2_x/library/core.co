@@ -1,5 +1,5 @@
+@meta(user_action='user said "{$transcript}"')
 flow user said $text -> $transcript
-  # meta: user action
   match UtteranceUserAction.Finished(final_transcript=$text) as $event
   $transcript = $event.final_transcript
 
@@ -16,6 +16,6 @@ flow _bot_say $text
   """It's an internal helper for higher semantic level flows"""
   await UtteranceBotAction(script=$text) as $action
 
+@meta(bot_action=True)
 flow bot say $text
-  # meta: bot action
   await _bot_say $text

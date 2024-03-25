@@ -1411,19 +1411,23 @@ def _finish_flow(
     event = flow_state.finished_event(matching_scores)
     _push_internal_event(state, event)
 
-    # Check if it was an user/bot intent/action flow a generate internal events
+    # Check if it was an user/bot intent/action flow and generate internal events
     # TODO: Let's refactor that once we have the new llm prompting
     event_type: Optional[str] = None
-    source_code = state.flow_configs[flow_state.flow_id].source_code
-    if source_code is not None:
-        if "meta: user intent" in source_code:
-            event_type = InternalEvents.USER_INTENT_LOG
-        elif "meta: bot intent" in source_code:
-            event_type = InternalEvents.BOT_INTENT_LOG
-        elif "meta: user action" in source_code:
-            event_type = InternalEvents.USER_ACTION_LOG
-        elif "meta: bot action" in source_code:
-            event_type = InternalEvents.BOT_ACTION_LOG
+    flow_config = state.flow_configs[flow_state.flow_id]
+    meta_tag_parameters = None
+    if flow_config.has_meta_tag("user_intent"):
+        meta_tag_parameters = flow_config.meta_tag("user_intent")
+        event_type = InternalEvents.USER_INTENT_LOG
+    elif flow_config.has_meta_tag("bot_intent"):
+        meta_tag_parameters = flow_config.meta_tag("bot_intent")
+        event_type = InternalEvents.BOT_INTENT_LOG
+    elif flow_config.has_meta_tag("user_action"):
+        meta_tag_parameters = flow_config.meta_tag("user_action")
+        event_type = InternalEvents.USER_ACTION_LOG
+    elif flow_config.has_meta_tag("bot_action"):
+        meta_tag_parameters = flow_config.meta_tag("bot_action")
+        event_type = InternalEvents.BOT_ACTION_LOG
 
     if (
         event_type == InternalEvents.USER_INTENT_LOG
@@ -1454,27 +1458,44 @@ def _finish_flow(
         # TODO: Generalize to multi intents
         intent = None
         for flow_state_uid in reversed(hierarchy):
-            flow_config = state.flow_configs[state.flow_states[flow_state_uid].flow_id]
-            if flow_config.source_code is not None:
-                match = re.search(
-                    r'#\W*meta:\W*(bot intent|user intent)(\W*=\W*"([a-zA-Z0-9_ ]*)")?',
-                    flow_config.source_code,
-                )
-                if match:
-                    if match.group(3) is not None:
-                        intent = match.group(3)
-                    else:
-                        intent = flow_config.id
+            intent_flow_config = state.flow_configs[
+                state.flow_states[flow_state_uid].flow_id
+            ]
+            if intent_flow_config.has_meta_tag("bot_intent"):
+                intent = intent_flow_config.meta_tag("bot_intent")
+            elif intent_flow_config.has_meta_tag("user_intent"):
+                intent = intent_flow_config.meta_tag("user_intent")
 
-        event = create_internal_event(
-            event_type,
-            {
-                "flow_id": flow_state.flow_id,
-                "parameter": flow_state.arguments.get("$0", None),
-                "intent_flow_id": intent,
-            },
-            matching_scores,
-        )
+            if not isinstance(intent, str):
+                intent = flow_state.flow_id
+
+        # Create event based on meta tag
+        if isinstance(meta_tag_parameters, str):
+            name = eval_expression(
+                '"' + meta_tag_parameters.replace('"', '\\"') + '"',
+                _get_eval_context(state, flow_state),
+            )
+            event = create_internal_event(
+                event_type,
+                {
+                    "flow_id": name,
+                    "parameter": None,
+                    "intent_flow_id": intent,
+                },
+                matching_scores,
+            )
+        else:
+            # TODO: Generalize to multi flow parameters
+            event = create_internal_event(
+                event_type,
+                {
+                    "flow_id": flow_state.flow_id,
+                    "parameter": flow_state.arguments.get("$0", None),
+                    "intent_flow_id": intent,
+                },
+                matching_scores,
+            )
+
         _push_internal_event(state, event)
 
     log.info(

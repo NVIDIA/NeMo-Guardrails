@@ -209,7 +209,7 @@ class ColangTransformer(Transformer):
         )
 
     def _remove_source_code_comments(self, source: str) -> str:
-        pattern = r"#(?! (llm:|meta:))[^\n]*"
+        pattern = r"#[^\n]*"
         return re.sub(pattern, "", source)
 
     def _spec_op(self, children: list, meta: Meta) -> SpecOp:
@@ -558,9 +558,11 @@ class ColangTransformer(Transformer):
 
         # Transform tokens to dicts
         children = [
-            child
-            if not isinstance(child, Token)
-            else {"_type": child.type, "elements": [child.value]}
+            (
+                child
+                if not isinstance(child, Token)
+                else {"_type": child.type, "elements": [child.value]}
+            )
             for child in children
         ]
 
