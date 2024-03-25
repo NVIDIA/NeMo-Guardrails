@@ -1,0 +1,14 @@
+import core
+
+
+flow main
+  """You are an assistant that should talk to the user about cars.
+  Politely decline to talk about anything else.
+
+  Last user question is: "{{ question }}"
+  Generate the output in the following format:
+
+  bot say "<<the response>>"
+  """
+  $question = await user said something
+  ...
