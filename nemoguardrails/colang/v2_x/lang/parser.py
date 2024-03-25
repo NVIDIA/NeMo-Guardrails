@@ -19,7 +19,7 @@ import re
 
 import yaml
 
-from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
+from nemoguardrails.colang.v2_x.lang.colang_ast import Flow, Import
 from nemoguardrails.colang.v2_x.lang.grammar.load import load_lark_parser
 from nemoguardrails.colang.v2_x.lang.transformer import ColangTransformer
 from nemoguardrails.utils import CustomDumper
@@ -85,6 +85,18 @@ class ColangParser:
                 if element["_type"] == "flow":
                     element.file_info["exclude_from_llm"] = exclude_flows_from_llm
                     result["flows"].append(element)
+                elif element["_type"] == "import":
+                    if "import_paths" not in result:
+                        result["import_paths"] = []
+
+                    import_el: Import = element
+                    if import_el.path:
+                        result["import_paths"].append(import_el.path)
+                    else:
+                        # If we have a package name, we need to translate it to a path
+                        result["import_paths"].append(
+                            os.path.join(*import_el.package.split("."))
+                        )
 
         return result
 
@@ -114,9 +126,7 @@ def parse_colang_file(
     #         }
     #     )
 
-    data = {
-        "flows": result["flows"],
-    }
+    data = {"flows": result["flows"], "import_paths": result.get("import_paths", [])}
 
     return data
 

@@ -87,21 +87,30 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
             llm_call_info = LLMCallInfo()
             llm_call_info_var.set(llm_call_info)
 
-        prompt = "\n" + "\n".join(
-            [
-                Styles.CYAN
-                + (
-                    "User"
-                    if msg.type == "human"
-                    else "Bot"
-                    if msg.type == "ai"
-                    else "System"
-                )
-                + Styles.PROMPT
-                + "\n"
-                + msg.content
-                for msg in messages[0] + Styles.RESET_ALL
-            ]
+        # We also add it to the explain object
+        explain_info = explain_info_var.get()
+        if explain_info:
+            explain_info.llm_calls.append(llm_call_info)
+
+        prompt = (
+            "\n"
+            + "\n".join(
+                [
+                    Styles.CYAN
+                    + (
+                        "User"
+                        if msg.type == "human"
+                        else "Bot"
+                        if msg.type == "ai"
+                        else "System"
+                    )
+                    + Styles.PROMPT
+                    + "\n"
+                    + msg.content
+                    for msg in messages[0]
+                ]
+            )
+            + Styles.RESET_ALL
         )
 
         log.info("Invocation Params :: %s", kwargs.get("invocation_params", {}))
@@ -177,9 +186,10 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
 
         # Finally, we append the LLM call log to the processing log
         processing_log = processing_log_var.get()
-        processing_log.append(
-            {"type": "llm_call_info", "timestamp": time(), "data": llm_call_info}
-        )
+        if processing_log:
+            processing_log.append(
+                {"type": "llm_call_info", "timestamp": time(), "data": llm_call_info}
+            )
 
     async def on_llm_error(
         self,

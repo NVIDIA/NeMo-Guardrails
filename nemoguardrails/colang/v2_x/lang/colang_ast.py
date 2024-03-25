@@ -104,6 +104,36 @@ def _make_hashable(obj: Any) -> Any:
 
 @dataclass_json
 @dataclass
+class Decorator(Element):
+    """The definition for a flow decorator.
+
+    Explicit typing is not yet supported.
+    """
+
+    name: str = ""
+    parameters: dict = field(default_factory=dict)
+    _type: str = "decorator"
+
+
+@dataclass_json
+@dataclass
+class Import(Element):
+    """The definition for an import statement.
+
+    We support both "path mode" and "package" mode.
+
+        import core
+        import rag.advanced
+        import "some-spec/some-sub-package"
+    """
+
+    path: Optional[str] = None
+    package: Optional[str] = None
+    _type: str = "import"
+
+
+@dataclass_json
+@dataclass
 class Value(Element):
     """Element that contains a value."""
 
@@ -126,6 +156,7 @@ class Flow(Element):
     """Element that represents a flow."""
 
     name: str = ""
+    decorators: List[Decorator] = field(default_factory=list)
     parameters: List[FlowParamDef] = field(default_factory=list)
     return_members: List[FlowReturnMemberDef] = field(default_factory=list)
     elements: List[Element] = field(default_factory=list)

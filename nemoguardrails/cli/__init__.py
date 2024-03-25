@@ -25,6 +25,7 @@ from rich.logging import RichHandler
 from nemoguardrails import __version__
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
+from nemoguardrails.cli.simplify_formatter import SimplifyFormatter
 from nemoguardrails.eval.cli import evaluate
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
@@ -50,6 +51,10 @@ def chat(
     verbose_llm_calls: bool = typer.Option(
         default=False,
         help="If the chat should be verbose and include the prompts and responses for the LLM calls.",
+    ),
+    verbose_simplify: bool = typer.Option(
+        default=False,
+        help="Simplify further the verbose output.",
     ),
     debug_level: List[str] = typer.Option(
         default=[],
@@ -79,7 +84,13 @@ def chat(
 
     if len(debug_level) == 1:
         root_logger = logging.getLogger()
-        root_logger.addHandler(RichHandler(markup=True))
+        rich_handler = RichHandler(markup=True)
+
+        # If needed, simplify further the verbose output
+        if verbose_simplify:
+            rich_handler.setFormatter(SimplifyFormatter())
+
+        root_logger.addHandler(rich_handler)
         root_logger.setLevel(debug_level[0])
 
     run_chat(

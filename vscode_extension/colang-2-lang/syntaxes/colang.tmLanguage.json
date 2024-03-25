@@ -1,0 +1,4245 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "information_for_contributors": [
+        "This file is partially based on MagicPython: https://github.com/microsoft/vscode/blob/main/extensions/python/syntaxes/MagicPython.tmLanguage.json"
+    ],
+    "comment": "For more help see also: https://macromates.com/manual/en/language_grammars",
+    "version": "1.0.0",
+    "name": "colang",
+    "scopeName": "source.colang",
+    "fileTypes": [".co", ".colang"],
+    "patterns": [
+        {
+            "include": "#colang-patterns"
+        },
+        {
+            "include": "#python-patterns"
+        }
+    ],
+    "repository": {
+        "colang-patterns": {
+            "patterns": [
+                {
+                    "match": "^\\W*(flow) (.*?)(?=\\n|\\$|\\#)",
+                    "captures": {
+                        "1": { "name": "keyword.control.colang" },
+                        "2": { "name": "entity.name.function.colang" }
+                    }
+                },
+                {
+                    "name": "keyword.control.flow.colang",
+                    "comment": "Must be the first word in the line.",
+                    "match": "(^[ \t]*)\\b(send|start|match|await|activate|abort|while|if|else|elif|when|orwhen|or when|break|continue|return|priority|global|print|log)\\b"
+                },
+                {
+                    "name": "keyword.control.flow.colang",
+                    "comment": "These words cannot be used within a flow name.",
+                    "match": "\\b(and|or|as|and not)\\b"
+                },
+                {
+                    "name": "support.function.builtin.colang",
+                    "match": "\\b(len|regex|search|findall|uid|str|escape|isint|isfloat|isbool|isstr|isregex)\\b"
+                },
+                {
+                    "name": "variable.other.colang",
+                    "match": "\\$[[:alpha:]][[:word:]]+(.[[:alpha:]][[:word:]]*)*\\b"
+                },
+                {
+                    "match": "\\b(i)(?=(\\\".*?\\\")|('.*?'))",
+                    "captures": {
+                        "1": { "name": "storage.type.string.colang" }
+                    }
+                },
+                {
+                    "comment": "Highlight actions and events that use the brackets notation.",
+                    "begin": "([[:alpha:]][[:word:]]*)(?:\\.|\\w)*(\\()",
+                    "end": "(\\))",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.type.colang"
+                        },
+                        "2": {
+                            "name": "punctuation.definition.arguments.begin.colang"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.arguments.end.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "variable.parameter.function-call.colang",
+                            "match": "[[:alpha:]][[:word:]]*(?=\\s*?=)"
+                        },
+                        {
+                            "include": "#colang-patterns"
+                        },
+                        {
+                            "include": "#python-patterns"
+                        }
+                    ]
+                }
+            ]
+        },
+        "python-patterns": {
+            "patterns": [
+                {
+                    "include": "#comments"
+                },
+                {
+                    "include": "#docstring-statement"
+                },
+                {
+                    "include": "#docstring"
+                },
+                {
+                    "include": "#list"
+                },
+                {
+                    "include": "#assignment-operator"
+                },
+                {
+                    "include": "#literal"
+                },
+                {
+                    "include": "#number"
+                },
+                {
+                    "include": "#decorator"
+                }
+            ]
+        },
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.number-sign.colang",
+                    "contentName": "meta.typehint.comment.colang",
+                    "begin": "(?x)\n  (?:\n    \\# \\s* (type:)\n    \\s*+ (?# we want `\\s*+` which is possessive quantifier since\n             we do not actually want to backtrack when matching\n             whitespace here)\n    (?! $ | \\#)\n  )\n",
+                    "end": "(?:$|(?=\\#))",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "meta.typehint.comment.colang"
+                        },
+                        "1": {
+                            "name": "comment.typehint.directive.notation.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "comment.typehint.ignore.notation.colang",
+                            "match": "(?x)\n  \\G ignore\n  (?= \\s* (?: $ | \\#))\n"
+                        },
+                        {
+                            "name": "comment.typehint.type.notation.colang",
+                            "match": "(?x)\n  (?<!\\.)\\b(\n    bool | bytes | float | int | object | str\n    | List | Dict | Iterable | Sequence | Set\n    | FrozenSet | Callable | Union | Tuple\n    | Any | None\n  )\\b\n"
+                        },
+                        {
+                            "name": "comment.typehint.punctuation.notation.colang",
+                            "match": "([\\[\\]\\(\\),\\.\\=\\*]|(->))"
+                        },
+                        {
+                            "name": "comment.typehint.variable.notation.colang",
+                            "match": "([[:alpha:]_]\\w*)"
+                        }
+                    ]
+                },
+                {
+                    "include": "#comments-base"
+                }
+            ]
+        },
+        "docstring-statement": {
+            "begin": "^(?=\\s*[rR]?(\\'\\'\\'|\\\"\\\"\\\"|\\'|\\\"))",
+            "comment": "the string either terminates correctly or by the beginning of a new line (this is for single line docstrings that aren't terminated) AND it's not followed by another docstring",
+            "end": "((?<=\\1)|^)(?!\\s*[rR]?(\\'\\'\\'|\\\"\\\"\\\"|\\'|\\\"))",
+            "patterns": [
+                {
+                    "include": "#docstring"
+                }
+            ]
+        },
+        "docstring": {
+            "patterns": [
+                {
+                    "name": "string.quoted.docstring.multi.colang",
+                    "begin": "(\\'\\'\\'|\\\"\\\"\\\")",
+                    "end": "(\\1)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.string.begin.colang"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.string.end.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#docstring-prompt"
+                        },
+                        {
+                            "include": "#codetags"
+                        },
+                        {
+                            "include": "#docstring-guts-unicode"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.docstring.raw.multi.colang",
+                    "begin": "([rR])(\\'\\'\\'|\\\"\\\"\\\")",
+                    "end": "(\\2)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "storage.type.string.colang"
+                        },
+                        "2": {
+                            "name": "punctuation.definition.string.begin.colang"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.string.end.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#string-consume-escape"
+                        },
+                        {
+                            "include": "#docstring-prompt"
+                        },
+                        {
+                            "include": "#codetags"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.docstring.single.colang",
+                    "begin": "(\\'|\\\")",
+                    "end": "(\\1)|(\\n)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.string.begin.colang"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.string.end.colang"
+                        },
+                        "2": {
+                            "name": "invalid.illegal.newline.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#codetags"
+                        },
+                        {
+                            "include": "#docstring-guts-unicode"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.docstring.raw.single.colang",
+                    "begin": "([rR])(\\'|\\\")",
+                    "end": "(\\2)|(\\n)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "storage.type.string.colang"
+                        },
+                        "2": {
+                            "name": "punctuation.definition.string.begin.colang"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.string.end.colang"
+                        },
+                        "2": {
+                            "name": "invalid.illegal.newline.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#string-consume-escape"
+                        },
+                        {
+                            "include": "#codetags"
+                        }
+                    ]
+                }
+            ]
+        },
+        "docstring-guts-unicode": {
+            "patterns": [
+                {
+                    "include": "#escape-sequence-unicode"
+                },
+                {
+                    "include": "#escape-sequence"
+                },
+                {
+                    "include": "#string-line-continuation"
+                }
+            ]
+        },
+        "docstring-prompt": {
+            "match": "(?x)\n  (?:\n    (?:^|\\G) \\s* (?# '\\G' is necessary for ST)\n    ((?:>>>|\\.\\.\\.) \\s) (?=\\s*\\S)\n  )\n",
+            "captures": {
+                "1": {
+                    "name": "keyword.control.flow.colang"
+                }
+            }
+        },
+        "statement-keyword": {
+            "patterns": [
+                {
+                    "name": "storage.type.function.colang",
+                    "match": "\\b(\\s*flow)\\b"
+                },
+                {
+                    "name": "keyword.control.flow.colang",
+                    "comment": "if `as` is eventually followed by `:` or line continuation\nit's probably control flow like:\n    with foo as bar, \\\n         Foo as Bar:\n      try:\n        do_stuff()\n      except Exception as e:\n        pass\n",
+                    "match": "\\b(?<!\\.)as\\b(?=.*[:\\\\])"
+                },
+                {
+                    "name": "keyword.control.import.colang",
+                    "comment": "other legal use of `as` is in an import",
+                    "match": "\\b(?<!\\.)as\\b"
+                },
+                {
+                    "name": "keyword.control.flow.colang",
+                    "match": "(?x)\n  \\b(?<!\\.)(\n    continue | assert | break | for\n    | elif | else | if | when | orwhen | or when | pass | priority\n    | return | while\n  )\\b\n"
+                },
+                {
+                    "name": "storage.modifier.declaration.colang",
+                    "match": "(?x)\n  \\b(?<!\\.)(\n    global\n  )\\b\n"
+                },
+                {
+                    "name": "variable.other.colang",
+                    "match": "\\$(\\w)*\\b"
+                }
+            ]
+        },
+        "expression-bare": {
+            "comment": "valid Python expressions w/o comments and line continuation",
+            "patterns": [
+                {
+                    "include": "#backticks"
+                },
+                {
+                    "include": "#illegal-anno"
+                },
+                {
+                    "include": "#literal"
+                },
+                {
+                    "include": "#regexp"
+                },
+                {
+                    "include": "#string"
+                },
+                {
+                    "include": "#lambda"
+                },
+                {
+                    "include": "#generator"
+                },
+                {
+                    "include": "#illegal-operator"
+                },
+                {
+                    "include": "#operator"
+                },
+                {
+                    "include": "#curly-braces"
+                },
+                {
+                    "include": "#item-access"
+                },
+                {
+                    "include": "#list"
+                },
+                {
+                    "include": "#odd-function-call"
+                },
+                {
+                    "include": "#round-braces"
+                },
+                {
+                    "include": "#function-call"
+                },
+                {
+                    "include": "#builtin-functions"
+                },
+                {
+                    "include": "#builtin-types"
+                },
+                {
+                    "include": "#builtin-exceptions"
+                },
+                {
+                    "include": "#magic-names"
+                },
+                {
+                    "include": "#special-names"
+                },
+                {
+                    "include": "#illegal-names"
+                },
+                {
+                    "include": "#special-variables"
+                },
+                {
+                    "include": "#ellipsis"
+                },
+                {
+                    "include": "#punctuation"
+                },
+                {
+                    "include": "#line-continuation"
+                }
+            ]
+        },
+        "expression-base": {
+            "comment": "valid Python expressions with comments and line continuation",
+            "patterns": [
+                {
+                    "include": "#comments"
+                },
+                {
+                    "include": "#expression-bare"
+                },
+                {
+                    "include": "#line-continuation"
+                }
+            ]
+        },
+        "expression": {
+            "comment": "All valid Python expressions",
+            "patterns": [
+                {
+                    "include": "#expression-base"
+                },
+                {
+                    "include": "#member-access"
+                },
+                {
+                    "comment": "Tokenize identifiers to help linters",
+                    "match": "(?x) \\b ([[:alpha:]_]\\w*) \\b"
+                }
+            ]
+        },
+        "member-access": {
+            "name": "meta.member.access.colang",
+            "begin": "(\\.)\\s*(?!\\.)",
+            "end": "(?x)\n  # stop when you've just read non-whitespace followed by non-word\n  # i.e. when finished reading an identifier or function call\n  (?<=\\S)(?=\\W) |\n  # stop when seeing the start of something that's not a word,\n  # i.e. when seeing a non-identifier\n  (^|(?<=\\s))(?=[^\\\\\\w\\s]) |\n  $\n",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.separator.period.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#function-call"
+                },
+                {
+                    "include": "#member-access-base"
+                },
+                {
+                    "include": "#member-access-attribute"
+                }
+            ]
+        },
+        "member-access-base": {
+            "patterns": [
+                {
+                    "include": "#magic-names"
+                },
+                {
+                    "include": "#illegal-names"
+                },
+                {
+                    "include": "#illegal-object-name"
+                },
+                {
+                    "include": "#special-names"
+                },
+                {
+                    "include": "#line-continuation"
+                },
+                {
+                    "include": "#item-access"
+                }
+            ]
+        },
+        "member-access-attribute": {
+            "comment": "Highlight attribute access in otherwise non-specialized cases.",
+            "name": "meta.attribute.colang",
+            "match": "(?x)\n  \\b ([[:alpha:]_]\\w*) \\b\n"
+        },
+        "special-names": {
+            "name": "constant.other.caps.colang",
+            "match": "(?x)\n  \\b\n    # we want to see \"enough\", meaning 2 or more upper-case\n    # letters in the beginning of the constant\n    #\n    # for more details refer to:\n    #   https://github.com/MagicStack/MagicPython/issues/42\n    (\n      _* [[:upper:]] [_\\d]* [[:upper:]]\n    )\n    [[:upper:]\\d]* (_\\w*)?\n  \\b\n"
+        },
+        "curly-braces": {
+            "begin": "\\{",
+            "end": "\\}",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.dict.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.dict.end.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "name": "punctuation.separator.dict.colang",
+                    "match": ":"
+                },
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "list": {
+            "begin": "\\[",
+            "end": "\\]",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.list.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.list.end.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "odd-function-call": {
+            "comment": "A bit obscured function call where there may have been an\narbitrary number of other operations to get the function.\nE.g. \"arr[idx](args)\"\n",
+            "begin": "(?x)\n  (?<= \\] | \\) ) \\s*\n  (?=\\()\n",
+            "end": "(\\))",
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.arguments.end.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#function-arguments"
+                }
+            ]
+        },
+        "round-braces": {
+            "begin": "\\(",
+            "end": "\\)",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.parenthesis.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.parenthesis.end.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "line-continuation": {
+            "patterns": [
+                {
+                    "match": "(\\\\)\\s*(\\S.*$\\n?)",
+                    "captures": {
+                        "1": {
+                            "name": "punctuation.separator.continuation.line.colang"
+                        },
+                        "2": {
+                            "name": "invalid.illegal.line.continuation.colang"
+                        }
+                    }
+                },
+                {
+                    "begin": "(\\\\)\\s*$\\n?",
+                    "end": "(?x)\n  (?=^\\s*$)\n  |\n  (?! (\\s* [rR]? (\\'\\'\\'|\\\"\\\"\\\"|\\'|\\\"))\n      |\n      (\\G $)  (?# '\\G' is necessary for ST)\n  )\n",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "punctuation.separator.continuation.line.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#regexp"
+                        },
+                        {
+                            "include": "#string"
+                        }
+                    ]
+                }
+            ]
+        },
+        "assignment-operator": {
+            "name": "keyword.operator.assignment.colang",
+            "match": "(?x)\n     <<= | >>= | //= | \\*\\*=\n    | \\+= | -= | /= | @=\n    | \\*= | %= | ~= | \\^= | &= | \\|=\n    | =(?!=)\n"
+        },
+        "operator": {
+            "match": "(?x)\n    \\b(?<!\\.)\n      (?:\n        (and | or | and not | in | is)                         (?# 1)\n        |\n        (for | if | else | await | match | send | start | activate | (?:yield(?:\\s+from)?))  (?# 2)\n      )\n    (?!\\s*:)\\b\n\n    | (<< | >> | & | \\| | \\^ | ~)                          (?# 3)\n\n    | (\\*\\* | \\* | \\+ | - | % | // | / | @)                (?# 4)\n\n    | (!= | == | >= | <= | < | >)                          (?# 5)\n\n    | (:=)                                                 (?# 6)\n",
+            "captures": {
+                "1": {
+                    "name": "keyword.operator.logical.colang"
+                },
+                "2": {
+                    "name": "keyword.control.flow.colang"
+                },
+                "3": {
+                    "name": "keyword.operator.bitwise.colang"
+                },
+                "4": {
+                    "name": "keyword.operator.arithmetic.colang"
+                },
+                "5": {
+                    "name": "keyword.operator.comparison.colang"
+                },
+                "6": {
+                    "name": "keyword.operator.assignment.colang"
+                }
+            }
+        },
+        "punctuation": {
+            "patterns": [
+                {
+                    "name": "punctuation.separator.colon.colang",
+                    "match": ":"
+                },
+                {
+                    "name": "punctuation.separator.element.colang",
+                    "match": ","
+                }
+            ]
+        },
+        "literal": {
+            "patterns": [
+                {
+                    "name": "constant.language.colang",
+                    "match": "\\b(True|False|None|NotImplemented|Ellipsis)\\b"
+                },
+                {
+                    "include": "#number"
+                }
+            ]
+        },
+        "number": {
+            "name": "constant.numeric.colang",
+            "patterns": [
+                {
+                    "include": "#number-float"
+                },
+                {
+                    "include": "#number-dec"
+                },
+                {
+                    "include": "#number-hex"
+                },
+                {
+                    "include": "#number-oct"
+                },
+                {
+                    "include": "#number-bin"
+                },
+                {
+                    "include": "#number-long"
+                },
+                {
+                    "name": "invalid.illegal.name.colang",
+                    "match": "\\b[0-9]+\\w+"
+                }
+            ]
+        },
+        "number-float": {
+            "name": "constant.numeric.float.colang",
+            "match": "(?x)\n  (?<! \\w)(?:\n    (?:\n      \\.[0-9](?: _?[0-9] )*\n      |\n      [0-9](?: _?[0-9] )* \\. [0-9](?: _?[0-9] )*\n      |\n      [0-9](?: _?[0-9] )* \\.\n    ) (?: [eE][+-]?[0-9](?: _?[0-9] )* )?\n    |\n    [0-9](?: _?[0-9] )* (?: [eE][+-]?[0-9](?: _?[0-9] )* )\n  )([jJ])?\\b\n",
+            "captures": {
+                "1": {
+                    "name": "storage.type.imaginary.number.colang"
+                }
+            }
+        },
+        "number-dec": {
+            "name": "constant.numeric.dec.colang",
+            "match": "(?x)\n  (?<![\\w\\.])(?:\n      [1-9](?: _?[0-9] )*\n      |\n      0+\n      |\n      [0-9](?: _?[0-9] )* ([jJ])\n      |\n      0 ([0-9]+)(?![eE\\.])\n  )\\b\n",
+            "captures": {
+                "1": {
+                    "name": "storage.type.imaginary.number.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.dec.colang"
+                }
+            }
+        },
+        "number-hex": {
+            "name": "constant.numeric.hex.colang",
+            "match": "(?x)\n  (?<![\\w\\.])\n    (0[xX]) (_?[0-9a-fA-F])+\n  \\b\n",
+            "captures": {
+                "1": {
+                    "name": "storage.type.number.colang"
+                }
+            }
+        },
+        "number-oct": {
+            "name": "constant.numeric.oct.colang",
+            "match": "(?x)\n  (?<![\\w\\.])\n    (0[oO]) (_?[0-7])+\n  \\b\n",
+            "captures": {
+                "1": {
+                    "name": "storage.type.number.colang"
+                }
+            }
+        },
+        "number-bin": {
+            "name": "constant.numeric.bin.colang",
+            "match": "(?x)\n  (?<![\\w\\.])\n    (0[bB]) (_?[01])+\n  \\b\n",
+            "captures": {
+                "1": {
+                    "name": "storage.type.number.colang"
+                }
+            }
+        },
+        "number-long": {
+            "name": "constant.numeric.bin.colang",
+            "comment": "this is to support python2 syntax for long ints",
+            "match": "(?x)\n  (?<![\\w\\.])\n    ([1-9][0-9]* | 0) ([lL])\n  \\b\n",
+            "captures": {
+                "2": {
+                    "name": "storage.type.number.colang"
+                }
+            }
+        },
+        "regexp": {
+            "patterns": [
+                {
+                    "include": "#regexp-single-three-line"
+                },
+                {
+                    "include": "#regexp-double-three-line"
+                },
+                {
+                    "include": "#regexp-single-one-line"
+                },
+                {
+                    "include": "#regexp-double-one-line"
+                }
+            ]
+        },
+        "string": {
+            "patterns": [
+                {
+                    "include": "#string-quoted-multi-line"
+                },
+                {
+                    "include": "#string-quoted-single-line"
+                },
+                {
+                    "include": "#string-bin-quoted-multi-line"
+                },
+                {
+                    "include": "#string-bin-quoted-single-line"
+                },
+                {
+                    "include": "#string-raw-quoted-multi-line"
+                },
+                {
+                    "include": "#string-raw-quoted-single-line"
+                },
+                {
+                    "include": "#string-raw-bin-quoted-multi-line"
+                },
+                {
+                    "include": "#string-raw-bin-quoted-single-line"
+                },
+                {
+                    "include": "#fstring-fnorm-quoted-multi-line"
+                },
+                {
+                    "include": "#fstring-fnorm-quoted-single-line"
+                },
+                {
+                    "include": "#fstring-normf-quoted-multi-line"
+                },
+                {
+                    "include": "#fstring-normf-quoted-single-line"
+                },
+                {
+                    "include": "#fstring-raw-quoted-multi-line"
+                },
+                {
+                    "include": "#fstring-raw-quoted-single-line"
+                }
+            ]
+        },
+        "string-unicode-guts": {
+            "patterns": [
+                {
+                    "include": "#escape-sequence-unicode"
+                },
+                {
+                    "include": "#string-entity"
+                },
+                {
+                    "include": "#string-brace-formatting"
+                }
+            ]
+        },
+        "string-consume-escape": {
+            "match": "\\\\['\"\\n\\\\]"
+        },
+        "string-raw-guts": {
+            "patterns": [
+                {
+                    "include": "#string-consume-escape"
+                },
+                {
+                    "include": "#string-formatting"
+                },
+                {
+                    "include": "#string-brace-formatting"
+                }
+            ]
+        },
+        "string-raw-bin-guts": {
+            "patterns": [
+                {
+                    "include": "#string-consume-escape"
+                },
+                {
+                    "include": "#string-formatting"
+                }
+            ]
+        },
+        "string-entity": {
+            "patterns": [
+                {
+                    "include": "#escape-sequence"
+                },
+                {
+                    "include": "#string-line-continuation"
+                },
+                {
+                    "include": "#string-formatting"
+                }
+            ]
+        },
+        "fstring-guts": {
+            "patterns": [
+                {
+                    "include": "#escape-sequence-unicode"
+                },
+                {
+                    "include": "#escape-sequence"
+                },
+                {
+                    "include": "#string-line-continuation"
+                },
+                {
+                    "include": "#fstring-formatting"
+                }
+            ]
+        },
+        "fstring-raw-guts": {
+            "patterns": [
+                {
+                    "include": "#string-consume-escape"
+                },
+                {
+                    "include": "#fstring-formatting"
+                }
+            ]
+        },
+        "fstring-illegal-single-brace": {
+            "comment": "it is illegal to have a multiline brace inside a single-line string",
+            "begin": "(\\{)(?=[^\\n}]*$\\n?)",
+            "end": "(\\})|(?=\\n)",
+            "beginCaptures": {
+                "1": {
+                    "name": "constant.character.format.placeholder.other.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "constant.character.format.placeholder.other.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-terminator-single"
+                },
+                {
+                    "include": "#f-expression"
+                }
+            ]
+        },
+        "fstring-illegal-multi-brace": {
+            "patterns": [
+                {
+                    "include": "#impossible"
+                }
+            ]
+        },
+        "f-expression": {
+            "comment": "All valid Python expressions, except comments and line continuation",
+            "patterns": [
+                {
+                    "include": "#expression-bare"
+                },
+                {
+                    "include": "#member-access"
+                },
+                {
+                    "comment": "Tokenize identifiers to help linters",
+                    "match": "(?x) \\b ([[:alpha:]_]\\w*) \\b"
+                }
+            ]
+        },
+        "escape-sequence-unicode": {
+            "patterns": [
+                {
+                    "name": "constant.character.escape.colang",
+                    "match": "(?x)\n  \\\\ (\n        u[0-9A-Fa-f]{4}\n        | U[0-9A-Fa-f]{8}\n        | N\\{[\\w\\s]+?\\}\n     )\n"
+                }
+            ]
+        },
+        "escape-sequence": {
+            "name": "constant.character.escape.colang",
+            "match": "(?x)\n  \\\\ (\n        x[0-9A-Fa-f]{2}\n        | [0-7]{1,3}\n        | [\\\\\"'abfnrtv]\n     )\n"
+        },
+        "string-line-continuation": {
+            "name": "constant.language.colang",
+            "match": "\\\\$"
+        },
+        "string-formatting": {
+            "name": "meta.format.percent.colang",
+            "match": "(?x)\n  (\n    % (\\([\\w\\s]*\\))?\n      [-+#0 ]*\n      (\\d+|\\*)? (\\.(\\d+|\\*))?\n      ([hlL])?\n      [diouxXeEfFgGcrsab%]\n  )\n",
+            "captures": {
+                "1": {
+                    "name": "constant.character.format.placeholder.other.colang"
+                }
+            }
+        },
+        "string-brace-formatting": {
+            "patterns": [
+                {
+                    "name": "meta.format.brace.colang",
+                    "match": "(?x)\n  (\n    {{ | }}\n    | (?:\n      {\n        \\w* (\\.[[:alpha:]_]\\w* | \\[[^\\]'\"]+\\])*\n        (![rsa])?\n        ( : \\w? [<>=^]? [-+ ]? \\#?\n          \\d* ,? (\\.\\d+)? [bcdeEfFgGnosxX%]? )?\n      })\n  )\n",
+                    "captures": {
+                        "1": {
+                            "name": "constant.character.format.placeholder.other.colang"
+                        },
+                        "3": {
+                            "name": "storage.type.format.colang"
+                        },
+                        "4": {
+                            "name": "storage.type.format.colang"
+                        }
+                    }
+                },
+                {
+                    "name": "meta.format.brace.colang",
+                    "match": "(?x)\n  (\n    {\n      \\w* (\\.[[:alpha:]_]\\w* | \\[[^\\]'\"]+\\])*\n      (![rsa])?\n      (:)\n        [^'\"{}\\n]* (?:\n          \\{ [^'\"}\\n]*? \\} [^'\"{}\\n]*\n        )*\n    }\n  )\n",
+                    "captures": {
+                        "1": {
+                            "name": "constant.character.format.placeholder.other.colang"
+                        },
+                        "3": {
+                            "name": "storage.type.format.colang"
+                        },
+                        "4": {
+                            "name": "storage.type.format.colang"
+                        }
+                    }
+                }
+            ]
+        },
+        "fstring-formatting": {
+            "patterns": [
+                {
+                    "include": "#fstring-formatting-braces"
+                },
+                {
+                    "include": "#fstring-formatting-singe-brace"
+                }
+            ]
+        },
+        "fstring-formatting-singe-brace": {
+            "name": "invalid.illegal.brace.colang",
+            "match": "(}(?!}))"
+        },
+        "import": {
+            "comment": "Import statements used to correctly mark `from`, `import`, and `as`\n",
+            "patterns": [
+                {
+                    "begin": "\\b(?<!\\.)(from)\\b(?=.+import)",
+                    "end": "$|(?=import)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.control.import.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "punctuation.separator.period.colang",
+                            "match": "\\.+"
+                        },
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\b(?<!\\.)(import)\\b",
+                    "end": "$",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.control.import.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "name": "keyword.control.import.colang",
+                            "match": "\\b(?<!\\.)as\\b"
+                        },
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                }
+            ]
+        },
+        "class-declaration": {
+            "patterns": [
+                {
+                    "name": "meta.class.colang",
+                    "begin": "(?x)\n  \\s*(class)\\s+\n    (?=\n      [[:alpha:]_]\\w* \\s* (:|\\()\n    )\n",
+                    "end": "(:)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "storage.type.class.colang"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.section.class.begin.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#class-name"
+                        },
+                        {
+                            "include": "#class-inheritance"
+                        }
+                    ]
+                }
+            ]
+        },
+        "class-name": {
+            "patterns": [
+                {
+                    "include": "#illegal-object-name"
+                },
+                {
+                    "include": "#builtin-possible-callables"
+                },
+                {
+                    "name": "entity.name.type.class.colang",
+                    "match": "(?x)\n  \\b ([[:alpha:]_]\\w*) \\b\n"
+                }
+            ]
+        },
+        "class-inheritance": {
+            "name": "meta.class.inheritance.colang",
+            "begin": "(\\()",
+            "end": "(\\))",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.definition.inheritance.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.inheritance.end.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "name": "keyword.operator.unpacking.arguments.colang",
+                    "match": "(\\*\\*|\\*)"
+                },
+                {
+                    "name": "punctuation.separator.inheritance.colang",
+                    "match": ","
+                },
+                {
+                    "name": "keyword.operator.assignment.colang",
+                    "match": "=(?!=)"
+                },
+                {
+                    "name": "support.type.metaclass.colang",
+                    "match": "\\bmetaclass\\b"
+                },
+                {
+                    "include": "#illegal-names"
+                },
+                {
+                    "include": "#class-kwarg"
+                },
+                {
+                    "include": "#call-wrapper-inheritance"
+                },
+                {
+                    "include": "#expression-base"
+                },
+                {
+                    "include": "#member-access-class"
+                },
+                {
+                    "include": "#inheritance-identifier"
+                }
+            ]
+        },
+        "class-kwarg": {
+            "match": "(?x)\n  \\b ([[:alpha:]_]\\w*) \\s*(=)(?!=)\n",
+            "captures": {
+                "1": {
+                    "name": "entity.other.inherited-class.python variable.parameter.class.colang"
+                },
+                "2": {
+                    "name": "keyword.operator.assignment.colang"
+                }
+            }
+        },
+        "inheritance-identifier": {
+            "match": "(?x)\n  \\b ([[:alpha:]_]\\w*) \\b\n",
+            "captures": {
+                "1": {
+                    "name": "entity.other.inherited-class.colang"
+                }
+            }
+        },
+        "member-access-class": {
+            "name": "meta.member.access.colang",
+            "begin": "(\\.)\\s*(?!\\.)",
+            "end": "(?<=\\S)(?=\\W)|$",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.separator.period.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#call-wrapper-inheritance"
+                },
+                {
+                    "include": "#member-access-base"
+                },
+                {
+                    "include": "#inheritance-identifier"
+                }
+            ]
+        },
+        "lambda": {
+            "patterns": [
+                {
+                    "match": "((?<=\\.)lambda|lambda(?=\\s*[\\.=]))",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.control.flow.colang"
+                        }
+                    }
+                },
+                {
+                    "match": "\\b(lambda)\\s*?(?=[,\\n]|$)",
+                    "captures": {
+                        "1": {
+                            "name": "storage.type.function.lambda.colang"
+                        }
+                    }
+                },
+                {
+                    "name": "meta.lambda-function.colang",
+                    "begin": "(?x)\n  \\b (lambda) \\b\n",
+                    "end": "(:)|(\\n)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "storage.type.function.lambda.colang"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.section.function.lambda.begin.colang"
+                        }
+                    },
+                    "contentName": "meta.function.lambda.parameters.colang",
+                    "patterns": [
+                        {
+                            "name": "keyword.operator.positional.parameter.colang",
+                            "match": "/"
+                        },
+                        {
+                            "name": "keyword.operator.unpacking.parameter.colang",
+                            "match": "(\\*\\*|\\*)"
+                        },
+                        {
+                            "include": "#lambda-nested-incomplete"
+                        },
+                        {
+                            "include": "#illegal-names"
+                        },
+                        {
+                            "match": "([[:alpha:]_]\\w*)\\s*(?:(,)|(?=:|$))",
+                            "captures": {
+                                "1": {
+                                    "name": "variable.parameter.function.language.colang"
+                                },
+                                "2": {
+                                    "name": "punctuation.separator.parameters.colang"
+                                }
+                            }
+                        },
+                        {
+                            "include": "#comments"
+                        },
+                        {
+                            "include": "#backticks"
+                        },
+                        {
+                            "include": "#illegal-anno"
+                        },
+                        {
+                            "include": "#lambda-parameter-with-default"
+                        },
+                        {
+                            "include": "#line-continuation"
+                        },
+                        {
+                            "include": "#illegal-operator"
+                        }
+                    ]
+                }
+            ]
+        },
+        "lambda-incomplete": {
+            "name": "storage.type.function.lambda.colang",
+            "match": "\\blambda(?=\\s*[,)])"
+        },
+        "lambda-nested-incomplete": {
+            "name": "storage.type.function.lambda.colang",
+            "match": "\\blambda(?=\\s*[:,)])"
+        },
+        "lambda-parameter-with-default": {
+            "begin": "(?x)\n  \\b\n  ([[:alpha:]_]\\w*) \\s* (=)\n",
+            "end": "(,)|(?=:|$)",
+            "beginCaptures": {
+                "1": {
+                    "name": "variable.parameter.function.language.colang"
+                },
+                "2": {
+                    "name": "keyword.operator.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.separator.parameters.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "generator": {
+            "comment": "Match \"for ... in\" construct used in generators and for loops to\ncorrectly identify the \"in\" as a control flow keyword.\n",
+            "begin": "\\bfor\\b",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.control.flow.colang"
+                }
+            },
+            "end": "\\bin\\b",
+            "endCaptures": {
+                "0": {
+                    "name": "keyword.control.flow.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "function-declaration": {
+            "name": "meta.function.colang",
+            "begin": "(?x)\n  \\s*\n  \\b(flow)\\s+\n    (?=\n      [[:alpha:]_][[:word:] ]* )\n",
+            "end": "((?=[#'\"\\n]))",
+            "beginCaptures": {
+                "1": {
+                    "name": "storage.type.function.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.section.function.begin.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#function-def-name"
+                },
+                {
+                    "include": "#parameters"
+                },
+                {
+                    "include": "#line-continuation"
+                },
+                {
+                    "include": "#return-annotation"
+                }
+            ]
+        },
+        "function-def-name": {
+            "patterns": [
+                {
+                    "include": "#illegal-object-name"
+                },
+                {
+                    "include": "#builtin-possible-callables"
+                },
+                {
+                    "name": "entity.name.function.colang",
+                    "match": "(?x)\n  \\b ([[:alpha:]_]\\w*) \\b\n"
+                }
+            ]
+        },
+        "parameters": {
+            "name": "meta.function.parameters.colang",
+            "begin": "(\\()",
+            "end": "(\\))",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.definition.parameters.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.parameters.end.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "name": "keyword.operator.positional.parameter.colang",
+                    "match": "/"
+                },
+                {
+                    "name": "keyword.operator.unpacking.parameter.colang",
+                    "match": "(\\*\\*|\\*)"
+                },
+                {
+                    "include": "#lambda-incomplete"
+                },
+                {
+                    "include": "#illegal-names"
+                },
+                {
+                    "include": "#illegal-object-name"
+                },
+                {
+                    "include": "#parameter-special"
+                },
+                {
+                    "match": "(?x)\n  ([[:alpha:]_]\\w*)\n    \\s* (?: (,) | (?=[)#\\n=]))\n",
+                    "captures": {
+                        "1": {
+                            "name": "variable.parameter.function.language.colang"
+                        },
+                        "2": {
+                            "name": "punctuation.separator.parameters.colang"
+                        }
+                    }
+                },
+                {
+                    "include": "#comments"
+                },
+                {
+                    "include": "#loose-default"
+                },
+                {
+                    "include": "#annotated-parameter"
+                }
+            ]
+        },
+        "parameter-special": {
+            "match": "(?x)\n  \\b ((self)|(cls)) \\b \\s*(?:(,)|(?=\\)))\n",
+            "captures": {
+                "1": {
+                    "name": "variable.parameter.function.language.colang"
+                },
+                "2": {
+                    "name": "variable.parameter.function.language.special.self.colang"
+                },
+                "3": {
+                    "name": "variable.parameter.function.language.special.cls.colang"
+                },
+                "4": {
+                    "name": "punctuation.separator.parameters.colang"
+                }
+            }
+        },
+        "loose-default": {
+            "begin": "(=)",
+            "end": "(,)|(?=\\))",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.operator.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.separator.parameters.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "annotated-parameter": {
+            "begin": "(?x)\n  \\b\n  ([[:alpha:]_]\\w*) \\s* (:)\n",
+            "end": "(,)|(?=\\))",
+            "beginCaptures": {
+                "1": {
+                    "name": "variable.parameter.function.language.colang"
+                },
+                "2": {
+                    "name": "punctuation.separator.annotation.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.separator.parameters.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#expression"
+                },
+                {
+                    "name": "keyword.operator.assignment.colang",
+                    "match": "=(?!=)"
+                }
+            ]
+        },
+        "return-annotation": {
+            "begin": "(->)",
+            "end": "(?=:)",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.separator.annotation.result.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "item-access": {
+            "patterns": [
+                {
+                    "name": "meta.item-access.colang",
+                    "begin": "(?x)\n  \\b(?=\n    [[:alpha:]_]\\w* \\s* \\[\n  )\n",
+                    "end": "(\\])",
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.arguments.end.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#item-name"
+                        },
+                        {
+                            "include": "#item-index"
+                        },
+                        {
+                            "include": "#expression"
+                        }
+                    ]
+                }
+            ]
+        },
+        "item-name": {
+            "patterns": [
+                {
+                    "include": "#special-variables"
+                },
+                {
+                    "include": "#builtin-functions"
+                },
+                {
+                    "include": "#special-names"
+                },
+                {
+                    "name": "meta.indexed-name.colang",
+                    "match": "(?x)\n  \\b ([[:alpha:]_]\\w*) \\b\n"
+                }
+            ]
+        },
+        "item-index": {
+            "begin": "(\\[)",
+            "end": "(?=\\])",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.definition.arguments.begin.colang"
+                }
+            },
+            "contentName": "meta.item-access.arguments.colang",
+            "patterns": [
+                {
+                    "name": "punctuation.separator.slice.colang",
+                    "match": ":"
+                },
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "decorator": {
+            "name": "meta.function.decorator.colang",
+            "begin": "(?x)\n  ^\\s*\n  ((@)) \\s* (?=[[:alpha:]_]\\w*)\n",
+            "end": "(?x)\n  ( \\) )\n    # trailing whitespace and comments are legal\n    (?: (.*?) (?=\\s*(?:\\#|$)) )\n  | (?=\\n|\\#)\n",
+            "beginCaptures": {
+                "1": {
+                    "name": "entity.name.function.decorator.colang"
+                },
+                "2": {
+                    "name": "punctuation.definition.decorator.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.arguments.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.decorator.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#decorator-name"
+                },
+                {
+                    "include": "#function-arguments"
+                }
+            ]
+        },
+        "decorator-name": {
+            "patterns": [
+                {
+                    "include": "#builtin-callables"
+                },
+                {
+                    "include": "#illegal-object-name"
+                },
+                {
+                    "name": "entity.name.function.decorator.colang",
+                    "match": "(?x)\n  ([[:alpha:]_]\\w*) | (\\.)\n",
+                    "captures": {
+                        "2": {
+                            "name": "punctuation.separator.period.colang"
+                        }
+                    }
+                },
+                {
+                    "include": "#line-continuation"
+                },
+                {
+                    "name": "invalid.illegal.decorator.colang",
+                    "match": "(?x)\n  \\s* ([^([:alpha:]\\s_\\.#\\\\] .*?) (?=\\#|$)\n",
+                    "captures": {
+                        "1": {
+                            "name": "invalid.illegal.decorator.colang"
+                        }
+                    }
+                }
+            ]
+        },
+        "call-wrapper-inheritance": {
+            "comment": "same as a function call, but in inheritance context",
+            "name": "meta.function-call.colang",
+            "begin": "(?x)\n  \\b(?=\n    ([[:alpha:]_]\\w*) \\s* (\\()\n  )\n",
+            "end": "(\\))",
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.arguments.end.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#inheritance-name"
+                },
+                {
+                    "include": "#function-arguments"
+                }
+            ]
+        },
+        "inheritance-name": {
+            "patterns": [
+                {
+                    "include": "#lambda-incomplete"
+                },
+                {
+                    "include": "#builtin-possible-callables"
+                },
+                {
+                    "include": "#inheritance-identifier"
+                }
+            ]
+        },
+        "function-call": {
+            "name": "meta.function-call.colang",
+            "comment": "Regular function call of the type \"name(args)\"",
+            "begin": "(?x)\n  \\b(?=\n    ([[:alpha:]_]\\w*) \\s* (\\()\n  )\n",
+            "end": "(\\))",
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.arguments.end.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#special-variables"
+                },
+                {
+                    "include": "#function-name"
+                },
+                {
+                    "include": "#function-arguments"
+                }
+            ]
+        },
+        "function-name": {
+            "patterns": [
+                {
+                    "include": "#builtin-possible-callables"
+                },
+                {
+                    "comment": "Some color schemas support meta.function-call.generic scope",
+                    "name": "meta.function-call.generic.colang",
+                    "match": "(?x)\n  \\b ([[:alpha:]_]\\w*) \\b\n"
+                }
+            ]
+        },
+        "function-arguments": {
+            "begin": "(\\()",
+            "end": "(?=\\))(?!\\)\\s*\\()",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.definition.arguments.begin.colang"
+                }
+            },
+            "contentName": "meta.function-call.arguments.colang",
+            "patterns": [
+                {
+                    "name": "punctuation.separator.arguments.colang",
+                    "match": "(,)"
+                },
+                {
+                    "match": "(?x)\n  (?:(?<=[,(])|^) \\s* (\\*{1,2})\n",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.operator.unpacking.arguments.colang"
+                        }
+                    }
+                },
+                {
+                    "include": "#lambda-incomplete"
+                },
+                {
+                    "include": "#illegal-names"
+                },
+                {
+                    "match": "\\b([[:alpha:]_]\\w*)\\s*(=)(?!=)",
+                    "captures": {
+                        "1": {
+                            "name": "variable.parameter.function-call.colang"
+                        },
+                        "2": {
+                            "name": "keyword.operator.assignment.colang"
+                        }
+                    }
+                },
+                {
+                    "name": "keyword.operator.assignment.colang",
+                    "match": "=(?!=)"
+                },
+                {
+                    "include": "#expression"
+                },
+                {
+                    "match": "\\s*(\\))\\s*(\\()",
+                    "captures": {
+                        "1": {
+                            "name": "punctuation.definition.arguments.end.colang"
+                        },
+                        "2": {
+                            "name": "punctuation.definition.arguments.begin.colang"
+                        }
+                    }
+                }
+            ]
+        },
+        "builtin-callables": {
+            "patterns": [
+                {
+                    "include": "#illegal-names"
+                },
+                {
+                    "include": "#illegal-object-name"
+                },
+                {
+                    "include": "#builtin-exceptions"
+                },
+                {
+                    "include": "#builtin-functions"
+                },
+                {
+                    "include": "#builtin-types"
+                }
+            ]
+        },
+        "builtin-possible-callables": {
+            "patterns": [
+                {
+                    "include": "#builtin-callables"
+                },
+                {
+                    "include": "#magic-names"
+                }
+            ]
+        },
+        "builtin-exceptions": {
+            "name": "support.type.exception.colang",
+            "match": ""
+        },
+        "builtin-functions": {
+            "patterns": [
+                {
+                    "name": "support.function.builtin.colang",
+                    "match": "(?x)\n  (?<!\\.) \\b(\n    len | search | regex | findall | uid | str | escape | isint | isfloat | isbool | isstr | isregex | print | log\n  )\\b\n"
+                }
+            ]
+        },
+        "builtin-types": {
+            "name": "support.type.colang",
+            "match": ""
+        },
+        "magic-variable-names": {
+            "comment": "magic variables which a class/module may have.",
+            "match": "",
+            "captures": {
+                "1": {
+                    "name": "support.variable.magic.colang"
+                }
+            }
+        },
+        "magic-function-names": {
+            "comment": "these methods have magic interpretation by python and are generally called\nindirectly through syntactic constructs\n",
+            "match": "",
+            "captures": {
+                "1": {
+                    "name": "support.function.magic.colang"
+                }
+            }
+        },
+        "magic-names": {
+            "patterns": [
+                {
+                    "include": "#magic-function-names"
+                },
+                {
+                    "include": "#magic-variable-names"
+                }
+            ]
+        },
+        "illegal-names": {
+            "match": "(?x)\n  \\b(?:\n    (\n      and | assert |  await | break |  continue | flow | match | send | start | activate\n      | del | elif | else | except | finally | for | from | global\n      | if | in | is | (?<=\\.)lambda | lambda(?=\\s*[\\.=])\n      | nonlocal | not | or | pass | raise | return | try | while | with\n      | yield\n    ) | (\n      as | import\n    )\n  )\\b\n",
+            "captures": {
+                "1": {
+                    "name": "keyword.control.flow.colang"
+                },
+                "2": {
+                    "name": "keyword.control.import.colang"
+                }
+            }
+        },
+        "special-variables": {
+            "match": "(?x)\n  \\b (?<!\\.) (?:\n    (self) | (cls)\n  )\\b\n",
+            "captures": {
+                "1": {
+                    "name": "variable.language.special.self.colang"
+                },
+                "2": {
+                    "name": "variable.language.special.cls.colang"
+                }
+            }
+        },
+        "ellipsis": {
+            "name": "constant.other.ellipsis.colang",
+            "match": "\\.\\.\\."
+        },
+        "backticks": {
+            "name": "invalid.deprecated.backtick.colang",
+            "begin": "\\`",
+            "end": "(?:\\`|(?<!\\\\)(\\n))",
+            "patterns": [
+                {
+                    "include": "#expression"
+                }
+            ]
+        },
+        "illegal-operator": {
+            "patterns": [
+                {
+                    "name": "invalid.illegal.operator.colang",
+                    "match": "&&|\\|\\||--|\\+\\+"
+                },
+                {
+                    "name": "invalid.illegal.operator.colang",
+                    "comment": "We don't want `!` to flash when we're typing `!=`",
+                    "match": "!\\b"
+                }
+            ]
+        },
+        "illegal-object-name": {
+            "comment": "It's illegal to name class or function \"True\"",
+            "name": "keyword.illegal.name.colang",
+            "match": "\\b(True|False|None)\\b"
+        },
+        "illegal-anno": {
+            "name": "invalid.illegal.annotation.colang",
+            "match": "->"
+        },
+        "regexp-base-expression": {
+            "patterns": [
+                {
+                    "include": "#regexp-quantifier"
+                },
+                {
+                    "include": "#regexp-base-common"
+                }
+            ]
+        },
+        "fregexp-base-expression": {
+            "patterns": [
+                {
+                    "include": "#fregexp-quantifier"
+                },
+                {
+                    "include": "#fstring-formatting-braces"
+                },
+                {
+                    "match": "\\{.*?\\}"
+                },
+                {
+                    "include": "#regexp-base-common"
+                }
+            ]
+        },
+        "fstring-formatting-braces": {
+            "patterns": [
+                {
+                    "comment": "empty braces are illegal",
+                    "match": "({)(\\s*?)(})",
+                    "captures": {
+                        "1": {
+                            "name": "constant.character.format.placeholder.other.colang"
+                        },
+                        "2": {
+                            "name": "invalid.illegal.brace.colang"
+                        },
+                        "3": {
+                            "name": "constant.character.format.placeholder.other.colang"
+                        }
+                    }
+                },
+                {
+                    "name": "constant.character.escape.colang",
+                    "match": "({{|}})"
+                }
+            ]
+        },
+        "regexp-base-common": {
+            "patterns": [
+                {
+                    "name": "support.other.match.any.regexp",
+                    "match": "\\."
+                },
+                {
+                    "name": "support.other.match.begin.regexp",
+                    "match": "\\^"
+                },
+                {
+                    "name": "support.other.match.end.regexp",
+                    "match": "\\$"
+                },
+                {
+                    "name": "keyword.operator.quantifier.regexp",
+                    "match": "[+*?]\\??"
+                },
+                {
+                    "name": "keyword.operator.disjunction.regexp",
+                    "match": "\\|"
+                },
+                {
+                    "include": "#regexp-escape-sequence"
+                }
+            ]
+        },
+        "regexp-quantifier": {
+            "name": "keyword.operator.quantifier.regexp",
+            "match": "(?x)\n  \\{(\n    \\d+ | \\d+,(\\d+)? | ,\\d+\n  )\\}\n"
+        },
+        "fregexp-quantifier": {
+            "name": "keyword.operator.quantifier.regexp",
+            "match": "(?x)\n  \\{\\{(\n    \\d+ | \\d+,(\\d+)? | ,\\d+\n  )\\}\\}\n"
+        },
+        "regexp-backreference-number": {
+            "name": "meta.backreference.regexp",
+            "match": "(\\\\[1-9]\\d?)",
+            "captures": {
+                "1": {
+                    "name": "entity.name.tag.backreference.regexp"
+                }
+            }
+        },
+        "regexp-backreference": {
+            "name": "meta.backreference.named.regexp",
+            "match": "(?x)\n  (\\()  (\\?P= \\w+(?:\\s+[[:alnum:]]+)?)  (\\))\n",
+            "captures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.backreference.named.begin.regexp"
+                },
+                "2": {
+                    "name": "entity.name.tag.named.backreference.regexp"
+                },
+                "3": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.backreference.named.end.regexp"
+                }
+            }
+        },
+        "regexp-flags": {
+            "name": "storage.modifier.flag.regexp",
+            "match": "\\(\\?[aiLmsux]+\\)"
+        },
+        "regexp-escape-special": {
+            "name": "support.other.escape.special.regexp",
+            "match": "\\\\([AbBdDsSwWZ])"
+        },
+        "regexp-escape-character": {
+            "name": "constant.character.escape.regexp",
+            "match": "(?x)\n  \\\\ (\n        x[0-9A-Fa-f]{2}\n        | 0[0-7]{1,2}\n        | [0-7]{3}\n     )\n"
+        },
+        "regexp-escape-unicode": {
+            "name": "constant.character.unicode.regexp",
+            "match": "(?x)\n  \\\\ (\n        u[0-9A-Fa-f]{4}\n        | U[0-9A-Fa-f]{8}\n     )\n"
+        },
+        "regexp-escape-catchall": {
+            "name": "constant.character.escape.regexp",
+            "match": "\\\\(.|\\n)"
+        },
+        "regexp-escape-sequence": {
+            "patterns": [
+                {
+                    "include": "#regexp-escape-special"
+                },
+                {
+                    "include": "#regexp-escape-character"
+                },
+                {
+                    "include": "#regexp-escape-unicode"
+                },
+                {
+                    "include": "#regexp-backreference-number"
+                },
+                {
+                    "include": "#regexp-escape-catchall"
+                }
+            ]
+        },
+        "regexp-charecter-set-escapes": {
+            "patterns": [
+                {
+                    "name": "constant.character.escape.regexp",
+                    "match": "\\\\[abfnrtv\\\\]"
+                },
+                {
+                    "include": "#regexp-escape-special"
+                },
+                {
+                    "name": "constant.character.escape.regexp",
+                    "match": "\\\\([0-7]{1,3})"
+                },
+                {
+                    "include": "#regexp-escape-character"
+                },
+                {
+                    "include": "#regexp-escape-unicode"
+                },
+                {
+                    "include": "#regexp-escape-catchall"
+                }
+            ]
+        },
+        "codetags": {
+            "match": "(?:\\b(NOTE|XXX|HACK|FIXME|BUG|TODO)\\b)",
+            "captures": {
+                "1": {
+                    "name": "keyword.codetag.notation.colang"
+                }
+            }
+        },
+        "comments-base": {
+            "name": "comment.line.number-sign.colang",
+            "begin": "(\\#)",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.definition.comment.colang"
+                }
+            },
+            "end": "($)",
+            "patterns": [
+                {
+                    "include": "#codetags"
+                }
+            ]
+        },
+        "comments-string-single-three": {
+            "name": "comment.line.number-sign.colang",
+            "begin": "(\\#)",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.definition.comment.colang"
+                }
+            },
+            "end": "($|(?='''))",
+            "patterns": [
+                {
+                    "include": "#codetags"
+                }
+            ]
+        },
+        "comments-string-double-three": {
+            "name": "comment.line.number-sign.colang",
+            "begin": "(\\#)",
+            "beginCaptures": {
+                "1": {
+                    "name": "punctuation.definition.comment.colang"
+                }
+            },
+            "end": "($|(?=\"\"\"))",
+            "patterns": [
+                {
+                    "include": "#codetags"
+                }
+            ]
+        },
+        "single-one-regexp-expression": {
+            "patterns": [
+                {
+                    "include": "#regexp-base-expression"
+                },
+                {
+                    "include": "#single-one-regexp-character-set"
+                },
+                {
+                    "include": "#single-one-regexp-comments"
+                },
+                {
+                    "include": "#regexp-flags"
+                },
+                {
+                    "include": "#single-one-regexp-named-group"
+                },
+                {
+                    "include": "#regexp-backreference"
+                },
+                {
+                    "include": "#single-one-regexp-lookahead"
+                },
+                {
+                    "include": "#single-one-regexp-lookahead-negative"
+                },
+                {
+                    "include": "#single-one-regexp-lookbehind"
+                },
+                {
+                    "include": "#single-one-regexp-lookbehind-negative"
+                },
+                {
+                    "include": "#single-one-regexp-conditional"
+                },
+                {
+                    "include": "#single-one-regexp-parentheses-non-capturing"
+                },
+                {
+                    "include": "#single-one-regexp-parentheses"
+                }
+            ]
+        },
+        "single-one-regexp-character-set": {
+            "patterns": [
+                {
+                    "match": "(?x)\n  \\[ \\^? \\] (?! .*?\\])\n"
+                },
+                {
+                    "name": "meta.character.set.regexp",
+                    "begin": "(\\[)(\\^)?(\\])?",
+                    "end": "(\\]|(?=\\'))|((?=(?<!\\\\)\\n))",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "punctuation.character.set.begin.regexp constant.other.set.regexp"
+                        },
+                        "2": {
+                            "name": "keyword.operator.negation.regexp"
+                        },
+                        "3": {
+                            "name": "constant.character.set.regexp"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.character.set.end.regexp constant.other.set.regexp"
+                        },
+                        "2": {
+                            "name": "invalid.illegal.newline.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#regexp-charecter-set-escapes"
+                        },
+                        {
+                            "name": "constant.character.set.regexp",
+                            "match": "[^\\n]"
+                        }
+                    ]
+                }
+            ]
+        },
+        "single-one-regexp-named-group": {
+            "name": "meta.named.regexp",
+            "begin": "(?x)\n  (\\()  (\\?P <\\w+(?:\\s+[[:alnum:]]+)?>)\n",
+            "end": "(\\)|(?=\\'))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.named.begin.regexp"
+                },
+                "2": {
+                    "name": "entity.name.tag.named.group.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.named.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-one-regexp-expression"
+                }
+            ]
+        },
+        "single-one-regexp-comments": {
+            "name": "comment.regexp",
+            "begin": "\\(\\?#",
+            "end": "(\\)|(?=\\'))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.comment.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.comment.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#codetags"
+                }
+            ]
+        },
+        "single-one-regexp-lookahead": {
+            "begin": "(\\()\\?=",
+            "end": "(\\)|(?=\\'))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookahead.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookahead.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookahead.regexp punctuation.parenthesis.lookahead.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-one-regexp-expression"
+                }
+            ]
+        },
+        "single-one-regexp-lookahead-negative": {
+            "begin": "(\\()\\?!",
+            "end": "(\\)|(?=\\'))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookahead.negative.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookahead.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookahead.negative.regexp punctuation.parenthesis.lookahead.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-one-regexp-expression"
+                }
+            ]
+        },
+        "single-one-regexp-lookbehind": {
+            "begin": "(\\()\\?<=",
+            "end": "(\\)|(?=\\'))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookbehind.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookbehind.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookbehind.regexp punctuation.parenthesis.lookbehind.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-one-regexp-expression"
+                }
+            ]
+        },
+        "single-one-regexp-lookbehind-negative": {
+            "begin": "(\\()\\?<!",
+            "end": "(\\)|(?=\\'))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookbehind.negative.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookbehind.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookbehind.negative.regexp punctuation.parenthesis.lookbehind.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-one-regexp-expression"
+                }
+            ]
+        },
+        "single-one-regexp-conditional": {
+            "begin": "(\\()\\?\\((\\w+(?:\\s+[[:alnum:]]+)?|\\d+)\\)",
+            "end": "(\\)|(?=\\'))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.conditional.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.conditional.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.conditional.negative.regexp punctuation.parenthesis.conditional.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-one-regexp-expression"
+                }
+            ]
+        },
+        "single-one-regexp-parentheses-non-capturing": {
+            "begin": "\\(\\?:",
+            "end": "(\\)|(?=\\'))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.non-capturing.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.non-capturing.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-one-regexp-expression"
+                }
+            ]
+        },
+        "single-one-regexp-parentheses": {
+            "begin": "\\(",
+            "end": "(\\)|(?=\\'))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-one-regexp-expression"
+                }
+            ]
+        },
+        "single-three-regexp-expression": {
+            "patterns": [
+                {
+                    "include": "#regexp-base-expression"
+                },
+                {
+                    "include": "#single-three-regexp-character-set"
+                },
+                {
+                    "include": "#single-three-regexp-comments"
+                },
+                {
+                    "include": "#regexp-flags"
+                },
+                {
+                    "include": "#single-three-regexp-named-group"
+                },
+                {
+                    "include": "#regexp-backreference"
+                },
+                {
+                    "include": "#single-three-regexp-lookahead"
+                },
+                {
+                    "include": "#single-three-regexp-lookahead-negative"
+                },
+                {
+                    "include": "#single-three-regexp-lookbehind"
+                },
+                {
+                    "include": "#single-three-regexp-lookbehind-negative"
+                },
+                {
+                    "include": "#single-three-regexp-conditional"
+                },
+                {
+                    "include": "#single-three-regexp-parentheses-non-capturing"
+                },
+                {
+                    "include": "#single-three-regexp-parentheses"
+                },
+                {
+                    "include": "#comments-string-single-three"
+                }
+            ]
+        },
+        "single-three-regexp-character-set": {
+            "patterns": [
+                {
+                    "match": "(?x)\n  \\[ \\^? \\] (?! .*?\\])\n"
+                },
+                {
+                    "name": "meta.character.set.regexp",
+                    "begin": "(\\[)(\\^)?(\\])?",
+                    "end": "(\\]|(?=\\'\\'\\'))",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "punctuation.character.set.begin.regexp constant.other.set.regexp"
+                        },
+                        "2": {
+                            "name": "keyword.operator.negation.regexp"
+                        },
+                        "3": {
+                            "name": "constant.character.set.regexp"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.character.set.end.regexp constant.other.set.regexp"
+                        },
+                        "2": {
+                            "name": "invalid.illegal.newline.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#regexp-charecter-set-escapes"
+                        },
+                        {
+                            "name": "constant.character.set.regexp",
+                            "match": "[^\\n]"
+                        }
+                    ]
+                }
+            ]
+        },
+        "single-three-regexp-named-group": {
+            "name": "meta.named.regexp",
+            "begin": "(?x)\n  (\\()  (\\?P <\\w+(?:\\s+[[:alnum:]]+)?>)\n",
+            "end": "(\\)|(?=\\'\\'\\'))",
+            "beginCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.named.begin.regexp"
+                },
+                "2": {
+                    "name": "entity.name.tag.named.group.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.named.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-single-three"
+                }
+            ]
+        },
+        "single-three-regexp-comments": {
+            "name": "comment.regexp",
+            "begin": "\\(\\?#",
+            "end": "(\\)|(?=\\'\\'\\'))",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.comment.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.comment.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#codetags"
+                }
+            ]
+        },
+        "single-three-regexp-lookahead": {
+            "begin": "(\\()\\?=",
+            "end": "(\\)|(?=\\'\\'\\'))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookahead.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookahead.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookahead.regexp punctuation.parenthesis.lookahead.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-single-three"
+                }
+            ]
+        },
+        "single-three-regexp-lookahead-negative": {
+            "begin": "(\\()\\?!",
+            "end": "(\\)|(?=\\'\\'\\'))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookahead.negative.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookahead.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookahead.negative.regexp punctuation.parenthesis.lookahead.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-single-three"
+                }
+            ]
+        },
+        "single-three-regexp-lookbehind": {
+            "begin": "(\\()\\?<=",
+            "end": "(\\)|(?=\\'\\'\\'))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookbehind.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookbehind.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookbehind.regexp punctuation.parenthesis.lookbehind.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-single-three"
+                }
+            ]
+        },
+        "single-three-regexp-lookbehind-negative": {
+            "begin": "(\\()\\?<!",
+            "end": "(\\)|(?=\\'\\'\\'))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookbehind.negative.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookbehind.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookbehind.negative.regexp punctuation.parenthesis.lookbehind.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-single-three"
+                }
+            ]
+        },
+        "single-three-regexp-conditional": {
+            "begin": "(\\()\\?\\((\\w+(?:\\s+[[:alnum:]]+)?|\\d+)\\)",
+            "end": "(\\)|(?=\\'\\'\\'))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.conditional.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.conditional.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.conditional.negative.regexp punctuation.parenthesis.conditional.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-single-three"
+                }
+            ]
+        },
+        "single-three-regexp-parentheses-non-capturing": {
+            "begin": "\\(\\?:",
+            "end": "(\\)|(?=\\'\\'\\'))",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.non-capturing.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.non-capturing.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-single-three"
+                }
+            ]
+        },
+        "single-three-regexp-parentheses": {
+            "begin": "\\(",
+            "end": "(\\)|(?=\\'\\'\\'))",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-single-three"
+                }
+            ]
+        },
+        "double-one-regexp-expression": {
+            "patterns": [
+                {
+                    "include": "#regexp-base-expression"
+                },
+                {
+                    "include": "#double-one-regexp-character-set"
+                },
+                {
+                    "include": "#double-one-regexp-comments"
+                },
+                {
+                    "include": "#regexp-flags"
+                },
+                {
+                    "include": "#double-one-regexp-named-group"
+                },
+                {
+                    "include": "#regexp-backreference"
+                },
+                {
+                    "include": "#double-one-regexp-lookahead"
+                },
+                {
+                    "include": "#double-one-regexp-lookahead-negative"
+                },
+                {
+                    "include": "#double-one-regexp-lookbehind"
+                },
+                {
+                    "include": "#double-one-regexp-lookbehind-negative"
+                },
+                {
+                    "include": "#double-one-regexp-conditional"
+                },
+                {
+                    "include": "#double-one-regexp-parentheses-non-capturing"
+                },
+                {
+                    "include": "#double-one-regexp-parentheses"
+                }
+            ]
+        },
+        "double-one-regexp-character-set": {
+            "patterns": [
+                {
+                    "match": "(?x)\n  \\[ \\^? \\] (?! .*?\\])\n"
+                },
+                {
+                    "name": "meta.character.set.regexp",
+                    "begin": "(\\[)(\\^)?(\\])?",
+                    "end": "(\\]|(?=\"))|((?=(?<!\\\\)\\n))",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "punctuation.character.set.begin.regexp constant.other.set.regexp"
+                        },
+                        "2": {
+                            "name": "keyword.operator.negation.regexp"
+                        },
+                        "3": {
+                            "name": "constant.character.set.regexp"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.character.set.end.regexp constant.other.set.regexp"
+                        },
+                        "2": {
+                            "name": "invalid.illegal.newline.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#regexp-charecter-set-escapes"
+                        },
+                        {
+                            "name": "constant.character.set.regexp",
+                            "match": "[^\\n]"
+                        }
+                    ]
+                }
+            ]
+        },
+        "double-one-regexp-named-group": {
+            "name": "meta.named.regexp",
+            "begin": "(?x)\n  (\\()  (\\?P <\\w+(?:\\s+[[:alnum:]]+)?>)\n",
+            "end": "(\\)|(?=\"))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.named.begin.regexp"
+                },
+                "2": {
+                    "name": "entity.name.tag.named.group.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.named.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-one-regexp-expression"
+                }
+            ]
+        },
+        "double-one-regexp-comments": {
+            "name": "comment.regexp",
+            "begin": "\\(\\?#",
+            "end": "(\\)|(?=\"))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.comment.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.comment.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#codetags"
+                }
+            ]
+        },
+        "double-one-regexp-lookahead": {
+            "begin": "(\\()\\?=",
+            "end": "(\\)|(?=\"))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookahead.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookahead.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookahead.regexp punctuation.parenthesis.lookahead.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-one-regexp-expression"
+                }
+            ]
+        },
+        "double-one-regexp-lookahead-negative": {
+            "begin": "(\\()\\?!",
+            "end": "(\\)|(?=\"))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookahead.negative.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookahead.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookahead.negative.regexp punctuation.parenthesis.lookahead.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-one-regexp-expression"
+                }
+            ]
+        },
+        "double-one-regexp-lookbehind": {
+            "begin": "(\\()\\?<=",
+            "end": "(\\)|(?=\"))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookbehind.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookbehind.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookbehind.regexp punctuation.parenthesis.lookbehind.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-one-regexp-expression"
+                }
+            ]
+        },
+        "double-one-regexp-lookbehind-negative": {
+            "begin": "(\\()\\?<!",
+            "end": "(\\)|(?=\"))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookbehind.negative.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookbehind.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookbehind.negative.regexp punctuation.parenthesis.lookbehind.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-one-regexp-expression"
+                }
+            ]
+        },
+        "double-one-regexp-conditional": {
+            "begin": "(\\()\\?\\((\\w+(?:\\s+[[:alnum:]]+)?|\\d+)\\)",
+            "end": "(\\)|(?=\"))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.conditional.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.conditional.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.conditional.negative.regexp punctuation.parenthesis.conditional.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-one-regexp-expression"
+                }
+            ]
+        },
+        "double-one-regexp-parentheses-non-capturing": {
+            "begin": "\\(\\?:",
+            "end": "(\\)|(?=\"))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.non-capturing.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.non-capturing.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-one-regexp-expression"
+                }
+            ]
+        },
+        "double-one-regexp-parentheses": {
+            "begin": "\\(",
+            "end": "(\\)|(?=\"))|((?=(?<!\\\\)\\n))",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-one-regexp-expression"
+                }
+            ]
+        },
+        "double-three-regexp-expression": {
+            "patterns": [
+                {
+                    "include": "#regexp-base-expression"
+                },
+                {
+                    "include": "#double-three-regexp-character-set"
+                },
+                {
+                    "include": "#double-three-regexp-comments"
+                },
+                {
+                    "include": "#regexp-flags"
+                },
+                {
+                    "include": "#double-three-regexp-named-group"
+                },
+                {
+                    "include": "#regexp-backreference"
+                },
+                {
+                    "include": "#double-three-regexp-lookahead"
+                },
+                {
+                    "include": "#double-three-regexp-lookahead-negative"
+                },
+                {
+                    "include": "#double-three-regexp-lookbehind"
+                },
+                {
+                    "include": "#double-three-regexp-lookbehind-negative"
+                },
+                {
+                    "include": "#double-three-regexp-conditional"
+                },
+                {
+                    "include": "#double-three-regexp-parentheses-non-capturing"
+                },
+                {
+                    "include": "#double-three-regexp-parentheses"
+                },
+                {
+                    "include": "#comments-string-double-three"
+                }
+            ]
+        },
+        "double-three-regexp-character-set": {
+            "patterns": [
+                {
+                    "match": "(?x)\n  \\[ \\^? \\] (?! .*?\\])\n"
+                },
+                {
+                    "name": "meta.character.set.regexp",
+                    "begin": "(\\[)(\\^)?(\\])?",
+                    "end": "(\\]|(?=\"\"\"))",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "punctuation.character.set.begin.regexp constant.other.set.regexp"
+                        },
+                        "2": {
+                            "name": "keyword.operator.negation.regexp"
+                        },
+                        "3": {
+                            "name": "constant.character.set.regexp"
+                        }
+                    },
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.character.set.end.regexp constant.other.set.regexp"
+                        },
+                        "2": {
+                            "name": "invalid.illegal.newline.colang"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#regexp-charecter-set-escapes"
+                        },
+                        {
+                            "name": "constant.character.set.regexp",
+                            "match": "[^\\n]"
+                        }
+                    ]
+                }
+            ]
+        },
+        "double-three-regexp-named-group": {
+            "name": "meta.named.regexp",
+            "begin": "(?x)\n  (\\()  (\\?P <\\w+(?:\\s+[[:alnum:]]+)?>)\n",
+            "end": "(\\)|(?=\"\"\"))",
+            "beginCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.named.begin.regexp"
+                },
+                "2": {
+                    "name": "entity.name.tag.named.group.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.named.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-double-three"
+                }
+            ]
+        },
+        "double-three-regexp-comments": {
+            "name": "comment.regexp",
+            "begin": "\\(\\?#",
+            "end": "(\\)|(?=\"\"\"))",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.comment.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.comment.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#codetags"
+                }
+            ]
+        },
+        "double-three-regexp-lookahead": {
+            "begin": "(\\()\\?=",
+            "end": "(\\)|(?=\"\"\"))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookahead.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookahead.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookahead.regexp punctuation.parenthesis.lookahead.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-double-three"
+                }
+            ]
+        },
+        "double-three-regexp-lookahead-negative": {
+            "begin": "(\\()\\?!",
+            "end": "(\\)|(?=\"\"\"))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookahead.negative.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookahead.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookahead.negative.regexp punctuation.parenthesis.lookahead.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-double-three"
+                }
+            ]
+        },
+        "double-three-regexp-lookbehind": {
+            "begin": "(\\()\\?<=",
+            "end": "(\\)|(?=\"\"\"))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookbehind.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookbehind.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookbehind.regexp punctuation.parenthesis.lookbehind.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-double-three"
+                }
+            ]
+        },
+        "double-three-regexp-lookbehind-negative": {
+            "begin": "(\\()\\?<!",
+            "end": "(\\)|(?=\"\"\"))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.lookbehind.negative.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.lookbehind.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.lookbehind.negative.regexp punctuation.parenthesis.lookbehind.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-double-three"
+                }
+            ]
+        },
+        "double-three-regexp-conditional": {
+            "begin": "(\\()\\?\\((\\w+(?:\\s+[[:alnum:]]+)?|\\d+)\\)",
+            "end": "(\\)|(?=\"\"\"))",
+            "beginCaptures": {
+                "0": {
+                    "name": "keyword.operator.conditional.regexp"
+                },
+                "1": {
+                    "name": "punctuation.parenthesis.conditional.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "keyword.operator.conditional.negative.regexp punctuation.parenthesis.conditional.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-double-three"
+                }
+            ]
+        },
+        "double-three-regexp-parentheses-non-capturing": {
+            "begin": "\\(\\?:",
+            "end": "(\\)|(?=\"\"\"))",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.non-capturing.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.non-capturing.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-double-three"
+                }
+            ]
+        },
+        "double-three-regexp-parentheses": {
+            "begin": "\\(",
+            "end": "(\\)|(?=\"\"\"))",
+            "beginCaptures": {
+                "0": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.begin.regexp"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "support.other.parenthesis.regexp punctuation.parenthesis.end.regexp"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-three-regexp-expression"
+                },
+                {
+                    "include": "#comments-string-double-three"
+                }
+            ]
+        },
+        "regexp-single-one-line": {
+            "name": "string.regexp.quoted.single.colang",
+            "begin": "\\b(([uU]r)|([bB]r)|(r[bB]?))(\\')",
+            "end": "(\\')|(?<!\\\\)(\\n)",
+            "beginCaptures": {
+                "2": {
+                    "name": "invalid.deprecated.prefix.colang"
+                },
+                "3": {
+                    "name": "storage.type.string.colang"
+                },
+                "4": {
+                    "name": "storage.type.string.colang"
+                },
+                "5": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-one-regexp-expression"
+                }
+            ]
+        },
+        "regexp-single-three-line": {
+            "name": "string.regexp.quoted.multi.colang",
+            "begin": "\\b(([uU]r)|([bB]r)|(r[bB]?))(\\'\\'\\')",
+            "end": "(\\'\\'\\')",
+            "beginCaptures": {
+                "2": {
+                    "name": "invalid.deprecated.prefix.colang"
+                },
+                "3": {
+                    "name": "storage.type.string.colang"
+                },
+                "4": {
+                    "name": "storage.type.string.colang"
+                },
+                "5": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#single-three-regexp-expression"
+                }
+            ]
+        },
+        "regexp-double-one-line": {
+            "name": "string.regexp.quoted.single.colang",
+            "begin": "\\b(([uU]r)|([bB]r)|(r[bB]?))(\")",
+            "end": "(\")|(?<!\\\\)(\\n)",
+            "beginCaptures": {
+                "2": {
+                    "name": "invalid.deprecated.prefix.colang"
+                },
+                "3": {
+                    "name": "storage.type.string.colang"
+                },
+                "4": {
+                    "name": "storage.type.string.colang"
+                },
+                "5": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-one-regexp-expression"
+                }
+            ]
+        },
+        "regexp-double-three-line": {
+            "name": "string.regexp.quoted.multi.colang",
+            "begin": "\\b(([uU]r)|([bB]r)|(r[bB]?))(\"\"\")",
+            "end": "(\"\"\")",
+            "beginCaptures": {
+                "2": {
+                    "name": "invalid.deprecated.prefix.colang"
+                },
+                "3": {
+                    "name": "storage.type.string.colang"
+                },
+                "4": {
+                    "name": "storage.type.string.colang"
+                },
+                "5": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#double-three-regexp-expression"
+                }
+            ]
+        },
+        "string-raw-quoted-single-line": {
+            "name": "string.quoted.raw.single.colang",
+            "begin": "\\b(([uU]R)|(R))((['\"]))",
+            "end": "(\\4)|((?<!\\\\)\\n)",
+            "beginCaptures": {
+                "2": {
+                    "name": "invalid.deprecated.prefix.colang"
+                },
+                "3": {
+                    "name": "storage.type.string.colang"
+                },
+                "4": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#string-single-bad-brace1-formatting-raw"
+                },
+                {
+                    "include": "#string-single-bad-brace2-formatting-raw"
+                },
+                {
+                    "include": "#string-raw-guts"
+                }
+            ]
+        },
+        "string-bin-quoted-single-line": {
+            "name": "string.quoted.binary.single.colang",
+            "begin": "(\\b[bB])((['\"]))",
+            "end": "(\\2)|((?<!\\\\)\\n)",
+            "beginCaptures": {
+                "1": {
+                    "name": "storage.type.string.colang"
+                },
+                "2": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#string-entity"
+                }
+            ]
+        },
+        "string-raw-bin-quoted-single-line": {
+            "name": "string.quoted.raw.binary.single.colang",
+            "begin": "(\\b(?:R[bB]|[bB]R))((['\"]))",
+            "end": "(\\2)|((?<!\\\\)\\n)",
+            "beginCaptures": {
+                "1": {
+                    "name": "storage.type.string.colang"
+                },
+                "2": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#string-raw-bin-guts"
+                }
+            ]
+        },
+        "string-quoted-single-line": {
+            "name": "string.quoted.single.colang",
+            "begin": "(?:\\b([rR])(?=[uU]))?([uU])?((['\"]))",
+            "end": "(\\3)|((?<!\\\\)\\n)",
+            "beginCaptures": {
+                "1": {
+                    "name": "invalid.illegal.prefix.colang"
+                },
+                "2": {
+                    "name": "storage.type.string.colang"
+                },
+                "3": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#string-single-bad-brace1-formatting-unicode"
+                },
+                {
+                    "include": "#string-single-bad-brace2-formatting-unicode"
+                },
+                {
+                    "include": "#string-unicode-guts"
+                }
+            ]
+        },
+        "string-single-bad-brace1-formatting-unicode": {
+            "comment": "template using {% ... %}",
+            "begin": "(?x)\n    (?= \\{%\n          ( .*? (?!(['\"])|((?<!\\\\)\\n)) )\n        %\\}\n    )\n",
+            "end": "(?=(['\"])|((?<!\\\\)\\n))",
+            "patterns": [
+                {
+                    "include": "#escape-sequence-unicode"
+                },
+                {
+                    "include": "#escape-sequence"
+                },
+                {
+                    "include": "#string-line-continuation"
+                }
+            ]
+        },
+        "string-single-bad-brace1-formatting-raw": {
+            "comment": "template using {% ... %}",
+            "begin": "(?x)\n    (?= \\{%\n          ( .*? (?!(['\"])|((?<!\\\\)\\n)) )\n        %\\}\n    )\n",
+            "end": "(?=(['\"])|((?<!\\\\)\\n))",
+            "patterns": [
+                {
+                    "include": "#string-consume-escape"
+                }
+            ]
+        },
+        "string-single-bad-brace2-formatting-unicode": {
+            "comment": "odd format or format-like syntax",
+            "begin": "(?x)\n    (?!\\{\\{)\n    (?= \\{ (\n              \\w*? (?!(['\"])|((?<!\\\\)\\n)) [^!:\\.\\[}\\w]\n           )\n        .*?(?!(['\"])|((?<!\\\\)\\n))\n        \\}\n    )\n",
+            "end": "(?=(['\"])|((?<!\\\\)\\n))",
+            "patterns": [
+                {
+                    "include": "#escape-sequence-unicode"
+                },
+                {
+                    "include": "#string-entity"
+                }
+            ]
+        },
+        "string-single-bad-brace2-formatting-raw": {
+            "comment": "odd format or format-like syntax",
+            "begin": "(?x)\n    (?!\\{\\{)\n    (?= \\{ (\n              \\w*? (?!(['\"])|((?<!\\\\)\\n)) [^!:\\.\\[}\\w]\n           )\n        .*?(?!(['\"])|((?<!\\\\)\\n))\n        \\}\n    )\n",
+            "end": "(?=(['\"])|((?<!\\\\)\\n))",
+            "patterns": [
+                {
+                    "include": "#string-consume-escape"
+                },
+                {
+                    "include": "#string-formatting"
+                }
+            ]
+        },
+        "string-raw-quoted-multi-line": {
+            "name": "string.quoted.raw.multi.colang",
+            "begin": "\\b(([uU]R)|(R))('''|\"\"\")",
+            "end": "(\\4)",
+            "beginCaptures": {
+                "2": {
+                    "name": "invalid.deprecated.prefix.colang"
+                },
+                "3": {
+                    "name": "storage.type.string.colang"
+                },
+                "4": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#string-multi-bad-brace1-formatting-raw"
+                },
+                {
+                    "include": "#string-multi-bad-brace2-formatting-raw"
+                },
+                {
+                    "include": "#string-raw-guts"
+                }
+            ]
+        },
+        "string-bin-quoted-multi-line": {
+            "name": "string.quoted.binary.multi.colang",
+            "begin": "(\\b[bB])('''|\"\"\")",
+            "end": "(\\2)",
+            "beginCaptures": {
+                "1": {
+                    "name": "storage.type.string.colang"
+                },
+                "2": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#string-entity"
+                }
+            ]
+        },
+        "string-raw-bin-quoted-multi-line": {
+            "name": "string.quoted.raw.binary.multi.colang",
+            "begin": "(\\b(?:R[bB]|[bB]R))('''|\"\"\")",
+            "end": "(\\2)",
+            "beginCaptures": {
+                "1": {
+                    "name": "storage.type.string.colang"
+                },
+                "2": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#string-raw-bin-guts"
+                }
+            ]
+        },
+        "string-quoted-multi-line": {
+            "name": "string.quoted.multi.colang",
+            "begin": "(?:\\b([rR])(?=[uU]))?([uU])?('''|\"\"\")",
+            "end": "(\\3)",
+            "beginCaptures": {
+                "1": {
+                    "name": "invalid.illegal.prefix.colang"
+                },
+                "2": {
+                    "name": "storage.type.string.colang"
+                },
+                "3": {
+                    "name": "punctuation.definition.string.begin.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#string-multi-bad-brace1-formatting-unicode"
+                },
+                {
+                    "include": "#string-multi-bad-brace2-formatting-unicode"
+                },
+                {
+                    "include": "#string-unicode-guts"
+                }
+            ]
+        },
+        "string-multi-bad-brace1-formatting-unicode": {
+            "comment": "template using {% ... %}",
+            "begin": "(?x)\n    (?= \\{%\n          ( .*? (?!'''|\"\"\") )\n        %\\}\n    )\n",
+            "end": "(?='''|\"\"\")",
+            "patterns": [
+                {
+                    "include": "#escape-sequence-unicode"
+                },
+                {
+                    "include": "#escape-sequence"
+                },
+                {
+                    "include": "#string-line-continuation"
+                }
+            ]
+        },
+        "string-multi-bad-brace1-formatting-raw": {
+            "comment": "template using {% ... %}",
+            "begin": "(?x)\n    (?= \\{%\n          ( .*? (?!'''|\"\"\") )\n        %\\}\n    )\n",
+            "end": "(?='''|\"\"\")",
+            "patterns": [
+                {
+                    "include": "#string-consume-escape"
+                }
+            ]
+        },
+        "string-multi-bad-brace2-formatting-unicode": {
+            "comment": "odd format or format-like syntax",
+            "begin": "(?x)\n    (?!\\{\\{)\n    (?= \\{ (\n              \\w*? (?!'''|\"\"\") [^!:\\.\\[}\\w]\n           )\n        .*?(?!'''|\"\"\")\n        \\}\n    )\n",
+            "end": "(?='''|\"\"\")",
+            "patterns": [
+                {
+                    "include": "#escape-sequence-unicode"
+                },
+                {
+                    "include": "#string-entity"
+                }
+            ]
+        },
+        "string-multi-bad-brace2-formatting-raw": {
+            "comment": "odd format or format-like syntax",
+            "begin": "(?x)\n    (?!\\{\\{)\n    (?= \\{ (\n              \\w*? (?!'''|\"\"\") [^!:\\.\\[}\\w]\n           )\n        .*?(?!'''|\"\"\")\n        \\}\n    )\n",
+            "end": "(?='''|\"\"\")",
+            "patterns": [
+                {
+                    "include": "#string-consume-escape"
+                },
+                {
+                    "include": "#string-formatting"
+                }
+            ]
+        },
+        "fstring-fnorm-quoted-single-line": {
+            "name": "meta.fstring.colang",
+            "begin": "(\\b[fF])([bBuU])?((['\"]))",
+            "end": "(\\3)|((?<!\\\\)\\n)",
+            "beginCaptures": {
+                "1": {
+                    "name": "string.interpolated.python string.quoted.single.python storage.type.string.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.prefix.colang"
+                },
+                "3": {
+                    "name": "punctuation.definition.string.begin.python string.interpolated.python string.quoted.single.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.python string.interpolated.python string.quoted.single.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-guts"
+                },
+                {
+                    "include": "#fstring-illegal-single-brace"
+                },
+                {
+                    "include": "#fstring-single-brace"
+                },
+                {
+                    "include": "#fstring-single-core"
+                }
+            ]
+        },
+        "fstring-normf-quoted-single-line": {
+            "name": "meta.fstring.colang",
+            "begin": "(\\b[bBuU])([fF])((['\"]))",
+            "end": "(\\3)|((?<!\\\\)\\n)",
+            "beginCaptures": {
+                "1": {
+                    "name": "invalid.illegal.prefix.colang"
+                },
+                "2": {
+                    "name": "string.interpolated.python string.quoted.single.python storage.type.string.colang"
+                },
+                "3": {
+                    "name": "punctuation.definition.string.begin.python string.quoted.single.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.python string.interpolated.python string.quoted.single.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-guts"
+                },
+                {
+                    "include": "#fstring-illegal-single-brace"
+                },
+                {
+                    "include": "#fstring-single-brace"
+                },
+                {
+                    "include": "#fstring-single-core"
+                }
+            ]
+        },
+        "fstring-raw-quoted-single-line": {
+            "name": "meta.fstring.colang",
+            "begin": "(\\b(?:[rR][fF]|[fF][rR]))((['\"]))",
+            "end": "(\\2)|((?<!\\\\)\\n)",
+            "beginCaptures": {
+                "1": {
+                    "name": "string.interpolated.python string.quoted.raw.single.python storage.type.string.colang"
+                },
+                "2": {
+                    "name": "punctuation.definition.string.begin.python string.quoted.raw.single.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.python string.interpolated.python string.quoted.raw.single.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-raw-guts"
+                },
+                {
+                    "include": "#fstring-illegal-single-brace"
+                },
+                {
+                    "include": "#fstring-single-brace"
+                },
+                {
+                    "include": "#fstring-raw-single-core"
+                }
+            ]
+        },
+        "fstring-single-core": {
+            "name": "string.interpolated.python string.quoted.single.colang",
+            "match": "(?x)\n  (.+?)\n    (\n      (?# .* and .*? in multi-line match need special handling of\n        newlines otherwise SublimeText and Atom will match slightly\n        differently.\n\n        The guard for newlines has to be separate from the\n        lookahead because of special $ matching rule.)\n      ($\\n?)\n      |\n      (?=[\\\\\\}\\{]|(['\"])|((?<!\\\\)\\n))\n    )\n  (?# due to how multiline regexps are matched we need a special case\n    for matching a newline character)\n  | \\n\n"
+        },
+        "fstring-raw-single-core": {
+            "name": "string.interpolated.python string.quoted.raw.single.colang",
+            "match": "(?x)\n  (.+?)\n    (\n      (?# .* and .*? in multi-line match need special handling of\n        newlines otherwise SublimeText and Atom will match slightly\n        differently.\n\n        The guard for newlines has to be separate from the\n        lookahead because of special $ matching rule.)\n      ($\\n?)\n      |\n      (?=[\\\\\\}\\{]|(['\"])|((?<!\\\\)\\n))\n    )\n  (?# due to how multiline regexps are matched we need a special case\n    for matching a newline character)\n  | \\n\n"
+        },
+        "fstring-single-brace": {
+            "comment": "value interpolation using { ... }",
+            "begin": "(\\{)",
+            "end": "(?x)\n  (\\})|(?=\\n)\n",
+            "beginCaptures": {
+                "1": {
+                    "name": "constant.character.format.placeholder.other.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "constant.character.format.placeholder.other.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-terminator-single"
+                },
+                {
+                    "include": "#f-expression"
+                }
+            ]
+        },
+        "fstring-terminator-single": {
+            "patterns": [
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(=(![rsa])?)(?=})"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(=?![rsa])(?=})"
+                },
+                {
+                    "match": "(?x)\n  ( (?: =?) (?: ![rsa])? )\n    ( : \\w? [<>=^]? [-+ ]? \\#?\n      \\d* ,? (\\.\\d+)? [bcdeEfFgGnosxX%]? )(?=})\n",
+                    "captures": {
+                        "1": {
+                            "name": "storage.type.format.colang"
+                        },
+                        "2": {
+                            "name": "storage.type.format.colang"
+                        }
+                    }
+                },
+                {
+                    "include": "#fstring-terminator-single-tail"
+                }
+            ]
+        },
+        "fstring-terminator-single-tail": {
+            "begin": "((?:=?)(?:![rsa])?)(:)(?=.*?{)",
+            "end": "(?=})|(?=\\n)",
+            "beginCaptures": {
+                "1": {
+                    "name": "storage.type.format.colang"
+                },
+                "2": {
+                    "name": "storage.type.format.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-illegal-single-brace"
+                },
+                {
+                    "include": "#fstring-single-brace"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "([bcdeEfFgGnosxX%])(?=})"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(\\.\\d+)"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(,)"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(\\d+)"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(\\#)"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "([-+ ])"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "([<>=^])"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(\\w)"
+                }
+            ]
+        },
+        "fstring-fnorm-quoted-multi-line": {
+            "name": "meta.fstring.colang",
+            "begin": "(\\b[fF])([bBuU])?('''|\"\"\")",
+            "end": "(\\3)",
+            "beginCaptures": {
+                "1": {
+                    "name": "string.interpolated.python string.quoted.multi.python storage.type.string.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.prefix.colang"
+                },
+                "3": {
+                    "name": "punctuation.definition.string.begin.python string.interpolated.python string.quoted.multi.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.python string.interpolated.python string.quoted.multi.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-guts"
+                },
+                {
+                    "include": "#fstring-illegal-multi-brace"
+                },
+                {
+                    "include": "#fstring-multi-brace"
+                },
+                {
+                    "include": "#fstring-multi-core"
+                }
+            ]
+        },
+        "fstring-normf-quoted-multi-line": {
+            "name": "meta.fstring.colang",
+            "begin": "(\\b[bBuU])([fF])('''|\"\"\")",
+            "end": "(\\3)",
+            "beginCaptures": {
+                "1": {
+                    "name": "invalid.illegal.prefix.colang"
+                },
+                "2": {
+                    "name": "string.interpolated.python string.quoted.multi.python storage.type.string.colang"
+                },
+                "3": {
+                    "name": "punctuation.definition.string.begin.python string.quoted.multi.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.python string.interpolated.python string.quoted.multi.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-guts"
+                },
+                {
+                    "include": "#fstring-illegal-multi-brace"
+                },
+                {
+                    "include": "#fstring-multi-brace"
+                },
+                {
+                    "include": "#fstring-multi-core"
+                }
+            ]
+        },
+        "fstring-raw-quoted-multi-line": {
+            "name": "meta.fstring.colang",
+            "begin": "(\\b(?:[rR][fF]|[fF][rR]))('''|\"\"\")",
+            "end": "(\\2)",
+            "beginCaptures": {
+                "1": {
+                    "name": "string.interpolated.python string.quoted.raw.multi.python storage.type.string.colang"
+                },
+                "2": {
+                    "name": "punctuation.definition.string.begin.python string.quoted.raw.multi.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "punctuation.definition.string.end.python string.interpolated.python string.quoted.raw.multi.colang"
+                },
+                "2": {
+                    "name": "invalid.illegal.newline.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-raw-guts"
+                },
+                {
+                    "include": "#fstring-illegal-multi-brace"
+                },
+                {
+                    "include": "#fstring-multi-brace"
+                },
+                {
+                    "include": "#fstring-raw-multi-core"
+                }
+            ]
+        },
+        "fstring-multi-core": {
+            "name": "string.interpolated.python string.quoted.multi.colang",
+            "match": "(?x)\n  (.+?)\n    (\n      (?# .* and .*? in multi-line match need special handling of\n        newlines otherwise SublimeText and Atom will match slightly\n        differently.\n\n        The guard for newlines has to be separate from the\n        lookahead because of special $ matching rule.)\n      ($\\n?)\n      |\n      (?=[\\\\\\}\\{]|'''|\"\"\")\n    )\n  (?# due to how multiline regexps are matched we need a special case\n    for matching a newline character)\n  | \\n\n"
+        },
+        "fstring-raw-multi-core": {
+            "name": "string.interpolated.python string.quoted.raw.multi.colang",
+            "match": "(?x)\n  (.+?)\n    (\n      (?# .* and .*? in multi-line match need special handling of\n        newlines otherwise SublimeText and Atom will match slightly\n        differently.\n\n        The guard for newlines has to be separate from the\n        lookahead because of special $ matching rule.)\n      ($\\n?)\n      |\n      (?=[\\\\\\}\\{]|'''|\"\"\")\n    )\n  (?# due to how multiline regexps are matched we need a special case\n    for matching a newline character)\n  | \\n\n"
+        },
+        "fstring-multi-brace": {
+            "comment": "value interpolation using { ... }",
+            "begin": "(\\{)",
+            "end": "(?x)\n  (\\})\n",
+            "beginCaptures": {
+                "1": {
+                    "name": "constant.character.format.placeholder.other.colang"
+                }
+            },
+            "endCaptures": {
+                "1": {
+                    "name": "constant.character.format.placeholder.other.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-terminator-multi"
+                },
+                {
+                    "include": "#f-expression"
+                }
+            ]
+        },
+        "fstring-terminator-multi": {
+            "patterns": [
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(=(![rsa])?)(?=})"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(=?![rsa])(?=})"
+                },
+                {
+                    "match": "(?x)\n  ( (?: =?) (?: ![rsa])? )\n    ( : \\w? [<>=^]? [-+ ]? \\#?\n      \\d* ,? (\\.\\d+)? [bcdeEfFgGnosxX%]? )(?=})\n",
+                    "captures": {
+                        "1": {
+                            "name": "storage.type.format.colang"
+                        },
+                        "2": {
+                            "name": "storage.type.format.colang"
+                        }
+                    }
+                },
+                {
+                    "include": "#fstring-terminator-multi-tail"
+                }
+            ]
+        },
+        "fstring-terminator-multi-tail": {
+            "begin": "((?:=?)(?:![rsa])?)(:)(?=.*?{)",
+            "end": "(?=})",
+            "beginCaptures": {
+                "1": {
+                    "name": "storage.type.format.colang"
+                },
+                "2": {
+                    "name": "storage.type.format.colang"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#fstring-illegal-multi-brace"
+                },
+                {
+                    "include": "#fstring-multi-brace"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "([bcdeEfFgGnosxX%])(?=})"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(\\.\\d+)"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(,)"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(\\d+)"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(\\#)"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "([-+ ])"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "([<>=^])"
+                },
+                {
+                    "name": "storage.type.format.colang",
+                    "match": "(\\w)"
+                }
+            ]
+        }
+    }
+}
