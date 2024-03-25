@@ -233,6 +233,28 @@ def get_colang_history(
         if action_group:
             new_history.append(events_to_dialog_history(action_group))
 
+        # We make sure that there is not empty line between `user action` and `user intent`.
+        # TODO: check this does not break existing history.
+        i = 0
+        while i < len(new_history) - 2:
+            if (
+                new_history[i].startswith("user action")
+                and new_history[i + 1].strip() == ""
+                and new_history[i + 2].startswith("user intent")
+            ):
+                del new_history[i + 1]
+
+            # Swap bot action and intent as well if found
+            if (
+                new_history[i].startswith("bot action")
+                and new_history[i + 1].strip() == ""
+                and new_history[i + 2].startswith("bot intent")
+            ):
+                del new_history[i + 1]
+                new_history[i], new_history[i + 1] = new_history[i + 1], new_history[i]
+
+            i += 1
+
         history = "\n".join(new_history).rstrip("\n")
 
     return history

@@ -473,7 +473,6 @@ def _process_internal_events_without_default_matchers(
         # Start new flow state instance if flow exists
         flow_id = event.arguments["flow_id"]
         if flow_id in state.flow_configs and flow_id != "main":
-
             started_instance = None
             if (
                 event.arguments.get("activated", None)
@@ -758,9 +757,9 @@ def _resolve_action_conflicts(
                         index = competing_flow_state.action_uids.index(
                             competing_event.action_uid
                         )
-                        competing_flow_state.action_uids[index] = (
-                            winning_event.action_uid
-                        )
+                        competing_flow_state.action_uids[
+                            index
+                        ] = winning_event.action_uid
                         del state.actions[competing_event.action_uid]
 
                     advancing_heads.append(head)
@@ -1391,6 +1390,10 @@ def _finish_flow(
 
     # Deactivate all activated child flows
     for child_flow_uid in flow_state.child_flow_uids:
+        # TODO (cschueller): check why this was the case
+        if child_flow_uid not in state.flow_states:
+            continue
+
         child_flow_state = state.flow_states[child_flow_uid]
         if child_flow_state.activated:
             child_flow_state.activated = False
@@ -1401,6 +1404,10 @@ def _finish_flow(
 
     # Abort all running child flows
     for child_flow_uid in flow_state.child_flow_uids:
+        # TODO (cschueller): check why this was the case
+        if child_flow_uid not in state.flow_states:
+            continue
+
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
             _abort_flow(state, child_flow_state, matching_scores, True)

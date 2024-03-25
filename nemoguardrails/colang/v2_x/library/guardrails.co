@@ -1,0 +1,44 @@
+# meta: exclude from llm
+import core
+
+# For guardrails, we override the `_user_said` and `_bot_say` to include calling
+# the input and the output rails.
+
+@override
+flow _user_said $text -> $event
+  """Core flow for when the user says something."""
+  if $text
+    match UtteranceUserAction.Finished(final_transcript=$text) as $event
+  else
+    match UtteranceUserAction.Finished() as $event
+
+  $text = $event.final_transcript
+
+  await run input rails $text
+
+
+@override
+flow unhandled user utterance -> $event
+  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
+
+  $text = $event.final_transcript
+  await run input rails $text
+
+@override
+flow _bot_say $text
+  """Core flow for when the bot should say something."""
+  await run output rails $text
+
+  await UtteranceBotAction(script=$text) as $action
+
+
+flow run input rails $input_text
+  $input_rails_exist = await CheckFlowDefinedAction(flow_id="input rails")
+  if $input_rails_exist
+    await input rails $input_text
+
+
+flow run output rails $output_text
+  $output_rails_exist = await CheckFlowDefinedAction(flow_id="output rails")
+  if $output_rails_exist
+    await output rails $output_text

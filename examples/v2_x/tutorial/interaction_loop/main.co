@@ -1,9 +1,3 @@
-# Example that shows a basic interaction loop.
-#
-# Unknown user inputs will tried to be matched to an existing user intent or alternatively caught by the
-# `unhandled user intent` cas in the main loop. If the user does not answer within 12 seconds, the bot will
-# proactively remind the user that she can ask anything.
-
 import avatars
 
 flow main

@@ -1,0 +1,12 @@
+import core
+
+
+flow user expressed greeting
+  user said "hi" or user said "hello"
+
+flow bot express greeting
+  bot say "Hello world!"
+
+flow main
+  user expressed greeting
+  bot express greeting

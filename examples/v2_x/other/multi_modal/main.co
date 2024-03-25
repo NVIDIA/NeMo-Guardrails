@@ -1,13 +1,8 @@
-# Example that shows a simple multimodal 'hello world'.
-#
-# To trigger the bot response type in `Hi`, `Hello`
-# or simulate a user greeting gesture by typing `/GestureUserActionFinished(gesture="Greeting gesture")`
-
 import avatars
 
 flow main
-    user expressed greeting
-    bot express greeting
+  user expressed greeting
+  bot express greeting
 
 flow user expressed greeting
   user expressed verbal greeting

@@ -21,7 +21,6 @@ class SimplifyFormatter(logging.Formatter):
     """A formatter to simplify the log messages for easy reading."""
 
     def format(self, record):
-
         text: str
         if isinstance(record, str):
             text = record

@@ -134,6 +134,10 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             instruction_flows
         )
 
+        # If we don't have an instruction_flows_index, we fall back to using the main one
+        if self.instruction_flows_index is None:
+            self.instruction_flows_index = self.flows_index
+
     @action(name="GetLastUserMessageAction", is_system_action=True)
     async def get_last_user_message(
         self, events: List[dict], llm: Optional[BaseLLM] = None
@@ -205,10 +209,13 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 "user_action": user_action,
             },
         )
+        stop = self.llm_task_manager.get_stop_tokens(
+            Task.GENERATE_USER_INTENT_FROM_USER_ACTION
+        )
 
         # We make this call with temperature 0 to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
-            result = await llm_call(llm, prompt)
+            result = await llm_call(llm, prompt, stop=stop)
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(
@@ -231,6 +238,11 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
     async def check_if_flow_exists(self, state: "State", flow_id: str) -> bool:
         """Return True if a flow with the provided flow_id exists."""
         return flow_id in state.flow_id_states
+
+    @action(name="CheckFlowDefinedAction", is_system_action=True)
+    async def check_if_flow_defined(self, state: "State", flow_id: str) -> bool:
+        """Return True if a flow with the provided flow_id is defined."""
+        return flow_id in state.flow_configs
 
     @action(name="CheckForActiveEventMatchAction", is_system_action=True)
     async def check_for_active_flow_finished_match(
@@ -515,3 +527,67 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         log.info("Generated value for $%s: %s", var_name, value)
 
         return literal_eval(value)
+
+    @action(name="GenerateFlowAction", is_system_action=True, execute_async=True)
+    async def generate_flow(
+        self,
+        state: State,
+        events: List[dict],
+        llm: Optional[BaseLLM] = None,
+    ) -> dict:
+        """Generate the body for a flow."""
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
+        event = events[-1]
+        assert event["type"] == "StartGenerateFlowAction"
+        action_uid = event["action_uid"]
+
+        # We need to search for the flow that is waiting on this action
+        triggering_flow_id = None
+        for _, flow_state in state.flow_states.items():
+            if action_uid in flow_state.action_uids:
+                triggering_flow_id = flow_state.flow_id
+                break
+
+        assert triggering_flow_id is not None
+
+        flow_config = state.flow_configs[triggering_flow_id]
+        docstrings = re.findall(r'"""(.*?)"""', flow_config.source_code, re.DOTALL)
+        assert len(docstrings) > 0
+
+        render_context = {}
+        render_context.update(state.context)
+        render_context.update(state.flow_id_states[triggering_flow_id][0].context)
+
+        # TODO: add the context of the flow
+        prompt = self.llm_task_manager._render_string(
+            docstrings[0], context=render_context, events=events
+        )
+
+        # We make this call with temperature 0 to have it as deterministic as possible.
+        with llm_params(llm, temperature=self.config.lowest_temperature):
+            result = await llm_call(llm, prompt)
+
+        lines = _remove_leading_empty_lines(result).split("\n")
+
+        if len(lines) == 0 or (len(lines) == 1 and lines[0] == ""):
+            return {
+                "name": "bot inform LLM issue",
+                "body": 'flow bot inform LLM issue\n  bot say "Sorry! There was an issue in the LLM result form GenerateFlowContinuationAction!"',
+            }
+
+        uuid = new_uuid()[0:8]
+
+        flow_name = f"_dynamic_{uuid}"
+        for i in range(len(lines)):
+            if not lines[i].startswith("  "):
+                lines[i] = "  " + lines[i]
+
+        body = "\n".join(lines)
+
+        return {
+            "name": flow_name,
+            "parameters": [],
+            "body": f"""flow {flow_name}\n{body}""",
+        }

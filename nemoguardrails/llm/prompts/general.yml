@@ -131,6 +131,8 @@ prompts:
 
           user action: {{ user_action }}
           user intent:
+      stop:
+          - "user intent:"
 
     # Prompt for generating the value of a context variable.
     - task: generate_value_from_instruction
