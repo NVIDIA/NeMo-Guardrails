@@ -22,6 +22,10 @@ from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
 
 import yaml
+from rich.console import Console
+
+# Global console object to be used throughout the code base.
+console = Console()
 
 
 def new_uid() -> str:

@@ -27,11 +27,11 @@ from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
-from nemoguardrails.colang.v2_x.runtime.flows import (
+from nemoguardrails.colang.v2_x.runtime.errors import (
     ColangRuntimeError,
-    Event,
-    FlowStatus,
+    ColangSyntaxError,
 )
+from nemoguardrails.colang.v2_x.runtime.flows import Event, FlowStatus
 from nemoguardrails.colang.v2_x.runtime.statemachine import (
     FlowConfig,
     InternalEvent,
@@ -69,7 +69,10 @@ class RuntimeV2_x(Runtime):
     async def _add_flows_action(self, state: "State", **args: dict) -> List[str]:
         log.info("Start AddFlowsAction! %s", args)
         flow_content = args["config"]
-        assert isinstance(flow_content, str)
+        if not isinstance(flow_content, str):
+            raise ColangRuntimeError(
+                "Parameter 'config' in AddFlowsAction is not of type 'str'!"
+            )
         # Parse new flow
         try:
             parsed_flow = parse_colang_file(
@@ -79,7 +82,9 @@ class RuntimeV2_x(Runtime):
                 include_source_mapping=True,
             )
         except Exception as e:
-            print("Failed parsing a generated flow\n%s\n%s", flow_content, e)
+            warning = f"Failed parsing a generated flow\n{flow_content}\n{e}"
+            log.warning(warning)
+            print(warning)
             return []
             # Alternatively, we could through an exceptions
             # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
@@ -87,12 +92,13 @@ class RuntimeV2_x(Runtime):
         added_flows: List[str] = []
         for flow in parsed_flow["flows"]:
             if flow.name in state.flow_configs:
-                print("Flow '%s' already exists! Not loaded!", flow.name)
+                warning = "Flow '{flow.name}' already exists! Not loaded!"
+                log.warning(warning)
+                print(warning)
                 break
 
             flow_config = FlowConfig(
                 id=flow.name,
-                loop_id=None,
                 elements=expand_elements(flow.elements, state.flow_configs),
                 parameters=flow.parameters,
                 source_code=flow.source_code,
@@ -124,19 +130,7 @@ class RuntimeV2_x(Runtime):
 
     def _init_flow_configs(self) -> None:
         """Initializes the flow configs based on the config."""
-        self.flow_configs = {}
-
-        for flow in self.config.flows:
-            assert isinstance(flow, Flow)
-            flow_id = flow.name
-            self.flow_configs[flow_id] = FlowConfig(
-                id=flow_id,
-                elements=flow.elements,
-                decorators={decorator.name: decorator for decorator in flow.decorators},
-                parameters=flow.parameters,
-                return_members=flow.return_members,
-                source_code=flow.source_code,
-            )
+        self.flow_configs = create_flow_configs_from_flow_list(self.config.flows)
 
     async def generate_events(self, events: List[dict]) -> List[dict]:
         raise NotImplementedError("Stateless API not supported for Colang 2.x, yet.")
@@ -248,7 +242,7 @@ class RuntimeV2_x(Runtime):
                 ):
                     kwargs["llm"] = self.registered_action_params[f"{action_name}_llm"]
 
-                log.info("Executing action :: %s", action_name)
+                log.info("Running action :: %s", action_name)
                 result, status = await self.action_dispatcher.execute_action(
                     action_name, kwargs
                 )
@@ -446,7 +440,7 @@ class RuntimeV2_x(Runtime):
         # we continue the processing.
         while input_events or local_running_actions:
             for event in input_events:
-                log.info("Processing event %s", event)
+                log.info("Processing event :: %s", event)
 
                 event_name = event["type"] if isinstance(event, dict) else event.name
 
@@ -468,7 +462,7 @@ class RuntimeV2_x(Runtime):
                         new_event = Event(
                             name="ColangError",
                             arguments={
-                                "error_type": str(type(e).__name__),
+                                "type": str(type(e).__name__),
                                 "error": str(e),
                             },
                         )
@@ -612,3 +606,44 @@ class RuntimeV2_x(Runtime):
             "context_updates": context_updates,
             "start_action_event": start_action_event,
         }
+
+
+def create_flow_configs_from_flow_list(flows: List[Flow]) -> Dict[str, FlowConfig]:
+    """Create a flow config dictionary and resolves flow overriding."""
+    flow_configs: Dict[str, FlowConfig] = {}
+    override_flows: Dict[str, FlowConfig] = {}
+
+    # Create two dictionaries with normal and override flows
+    for flow in flows:
+        assert isinstance(flow, Flow)
+        config = FlowConfig(
+            id=flow.name,
+            elements=flow.elements,
+            decorators={decorator.name: decorator for decorator in flow.decorators},
+            parameters=flow.parameters,
+            return_members=flow.return_members,
+            source_code=flow.source_code,
+        )
+
+        if config.is_override:
+            if flow.name in override_flows:
+                raise ColangSyntaxError(
+                    f"Multiple override flows with name '{flow.name}' detected! There can only be one!"
+                )
+            override_flows[flow.name] = config
+        elif flow.name in flow_configs:
+            raise ColangSyntaxError(
+                f"Multiple non-overriding flows with name '{flow.name}' detected! There can only be one!"
+            )
+        else:
+            flow_configs[flow.name] = config
+
+    # Override normal flows
+    for override_flow in override_flows.values():
+        if override_flow.id not in flow_configs:
+            raise ColangSyntaxError(
+                f"Override flow with name '{override_flow.id}' does not override any flow with that name!"
+            )
+        flow_configs[override_flow.id] = override_flow
+
+    return flow_configs

@@ -24,7 +24,7 @@ from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
-from nemoguardrails.colang.v2_x.runtime.flows import ColangParsingError
+from nemoguardrails.colang.v2_x.runtime.errors import ColangParsingError
 
 log = logging.getLogger(__name__)
 
@@ -590,7 +590,6 @@ def _parse_colang_files_recursively(
                     current_file, content=f.read(), version=colang_version
                 )
             except Exception as e:
-                print(e)
                 raise ColangParsingError(
                     f"Error while parsing Colang file: {current_path}"
                 ) from e

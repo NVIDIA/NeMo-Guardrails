@@ -18,6 +18,7 @@ from tests.utils import TestChat
 
 
 def test_1():
+    """Test use of expression as statements."""
     config = RailsConfig.from_content(
         colang_content="""
         flow user said $text
