@@ -16,6 +16,7 @@
 import logging
 import os
 import re
+import textwrap
 
 import yaml
 
@@ -52,16 +53,42 @@ class ColangParser:
         # to avoid some issues arising from that is to append a new line at the end
         return self._lark_parser.parse(content + "\n")
 
+    @staticmethod
+    def _apply_pre_parsing_expansions(content: str):
+        """Applies a set of expansions even before starting the parsing.
+
+        Currently, only the "..." is expanded.
+        """
+        # We make sure to capture the correct indentation level and use that.
+        content = re.sub(
+            r"\n( +)\.\.\.",
+            textwrap.dedent(
+                r"""
+                \1$flow_info = await GenerateFlowAction()
+                \1await AddFlowsAction(config=$flow_info['body'])
+                \1$instance_uid = uid()
+                \1send StartFlow(flow_id=$flow_info['name'], flow_instance_uid=$instance_uid, context=$self.context)
+                \1match FlowStarted(flow_instance_uid=$instance_uid)
+                \1match FlowFinished(flow_instance_uid=$instance_uid)
+                """
+            ),
+            content,
+        )
+
+        return content
+
     def parse_content(
         self, content: str, print_tokens: bool = False, print_parsing_tree: bool = False
     ) -> dict:
         """Parse the provided content and create element structure."""
         if print_tokens:
-            tokens = list(self._lark_parser.lex(content))
+            tokens = list(
+                self._lark_parser.lex(self._apply_pre_parsing_expansions(content))
+            )
             for token in tokens:
                 print(token.__repr__())
 
-        tree = self.get_parsing_tree(content)
+        tree = self.get_parsing_tree(self._apply_pre_parsing_expansions(content))
 
         if print_parsing_tree:
             print(tree.pretty())
@@ -69,7 +96,8 @@ class ColangParser:
         exclude_flows_from_llm = self._contains_exclude_from_llm_tag(content)
 
         transformer = ColangTransformer(
-            source=content, include_source_mapping=self.include_source_mapping
+            source=self._apply_pre_parsing_expansions(content),
+            include_source_mapping=self.include_source_mapping,
         )
         data = transformer.transform(tree)
 
