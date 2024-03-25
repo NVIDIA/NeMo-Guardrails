@@ -1558,7 +1558,7 @@ def test_flow_parameter_await_mechanism():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Success",
-            }
+            },
         ],
     )
 
@@ -1611,6 +1611,68 @@ def test_flow_context_sharing():
             },
             {
                 "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+
+def test_single_flow_activation():
+    """Test how a parent flow can share its context with a child flow."""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="a")
+      activate z 1
+      match WaitEvent()
+
+    flow b
+      start UtteranceBotAction(script="b")
+      activate z 1
+      match WaitEvent()
+
+    flow c
+      start UtteranceBotAction(script="c")
+      activate z 2
+      match WaitEvent()
+
+    flow z $param
+      await UtteranceBotAction(script="test {$param}")
+
+    flow main
+      activate a
+      activate b
+      activate c
+      await UtteranceBotAction(script="done")
+
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "a",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "test 1",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "b",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "c",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "test 2",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "done",
             },
         ],
     )

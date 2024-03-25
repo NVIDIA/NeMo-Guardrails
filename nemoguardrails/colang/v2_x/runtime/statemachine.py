@@ -473,15 +473,55 @@ def _process_internal_events_without_default_matchers(
         # Start new flow state instance if flow exists
         flow_id = event.arguments["flow_id"]
         if flow_id in state.flow_configs and flow_id != "main":
-            add_new_flow_instance(
-                state,
-                create_flow_instance(
-                    state.flow_configs[flow_id],
-                    event.arguments["flow_instance_uid"],
-                    event.arguments["flow_hierarchy_position"],
-                    event.arguments,
-                ),
-            )
+
+            started_instance = None
+            if (
+                event.arguments.get("activated", None)
+                and flow_id in state.flow_id_states
+            ):
+                # Check if there already exists an instance of the same activated flow
+                for activated_flow in state.flow_id_states[flow_id]:
+                    if activated_flow.status != FlowStatus.STARTED:
+                        continue
+                    has_same_arguments = False
+                    for idx, arg in enumerate(state.flow_configs[flow_id].parameters):
+                        val = activated_flow.arguments[arg.name]
+                        if (
+                            arg.name in event.arguments
+                            and val == event.arguments[arg.name]
+                        ):
+                            has_same_arguments = True
+                        elif (
+                            f"${idx}" in event.arguments
+                            and val == event.arguments[f"${idx}"]
+                        ):
+                            has_same_arguments = True
+                        else:
+                            has_same_arguments = False
+                            break
+                    if has_same_arguments:
+                        started_instance = activated_flow
+                        break
+
+            if not started_instance:
+                add_new_flow_instance(
+                    state,
+                    create_flow_instance(
+                        state.flow_configs[flow_id],
+                        event.arguments["flow_instance_uid"],
+                        event.arguments["flow_hierarchy_position"],
+                        event.arguments,
+                    ),
+                )
+            else:
+                started_event = started_instance.started_event(
+                    event.matching_scores,
+                    {"flow_instance_uid": event.arguments["flow_instance_uid"]},
+                )
+                _push_internal_event(
+                    state,
+                    started_event,
+                )
     elif event.name == InternalEvents.FINISH_FLOW:
         if "flow_instance_uid" in event.arguments:
             flow_instance_uid = event.arguments["flow_instance_uid"]
