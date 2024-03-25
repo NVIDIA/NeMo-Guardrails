@@ -71,7 +71,7 @@ from nemoguardrails.colang.v2_x.runtime.flows import (
     State,
 )
 from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
-from nemoguardrails.utils import new_event_dict, new_uid
+from nemoguardrails.utils import console, new_event_dict, new_uid
 
 log = logging.getLogger(__name__)
 
@@ -330,7 +330,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> State
                                 assert flow_state.loop_id
                                 handled_event_loops.add(flow_state.loop_id)
                             log.info(
-                                "Matching head: %s context=%s",
+                                "Matching head :: %s context=%s",
                                 head,
                                 _context_log(flow_state),
                             )
@@ -504,7 +504,7 @@ def _process_internal_events_without_default_matchers(
                             state,
                             flow_state,
                             event.matching_scores,
-                            event.arguments.get("deactivate", "False"),
+                            event.arguments.get("deactivate", False),
                         )
                         assert flow_state.loop_id
                         handled_event_loops.add(flow_state.loop_id)
@@ -800,7 +800,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
 
             all_heads_are_waiting = False
             if not flow_finished and not flow_aborted:
-                # Check if all all flow heads are waiting at a 'match' or a 'wait_for_heads' element
+                # Check if all flow heads are waiting at a 'match' or a 'wait_for_heads' element
                 all_heads_are_waiting = True
                 for temp_head in flow_state.active_heads.values():
                     element = flow_config.elements[temp_head.position]
@@ -816,6 +816,11 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
                     flow_state.status = FlowStatus.STARTED
                     event = flow_state.started_event(head.matching_scores)
                     _push_internal_event(state, event)
+
+                    # Avoid an activated flow that was just started from finishing
+                    # since this would end in an infinite loop
+                    if flow_finished and flow_state.activated:
+                        flow_finished = False
             elif not flow_aborted:
                 elem = get_element_from_head(state, head)
                 if elem and is_action_op_element(elem):
@@ -935,9 +940,16 @@ def slide(
 
         elif isinstance(element, Label):
             if element.name == "start_new_flow_instance":
-                new_event = flow_state.start_event(head.matching_scores)
-                _push_left_internal_event(state, new_event)
-                flow_state.new_instance_started = True
+                if flow_state.status is not FlowStatus.STARTED:
+                    log.warning(
+                        "Did not restart flow '%s' at"
+                        " label 'start_new_flow_instance' since this would have created an infinite loop!",
+                        flow_state.flow_id,
+                    )
+                else:
+                    new_event = flow_state.start_event(head.matching_scores)
+                    _push_left_internal_event(state, new_event)
+                    flow_state.new_instance_started = True
             head.position += 1
 
         elif isinstance(element, Goto):
@@ -1154,7 +1166,9 @@ def slide(
             head.position += 1
 
         elif isinstance(element, Print):
-            print(eval_expression(element.info, _get_eval_context(state, flow_state)))
+            console.print(
+                eval_expression(element.info, _get_eval_context(state, flow_state))
+            )
             head.position += 1
 
         elif isinstance(element, Priority):
@@ -1645,7 +1659,7 @@ def _get_flow_state_hierarchy(state: State, flow_state_uid: str) -> List[str]:
         return []
     flow_state = state.flow_states[flow_state_uid]
     if flow_state.parent_uid is None:
-        return []
+        return [flow_state.uid]
     else:
         result = _get_flow_state_hierarchy(state, flow_state.parent_uid)
         result.append(flow_state.uid)

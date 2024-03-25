@@ -117,7 +117,7 @@ define parallel extension flow process bot message
         create event StartOutputRails
         event StartOutputRails
 
-        # Run all the input rails
+        # Run all the output rails
         # This can potentially alter the $user_message
         do run output rails
 

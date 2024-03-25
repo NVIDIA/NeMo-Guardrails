@@ -137,7 +137,7 @@ flow user interrupted bot talking $sentence_length=15
         log "Bot finished talking without interruption"
         break
 
-      if "{len($transcript) > $sentence_length}" == "True"
+      if len($transcript) > $sentence_length
         log "Bot interrupted by user with: {$transcript}"
         return
 
@@ -330,7 +330,7 @@ flow tracking visual choice selection state
   when VisualChoiceSceneAction.Started()
     $choice_selection_state = None
   orwhen VisualChoiceSceneAction.ChoiceUpdated() as $event
-    if "{len($event.current_choice) > 0}" == "True"
+    if len($event.current_choice) > 0
       $choice_selection_state = $event.current_choice[0]
     else
       $choice_selection_state = None
@@ -465,7 +465,7 @@ flow generate interaction continuation -> $flow_name
   $exists = await CheckValidFlowExistsAction(flow_id=$flow_info.name)
   if $exists == False
     $flows = await AddFlowsAction(config=$flow_info.body)
-    if "{len($flows)}" == "0"
+    if len($flows) == 0
       print "LLM generated flow parsing failed!"
       bot say "Sorry, what did you say?"
       return None
@@ -497,7 +497,7 @@ flow handling start of undefined flow
 
   start_new_flow_instance:
 
-  if "{search('^user ',$event.flow_id)}" == "True"
+  if search('^user ',$event.flow_id)
 
     # We have an undefined user intent, so we just fake it to be started by this fallback flow
     send FlowStarted(flow_id=$event.flow_id, flow_instance_uid=$event.flow_instance_uid)

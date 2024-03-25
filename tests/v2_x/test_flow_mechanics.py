@@ -595,6 +595,75 @@ def test_activate_flow_mechanism():
     )
 
 
+def test_infinite_loops_avoidance_for_activate_flows():
+    """Test that activated flows don't loop infinitely if not match statement is present."""
+
+    content = """
+    flow a
+      # Comment
+      activate b
+      $test = "Hello"
+      start UtteranceBotAction(script=$test)
+
+    flow b
+      await GestureBotAction(gesture="smile")
+
+    flow main
+      activate a
+      match WaitAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "smile",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+        ],
+    )
+
+
+def test_infinite_loops_avoidance_for_early_restart_labels():
+    """Test that flows don't loop infinitely if when the `start_new_flow_instance` label comes to early."""
+
+    content = """
+    flow a
+      activate b
+      $test = "Hello"
+      start UtteranceBotAction(script=$test)
+      start_new_flow_instance:
+      match Event()
+
+    flow b
+      await GestureBotAction(gesture="smile")
+
+    flow main
+      activate a
+      match WaitAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "smile",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+        ],
+    )
+
+
 def test_activate_and_grouping():
     """Test and-grouping with activate statement."""
 

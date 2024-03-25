@@ -158,7 +158,7 @@ def eval_expression(expr: str, context: dict) -> Any:
             "not_equal_to": _not_equal_to_operator,
         }
         if "_state" in context:
-            functions.update({"flow_states": partial(_flow_states, context["_state"])})
+            functions.update({"flows_info": partial(_flows_info, context["_state"])})
 
         # TODO: replace this with something even more restrictive.
         s = EvalWithCompoundTypes(
@@ -250,7 +250,7 @@ def _not_equal_to_operator(v_ref: Any) -> ComparisonExpression:
     return ComparisonExpression(lambda val, val_ref=v_ref: val != val_ref, v_ref)
 
 
-def _flow_states(state: State, flow_instance_uid: Optional[str] = None) -> dict:
+def _flows_info(state: State, flow_instance_uid: Optional[str] = None) -> dict:
     """Return a summary of the provided state, or all states by default."""
     if flow_instance_uid is not None and flow_instance_uid in state.flow_states:
         summary = {"flow_instance_uid": flow_instance_uid}
@@ -279,16 +279,26 @@ def _flow_state_related_to_source(state: State, flow_state: FlowState):
         "flow_id": flow_state.flow_id,
         "loop_id": flow_state.loop_id,
         "status": flow_state.status.value,
-        "active_source_lines": list(flow_head_source_lines),
+        "flow_hierarchy": _get_flow_state_hierarchy(state, flow_state.uid)[:-1],
+        "active_statement_at_lines": list(flow_head_source_lines),
     }
 
     if flow_state.action_uids:
         summary.update({"action_uids": flow_state.action_uids})
 
-    if flow_state.parent_uid:
-        summary.update({"parent_flow_uid": flow_state.parent_uid})
-
     if flow_state.child_flow_uids:
         summary.update({"child_flow_uids": flow_state.child_flow_uids})
 
     return summary
+
+
+def _get_flow_state_hierarchy(state: State, flow_state_uid: str) -> List[str]:
+    if flow_state_uid not in state.flow_states:
+        return []
+    flow_state = state.flow_states[flow_state_uid]
+    if flow_state.parent_uid is None:
+        return [flow_state.uid]
+    else:
+        result = _get_flow_state_hierarchy(state, flow_state.parent_uid)
+        result.append(flow_state.uid)
+        return result

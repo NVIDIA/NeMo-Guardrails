@@ -21,7 +21,6 @@
                 "chat",
                 "--config=${fileDirname}",
                 "--verbose",
-                "--verbose-llm-calls",
                 "--debug-level=DEBUG"
             ],
             "justMyCode": true,
@@ -53,13 +52,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "nemoguardrails",
-            "args": [
-                "chat",
-                "--config=${fileDirname}",
-                "--verbose-simplify",
-                "--verbose-llm-calls",
-                "--debug-level=INFO"
-            ],
+            "args": ["chat", "--config=${fileDirname}", "--verbose"],
             "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}${pathSeparator}${env:PYTHONPATH}"
