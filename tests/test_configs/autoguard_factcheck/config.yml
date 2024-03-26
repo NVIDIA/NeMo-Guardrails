@@ -9,7 +9,7 @@ rails:
         fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
   input:
     flows:
-      - input autoguard factcheck
+      - autoguard factcheck input
   output:
     flows:
-      - output autoguard factcheck
+      - autoguard factcheck output
