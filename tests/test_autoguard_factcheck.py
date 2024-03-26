@@ -47,19 +47,6 @@ async def retrieve_relevant_chunks():
     )
 
 
-@action(is_system_action=True)
-async def autoguard_retrieve_relevant_chunks_input():
-    """Retrieve relevant chunks from the knowledge base and add them to the context."""
-    context_updates = {}
-    relevant_chunks = "\n".join(build_kb())
-    context_updates["relevant_chunks"] = relevant_chunks
-
-    return ActionResult(
-        return_value=context_updates["relevant_chunks"],
-        context_updates=context_updates,
-    )
-
-
 @pytest.mark.asyncio
 async def test_fact_checking_correct(httpx_mock):
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_factcheck"))
@@ -74,19 +61,6 @@ async def test_fact_checking_correct(httpx_mock):
             "It's a fascinating example of the intricate dance of celestial bodies in our solar system!",
         ],
     )
-
-    async def mock_autoguard_factcheck_input_api(
-        context: Optional[dict] = None, **kwargs
-    ):
-        query = context.get("user_message")
-        if (
-            query
-            == "Pluto, with its eccentric orbit, comes closer to the Sun than Neptune at times, yet a stable "
-            "orbital resonance ensures they do not collide."
-        ):
-            return 1.0
-        else:
-            return 0.0
 
     async def mock_autoguard_factcheck_output_api(
         context: Optional[dict] = None, **kwargs
@@ -106,9 +80,6 @@ async def test_fact_checking_correct(httpx_mock):
         else:
             return 0.0
 
-    chat.app.register_action(
-        mock_autoguard_factcheck_input_api, "autoguard_factcheck_input_api"
-    )
     chat.app.register_action(
         mock_autoguard_factcheck_output_api, "autoguard_factcheck_output_api"
     )
@@ -144,23 +115,6 @@ async def test_fact_checking_wrong(httpx_mock):
         ],
     )
 
-    async def mock_autoguard_factcheck_input_api(
-        context: Optional[dict] = None, **kwargs
-    ):
-        query = context.get("user_message")
-        if (
-            query
-            == "Pluto has no known moons; Charon, the smallest, has a diameter greater than Pluto's, along with "
-            "the non-existent Styx, Nix, Kerberos, and Hydra."
-        ):
-            return 0.0
-        else:
-            return 1.0
-
-    chat.app.register_action(
-        mock_autoguard_factcheck_input_api, "autoguard_factcheck_input_api"
-    )
-
     async def mock_autoguard_factcheck_output_api(
         context: Optional[dict] = None, **kwargs
     ):
@@ -186,6 +140,5 @@ async def test_fact_checking_wrong(httpx_mock):
         "non-existent Styx, Nix, Kerberos, and Hydra."
     )
     await chat.bot_async(
-        "Factcheck violation in user input has been detected by AutoGuard.\nFactcheck violation in "
-        "llm response has been detected by AutoGuard."
+        "Factcheck violation in llm response has been detected by AutoGuard."
     )

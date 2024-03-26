@@ -265,32 +265,6 @@ async def autoguard_output_api(
     return autoguard_response
 
 
-@action(name="autoguard_factcheck_input_api")
-async def autoguard_factcheck_input_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
-):
-    """Calls AutoGuard factcheck API and checks whether the user message is factually correct according to given
-    documents"""
-
-    user_message = context.get("user_message")
-    documents = context.get("relevant_chunks", [])
-    autoguard_config = llm_task_manager.config.rails.config.autoguard
-    autoguard_fact_check_api_url = autoguard_config.parameters.get(
-        "fact_check_endpoint"
-    )
-    if not autoguard_fact_check_api_url:
-        raise ValueError("Provide the autoguard factcheck endpoint in the config")
-    if isinstance(documents, str):
-        documents = documents.split("\n")
-    prompt = user_message
-    if isinstance(documents, list) and len(documents) > 0:
-        return await autoguard_factcheck_infer(
-            autoguard_fact_check_api_url, prompt, documents
-        )
-    else:
-        raise ValueError("Provide relevant documents in proper format")
-
-
 @action(name="autoguard_factcheck_output_api")
 async def autoguard_factcheck_output_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
@@ -315,24 +289,3 @@ async def autoguard_factcheck_output_api(
         )
     else:
         raise ValueError("Provide relevant documents in proper format")
-
-
-@action(name="autoguard_retrieve_relevant_chunks_input")
-async def autoguard_retrieve_relevant_chunks_input(
-    context: Optional[dict] = None,
-    kb: Optional[KnowledgeBase] = None,
-):
-    """Retrieve knowledge chunks from knowledge base and update the context."""
-    user_message = context.get("user_message")
-    context_updates = {}
-    chunks = await kb.search_relevant_chunks(user_message)
-    chunks = [chunk["body"] for chunk in chunks]
-    # 💡 Store the chunks for fact-checking
-
-    context_updates["relevant_chunks"] = "\n".join(chunks)
-    context_updates["relevant_chunks_sep"] = chunks
-
-    return ActionResult(
-        return_value=context_updates["relevant_chunks"],
-        context_updates=context_updates,
-    )
