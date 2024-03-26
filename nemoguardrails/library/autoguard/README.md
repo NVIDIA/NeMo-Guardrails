@@ -9,11 +9,11 @@ AutoGuard comes with a library of built-in guardrails that you can easily use:
 3. [Jailbreak Detection](#jailbreak-detection)
 4. [Confidential Detection](#confidential-detection)
 5. [Intellectual property detection](#intellectual-property-detection)
-5. [Racial bias Detection](#racial-bias-detection)
-6. [Tonal Detection](#tonal-detection)
-7. [Toxicity detection](#toxicity-extraction)
-8. [PII](#pii)
-9. [Factcheck](#factcheck)
+6. [Racial bias Detection](#racial-bias-detection)
+7. [Tonal Detection](#tonal-detection)
+8. [Toxicity detection](#toxicity-extraction)
+9. [PII](#pii)
+10. [Factcheck](#factcheck-or-groundness-check)
 
 
 Note: Factcheck is implemented a bit differently, compared to other guardrails.
@@ -25,14 +25,14 @@ Please have a look at its description within this document to understand its usa
 In order to use AutoGuard's guardrails you need to set `AUTOGUARD_API_KEY` as an environment variable in your system,
 with the API key as its value.
 
-Please contact [hello@autoalign.ai](mailto:hello@autoalign.ai) for your own API key. Please mention NeMo and AutoGuard in the subject line in order to receive quick responses fron the AutoAlign team.
+Please contact [hello@autoalign.ai](mailto:hello@autoalign.ai) for your own API key. Please mention NeMo and AutoGuard in the subject line in order to receive quick responses from the AutoAlign team.
 
 
 ## Usage (AutoGuard)
 
 To use the autoguard's guardrails:
 
-You have to configure the guardrails in a dictionary under `guardrails_config` section, which you can provide for both `input`
+You have to configure the guardrails using the `guardrails_config` section, which you can provide for both `input`
 section and `output` sections that come under `autoguard` section in `config.yml` file:
 
 ```yaml
@@ -261,14 +261,14 @@ rails:
                   }
     input:
         flows:
-            - call autoguard input
+            - autoguard check input
     output:
         flows:
-            - call autoguard output
+            - autoguard check output
 ```
 We also have to add the autoguard's endpoint in parameters.
 
-One of the advanced configs is matching score (ranging between 0 to 1) which is a threshold that determines whether the guardrail will block the input/output or not.
+One of the advanced configs is matching score (ranging between 0 and 1) which is a threshold that determines whether the guardrail will block the input/output or not.
 If the matching score is higher (i.e. close to 1) then the guardrail will be more strict.
 Some guardrails have very different format of `matching_scores` config,
 in each guardrail's description we have added an example to show how `matching_scores`
@@ -276,15 +276,15 @@ has been implemented for that guardrail.
 PII has some more advanced config like `contextual_rules` and `enabled_types`, more details can be read in the PII section
 given below.
 
-**Please note that** all the additional configs such as `matching_scores`, `contextual_rules`, and `enabled_types` are optiona; if they are not specified then the default valus will be applied.
+**Please note that** all the additional configs such as `matching_scores`, `contextual_rules`, and `enabled_types` are optional; if they are not specified then the default values will be applied.
 
 The config for the guardrails has to be defined separately for both input and output side, as shown in the above example.
 
 
-The colang file has to be in the following format:
+The colang file has been implemented in the following format in the library:
 
 ```colang
-define flow call autoguard input
+define flow autoguard check input
   $input_result = execute autoguard_input_api(show_autoguard_message=True)
 
   if $input_result["guardrails_triggered"]
@@ -292,7 +292,7 @@ define flow call autoguard input
     bot refuse to respond
     stop
 
-define flow call autoguard output
+define flow autoguard check output
   $pre_rail_bot_message = $bot_message
   $output_result = execute autoguard_output_api(show_autoguard_message=True)
 
@@ -304,7 +304,6 @@ define flow call autoguard output
     if $output_result["pii_fast"]["guarded"]
       bot respond pii output
       stop
-
 
 define bot respond pii output
   "$pii_message_output"
@@ -332,6 +331,8 @@ Now coming to the additional keys, one of the key `guardrails_triggered` whose v
 us whether any guardrail apart from PII got triggered or not. Another key is `combined_response` whose value
 provides a combined guardrail message for all the guardrails that got triggered.
 
+Users can create their own flows and make use of AutoGuard's guardrails by using the actions
+`execute autoguard_input_api` and `execute autoguard_output_api` in their flow.
 
 ### Gender bias detection
 
@@ -566,10 +567,10 @@ rails:
         fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
   input:
     flows:
-      - input autoguard factcheck
+      - autoguard factcheck input
   output:
     flows:
-      - output autoguard factcheck
+      - autoguard factcheck output
 ```
 
 Specify the factcheck endpoint the parameters section of autoguard's config.
@@ -577,29 +578,27 @@ Then, you have to call the corresponding subflows for input and output factcheck
 
 Following is the format of the colang file:
 ```colang
-define subflow input autoguard factcheck
-    execute autoguard_retrieve_relevant_chunks
-    $input_result = execute autoguard_factcheck_input_api
-    if $input_result < 0.5
-        bot inform autoguard factcheck input violation
-        stop
+define flow autoguard factcheck input
+  execute autoguard_retrieve_relevant_chunks_input
+  $input_result = execute autoguard_factcheck_input_api
 
-define subflow output autoguard factcheck
-    execute autoguard_retrieve_relevant_chunks
-    $output_result = execute autoguard_factcheck_output_api
-    if $output_result < 0.5
-        bot inform autoguard factcheck output violation
-        stop
+define flow autoguard factcheck output
+  $output_result = execute autoguard_factcheck_output_api
+  if $input_result < 0.5
+    bot inform autoguard factcheck input violation
+  if $output_result < 0.5
+    bot inform autoguard factcheck output violation
+    stop
 
 define bot inform autoguard factcheck input violation
-    "Factcheck input violation has been detected by AutoGuard."
+  "Factcheck input violation has been detected by AutoGuard."
 
 define bot inform autoguard factcheck output violation
-    "$bot_message Factcheck output violation has been detected by AutoGuard."
+  "$bot_message Factcheck output violation has been detected by AutoGuard."
 ```
 
-Within the subflow you have to execute a custom relevant chunk extraction action `autoguard_retrieve_relevant_chunks`,
-so that the documents are passed in the context for the guardrail.
+Within the flow you can see we have an action for custom relevant chunk extraction, `autoguard_retrieve_relevant_chunks_input`,
+which ensures that the documents are passed in the context for the guardrail while using it for user input.
 
 The output of the factcheck endpoint provides you with a factcheck score against which we can add a threshold which determines whether the given output is factually correct or not.
 
