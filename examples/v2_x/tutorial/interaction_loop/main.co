@@ -9,11 +9,11 @@ flow main
     when unhandled user intent
       $response = i"Response to what user said."
       bot say $response
-    orwhen user was silent 12.0
+    or when user was silent 12.0
       bot say "You can ask me anything!"
-    orwhen user expressed greeting
+    or when user expressed greeting
       bot say "Hi there!"
-    orwhen user expressed goodbye
+    or when user expressed goodbye
       bot inform "That was fun. Goodbye"
 
 flow user expressed greeting

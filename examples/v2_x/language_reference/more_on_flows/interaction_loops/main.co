@@ -3,9 +3,9 @@ flow main
     while True
         when user said "Hi"
             bot say "Hi"
-        orwhen user said something
+        or when user said something
             bot say "Thanks for sharing"
-        orwhen user said "Bye"
+        or when user said "Bye"
             bot say "Goodbye"
 
 flow handling of bot gesture reaction
