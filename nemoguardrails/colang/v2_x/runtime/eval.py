@@ -271,7 +271,7 @@ def _flows_info(state: State, flow_instance_uid: Optional[str] = None) -> dict:
 def _flow_state_related_to_source(state: State, flow_state: FlowState):
     flow_config = state.flow_configs[flow_state.flow_id]
     flow_head_source_lines: Set[int] = set()
-    for head in flow_state.heads.values():
+    for head in flow_state.active_heads.values():
         element = flow_config.elements[head.position]
         if isinstance(element, Element) and element._source is not None:
             flow_head_source_lines.add(element._source.line)
