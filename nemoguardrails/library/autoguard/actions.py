@@ -24,7 +24,6 @@ from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.taskmanager import LLMTaskManager
-from nemoguardrails.logging.verbose import Styles
 
 log = logging.getLogger(__name__)
 
@@ -226,13 +225,11 @@ async def autoguard_input_api(
     )
     if autoguard_response["guardrails_triggered"] and show_autoguard_message:
         print(
-            Styles.YELLOW,
             f"AutoGuard on Input: {autoguard_response['combined_response']}",
         )
     else:
         if autoguard_response["pii_fast"]["guarded"] and show_autoguard_message:
             print(
-                Styles.YELLOW,
                 f"AutoGuard on Input: {autoguard_response['pii_fast']['response']}",
             )
 
@@ -262,7 +259,6 @@ async def autoguard_output_api(
     )
     if autoguard_response["guardrails_triggered"] and show_autoguard_message:
         print(
-            Styles.YELLOW,
             f"AutoGuard on LLM Response: {autoguard_response['combined_response']}",
         )
 
