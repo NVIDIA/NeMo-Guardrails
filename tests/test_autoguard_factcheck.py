@@ -19,9 +19,32 @@ from typing import Optional
 import pytest
 
 from nemoguardrails import RailsConfig
+from nemoguardrails.actions.actions import ActionResult, action
 from tests.utils import TestChat
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
+
+
+def build_kb():
+    with open(
+        os.path.join(CONFIGS_FOLDER, "autoguard_factcheck", "kb", "kb.md"), "r"
+    ) as f:
+        content = f.readlines()
+
+    return content
+
+
+@action(is_system_action=True)
+async def retrieve_relevant_chunks():
+    """Retrieve relevant chunks from the knowledge base and add them to the context."""
+    context_updates = {}
+    relevant_chunks = "\n".join(build_kb())
+    context_updates["relevant_chunks"] = relevant_chunks
+
+    return ActionResult(
+        return_value=context_updates["relevant_chunks"],
+        context_updates=context_updates,
+    )
 
 
 @pytest.mark.asyncio
@@ -30,9 +53,6 @@ async def test_fact_checking_correct(httpx_mock):
     chat = TestChat(
         config,
         llm_completions=[
-            "Pluto, with its eccentric orbit, comes closer to the Sun than Neptune at times, yet a stable orbital "
-            "resonance ensures they do not collide.",
-            "  ask about pluto",
             "That's correct! Pluto's orbit is indeed eccentric, meaning it is not a perfect circle. This causes Pluto "
             "to come closer to the Sun than Neptune at times. However, despite this, the two planets do not collide "
             "due to a stable orbital resonance. Orbital resonance is when two objects orbiting a common point exert a "
@@ -48,8 +68,8 @@ async def test_fact_checking_correct(httpx_mock):
         query = context.get("user_message")
         if (
             query
-            == "Pluto, with its eccentric orbit, comes closer to the Sun than Neptune at times, yet a stable orbital "
-            "resonance ensures they do not collide."
+            == "Pluto, with its eccentric orbit, comes closer to the Sun than Neptune at times, yet a stable "
+            "orbital resonance ensures they do not collide."
         ):
             return 1.0
         else:
@@ -61,13 +81,13 @@ async def test_fact_checking_correct(httpx_mock):
         query = context.get("bot_message")
         if (
             query
-            == "That's correct! Pluto's orbit is indeed eccentric, meaning it is not a perfect circle. This causes "
-            "Pluto to come closer to the Sun than Neptune at times. However, despite this, the two planets do not "
-            "collide due to a stable orbital resonance. Orbital resonance is when two objects orbiting a common "
-            "point exert a regular influence on each other, keeping their orbits stable and preventing collisions. "
-            "In the case of Pluto and Neptune, their orbits are in a specific ratio that keeps them from crashing "
-            "into each other. It's a fascinating example of the intricate dance of celestial bodies in our solar "
-            "system!"
+            == "That's correct! Pluto's orbit is indeed eccentric, meaning it is not a perfect circle. This "
+            "causes Pluto to come closer to the Sun than Neptune at times. However, despite this, "
+            "the two planets do not collide due to a stable orbital resonance. Orbital resonance is when two "
+            "objects orbiting a common point exert a regular influence on each other, keeping their orbits "
+            "stable and preventing collisions. In the case of Pluto and Neptune, their orbits are in a "
+            "specific ratio that keeps them from crashing into each other. It's a fascinating example of the "
+            "intricate dance of celestial bodies in our solar system!"
         ):
             return 0.52
         else:
@@ -103,10 +123,11 @@ async def test_fact_checking_wrong(httpx_mock):
     chat = TestChat(
         config,
         llm_completions=[
-            "Pluto has no known moons; Charon, the smallest, has a diameter greater than Pluto's, along with the "
-            "non-existent Styx, Nix, Kerberos, and Hydra.",
-            "  ask about pluto",
-            "Factcheck input violation has been detected by AutoGuard.",
+            "Actually, Pluto does have moons! In addition to Charon, which is the largest moon of Pluto and has a "
+            "diameter greater than Pluto's, there are four other known moons: Styx, Nix, Kerberos, and Hydra. Styx "
+            "and Nix were discovered in 2005, while Kerberos and Hydra were discovered in 2011 and 2012, "
+            "respectively. These moons are much smaller than Charon and Pluto, but they are still significant in "
+            "understanding the dynamics of the Pluto system. Isn't that fascinating?",
         ],
     )
 
@@ -116,8 +137,8 @@ async def test_fact_checking_wrong(httpx_mock):
         query = context.get("user_message")
         if (
             query
-            == "Pluto has no known moons; Charon, the smallest, has a diameter greater than Pluto's, along with the "
-            "non-existent Styx, Nix, Kerberos, and Hydra. "
+            == "Pluto has no known moons; Charon, the smallest, has a diameter greater than Pluto's, along with "
+            "the non-existent Styx, Nix, Kerberos, and Hydra."
         ):
             return 0.0
         else:
@@ -126,9 +147,32 @@ async def test_fact_checking_wrong(httpx_mock):
     chat.app.register_action(
         mock_autoguard_factcheck_input_api, "autoguard_factcheck_input_api"
     )
+
+    async def mock_autoguard_factcheck_output_api(
+        context: Optional[dict] = None, **kwargs
+    ):
+        query = context.get("bot_message")
+        if (
+            query
+            == "Actually, Pluto does have moons! In addition to Charon, which is the largest moon of Pluto and "
+            "has a diameter greater than Pluto's, there are four other known moons: Styx, Nix, Kerberos, "
+            "and Hydra. Styx and Nix were discovered in 2005, while Kerberos and Hydra were discovered in 2011 "
+            "and 2012, respectively. These moons are much smaller than Charon and Pluto, but they are still "
+            "significant in understanding the dynamics of the Pluto system. Isn't that fascinating?"
+        ):
+            return 0.0
+        else:
+            return 1.0
+
+    chat.app.register_action(
+        mock_autoguard_factcheck_output_api, "autoguard_factcheck_output_api"
+    )
     (
         chat
         >> "Pluto has no known moons; Charon, the smallest, has a diameter greater than Pluto's, along with the "
-        "non-existent Styx, Nix, Kerberos, and Hydra. "
+        "non-existent Styx, Nix, Kerberos, and Hydra."
     )
-    await chat.bot_async("Factcheck input violation has been detected by AutoGuard.")
+    await chat.bot_async(
+        "Factcheck violation in user input has been detected by AutoGuard.\nFactcheck violation in "
+        "llm response has been detected by AutoGuard."
+    )
