@@ -67,6 +67,16 @@ class HallucinationRailsEvaluation:
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
+    def get_response_with_retries(self, prompt, max_tries=1):
+        num_tries = 0
+        while num_tries < max_tries:
+            try:
+                response = self.llm(prompt)
+                return response
+            except:
+                num_tries += 1
+        return None
+
     def get_extra_responses(self, prompt, num_responses=2):
         """
         Sample extra responses with temperature=1.0 from the LLM for hallucination check.
@@ -81,7 +91,14 @@ class HallucinationRailsEvaluation:
         extra_responses = []
         with llm_params(self.llm, temperature=1.0, max_tokens=100):
             for _ in range(num_responses):
-                extra_responses.append(self.llm(prompt))
+                extra_response = self.get_response_with_retries(prompt)
+                if extra_response is None:
+                    log(
+                        logging.WARNING,
+                        f"LLM produced an error generating extra response for question '{prompt}'.",
+                    )
+                else:
+                    extra_responses.append(extra_response)
 
         return extra_responses
 
@@ -97,48 +114,75 @@ class HallucinationRailsEvaluation:
 
         hallucination_check_predictions = []
         num_flagged = 0
+        num_error = 0
 
         for question in tqdm.tqdm(self.dataset):
+            errored_out = False
             with llm_params(self.llm, temperature=0.2, max_tokens=100):
-                bot_response = self.llm(question)
+                bot_response = self.get_response_with_retries(question)
 
-            extra_responses = self.get_extra_responses(question, num_responses=2)
-            if len(extra_responses) == 0:
-                # Log message and return that no hallucination was found
+            if bot_response is None:
                 log(
                     logging.WARNING,
-                    f"No extra LLM responses were generated for '{bot_response}' hallucination check.",
+                    f"LLM produced an error for question '{question}'.",
                 )
-                continue
+                extra_responses = None
+                errored_out = True
+            else:
+                extra_responses = self.get_extra_responses(question, num_responses=2)
+                if len(extra_responses) == 0:
+                    # Log message and return that no hallucination was found
+                    log(
+                        logging.WARNING,
+                        f"No extra LLM responses were generated for '{bot_response}' hallucination check.",
+                    )
+                    errored_out = True
 
-            paragraph = ". ".join(extra_responses)
-            hallucination_check_prompt = self.llm_task_manager.render_task_prompt(
-                Task.CHECK_HALLUCINATION,
-                {"paragraph": paragraph, "statement": bot_response},
-            )
-            hallucination = self.llm(hallucination_check_prompt)
-            hallucination = hallucination.lower().strip()
+            if errored_out:
+                num_error += 1
+                prediction = {
+                    "question": question,
+                    "hallucination_agreement": "na",
+                    "bot_response": bot_response,
+                    "extra_responses": extra_responses,
+                }
+                hallucination_check_predictions.append(prediction)
+            else:
+                paragraph = ". ".join(extra_responses)
+                hallucination_check_prompt = self.llm_task_manager.render_task_prompt(
+                    Task.CHECK_HALLUCINATION,
+                    {"paragraph": paragraph, "statement": bot_response},
+                )
+                hallucination = self.llm(hallucination_check_prompt)
+                hallucination = hallucination.lower().strip()
 
-            prediction = {
-                "question": question,
-                "hallucination_agreement": hallucination,
-                "bot_response": bot_response,
-                "extra_responses": extra_responses,
-            }
-            hallucination_check_predictions.append(prediction)
-            if "no" in hallucination:
-                num_flagged += 1
+                prediction = {
+                    "question": question,
+                    "hallucination_agreement": hallucination,
+                    "bot_response": bot_response,
+                    "extra_responses": extra_responses,
+                }
+                hallucination_check_predictions.append(prediction)
+                if "no" in hallucination:
+                    num_flagged += 1
 
-        return hallucination_check_predictions, num_flagged
+        return hallucination_check_predictions, num_flagged, num_error
 
     def run(self):
         """
         Run  and print the hallucination rail evaluation.
         """
 
-        hallucination_check_predictions, num_flagged = self.check_hallucination()
+        (
+            hallucination_check_predictions,
+            num_flagged,
+            num_error,
+        ) = self.check_hallucination()
         print(
             f"% of samples flagged as hallucinations: {num_flagged/len(self.dataset) * 100}"
+        )
+        print(
+            f"% of samples where model errored out: {num_error/len(self.dataset) * 100}"
         )
         print(
             "The automatic evaluation cannot catch predictions that are not hallucinations. Please check the predictions manually."

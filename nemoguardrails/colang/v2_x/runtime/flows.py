@@ -23,7 +23,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Deque, Dict, List, Optional, Tuple, Union
 
 from dataclasses_json import dataclass_json
 
@@ -32,6 +32,8 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     FlowParamDef,
     FlowReturnMemberDef,
 )
+from nemoguardrails.colang.v2_x.runtime.errors import ColangSyntaxError
+from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
@@ -106,6 +108,17 @@ class Event:
             [(key, event[key]) for key in event if key not in ["type"]]
         )
         return new_event
+
+    # Expose all event parameters as attributes of the event
+    def __getattr__(self, name):
+        if (
+            name not in self.__dict__
+            and "arguments" in self.__dict__
+            and name in self.__dict__["arguments"]
+        ):
+            return self.__dict__["arguments"][name]
+        else:
+            return object.__getattribute__(self, "params")[name]
 
 
 @dataclass
@@ -201,6 +214,9 @@ class Action:
         # The arguments that will be used for the start event
         self.start_event_arguments = arguments
 
+        # Number of flows where this action is still active
+        self.flow_scope_count = 0
+
     # Process an event
     def process_event(self, event: ActionEvent) -> None:
         """Processes event and updates action accordingly."""
@@ -214,9 +230,11 @@ class Action:
             elif "ActionFinished" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.FINISHED
+                self.flow_scope_count = 0
             elif "Start" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.STARTING
+                self.flow_scope_count = 1
             elif "Stop" in event.name:
                 self.context.update(event.arguments)
                 self.status = ActionStatus.STOPPING
@@ -285,6 +303,17 @@ class Action:
             name=f"{self.name}Finished", arguments=arguments, action_uid=self.uid
         )
 
+    # Expose all action parameters as attributes
+    def __getattr__(self, name):
+        if (
+            name not in self.__dict__
+            and "context" in self.__dict__
+            and name in self.__dict__["context"]
+        ):
+            return self.__dict__["context"][name]
+        else:
+            return object.__getattribute__(self, "params")[name]
+
 
 class InteractionLoopType(Enum):
     """The type of the interaction loop."""
@@ -307,18 +336,61 @@ class FlowConfig:
     # The flow parameters
     parameters: List[FlowParamDef]
 
+    # The decorators for the flow.
+    # Maps the name of the applied decorators to the arguments.
+    # If positional arguments are provided, then the "$0", "$1", ... are used as the keys.
+    decorators: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+
     # The flow return member variables
     return_members: List[FlowReturnMemberDef] = field(default_factory=list)
 
     # All the label element positions in the flow
     element_labels: Dict[str, int] = field(default_factory=dict)
 
-    # Interaction loop
-    loop_id: Optional[str] = None
-    loop_type: InteractionLoopType = InteractionLoopType.PARENT
-
     # The actual source code, if available
     source_code: Optional[str] = None
+
+    @property
+    def loop_id(self) -> Optional[str]:
+        """Return the interaction loop id if set."""
+        if "loop" in self.decorators:
+            parameters = self.decorators["loop"]
+            if "id" in parameters:
+                return parameters["id"]
+            elif "$0" in parameters:
+                return parameters["$0"]
+            else:
+                log.warning(
+                    "No loop id specified for @loop decorator for flow `%s`", self.id
+                )
+        return None
+
+    @property
+    def loop_type(self) -> InteractionLoopType:
+        """Return the interaction loop type."""
+        loop_id = self.loop_id
+        if loop_id == "NEW":
+            return InteractionLoopType.NEW
+        elif loop_id is not None:
+            return InteractionLoopType.NAMED
+        else:
+            return InteractionLoopType.PARENT
+
+    @property
+    def is_override(self) -> bool:
+        """Return True if flow is marked as override."""
+        return "override" in self.decorators
+
+    def has_meta_tag(self, tag_name: str) -> bool:
+        """Return True if flow is marked with given meta tag, e.g. `@meta(llm_exclude=True)`."""
+        return "meta" in self.decorators and tag_name in self.decorators["meta"]
+
+    def meta_tag(self, tag_name: str) -> Optional[Any]:
+        """Return the parameter of the meta tag or None if it does not exist."""
+        if not self.has_meta_tag(tag_name):
+            return None
+        else:
+            return self.decorators["meta"][tag_name]
 
 
 class FlowHeadStatus(Enum):
@@ -468,13 +540,13 @@ class FlowState:
     priority: float = 1.0
 
     # All the arguments of a flow (e.g. flow bot say $utterance -> arguments = ["$utterance"])
-    arguments: List[str] = field(default_factory=list)
-
-    # Variables in the flow that are defined as global
-    global_variables: Set[str] = field(default_factory=set)
+    arguments: Dict[str, Any] = field(default_factory=dict)
 
     # Parent flow id
     parent_uid: Optional[str] = None
+
+    # Parent flow head id
+    parent_head_uid: Optional[str] = None
 
     # The ids of all the child flows
     child_flow_uids: List[str] = field(default_factory=list)
@@ -527,51 +599,78 @@ class FlowState:
             "Failed": "failed_event",
         }
 
-    def get_event(self, name: str, arguments: dict) -> InternalEvent:
+    def get_event(
+        self, name: str, arguments: dict, matching_scores: Optional[List[float]] = None
+    ) -> InternalEvent:
         """Returns the corresponding action event."""
         assert name in self._event_name_map, f"Event '{name}' not available!"
         func = getattr(self, self._event_name_map[name])
-        return func(arguments)
+        if not matching_scores:
+            matching_scores = []
+        return func(matching_scores, arguments)
 
     # Flow events to send
-    def start_event(self, _args: dict) -> InternalEvent:
+    def start_event(
+        self, matching_scores: List[float], args: Optional[dict] = None
+    ) -> InternalEvent:
         """Starts the flow. Takes no arguments."""
+        arguments = {
+            "flow_instance_uid": new_readable_uid(self.flow_id),
+            "flow_id": self.flow_id,
+            "source_flow_instance_uid": self.parent_uid,
+            "source_head_uid": self.parent_head_uid,
+            "flow_hierarchy_position": self.hierarchy_position,
+            "activated": self.activated,
+        }
+        arguments.update(self.arguments)
+        if args:
+            arguments.update(args)
         return InternalEvent(
-            name=InternalEvents.START_FLOW, arguments={"flow_id": self.flow_id}
+            name=InternalEvents.START_FLOW,
+            arguments=arguments,
+            matching_scores=matching_scores,
         )
 
-    def finish_event(self, _args: dict) -> InternalEvent:
+    def finish_event(self, matching_scores: List[float], _args: dict) -> InternalEvent:
         """Finishes the flow. Takes no arguments."""
         return InternalEvent(
             name=InternalEvents.FINISH_FLOW,
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
+            matching_scores=matching_scores,
         )
 
-    def stop_event(self, _args: dict) -> InternalEvent:
+    def stop_event(self, matching_scores: List[float], _args: dict) -> InternalEvent:
         """Stops the flow. Takes no arguments."""
         return InternalEvent(
             name="StopFlow",
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
+            matching_scores=matching_scores,
         )
 
-    def pause_event(self, _args: dict) -> InternalEvent:
+    def pause_event(self, matching_scores: List[float], _args: dict) -> InternalEvent:
         """Pauses the flow. Takes no arguments."""
         return InternalEvent(
             name="PauseFlow",
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
+            matching_scores=matching_scores,
         )
 
-    def resume_event(self, _args: dict) -> InternalEvent:
+    def resume_event(self, matching_scores: List[float], _args: dict) -> InternalEvent:
         """Resumes the flow. Takes no arguments."""
         return InternalEvent(
             name="ResumeFlow",
             arguments={"flow_id": self.flow_id, "flow_instance_uid": self.uid},
+            matching_scores=matching_scores,
         )
 
     # Flow events to match
-    def started_event(self, args: dict) -> InternalEvent:
+    def started_event(
+        self, matching_scores: List[float], args: Optional[Dict[str, Any]] = None
+    ) -> InternalEvent:
         """Returns the flow Started event."""
-        return self._create_event(InternalEvents.FLOW_STARTED, args)
+        return self._create_out_event(
+            InternalEvents.FLOW_STARTED, matching_scores, args
+        )
 
     # def paused_event(self, args: dict) -> FlowEvent:
     #     """Returns the flow Pause event."""
@@ -581,29 +680,38 @@ class FlowState:
     #     """Returns the flow Resumed event."""
     #     return self._create_event(InternalEvents.FLOW_RESUMED, args)
 
-    def finished_event(self, args: dict) -> InternalEvent:
+    def finished_event(
+        self, matching_scores: List[float], args: Optional[Dict[str, Any]] = None
+    ) -> InternalEvent:
         """Returns the flow Finished event."""
-        return self._create_event(InternalEvents.FLOW_FINISHED, args)
-
-    def failed_event(self, args: dict) -> InternalEvent:
-        """Returns the flow Failed event."""
-        return self._create_event(InternalEvents.FLOW_FAILED, args)
-
-    def _create_event(self, event_type: str, args: dict) -> InternalEvent:
-        arguments = args.copy()
-        arguments["flow_id"] = self.flow_id
-        if "flow_start_uid" in self.context:
-            arguments["flow_start_uid"] = self.context["flow_start_uid"]
-        arguments.update(
-            dict(
-                [
-                    (arg, self.context[arg])
-                    for arg in self.arguments
-                    if arg in self.context
-                ]
-            )
+        if not args:
+            args = {}
+        if "_return_value" in self.context:
+            args["return_value"] = self.context["_return_value"]
+        return self._create_out_event(
+            InternalEvents.FLOW_FINISHED, matching_scores, args
         )
-        return InternalEvent(event_type, arguments)
+
+    def failed_event(
+        self, matching_scores: List[float], args: Optional[Dict[str, Any]] = None
+    ) -> InternalEvent:
+        """Returns the flow Failed event."""
+        return self._create_out_event(InternalEvents.FLOW_FAILED, matching_scores, args)
+
+    def _create_out_event(
+        self,
+        event_type: str,
+        matching_scores: List[float],
+        args: Optional[Dict[str, Any]],
+    ) -> InternalEvent:
+        arguments = {}
+        arguments["source_flow_instance_uid"] = self.uid
+        arguments["flow_instance_uid"] = self.uid
+        arguments["flow_id"] = self.flow_id
+        arguments.update(self.arguments)
+        if args:
+            arguments.update(args)
+        return InternalEvent(event_type, arguments, matching_scores)
 
     def __repr__(self) -> str:
         return (
@@ -672,19 +780,3 @@ class State:
     event_matching_heads_reverse_map: Dict[Tuple[str, str], str] = field(
         default_factory=dict
     )
-
-
-class ColangSyntaxError(Exception):
-    """Raised when there is invalid Colang syntax detected."""
-
-
-class ColangValueError(Exception):
-    """Raised when there is an invalid value detected in a Colang expression."""
-
-
-class ColangRuntimeError(Exception):
-    """Raised when there is a Colang related runtime exception."""
-
-
-class LlmResponseError(Exception):
-    """Raised when there is an issue with the lmm response."""

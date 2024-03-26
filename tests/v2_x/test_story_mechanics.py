@@ -19,7 +19,7 @@ import logging
 
 from rich.logging import RichHandler
 
-from nemoguardrails.colang.v2_x.runtime.flows import ActionStatus, Event
+from nemoguardrails.colang.v2_x.runtime.flows import Event
 from nemoguardrails.colang.v2_x.runtime.statemachine import (
     InternalEvent,
     run_to_completion,
@@ -38,7 +38,7 @@ start_main_flow_event = InternalEvent(name="StartFlow", arguments={"flow_id": "m
 
 
 def test_when_else_deep_hierarchy_case_match():
-    """"""
+    """Test when else mechanism with deep flow hierarchies."""
 
     content = """
     flow user said $transcript
@@ -56,8 +56,8 @@ def test_when_else_deep_hierarchy_case_match():
     flow bot ask $text
       await bot say $text
 
+    @loop("observer")
     flow observer
-      # meta: loop_id=observer
       while True
         when bot asked something
           start GestureBotAction(gesture="Case 1")
@@ -123,7 +123,7 @@ def test_when_else_deep_hierarchy_case_match():
 
 
 def test_when_conflict_issue():
-    """"""
+    """Test some when construct edge case."""
 
     content = """
     flow user said something
@@ -135,8 +135,8 @@ def test_when_conflict_issue():
     flow bot said something
       match UtteranceBotAction().Finished()
 
+    @loop("observer")
     flow observer
-      # meta: loop_id=observer
       while True
         when bot said something or user said something
           start GestureBotAction(gesture="test")
@@ -188,19 +188,19 @@ def test_when_conflict_issue():
         state.outgoing_events,
         [
             {
-                "type": "StartGestureBotAction",
-                "gesture": "test",
-            },
-            {
                 "type": "StartUtteranceBotAction",
                 "script": "Ok",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "test",
             },
         ],
     )
 
 
 def test_flow_event_competition():
-    """"""
+    """Test flow conflict resolution based on internal event matching."""
 
     content = """
     flow a
@@ -237,7 +237,7 @@ def test_flow_event_competition():
 
 
 def test_flow_bot_question_repetition():
-    """"""
+    """Test a complex use case where the bot repeats a question when user was silent."""
 
     content = """
     flow _bot_say $text
@@ -344,7 +344,7 @@ def test_flow_bot_question_repetition():
 
 
 def test_multi_level_head_merging():
-    """"""
+    """Test a complex use case for posture management."""
 
     content = """
     flow bot say $text
@@ -429,16 +429,16 @@ def test_multi_level_head_merging():
 
 
 def test_match_colang_error_event():
-    """"""
+    """Test handling colang errors."""
 
     content = """
     flow catch colang errors
       match ColangError() as $event
-      await UtteranceBotAction(script="Warning: {{$event.arguments.error_type}} - {{escape($event.arguments.error)}}")
+      await UtteranceBotAction(script="Warning: {$event.type} - {escape($event.error)}")
 
     flow a
       match UtteranceUserAction.Finished(final_transcript="go") as $event
-      start UtteranceBotAction(script="{{$test[0]}}")
+      start UtteranceBotAction(script="{$test[0]}")
 
     flow main
       activate catch colang errors
@@ -465,7 +465,7 @@ def test_match_colang_error_event():
         new_event = Event(
             name="ColangError",
             arguments={
-                "error_type": str(type(ex).__name__),
+                "type": str(type(ex).__name__),
                 "error": str(ex),
             },
         )

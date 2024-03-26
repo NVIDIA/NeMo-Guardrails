@@ -20,12 +20,12 @@ from typing import List, Optional
 import typer
 import uvicorn
 from fastapi import FastAPI
-from rich.logging import RichHandler
 
 from nemoguardrails import __version__
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
 from nemoguardrails.eval.cli import evaluate
+from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
 
@@ -47,9 +47,13 @@ def chat(
         default=False,
         help="If the chat should be verbose and output detailed logging information.",
     ),
-    verbose_llm_calls: bool = typer.Option(
+    verbose_no_llm: bool = typer.Option(
         default=False,
-        help="If the chat should be verbose and include the prompts and responses for the LLM calls.",
+        help="If the chat should be verbose and exclude the prompts and responses for the LLM calls.",
+    ),
+    verbose_simplify: bool = typer.Option(
+        default=False,
+        help="Simplify further the verbose output.",
     ),
     debug_level: List[str] = typer.Option(
         default=[],
@@ -69,23 +73,29 @@ def chat(
     ),
 ):
     """Start an interactive chat session."""
-    if verbose:
-        set_verbose(True)
-
     if len(config) > 1:
         typer.secho(f"Multiple configurations are not supported.", fg=typer.colors.RED)
         typer.echo("Please provide a single folder.")
         raise typer.Exit(1)
 
-    if len(debug_level) == 1:
-        root_logger = logging.getLogger()
-        root_logger.addHandler(RichHandler(markup=True))
-        root_logger.setLevel(debug_level[0])
+    # We enable verbose mode automatically when a debug level is specified.
+    # If the `--verbose-no-llm` mode is used, we activate the verbose mode as well.
+    # This means that the user doesn't have to use both options at the same time.
+    verbose = verbose or verbose_no_llm or len(debug_level) > 0
+
+    if verbose:
+        set_verbose(
+            True,
+            llm_calls=not verbose_no_llm,
+            debug=len(debug_level) > 0,
+            debug_level=debug_level[0] if debug_level else "INFO",
+            simplify=verbose_simplify,
+        )
 
     run_chat(
         config_path=config[0],
         verbose=verbose,
-        verbose_llm_calls=verbose_llm_calls,
+        verbose_llm_calls=not verbose_no_llm,
         streaming=streaming,
         server_url=server_url,
         config_id=config_id,

@@ -24,12 +24,30 @@ from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
+from nemoguardrails.colang.v2_x.runtime.errors import ColangParsingError
 
 log = logging.getLogger(__name__)
 
 # Load the default config values from the file
 with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
     _default_config = yaml.safe_load(_fc)
+
+with open(os.path.join(os.path.dirname(__file__), "default_config_v2.yml")) as _fc:
+    _default_config_v2 = yaml.safe_load(_fc)
+
+
+# Extract the COLANGPATH directories.
+colang_path_dirs = [
+    _path.strip()
+    for _path in os.environ.get("COLANGPATH", "").split(os.pathsep)
+    if _path.strip() != ""
+]
+
+# We also make sure that the standard library is in the COLANGPATH.
+standard_library_path = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "colang", "v2_x", "library")
+)
+colang_path_dirs.append(standard_library_path)
 
 
 class Model(BaseModel):
@@ -466,6 +484,7 @@ def _join_config(dest_config: dict, additional_config: dict):
             "actions_server_url",
             "sensitive_data_detection",
             "embedding_search_provider",
+            "import_paths",
         }
     )
 
@@ -494,34 +513,39 @@ def _load_path(
     if not os.path.exists(config_path):
         raise ValueError(f"Could not find config path: {config_path}")
 
-    for root, _, files in os.walk(config_path, followlinks=True):
-        # Followlinks to traverse symlinks instead of ignoring them.
+    if os.path.isdir(config_path):
+        for root, _, files in os.walk(config_path, followlinks=True):
+            # Followlinks to traverse symlinks instead of ignoring them.
 
-        for file in files:
-            # This is the raw configuration that will be loaded from the file.
-            _raw_config = {}
+            for file in files:
+                # This is the raw configuration that will be loaded from the file.
+                _raw_config = {}
 
-            # Extract the full path for the file and compute relative path
-            full_path = os.path.join(root, file)
-            rel_path = os.path.relpath(full_path, config_path)
+                # Extract the full path for the file and compute relative path
+                full_path = os.path.join(root, file)
+                rel_path = os.path.relpath(full_path, config_path)
 
-            # If it's a file in the `kb` folder we need to append it to the docs
-            if rel_path.startswith("kb"):
-                _raw_config = {"docs": []}
-                if rel_path.endswith(".md"):
-                    with open(full_path, encoding="utf-8") as f:
-                        _raw_config["docs"].append(
-                            {"format": "md", "content": f.read()}
-                        )
+                # If it's a file in the `kb` folder we need to append it to the docs
+                if rel_path.startswith("kb"):
+                    _raw_config = {"docs": []}
+                    if rel_path.endswith(".md"):
+                        with open(full_path, encoding="utf-8") as f:
+                            _raw_config["docs"].append(
+                                {"format": "md", "content": f.read()}
+                            )
 
-            elif file.endswith(".yml") or file.endswith(".yaml"):
-                with open(full_path, "r", encoding="utf-8") as f:
-                    _raw_config = yaml.safe_load(f.read())
+                elif file.endswith(".yml") or file.endswith(".yaml"):
+                    with open(full_path, "r", encoding="utf-8") as f:
+                        _raw_config = yaml.safe_load(f.read())
 
-            elif file.endswith(".co"):
-                colang_files.append((file, full_path))
+                elif file.endswith(".co"):
+                    colang_files.append((file, full_path))
 
-            _join_config(raw_config, _raw_config)
+                _join_config(raw_config, _raw_config)
+
+    # If it's just a .co file, we append it as is to the config.
+    elif config_path.endswith(".co"):
+        colang_files.append((config_path, config_path))
 
     return raw_config, colang_files
 
@@ -534,22 +558,89 @@ def _load_imported_paths(raw_config: dict, colang_files: List[Tuple[str, str]]):
         colang_files: The current set of colang files which will be extended as new
             configurations are loaded.
     """
-    imported_paths = []
-    while len(imported_paths) != len(raw_config["import_paths"]):
+    # We also keep a temporary array of all the paths that have been imported
+    if "imported_paths" not in raw_config:
+        raw_config["imported_paths"] = {}
+
+    while len(raw_config["imported_paths"]) != len(raw_config["import_paths"]):
         for import_path in raw_config["import_paths"]:
-            if import_path in imported_paths:
+            if import_path in raw_config["imported_paths"]:
                 continue
 
             log.info(f"Loading imported path: {import_path}")
 
-            _raw_config, _colang_files = _load_path(import_path)
+            # If the path does not exist, we try to resolve it using COLANGPATH
+            actual_path = None
+            if not os.path.exists(import_path):
+                for root in colang_path_dirs:
+                    if os.path.exists(os.path.join(root, import_path)):
+                        actual_path = os.path.join(root, import_path)
+                        break
+
+                    # We also check if we can load it as a file.
+                    if not import_path.endswith(".co") and os.path.exists(
+                        os.path.join(root, import_path + ".co")
+                    ):
+                        actual_path = os.path.join(root, import_path + ".co")
+                        break
+            else:
+                actual_path = import_path
+
+            if actual_path is None:
+                raise ValueError(f"Import path `{import_path}` could not be resolved.")
+
+            _raw_config, _colang_files = _load_path(actual_path)
 
             # Join them.
             _join_config(raw_config, _raw_config)
             colang_files.extend(_colang_files)
 
             # And mark the path as imported.
-            imported_paths.append(import_path)
+            raw_config["imported_paths"][import_path] = actual_path
+
+
+def _parse_colang_files_recursively(
+    raw_config: dict,
+    colang_files: List[Tuple[str, str]],
+    parsed_colang_files: List[dict],
+):
+    """Helper function to parse all the Colang files.
+
+    If there are imports, they will be imported recursively
+    """
+    colang_version = raw_config.get("colang_version", "1.0")
+
+    # We start parsing the colang files one by one, and if we have
+    # new import paths, we continue to update
+    while len(parsed_colang_files) != len(colang_files):
+        current_file, current_path = colang_files[len(parsed_colang_files)]
+
+        with open(current_path, "r", encoding="utf-8") as f:
+            try:
+                _parsed_config = parse_colang_file(
+                    current_file, content=f.read(), version=colang_version
+                )
+            except Exception as e:
+                raise ColangParsingError(
+                    f"Error while parsing Colang file: {current_path}"
+                ) from e
+
+            # We join only the "import_paths" field in the config for now
+            _join_config(
+                raw_config,
+                {"import_paths": _parsed_config.get("import_paths", [])},
+            )
+
+            parsed_colang_files.append(_parsed_config)
+
+        # If there are any new imports, we load them
+        if raw_config.get("import_paths"):
+            _load_imported_paths(raw_config, colang_files)
+
+    # To allow overriding of elements from imported paths, we need to merge the
+    # parsed data in reverse order.
+    for file_parsed_data in reversed(parsed_colang_files):
+        _join_config(raw_config, file_parsed_data)
 
 
 class RailsConfig(BaseModel):
@@ -615,6 +706,10 @@ class RailsConfig(BaseModel):
         default_factory=list,
         description="A list of additional paths from which configuration elements (colang flows, .yml files, actions)"
         " should be loaded.",
+    )
+    imported_paths: Optional[Dict[str, str]] = Field(
+        default_factory=dict,
+        description="The mapping between the imported paths and the actual full path to which they were resolved.",
     )
 
     # Some tasks need to be as deterministic as possible. The lowest possible temperature
@@ -710,6 +805,23 @@ class RailsConfig(BaseModel):
 
         return values
 
+    @root_validator(pre=True, allow_reuse=True)
+    def fill_in_default_values_for_v2_x(cls, values):
+        instructions = values.get("instructions", {})
+        sample_conversation = values.get("sample_conversation")
+        colang_version = values.get("colang_version", "1.0")
+
+        if colang_version == "2.x":
+            if not instructions:
+                values["instructions"] = _default_config_v2["instructions"]
+
+            if not sample_conversation:
+                values["sample_conversation"] = _default_config_v2[
+                    "sample_conversation"
+                ]
+
+        return values
+
     raw_llm_call_action: Optional[str] = Field(
         default="raw llm call",
         description="The name of the action that would execute the original raw LLM call. ",
@@ -737,16 +849,9 @@ class RailsConfig(BaseModel):
                 _load_imported_paths(raw_config, colang_files)
 
             # Parse the colang files after we know the colang version
-            colang_version = raw_config.get("colang_version", "1.0")
-
-            # To allow overriding of elements from imported paths, we need to process
-            # these in reverse order.
-            for file, full_path in reversed(colang_files):
-                with open(full_path, "r", encoding="utf-8") as f:
-                    _raw_config = parse_colang_file(
-                        file, content=f.read(), version=colang_version
-                    )
-                    _join_config(raw_config, _raw_config)
+            _parse_colang_files_recursively(
+                raw_config, colang_files, parsed_colang_files=[]
+            )
 
         else:
             raise ValueError(f"Invalid config path {config_path}.")
@@ -774,33 +879,38 @@ class RailsConfig(BaseModel):
         if yaml_content:
             _join_config(raw_config, yaml.safe_load(yaml_content))
 
-        # If we have import paths, we also need to load them.
-        colang_files = []
-        if raw_config.get("import_paths"):
-            _load_imported_paths(raw_config, colang_files)
-
         # Parse the colang files after we know the colang version
         colang_version = raw_config.get("colang_version", "1.0")
 
-        # To allow overriding of elements from imported paths, we need to process
-        # these in reverse order.
-        for file, full_path in reversed(colang_files):
-            with open(full_path, "r", encoding="utf-8") as f:
-                _raw_config = parse_colang_file(
-                    file, content=f.read(), version=colang_version
-                )
-                _join_config(raw_config, _raw_config)
+        # We start parsing the colang files one by one, and if we have
+        # new import paths, we continue to update
+        colang_files = []
+        parsed_colang_files = []
 
-        # Finally, parse the content colang.
+        # First, we parse the starting content.
         if colang_content:
+            colang_files.append(("main.co", "main.co"))
+
+            _parsed_config = parse_colang_file(
+                "main.co",
+                content=colang_content,
+                version=colang_version,
+            )
+
+            # We join only the "import_paths" field in the config for now
             _join_config(
                 raw_config,
-                parse_colang_file(
-                    "main.co",
-                    content=colang_content,
-                    version=colang_version,
-                ),
+                {"import_paths": _parsed_config.get("import_paths", [])},
             )
+
+            parsed_colang_files.append(_parsed_config)
+
+        # Load any new colang files potentially coming from imports
+        if raw_config.get("import_paths"):
+            _load_imported_paths(raw_config, colang_files)
+
+        # Next, we parse any additional files recursively
+        _parse_colang_files_recursively(raw_config, colang_files, parsed_colang_files)
 
         # If there are no instructions, we use the default ones.
         if len(raw_config.get("instructions", [])) == 0:

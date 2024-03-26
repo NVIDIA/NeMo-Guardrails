@@ -55,13 +55,32 @@ For testing purposes, the Guardrails toolkit provides a command line chat that c
 
   Starts an interactive chat session.
 
- Options:
-  --config TEXT             Path to a directory containing configuration files
-                            to use. Can also point to a single configuration
-                            file.  [default: config]
-  --verbose / --no-verbose  If the chat should be verbose and output detailed logging information. [default: no-verbose]
-  --verbose-llm-calls    --no-verbose-llm-calls          If the chat should be verbose and include the prompts and responses for the LLM calls. [default: no-verbose-llm-calls]
-  --help                    Show this message and exit.
+  --config                                       TEXT  Path to a directory containing configuration
+                                                       files to use. Can also point to a single
+                                                       configuration file.
+                                                       [default: config]
+  --verbose             --no-verbose                   If the chat should be verbose and output
+                                                       detailed logging information.
+                                                       [default: no-verbose]
+  --verbose-no-llm      --no-verbose-no-llm            If the chat should be verbose and exclude the
+                                                       prompts and responses for the LLM calls.
+                                                       [default: no-verbose-no-llm]
+  --verbose-simplify    --no-verbose-simplify          Simplify further the verbose output.
+                                                       [default: no-verbose-simplify]
+  --debug-level                                  TEXT  Enable debug mode which prints rich
+                                                       information about the flows execution.
+                                                       Available levels: WARNING, INFO, DEBUG
+  --streaming           --no-streaming                 If the chat should use the streaming mode, if
+                                                       possible.
+                                                       [default: no-streaming]
+  --server-url                                   TEXT  If specified, the chat CLI will interact with
+                                                       a server, rather than load the config. In this
+                                                       case, the --config-id must also be specified.
+                                                       [default: None]
+  --config-id                                    TEXT  The config_id to be used when interacting with
+                                                       the server.
+                                                       [default: None]
+  --help                                               Show this message and exit.
  ```
 
  ```bash

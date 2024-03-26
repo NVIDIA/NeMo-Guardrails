@@ -195,7 +195,13 @@ class NeMoLLM(BaseLLM, BaseModel):
             generations=generations,
             llm_output={
                 "url": self._get_request_url(),
-                "headers": self._get_request_headers(),
+                "headers": {
+                    k: v
+                    for k, v in self._get_request_headers().items()
+                    # We make sure the Authorization header is not returned as this
+                    # can lean the authorization key.
+                    if k != "Authorization"
+                },
                 "model_name": self.model,
             },
         )
@@ -293,7 +299,13 @@ class NeMoLLM(BaseLLM, BaseModel):
             generations=generations,
             llm_output={
                 "url": self._get_request_url(),
-                "headers": self._get_request_headers(),
+                "headers": {
+                    k: v
+                    for k, v in self._get_request_headers().items()
+                    # We make sure the Authorization header is not returned as this
+                    # can lean the authorization key.
+                    if k != "Authorization"
+                },
                 "model_name": self.model,
             },
         )

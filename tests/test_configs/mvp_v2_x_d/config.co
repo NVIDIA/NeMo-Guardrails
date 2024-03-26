@@ -16,7 +16,7 @@ flow count
   """Count from 1 to 5."""
   $count = 1
   while $count <= 5
-    bot say "{{$count}}"
+    bot say "{$count}"
     $count = $count + 1
 
 # Sequence
@@ -58,20 +58,20 @@ flow number guessing game
 
 # Common
 
+@meta(exclude_from_llm=True)
 flow user said $text
-  # meta: exclude from llm
   match UtteranceUserAction.Finished(final_transcript=$text)
 
+@meta(exclude_from_llm=True)
 flow user said something
-  # meta: exclude from llm
   match UtteranceUserAction.Finished() as $event
 
+@meta(exclude_from_llm=True)
 flow bot say $text
-  # meta: exclude from llm
   await UtteranceBotAction(script=$text)
 
+@meta(exclude_from_llm=True)
 flow wait
-  # meta: exclude from llm
   match SomeRandomEvent()
 
 # Custom
@@ -87,7 +87,7 @@ flow user provided custom instructions
   user said "do something"
 
 flow bot express greeting $name
-  bot say "Hello {{$name}}!"
+  bot say "Hello {$name}!"
 
 flow bot comment unsure how to respond
   bot say "I'm not sure how to respond."
@@ -113,21 +113,21 @@ flow unknown intent
   user unknown intent
   bot comment unsure how to respond
 
+@meta(exclude_from_llm=True)
 flow fallback
   """This is the fallback flow that takes care of unhandled user utterances and will generate a flow continuation."""
-  # meta: exclude from llm
 
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
 
   start_new_flow_instance:
 
-  $intent = await GenerateUserIntentAction(user_utterance=$event.arguments.final_transcript)
+  $intent = await GenerateUserIntentAction(user_utterance=$event.final_transcript)
   $exists = await CheckForActiveEventMatchAction(name="FlowFinished", flow_id=$intent)
 
   if $exists
     send FinishFlow(flow_id=$intent)
   else
-    #log "'fallback' -> Generate new flow for intent '{{$intent}}'"
+    #log "'fallback' -> Generate new flow for intent '{$intent}'"
     send DynamicFlowFinished(flow_id=$intent)
 
     $flow_info = await GenerateFlowContinuationAction()
@@ -137,45 +137,44 @@ flow fallback
     match FlowStarted(flow_id=$flow_info['name']) as $event_ref
     match $event_ref.flow.Finished()
 
-flow handle undefined flow starts
+@meta(exclude_from_llm=True)
+flow handling start of undefined flow
   """If we reach a point where we need to start a flow that does not exist, we generate it."""
-  # meta: exclude from llm
 
   match UnhandledEvent(event="StartFlow") as $event
 
-  $exists = await CheckValidFlowExistsAction(flow_id=$event.arguments.flow_id)
+  $exists = await CheckValidFlowExistsAction(flow_id=$event.flow_id)
 
   start_new_flow_instance:
 
   if not $exists
-    $flow_id = $event.arguments.flow_id
-    log "'handle undefined flow starts' -> generate new flow '{{$event.arguments.flow_id}}'"
+    $flow_id = $event.flow_id
+    log "'handling start of undefined flow' -> generate new flow '{$event.flow_id}'"
     $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
     await AddFlowsAction(config=$flow_source)
     send StartFlow(flow_id=$flow_id)
 
-
+@meta(exclude_from_llm=True)
 flow do $instructions
-  # meta: exclude from llm
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
   await AddFlowsAction(config=$flow_info.body)
   send StartFlow(flow_id=$flow_info['name'])
   match FlowStarted(flow_id=$flow_info['name']) as $event_ref
   match $event_ref.flow.Finished()
 
+@meta(exclude_from_llm=True)
 flow custom instructions
-  # meta: exclude from llm
   user provided custom instructions
   $instructions = await GetLastUserMessageAction()
   do $instructions
 
+@meta(exclude_from_llm=True)
 flow main
-  # meta: exclude from llm
   activate greeting
   activate custom instructions
   activate unknown intent
   activate fallback
-  activate handle undefined flow starts
+  activate handling start of undefined flow
   # activate question
   # activate tell the user the weather
 

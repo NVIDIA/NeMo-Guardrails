@@ -27,7 +27,10 @@ from langchain.llms.base import LLM
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.colang import parse_colang_file
-from nemoguardrails.colang.v2_x.runtime.flows import FlowConfig, State
+from nemoguardrails.colang.v2_x.runtime.flows import State
+from nemoguardrails.colang.v2_x.runtime.runtime import (
+    create_flow_configs_from_flow_list,
+)
 from nemoguardrails.colang.v2_x.runtime.statemachine import initialize_state
 from nemoguardrails.utils import EnhancedJsonEncoder, new_event_dict
 
@@ -293,36 +296,14 @@ def is_data_in_events(
     return True
 
 
-def convert_parsed_colang_to_flow_config(
-    parsed_colang: Dict[str, Any]
-) -> Dict[str, FlowConfig]:
-    """Converts the parsed colang to a flow configuration."""
-    return dict(
-        [
-            (
-                flow["name"],
-                FlowConfig(
-                    id=flow["name"],
-                    loop_id=None,
-                    elements=flow["elements"],
-                    parameters=flow["parameters"],
-                    return_members=flow["return_members"],
-                    source_code=flow["source_code"],
-                ),
-            )
-            for flow in parsed_colang["flows"]
-        ]
-    )
-
-
 def _init_state(colang_content) -> State:
-    config = convert_parsed_colang_to_flow_config(
+    config = create_flow_configs_from_flow_list(
         parse_colang_file(
             filename="",
             content=colang_content,
             include_source_mapping=True,
             version="2.x",
-        )
+        )["flows"]
     )
 
     json.dump(config, sys.stdout, indent=4, cls=EnhancedJsonEncoder)

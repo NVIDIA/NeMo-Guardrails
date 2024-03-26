@@ -35,11 +35,9 @@ tests_root = os.path.join(os.path.dirname(__file__), "../../..")
         "colang/parser/v2_x/inputs/test8.co",
         "colang/parser/v2_x/inputs/test9.co",
         "colang/parser/v2_x/inputs/test10.co",
-        "test_configs/example_flows_v_2_x/faq_questions.co",
-        "test_configs/example_flows_v_2_x/core_flows.co",
-        "test_configs/example_flows_v_2_x/confirmation_question.co",
-        "test_configs/example_flows_v_2_x/multi_modal_actions.co",
-        "test_configs/example_flows_v_2_x/action_conflicts.co",
+        "colang/parser/v2_x/inputs/test11.co",
+        "colang/parser/v2_x/inputs/test12.co",
+        "colang/parser/v2_x/inputs/test13.co",
     ],
 )
 def test_parsing_syntax(filename):
