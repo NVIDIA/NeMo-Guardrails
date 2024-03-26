@@ -1,6 +1,5 @@
 define flow autoguard check input
   $input_result = execute autoguard_input_api(show_autoguard_message=True)
-
   if $input_result["guardrails_triggered"]
     $autoguard_input_response = $input_result['combined_response']
     bot refuse to respond
@@ -8,7 +7,6 @@ define flow autoguard check input
 
 define flow autoguard check output
   $output_result = execute autoguard_output_api(show_autoguard_message=True)
-
   if $output_result["guardrails_triggered"]
     bot refuse to respond
     stop
@@ -18,20 +16,11 @@ define flow autoguard check output
       bot respond pii output
       stop
 
-define flow autoguard factcheck input
-  execute autoguard_retrieve_relevant_chunks_input
-  $input_result = execute autoguard_factcheck_input_api
-
 define flow autoguard factcheck output
   $output_result = execute autoguard_factcheck_output_api
-  if $input_result < 0.5
-    bot inform autoguard factcheck input violation
   if $output_result < 0.5
     bot inform autoguard factcheck output violation
     stop
-
-define bot inform autoguard factcheck input violation
-  "Factcheck violation in user input has been detected by AutoGuard."
 
 define bot inform autoguard factcheck output violation
   "Factcheck violation in llm response has been detected by AutoGuard."
