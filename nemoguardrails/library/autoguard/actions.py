@@ -138,7 +138,7 @@ async def autoguard_infer(
         raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
 
     headers = {"x-api-key": api_key}
-    config = DEFAULT_CONFIG
+    config = DEFAULT_CONFIG.copy()
     # enable the select guardrail
     for task in task_config.keys():
         if task != "factcheck":
@@ -321,13 +321,17 @@ async def autoguard_factcheck_output_api(
         raise ValueError("Provide relevant documents in proper format")
 
 
-@action(name="autoguard_retrieve_relevant_chunks")
-async def autoguard_retrieve_relevant_chunks(
+@action(name="autoguard_retrieve_relevant_chunks_input")
+async def autoguard_retrieve_relevant_chunks_input(
+    context: Optional[dict] = None,
     kb: Optional[KnowledgeBase] = None,
 ):
     """Retrieve knowledge chunks from knowledge base and update the context."""
+    user_message = context.get("user_message")
     context_updates = {}
-    chunks = [chunk["body"] for chunk in kb.chunks]
+    chunks = await kb.search_relevant_chunks(user_message)
+    chunks = [chunk["body"] for chunk in chunks]
+    # 💡 Store the chunks for fact-checking
 
     context_updates["relevant_chunks"] = "\n".join(chunks)
     context_updates["relevant_chunks_sep"] = chunks
