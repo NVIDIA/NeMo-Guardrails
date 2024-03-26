@@ -268,7 +268,7 @@ rails:
 ```
 We also have to add the autoguard's endpoint in parameters.
 
-One of the advanced configs is matching score (ranging between 0 and 1) which is a threshold that determines whether the guardrail will block the input/output or not.
+One of the advanced configs is matching score (ranging from 0 to 1) which is a threshold that determines whether the guardrail will block the input/output or not.
 If the matching score is higher (i.e. close to 1) then the guardrail will be more strict.
 Some guardrails have very different format of `matching_scores` config,
 in each guardrail's description we have added an example to show how `matching_scores`
