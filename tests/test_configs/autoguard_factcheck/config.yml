@@ -7,9 +7,6 @@ rails:
     autoguard:
       parameters:
         fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
-  input:
-    flows:
-      - autoguard factcheck input
   output:
     flows:
       - autoguard factcheck output
