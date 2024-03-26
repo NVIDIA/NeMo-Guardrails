@@ -67,7 +67,7 @@ rails:
                   }
     input:
         flows:
-            - call autoguard input
+            - autoguard check input
     output:
         flows:
-            - call autoguard output
+            - autoguard check output
