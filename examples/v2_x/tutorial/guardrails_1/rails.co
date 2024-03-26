@@ -1,18 +1,17 @@
 import guardrails
 import core
 import llm
-import utils
 
 
-flow user express greeting
+flow user expressed greeting
   user said "hi" or user said "hello"
 
-flow bot expressed greeting
+flow bot express greeting
   bot say "Hello world!"
 
 flow greeting
-  user express greeting
-  bot expressed greeting
+  user expressed greeting
+  bot express greeting
 
 flow input rails $input_text
   $input_safe = await self check input $input_text
@@ -40,5 +39,3 @@ flow self check input $input_text -> $input_safe
 flow main
   activate llm continuation
   activate greeting
-
-  wait indefinitely
