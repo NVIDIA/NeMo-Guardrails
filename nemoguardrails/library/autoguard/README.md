@@ -293,7 +293,6 @@ define flow autoguard check input
     stop
 
 define flow autoguard check output
-  $pre_rail_bot_message = $bot_message
   $output_result = execute autoguard_output_api(show_autoguard_message=True)
 
   if $output_result["guardrails_triggered"]
@@ -459,7 +458,6 @@ define flow call autoguard input
     stop
 
 define flow call autoguard output
-  $pre_rail_bot_message = $bot_message
   $output_result = execute autoguard_output_api(show_autoguard_message=True, show_toxic_phrases=True)
 
   if $output_result["guardrails_triggered"]
