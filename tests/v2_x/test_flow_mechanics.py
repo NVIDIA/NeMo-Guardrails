@@ -15,7 +15,6 @@
 
 """Test the core flow mechanics"""
 import logging
-import os
 
 from rich.logging import RichHandler
 
@@ -23,8 +22,7 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     InternalEvent,
     run_to_completion,
 )
-from nemoguardrails.rails.llm.config import RailsConfig
-from tests.utils import TestChat, _init_state, is_data_in_events
+from tests.utils import _init_state, is_data_in_events
 
 FORMAT = "%(message)s"
 logging.basicConfig(
@@ -38,7 +36,7 @@ start_main_flow_event = InternalEvent(name="StartFlow", arguments={"flow_id": "m
 
 
 def test_child_flow_abort():
-    """Test start a child flow two times"""
+    """Test to match failure of child flow."""
 
     content = """
     flow a
@@ -75,7 +73,7 @@ def test_child_flow_abort():
 
 
 def test_conflicting_actions_v_a():
-    """Test the action conflict resolution"""
+    """Test the action conflict resolution where main flow wins."""
 
     content = """
     flow a
@@ -121,7 +119,7 @@ def test_conflicting_actions_v_a():
 
 
 def test_conflicting_actions_v_b():
-    """Test the action conflict resolution"""
+    """Test the action conflict resolution where flow a wins."""
 
     content = """
     flow a
@@ -167,7 +165,7 @@ def test_conflicting_actions_v_b():
 
 
 def test_conflicting_actions_with_flow_priorities():
-    """Test the action conflict resolution"""
+    """Test the action conflict resolution based on priorities."""
 
     content = """
     flow a $p
@@ -240,7 +238,7 @@ def test_conflicting_actions_with_flow_priorities():
 
 
 def test_conflicting_actions_branching_length():
-    """Test the action conflict resolution"""
+    """Test the action conflict resolution with event branching of different lengths."""
 
     content = """
     flow a
@@ -289,7 +287,7 @@ def test_conflicting_actions_branching_length():
 
 
 def test_conflicting_actions_reference_sharing():
-    """Test the action conflict resolution"""
+    """Test the action conflict resolution action reference sharing."""
 
     content = """
     flow a
@@ -370,7 +368,7 @@ def test_conflicting_actions_reference_sharing():
 
 
 def test_flow_parameters_action_wrapper():
-    """Test flow parameter action wrapper mechanic"""
+    """Test flow parameter action wrapper mechanic."""
 
     content = """
     flow bot say $script
@@ -393,7 +391,7 @@ def test_flow_parameters_action_wrapper():
 
 
 def test_flow_parameters_event_wrapper():
-    """Test flow parameter event wrapper mechanic"""
+    """Test flow parameter event wrapper mechanic."""
 
     content = """
     flow user said $transcript
@@ -428,7 +426,7 @@ def test_flow_parameters_event_wrapper():
 
 
 def test_flow_parameters_positional_parameter():
-    """Test positional flow parameters"""
+    """Test positional flow parameters."""
 
     content = """
     flow bot say $script
@@ -451,7 +449,7 @@ def test_flow_parameters_positional_parameter():
 
 
 def test_flow_parameters_default_parameter():
-    """Test default flow parameters"""
+    """Test default flow parameters."""
 
     content = """
     flow bot say $script="Howdy"
@@ -473,8 +471,8 @@ def test_flow_parameters_default_parameter():
     )
 
 
-def test_distributed_flow_matching():
-    """Test flow default parameters."""
+def test_flow_started_matching():
+    """Test matching to flow started events."""
 
     content = """
     flow user said $transcript
@@ -520,16 +518,16 @@ def test_distributed_flow_matching():
 
 
 def test_activate_flow_mechanism():
-    """Test the activate a flow mechanism"""
+    """Test the activate a flow mechanism."""
 
     content = """
-    flow a
-      start UtteranceBotAction(script="Start")
+    flow a $text
+      start UtteranceBotAction(script=$text)
       match UtteranceUserAction().Finished(final_transcript="Hi")
       start UtteranceBotAction(script="End")
 
     flow main
-      activate a
+      activate a "Start"
       match WaitAction().Finished()
     """
 
@@ -597,8 +595,148 @@ def test_activate_flow_mechanism():
     )
 
 
-def test_stop_activate_flow_mechanism():
-    """Test the activate a flow mechanism"""
+def test_infinite_loops_avoidance_for_activate_flows():
+    """Test that activated flows don't loop infinitely if not match statement is present."""
+
+    content = """
+    flow a
+      # Comment
+      activate b
+      $test = "Hello"
+      start UtteranceBotAction(script=$test)
+
+    flow b
+      await GestureBotAction(gesture="smile")
+
+    flow main
+      activate a
+      match WaitAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "smile",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+        ],
+    )
+
+
+def test_infinite_loops_avoidance_for_early_restart_labels():
+    """Test that flows don't loop infinitely if when the `start_new_flow_instance` label comes to early."""
+
+    content = """
+    flow a
+      activate b
+      $test = "Hello"
+      start UtteranceBotAction(script=$test)
+      start_new_flow_instance:
+      match Event()
+
+    flow b
+      await GestureBotAction(gesture="smile")
+
+    flow main
+      activate a
+      match WaitAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "smile",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello",
+            },
+        ],
+    )
+
+
+def test_activate_and_grouping():
+    """Test and-grouping with activate statement."""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="A")
+      match UtteranceUserAction().Finished(final_transcript="a")
+
+    flow b
+      start UtteranceBotAction(script="B")
+      match UtteranceUserAction().Finished(final_transcript="b")
+
+    flow main
+        activate a and b
+        match UtteranceUserAction().Finished(final_transcript="end")
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "a",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "A",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "b",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "B",
+            },
+        ],
+    )
+
+
+def test_stop_activated_flow_mechanism():
+    """Test to stop an activated flow."""
 
     content = """
     flow a
@@ -633,7 +771,7 @@ def test_stop_activate_flow_mechanism():
 
 
 def test_finish_flow_event():
-    """Test the FinishFlow event that will immediately finish a flow"""
+    """Test the FinishFlow event that will immediately finish a flow."""
 
     content = """
     flow a
@@ -682,8 +820,8 @@ def test_finish_flow_event():
     )
 
 
-def test_match_specificity_mechanic():
-    """Test the FinishFlow event that will immediately finish a flow"""
+def test_match_event_specificity_mechanic():
+    """Test flow conflict resolution based on event specificity."""
 
     content = """
     flow user said something
@@ -784,7 +922,7 @@ def test_match_specificity_mechanic():
 
 def test_match_failure_flow_abort():
     """Test the mechanism where a match statement FlowFinished/FlowFailed will abort the flow
-    if it fails to be satisfied"""
+    if it is impossible to be satisfied."""
 
     content = """
     flow a
@@ -1049,22 +1187,496 @@ def test_implicit_flow_deactivation():
     )
 
 
-CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), "../test_configs")
+def test_concurrent_flows_with_actions():
+    """Check basic concurrent flow mechanism."""
 
+    content = """
+    flow a
+      match UtteranceUserAction().Finished(final_transcript="One")
+      start UtteranceBotAction(script="One")
+      match UtteranceUserAction().Finished(final_transcript="Two")
+      match UtteranceUserAction().Finished(final_transcript="Three")
 
-def test_action_event_requeuing():
-    config = RailsConfig.from_path(
-        os.path.join(CONFIGS_FOLDER, "with_custom_action_v2_x")
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="One")
+      start UtteranceBotAction(script="One")
+      start UtteranceBotAction(script="Two")
+      match UtteranceUserAction().Finished(final_transcript="Two")
+
+    flow c
+      match UtteranceUserAction().Finished(final_transcript="One")
+      start UtteranceBotAction(script="One")
+      start UtteranceBotAction(script="Two")
+
+    flow main
+      await a and b and c
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "One",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "One",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Two",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Two",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Three",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            }
+        ],
     )
 
-    chat = TestChat(
-        config,
-        llm_completions=[],
+
+def test_interaction_loops():
+    """Test that flows in different interaction loops don't interfere."""
+
+    content = """
+    @loop("a")
+    flow a
+      match UtteranceUserAction().Finished()
+      start GestureBotAction(script="Smile 1")
+      match UtteranceUserAction().Finished()
+      start UtteranceBotAction(script="Two")
+      match UtteranceUserAction().Finished()
+
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="One")
+      start UtteranceBotAction(script="One")
+      match UtteranceUserAction().Finished(final_transcript="Two")
+      start GestureBotAction(script="Smile 2")
+      match UtteranceUserAction().Finished(final_transcript="Three")
+
+    flow main
+      start a and b
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "One",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "One",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "script": "Smile 1",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Two",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "script": "Smile 2",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Two",
+            },
+        ],
     )
 
-    chat >> "start"
-    chat << "8"
+
+def test_interaction_loop_with_new():
+    """Test that flows in different interaction loops don't interfere using NEW as loop id."""
+
+    content = """
+    @loop("NEW")
+    flow a
+      match UtteranceUserAction().Finished()
+      start GestureBotAction(script="Smile 1")
+      match UtteranceUserAction().Finished()
+      start UtteranceBotAction(script="Two")
+      match UtteranceUserAction().Finished()
+
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="One")
+      start UtteranceBotAction(script="One")
+      start a
+      match UtteranceUserAction().Finished(final_transcript="Two")
+      start GestureBotAction(script="Smile 2")
+      match UtteranceUserAction().Finished(final_transcript="Three")
+
+    flow main
+      start a and b
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "One",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "One",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "script": "Smile 1",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Two",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartGestureBotAction",
+                "script": "Smile 2",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Two",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "script": "Smile 1",
+            },
+        ],
+    )
+
+
+def test_flow_overriding():
+    """Test flow overriding mechanic."""
+
+    content = """
+    @override
+    flow a
+      match UtteranceUserAction().Finished(final_transcript="One")
+      await UtteranceBotAction(script="One")
+
+    flow a
+      match UtteranceUserAction().Finished(final_transcript="One")
+      await UtteranceBotAction(script="Two")
+
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="Two")
+      await UtteranceBotAction(script="One")
+
+    @override
+    flow b
+      match UtteranceUserAction().Finished(final_transcript="Two")
+      await UtteranceBotAction(script="Two")
+
+    flow main
+      start a and b
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "One",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "One",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Two",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Two",
+            },
+        ],
+    )
+
+
+def test_meta_decorators():
+    """Test the meta decorator statement."""
+
+    content = """
+    @meta(bot_action=True)
+    flow bot say $text
+      start UtteranceBotAction(script=$text)
+
+    @meta(bot_intent=True)
+    flow bot greet
+      start bot say "Hi" or bot say "Hello"
+
+    @loop("observer_1")
+    flow observer_1
+        match BotActionLog(flow_id="bot say", intent_flow_id="bot say")
+        send Success1()
+
+    @loop("observer_2")
+    flow observer_2
+        match BotIntentLog(flow_id="bot greet")
+        send Success2()
+
+    flow main
+      activate observer_1 and observer_2
+      await bot greet
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "Success1",
+            },
+            {
+                "type": "Success2",
+            },
+        ],
+    )
+
+
+def test_flow_parameter_await_mechanism():
+    """Test flow overriding mechanic."""
+
+    content = """
+    flow a $text $test
+      $text = "bye"
+      $test = 32
+      start UtteranceBotAction(script="{$text} {$test}")
+
+    flow main
+      await a "hi" $test=123
+      await UtteranceBotAction(script="Success")
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "bye 32",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            },
+        ],
+    )
+
+
+def test_flow_context_sharing():
+    """Test how a parent flow can share its context with a child flow."""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="{$test1}")
+      $test0 = "pong"
+      $test1 = "bye"
+      $test2 = 55
+
+    flow b
+      global $test0
+      start UtteranceBotAction(script="{$test0}")
+
+    flow main
+      global $test0
+      $test0 = "ping"
+      $test1 = "hi"
+      $instance_uid = uid()
+      send StartFlow(flow_id="a", flow_instance_uid=$instance_uid, context=$self.context)
+      match FlowStarted(flow_instance_uid=$instance_uid)
+      match FlowFinished(flow_instance_uid=$instance_uid)
+      start UtteranceBotAction(script="{$test1} {$test2}")
+      start b
+      match Event()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "hi",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "bye 55",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "pong",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+
+def test_single_flow_activation():
+    """Test how a parent flow can share its context with a child flow."""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="a")
+      activate z 1
+      match WaitEvent()
+
+    flow b
+      start UtteranceBotAction(script="b")
+      activate z 1
+      match WaitEvent()
+
+    flow c
+      start UtteranceBotAction(script="c")
+      activate z 2
+      match WaitEvent()
+
+    flow z $param
+      await UtteranceBotAction(script="test {$param}")
+
+    flow main
+      activate a
+      activate b
+      activate c
+      await UtteranceBotAction(script="done")
+
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "a",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "test 1",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "b",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "c",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "test 2",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "done",
+            },
+        ],
+    )
 
 
 if __name__ == "__main__":
-    test_child_flow_abort()
+    test_meta_decorators()

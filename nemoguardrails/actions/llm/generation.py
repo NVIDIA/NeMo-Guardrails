@@ -161,7 +161,11 @@ class LLMGenerationActions:
                     specs = [spec]
 
                 for spec in specs:
-                    if not spec.name.startswith("user "):
+                    if (
+                        not spec.name.startswith("user ")
+                        or not spec.arguments
+                        or not spec.arguments["$0"]
+                    ):
                         continue
 
                     message = spec.arguments["$0"][1:-1]

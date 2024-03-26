@@ -24,6 +24,7 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     Break,
     CatchPatternFailure,
     Continue,
+    Element,
     ElementType,
     EndScope,
     ForkHead,
@@ -38,11 +39,8 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     When,
     While,
 )
-from nemoguardrails.colang.v2_x.runtime.flows import (
-    ColangSyntaxError,
-    FlowConfig,
-    InternalEvents,
-)
+from nemoguardrails.colang.v2_x.runtime.errors import ColangSyntaxError
+from nemoguardrails.colang.v2_x.runtime.flows import FlowConfig, InternalEvents
 from nemoguardrails.colang.v2_x.runtime.utils import new_var_uid
 
 
@@ -89,6 +87,13 @@ def expand_elements(
                     element.label = continue_break_labels[1]
 
             if len(expanded_elements) > 0:
+                # Map new elements to source
+                for expanded_element in expanded_elements:
+                    if isinstance(expanded_element, Element) and isinstance(
+                        element, Element
+                    ):
+                        expanded_element._source = element._source
+                # Add new elements
                 new_elements.extend(expanded_elements)
                 elements_changed = True
             else:
@@ -161,11 +166,19 @@ def _expand_start_element(
         # Single element
         if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
-            # send StartFlow(flow_id="FLOW_NAME")
+            # $_instance_<uid> = (<flow_id>)<uid>
+            instance_uid_variable_name = f"_instance_uid_{new_var_uid()}"
+            new_elements.append(
+                Assignment(
+                    key=instance_uid_variable_name,
+                    expression=f"'({element.spec.name}){{uid()}}'",
+                )
+            )
+            # send StartFlow(flow_id=<flow_id>, flow_instance_uid=$_instance_<uid>)
             element.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
-                    "flow_start_uid": f"'{new_var_uid()}'",
+                    "flow_instance_uid": f"'{{${instance_uid_variable_name}}}'",
                 }
             )
             new_elements.append(
@@ -574,10 +587,18 @@ def _expand_activate_element(
             element_copy = copy.deepcopy(element)
             # TODO: Remove assert once SpecOp type is refactored
             assert isinstance(element_copy.spec, Spec)
+            # $_instance_<uid> = (<flow_id>)<uid>
+            instance_uid_variable_name = f"_instance_uid_{new_var_uid()}"
+            new_elements.append(
+                Assignment(
+                    key=instance_uid_variable_name,
+                    expression=f"'({element.spec.name}){{uid()}}'",
+                )
+            )
             element_copy.spec.arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
-                    "flow_start_uid": f"'{new_var_uid()}'",
+                    "flow_instance_uid": f"'{{${instance_uid_variable_name}}}'",
                     "activated": "True",
                 }
             )
@@ -611,9 +632,9 @@ def _expand_activate_element(
 def _expand_assignment_stmt_element(element: Assignment) -> List[ElementType]:
     new_elements: List[ElementType] = []
 
-    # Check if the expression is an NLD
-    nld_pattern = r"\"\"\"(.*?)\"\"\"|'''(.*?)'''"
-    match = re.search(nld_pattern, element.expression)
+    # Check if the expression is an NLD instruction
+    nld_instruction_pattern = r"^\s*i\"(.*)\"|^\s*i'(.*)'"
+    match = re.search(nld_instruction_pattern, element.expression)
 
     if match:
         # Replace the assignment with the GenerateValueAction system action
@@ -674,9 +695,11 @@ def _expand_if_element(
     elements.append(
         Goto(
             expression=f"not({element.expression})",
-            label=if_end_label_name
-            if not element.else_elements
-            else if_else_body_label_name,
+            label=(
+                if_end_label_name
+                if not element.else_elements
+                else if_else_body_label_name
+            ),
         )
     )
     elements.extend(expand_elements(element.then_elements, flow_configs))
@@ -888,9 +911,11 @@ def normalize_element_groups(group: Union[Spec, dict]) -> dict:
             {
                 "_type": "spec_or",
                 "elements": [
-                    normalize_element_groups(elem)
-                    if isinstance(elem, dict)
-                    else {"_type": "spec_and", "elements": [elem]}
+                    (
+                        normalize_element_groups(elem)
+                        if isinstance(elem, dict)
+                        else {"_type": "spec_and", "elements": [elem]}
+                    )
                     for elem in group["elements"]
                 ],
             }

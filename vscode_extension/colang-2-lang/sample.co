@@ -1,0 +1,57 @@
+flow init llms $dsff="dsfsf"
+    $test = "sdf"
+
+@override
+@loop_id("test")
+flow this is another to continue $in_var = "default" -> $out_var_1 = "test" $out_var_2 = 23.34
+    """This is a magic flow"""
+    activate manage variables
+    global $var = 0
+    priority 1.0
+    start Event1()
+    send StartUtteranceBotAction(script="Hi") as $event
+    match UtteranceUserActionFinished(final_transcript=$event.final_transcript.test) # Comment
+    start UtteranceBotAction(script=$test) or UtteranceBotAction(script='Hi')
+    match UtteranceUserAction.Finished(final_transcript = regex("\\w*Hi"))
+    await bot say await for continue in test is not $param_1=["a","b"] {"a":1, "b",2} 345
+    bot bot say await for continue in test is not $param_1=["a","b"] {"a":1, "b",2} 345
+        and bot say "Hallo"
+        or bot say "Test"
+        and (
+            bot gesture "wink" or bot gesture 'wave'
+        )
+    while $var <= 4
+        if $var == 3
+            bot say "Hi"
+            break
+        elif $var > 5
+            bot say "Hi"
+            continue
+        else
+            break
+
+    # This is a comment
+    when user said "Hi"
+        $instruction = i'sdfdsf'
+        break
+    orwhen user said something
+        $instruction = i"sdfdsf"
+        log "Yes 'sdf'!"
+        return
+    or when user said something
+        log "Yes 'sdf'!"
+        return
+    else
+        print "All good"
+
+    $t1 = len(["a","b"])
+    $t2 = search("a", "a b")
+    $t3 = regex("test")
+    $t4 = find_all("a", "a b")
+    $t5 = uid()
+    $t6 = str(3)
+    $t7 = escape("")
+    $t8 = is_int(3)
+    $t9 = is_float(3.4)
+    $t10 = is_bool(True)
+    $t11 = is_str("test")
