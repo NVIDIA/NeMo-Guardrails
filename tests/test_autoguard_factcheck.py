@@ -47,6 +47,19 @@ async def retrieve_relevant_chunks():
     )
 
 
+@action(is_system_action=True)
+async def autoguard_retrieve_relevant_chunks_input():
+    """Retrieve relevant chunks from the knowledge base and add them to the context."""
+    context_updates = {}
+    relevant_chunks = "\n".join(build_kb())
+    context_updates["relevant_chunks"] = relevant_chunks
+
+    return ActionResult(
+        return_value=context_updates["relevant_chunks"],
+        context_updates=context_updates,
+    )
+
+
 @pytest.mark.asyncio
 async def test_fact_checking_correct(httpx_mock):
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_factcheck"))
