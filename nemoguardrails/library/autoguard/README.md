@@ -563,18 +563,15 @@ rails:
     autoguard:
       parameters:
         fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
-  input:
-    flows:
-      - autoguard factcheck input
   output:
     flows:
       - autoguard factcheck output
 ```
 
 Specify the factcheck endpoint the parameters section of autoguard's config.
-Then, you have to call the corresponding subflows for input and output factcheck guardrails.
+Then, you have to call the corresponding subflows for factcheck guardrails.
 
-Following is the format of the colang file:
+Following is the format of the colang file, which is present in the library:
 ```colang
 define flow autoguard factcheck input
   execute autoguard_retrieve_relevant_chunks_input
@@ -594,9 +591,6 @@ define bot inform autoguard factcheck input violation
 define bot inform autoguard factcheck output violation
   "$bot_message Factcheck output violation has been detected by AutoGuard."
 ```
-
-Within the flow you can see we have an action for custom relevant chunk extraction, `autoguard_retrieve_relevant_chunks_input`,
-which ensures that the documents are passed in the context for the guardrail while using it for user input.
 
 The output of the factcheck endpoint provides you with a factcheck score against which we can add a threshold which determines whether the given output is factually correct or not.
 
