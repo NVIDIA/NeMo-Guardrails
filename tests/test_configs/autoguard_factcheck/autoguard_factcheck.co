@@ -1,7 +1,0 @@
-define user ask about pluto
-  "Pluto has no known moons; Charon, the smallest, has a diameter greater than Pluto's, along with the non-existent Styx, Nix, Kerberos, and Hydra."
-  "Pluto, with its eccentric orbit, comes closer to the Sun than Neptune at times, yet a stable orbital resonance ensures they do not collide."
-
-define flow
-  user ask about pluto
-  bot provide response
