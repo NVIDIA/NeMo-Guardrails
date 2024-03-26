@@ -41,4 +41,4 @@ define bot respond pii output
   "$pii_message_output"
 
 define bot refuse to respond
-  "I'm sorry I can't respond."
+  "I'm sorry, I can't respond to that."
