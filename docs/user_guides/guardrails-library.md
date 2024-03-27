@@ -687,9 +687,9 @@ define bot inform cannot engage in abusive or harmful behavior
 
 
 
-### AutoGuard
+### AutoAlign
 
-NeMo Guardrails provides an interface for using the AutoAlign AI's AutoGuard guardrails
+NeMo Guardrails provides an interface for using the AutoAlign's guardrails
 (you need to have the `AUTOGUARD_API_KEY` environment variable set).
 
 
@@ -705,7 +705,7 @@ Following is the list of guardrails that are currently supported:
 9. PII
 10. Factcheck
 
-More details regarding the configuration and usage of these can be found [here](../../nemoguardrails/library/autoguard/README.md).
+More details regarding the configuration and usage of these can be found [here](../../nemoguardrails/library/autoalign/README.md).
 
 
 ## Other
