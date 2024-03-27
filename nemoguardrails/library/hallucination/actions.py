@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+from functools import partial
 import logging
 from typing import Optional
 
@@ -45,6 +47,10 @@ async def check_hallucination(
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
     use_llm_checking: bool = True,
+    bert_score_threshold: Optional[float] = None,
+    bert_score_model_type: Optional[str] = None,
+    bert_score_lang: Optional[str] = None,
+    **kwargs,
 ):
     """Checks if the last bot response is a hallucination by checking multiple completions for self-consistency.
 
@@ -125,8 +131,28 @@ async def check_hallucination(
             # Return True if the hallucination check fails
             return "no" in agreement
         else:
-            # TODO Implement BERT-Score based consistency method proposed by SelfCheckGPT paper
-            # See details: https://arxiv.org/abs/2303.08896
-            return False
+            # Using BERT-Score to detect hallucination
+            # TODO: use bert_score's scorer class to avoid loading model every time
+            try:
+                from bert_score import score
+            except ModuleNotFoundError:
+                raise ValueError("Cannot import module bert_score. We use BERT-Score to detect hallucination when `use_llm_checking` is false. Install it with `pip install bert_score`.")
+
+            if bert_score_threshold is None:
+                raise ValueError("Argument `bert_score_threshold` is required to use BERT-Score.")
+            if bert_score_model_type is None and bert_score_lang is None:
+                raise ValueError("One of `bert_score_model_type` and `bert_score_lang` is required to use BERT-Score.")
+
+            loop = asyncio.get_event_loop()
+            # NOTE: SelfCheckGPT paper uses average BERT-Score while bert_score library only returns the best score
+            score_fn = partial(score, [bot_response], [extra_responses], lang=bert_score_lang, model_type=bert_score_model_type, **kwargs)
+            _, _, F = await loop.run_in_executor(None, score_fn)
+            if F[0] >= bert_score_threshold:
+                # no hallucination
+                return False
+            else:
+                return True
 
     return False
+
+
