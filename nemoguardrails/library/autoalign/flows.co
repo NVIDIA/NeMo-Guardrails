@@ -1,11 +1,11 @@
-define flow autoalign check input
+define subflow autoalign check input
   $input_result = execute autoalign_input_api(show_autoalign_message=True)
   if $input_result["guardrails_triggered"]
     $autoalign_input_response = $input_result['combined_response']
     bot refuse to respond
     stop
 
-define flow autoalign check output
+define subflow autoalign check output
   $output_result = execute autoalign_output_api(show_autoalign_message=True)
   if $output_result["guardrails_triggered"]
     bot refuse to respond
@@ -16,7 +16,7 @@ define flow autoalign check output
       bot respond pii output
       stop
 
-define flow autoalign factcheck output
+define subflow autoalign factcheck output
   execute retrieve_relevant_chunks
   $output_result = execute autoalign_factcheck_output_api
   if $output_result < 0.5
