@@ -132,9 +132,9 @@ async def autoalign_infer(
     show_toxic_phrases: bool = False,
 ):
     """Checks whether the given text passes through the applied guardrails."""
-    api_key = os.environ.get("AUTOGUARD_API_KEY")
+    api_key = os.environ.get("AUTOALIGN_API_KEY")
     if api_key is None:
-        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
+        raise ValueError("AUTOALIGN_API_KEY environment variable not set.")
 
     headers = {"x-api-key": api_key}
     config = DEFAULT_CONFIG.copy()
@@ -176,9 +176,9 @@ async def autoalign_factcheck_infer(
     documents: List[str],
 ):
     """Checks the facts for the text using the given documents and provides a fact-checking score"""
-    api_key = os.environ.get("AUTOGUARD_API_KEY")
+    api_key = os.environ.get("AUTOALIGN_API_KEY")
     if api_key is None:
-        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
+        raise ValueError("AUTOALIGN_API_KEY environment variable not set.")
     headers = {"x-api-key": api_key}
     request_body = {
         "prompt": text,
