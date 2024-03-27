@@ -17,6 +17,7 @@ define flow autoalign check output
       stop
 
 define flow autoalign factcheck output
+  execute retrieve_relevant_chunks
   $output_result = execute autoalign_factcheck_output_api
   if $output_result < 0.5
     bot inform autoalign factcheck output violation
