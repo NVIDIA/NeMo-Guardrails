@@ -578,6 +578,7 @@ define flow autoalign factcheck input
   $input_result = execute autoalign_factcheck_input_api
 
 define flow autoalign factcheck output
+  execute retrieve_relevant_chunks
   $output_result = execute autoalign_factcheck_output_api
   if $input_result < 0.5
     bot inform autoalign factcheck input violation
