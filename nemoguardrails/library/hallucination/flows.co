@@ -1,5 +1,5 @@
 define bot inform answer unknown
-  "I don't know the answer that."
+  "I don't know the answer to that."
 
 define flow hallucination warning
   """Warning rail for hallucination."""
