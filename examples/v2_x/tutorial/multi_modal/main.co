@@ -9,8 +9,8 @@ flow user expressed greeting
     or user gestured "Greeting gesture"
 
 flow user expressed verbal greeting
-  user said "Hi"
-    or user said "Hello"
+  user said "hi"
+    or user said "hello"
 
 flow bot express greeting
   bot express verbal greeting

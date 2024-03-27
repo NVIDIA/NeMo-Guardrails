@@ -434,7 +434,7 @@ flow handling bot talking interruption $mode="inform"
 # ----------------------------------
 
 @loop("llm_response_polling")
-flow polling llm request response $interval
+flow polling llm request response $interval=1.0
   match StartGenerateUserIntentAction() as $event_ref
     or StartGenerateFlowContinuationAction() as $event_ref
     or StartGenerateFlowFromNameAction() as $event_ref
@@ -448,7 +448,9 @@ flow polling llm request response $interval
 
 flow generating user intent for unhandled user utterance
   """This is the fallback flow that takes care of unhandled user utterances and will generate a user intent."""
+  activate tracking bot talking state
   global $bot_talking_state
+
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
   if $bot_talking_state == False
     $transcript = $event.final_transcript
@@ -465,10 +467,12 @@ flow generating user intent for unhandled user utterance
   send FinishFlow(flow_id=$intent)
 
 flow derive user intent from user action $user_action $max_example_flows -> $intent
+  activate polling llm request response
   $intent = await GenerateUserIntentAction(user_action=$user_action, max_example_flows=$max_example_flows)
   return $intent
 
 flow generate interaction continuation -> $flow_name
+  activate polling llm request response
   # Generate continuation based current interaction history
   $flow_info = await GenerateFlowContinuationAction(temperature=0.1)
 

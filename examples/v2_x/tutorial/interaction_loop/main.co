@@ -1,9 +1,7 @@
 import avatars
 
 flow main
-  activate polling llm request response 1.0
   activate generating user intent for unhandled user utterance
-  activate tracking bot talking state
 
   while True
     when unhandled user intent
@@ -17,10 +15,10 @@ flow main
       bot inform "That was fun. Goodbye"
 
 flow user expressed greeting
-  user said "Hi"
-    or user said "Hello"
+  user said "hi"
+    or user said "hello"
 
 flow user expressed goodbye
-  user said "Goodbye"
+  user said "goodbye"
     or user said "I am done"
     or user said "I have to go"

@@ -610,6 +610,7 @@ def test_infinite_loops_avoidance_for_activate_flows():
 
     flow main
       activate a
+      $info = flows_info()
       match WaitAction().Finished()
     """
 
@@ -1491,22 +1492,22 @@ def test_meta_decorators():
       start UtteranceBotAction(script=$text)
 
     @meta(bot_intent=True)
-    flow bot greet
+    flow bot expressed greeting
       start bot say "Hi" or bot say "Hello"
 
     @loop("observer_1")
     flow observer_1
-        match BotActionLog(flow_id="bot say", intent_flow_id="bot say")
+        match BotActionLog(flow_id="bot say", intent_flow_id="bot expressed greeting")
         send Success1()
 
     @loop("observer_2")
     flow observer_2
-        match BotIntentLog(flow_id="bot greet")
+        match BotIntentLog(flow_id="bot expressed greeting")
         send Success2()
 
     flow main
       activate observer_1 and observer_2
-      await bot greet
+      await bot expressed greeting
       match Event()
     """
 
@@ -1679,4 +1680,4 @@ def test_single_flow_activation():
 
 
 if __name__ == "__main__":
-    test_meta_decorators()
+    test_single_flow_activation()

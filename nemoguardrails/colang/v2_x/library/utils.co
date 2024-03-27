@@ -5,7 +5,7 @@ flow wait indefinitely
   match NeverComingEvent()
 
 @loop("NEW")
-flow wait $time_s $timer_id="wait_timer_{{uid()}}"
+flow wait $time_s $timer_id = "wait_timer_{uid()}"
   """Wait the specified number of seconds before continuing."""
   await TimerBotAction(timer_name=$timer_id, duration=$time_s)
 

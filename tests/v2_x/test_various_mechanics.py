@@ -110,9 +110,6 @@ def test_flow_start_event_fallback():
                 "type": "StartUtteranceBotAction",
                 "script": "End",
             },
-            {
-                "type": "StopUtteranceBotAction",
-            },
         ],
     )
 
@@ -163,12 +160,15 @@ def test_flow_end_on_parent_flow_finished():
     """Check that a flow gets stopped when its parent flow has ended."""
 
     content = """
-    flow a
+    flow child
       start UtteranceBotAction(script="Started")
       match UtteranceUserAction.Finished(final_transcript="too late")
 
+    flow parent
+      start child
+
     flow main
-      start a
+      start parent
     """
 
     config = _init_state(content)
@@ -418,10 +418,7 @@ def test_list_parameters():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hi",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
+            }
         ],
     )
 
@@ -445,10 +442,7 @@ def test_dict_parameters():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
+            }
         ],
     )
 

@@ -137,14 +137,14 @@ def eval_expression(expr: str, context: dict) -> Any:
         # TODO: replace this with something even more restrictive.
         functions: Dict[str, Callable] = {
             "len": len,
-            "flow": system_functions.flow,
-            "action": system_functions.action,
+            "flow": system_functions.flow,  # TODO: Consider this to remove
+            "action": system_functions.action,  # TODO: Consider this to remove
             "regex": _create_regex,
             "search": _regex_search,
             "find_all": _regex_findall,
             "uid": new_uid,
             "str": _to_str,
-            "simple_str": _simple_str,
+            "pretty_str": _pretty_str,
             "escape": _escape_string,
             "is_int": _is_int,
             "is_float": _is_float,
@@ -188,7 +188,7 @@ def _to_str(data: Any) -> str:
     return str(data)
 
 
-def _simple_str(data: Any) -> str:
+def _pretty_str(data: Any) -> str:
     if isinstance(data, (dict, list, set)):
         string = json.dumps(data, indent=4)
         return SimplifyFormatter().format(string)
@@ -271,7 +271,7 @@ def _flows_info(state: State, flow_instance_uid: Optional[str] = None) -> dict:
 def _flow_state_related_to_source(state: State, flow_state: FlowState):
     flow_config = state.flow_configs[flow_state.flow_id]
     flow_head_source_lines: Set[int] = set()
-    for head in flow_state.heads.values():
+    for head in flow_state.active_heads.values():
         element = flow_config.elements[head.position]
         if isinstance(element, Element) and element._source is not None:
             flow_head_source_lines.add(element._source.line)

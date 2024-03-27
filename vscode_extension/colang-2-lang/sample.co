@@ -1,4 +1,6 @@
-flow init llms $dsff="dsfsf"
+import core
+
+flow init llms $param="value1"
     $test = "sdf"
 
 @override
@@ -9,7 +11,7 @@ flow this is another to continue $in_var = "default" -> $out_var_1 = "test" $out
     global $var = 0
     priority 1.0
     start Event1()
-    send StartUtteranceBotAction(script="Hi") as $event
+    send StartUtteranceBotAction(script = "Hi {$test}") as $event
     match UtteranceUserActionFinished(final_transcript=$event.final_transcript.test) # Comment
     start UtteranceBotAction(script=$test) or UtteranceBotAction(script='Hi')
     match UtteranceUserAction.Finished(final_transcript = regex("\\w*Hi"))
@@ -20,7 +22,7 @@ flow this is another to continue $in_var = "default" -> $out_var_1 = "test" $out
         and (
             bot gesture "wink" or bot gesture 'wave'
         )
-    while $var <= 4
+    while $var <= $self.flow_id
         if $var == 3
             bot say "Hi"
             break
@@ -32,10 +34,10 @@ flow this is another to continue $in_var = "default" -> $out_var_1 = "test" $out
 
     # This is a comment
     when user said "Hi"
-        $instruction = i'sdfdsf'
+        $instruction = i'this is an instruction\n'
         break
     orwhen user said something
-        $instruction = i"sdfdsf"
+        $instruction = i"this is an instruction"
         log "Yes 'sdf'!"
         return
     or when user said something
