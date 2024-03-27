@@ -27,7 +27,7 @@ CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
 
 def build_kb():
     with open(
-        os.path.join(CONFIGS_FOLDER, "autoguard_factcheck", "kb", "kb.md"), "r"
+        os.path.join(CONFIGS_FOLDER, "autoalign_factcheck", "kb", "kb.md"), "r"
     ) as f:
         content = f.readlines()
 
@@ -49,7 +49,7 @@ async def retrieve_relevant_chunks():
 
 @pytest.mark.asyncio
 async def test_fact_checking_correct(httpx_mock):
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_factcheck"))
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoalign_factcheck"))
     chat = TestChat(
         config,
         llm_completions=[
@@ -62,7 +62,7 @@ async def test_fact_checking_correct(httpx_mock):
         ],
     )
 
-    async def mock_autoguard_factcheck_output_api(
+    async def mock_autoalign_factcheck_output_api(
         context: Optional[dict] = None, **kwargs
     ):
         query = context.get("bot_message")
@@ -81,7 +81,7 @@ async def test_fact_checking_correct(httpx_mock):
             return 0.0
 
     chat.app.register_action(
-        mock_autoguard_factcheck_output_api, "autoguard_factcheck_output_api"
+        mock_autoalign_factcheck_output_api, "autoalign_factcheck_output_api"
     )
 
     (
@@ -103,7 +103,7 @@ async def test_fact_checking_correct(httpx_mock):
 @pytest.mark.asyncio
 async def test_fact_checking_wrong(httpx_mock):
     # Test  - Very low score - Not factual
-    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoguard_factcheck"))
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoalign_factcheck"))
     chat = TestChat(
         config,
         llm_completions=[
@@ -115,7 +115,7 @@ async def test_fact_checking_wrong(httpx_mock):
         ],
     )
 
-    async def mock_autoguard_factcheck_output_api(
+    async def mock_autoalign_factcheck_output_api(
         context: Optional[dict] = None, **kwargs
     ):
         query = context.get("bot_message")
@@ -132,7 +132,7 @@ async def test_fact_checking_wrong(httpx_mock):
             return 1.0
 
     chat.app.register_action(
-        mock_autoguard_factcheck_output_api, "autoguard_factcheck_output_api"
+        mock_autoalign_factcheck_output_api, "autoalign_factcheck_output_api"
     )
     (
         chat
@@ -140,5 +140,5 @@ async def test_fact_checking_wrong(httpx_mock):
         "non-existent Styx, Nix, Kerberos, and Hydra."
     )
     await chat.bot_async(
-        "Factcheck violation in llm response has been detected by AutoGuard."
+        "Factcheck violation in llm response has been detected by AutoAlign."
     )

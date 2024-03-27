@@ -330,26 +330,27 @@ class JailbreakDetectionConfig(BaseModel):
         default=1845.65, description="The prefix/suffix perplexity threshold."
     )
 
-class AutoGuardOptions(BaseModel):
+
+class AutoAlignOptions(BaseModel):
     """List of guardrails that are activated"""
 
     guardrails_config: Dict[str, Any] = Field(
         default_factory=dict,
-        description="The guardrails configuration that is passed to the AutoGuard endpoint",
+        description="The guardrails configuration that is passed to the AutoAlign endpoint",
     )
 
 
-class AutoGuardRailConfig(BaseModel):
-    """Configuration data for the AutoGuard API"""
+class AutoAlignRailConfig(BaseModel):
+    """Configuration data for the AutoAlign API"""
 
     parameters: Dict[str, Any] = Field(default_factory=dict)
-    input: AutoGuardOptions = Field(
-        default_factory=AutoGuardOptions,
-        description="Input configuration for Autoguard",
+    input: AutoAlignOptions = Field(
+        default_factory=AutoAlignOptions,
+        description="Input configuration for AutoAlign guardrails",
     )
-    output: AutoGuardOptions = Field(
-        default_factory=AutoGuardOptions,
-        description="Output configuration for Autoguard",
+    output: AutoAlignOptions = Field(
+        default_factory=AutoAlignOptions,
+        description="Output configuration for AutoAlign guardrails",
     )
 
 
@@ -361,9 +362,9 @@ class RailsConfigData(BaseModel):
         description="Configuration data for the fact-checking rail.",
     )
 
-    autoguard: AutoGuardRailConfig = Field(
-        default_factory=AutoGuardRailConfig,
-        description="Configuration data for the Autoguard API.",
+    autoalign: AutoAlignRailConfig = Field(
+        default_factory=AutoAlignRailConfig,
+        description="Configuration data for the AutoAlign guardrails API.",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(

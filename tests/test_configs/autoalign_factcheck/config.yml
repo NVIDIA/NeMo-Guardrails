@@ -4,9 +4,9 @@ models:
     model: gpt-43b-002
 rails:
   config:
-    autoguard:
+    autoalign:
       parameters:
         fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
   output:
     flows:
-      - autoguard factcheck output
+      - autoalign factcheck output
