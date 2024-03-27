@@ -721,7 +721,7 @@ define flow
 ### AutoAlign
 
 NeMo Guardrails provides an interface for using the AutoAlign's guardrails
-(you need to have the `AUTOGUARD_API_KEY` environment variable set).
+(you need to have the `AUTOALIGN_API_KEY` environment variable set).
 
 
 Following is the list of guardrails that are currently supported:
