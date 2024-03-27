@@ -6,7 +6,7 @@ models:
       temperature: 0.0
 rails:
     config:
-        autoguard:
+        autoalign:
             parameters:
                 endpoint: "https://nvidia.autoalign.ai/guardrail"
             input:
@@ -67,7 +67,7 @@ rails:
                   }
     input:
         flows:
-            - call autoguard input
+            - autoalign check input
     output:
         flows:
-            - call autoguard output
+            - autoalign check output

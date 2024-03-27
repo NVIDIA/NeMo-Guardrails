@@ -24,7 +24,6 @@ from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.taskmanager import LLMTaskManager
-from nemoguardrails.logging.verbose import Styles
 
 log = logging.getLogger(__name__)
 
@@ -79,8 +78,8 @@ DEFAULT_CONFIG = {
 }
 
 
-def process_autoguard_output(responses: List[Any], show_toxic_phrases: bool = False):
-    """Processes the output provided AutoGuard API"""
+def process_autoalign_output(responses: List[Any], show_toxic_phrases: bool = False):
+    """Processes the output provided AutoAlign API"""
 
     response_dict = {
         "guardrails_triggered": False,
@@ -126,19 +125,19 @@ def process_autoguard_output(responses: List[Any], show_toxic_phrases: bool = Fa
     return response_dict
 
 
-async def autoguard_infer(
+async def autoalign_infer(
     request_url: str,
     text: str,
     task_config: Optional[Dict[Any, Any]] = None,
     show_toxic_phrases: bool = False,
 ):
     """Checks whether the given text passes through the applied guardrails."""
-    api_key = os.environ.get("AUTOGUARD_API_KEY")
+    api_key = os.environ.get("AUTOALIGN_API_KEY")
     if api_key is None:
-        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
+        raise ValueError("AUTOALIGN_API_KEY environment variable not set.")
 
     headers = {"x-api-key": api_key}
-    config = DEFAULT_CONFIG
+    config = DEFAULT_CONFIG.copy()
     # enable the select guardrail
     for task in task_config.keys():
         if task != "factcheck":
@@ -157,7 +156,7 @@ async def autoguard_infer(
         ) as response:
             if response.status != 200:
                 raise ValueError(
-                    f"AutoGuard call failed with status code {response.status}.\n"
+                    f"AutoAlign call failed with status code {response.status}.\n"
                     f"Details: {await response.text()}"
                 )
             async for line in response.content:
@@ -165,21 +164,21 @@ async def autoguard_infer(
                 if len(line_text) > 0:
                     resp = json.loads(line_text)
                     guardrails_configured.append(resp)
-            processed_response = process_autoguard_output(
+            processed_response = process_autoalign_output(
                 guardrails_configured, show_toxic_phrases
             )
     return processed_response
 
 
-async def autoguard_factcheck_infer(
+async def autoalign_factcheck_infer(
     request_url: str,
     text: str,
     documents: List[str],
 ):
     """Checks the facts for the text using the given documents and provides a fact-checking score"""
-    api_key = os.environ.get("AUTOGUARD_API_KEY")
+    api_key = os.environ.get("AUTOALIGN_API_KEY")
     if api_key is None:
-        raise ValueError("AUTOGUARD_API_KEY environment variable not set.")
+        raise ValueError("AUTOALIGN_API_KEY environment variable not set.")
     headers = {"x-api-key": api_key}
     request_body = {
         "prompt": text,
@@ -193,7 +192,7 @@ async def autoguard_factcheck_infer(
         ) as response:
             if response.status != 200:
                 raise ValueError(
-                    f"AutoGuard call failed with status code {response.status}.\n"
+                    f"AutoAlign call failed with status code {response.status}.\n"
                     f"Details: {await response.text()}"
                 )
             async for line in response.content:
@@ -203,136 +202,90 @@ async def autoguard_factcheck_infer(
     return 1.0
 
 
-@action(name="autoguard_input_api")
-async def autoguard_input_api(
+@action(name="autoalign_input_api")
+async def autoalign_input_api(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
-    show_autoguard_message: bool = True,
+    show_autoalign_message: bool = True,
     show_toxic_phrases: bool = False,
 ):
-    """Calls AutoGuard API for the user message and guardrail configuration provided"""
+    """Calls AutoAlign API for the user message and guardrail configuration provided"""
     user_message = context.get("user_message")
-    autoguard_config = llm_task_manager.config.rails.config.autoguard
-    autoguard_api_url = autoguard_config.parameters.get("endpoint")
-    if not autoguard_api_url:
-        raise ValueError("Provide the autoguard endpoint in the config")
-    task_config = getattr(autoguard_config.input, "guardrails_config")
+    autoalign_config = llm_task_manager.config.rails.config.autoalign
+    autoalign_api_url = autoalign_config.parameters.get("endpoint")
+    if not autoalign_api_url:
+        raise ValueError("Provide the autoalign endpoint in the config")
+    task_config = getattr(autoalign_config.input, "guardrails_config")
     if not task_config:
         raise ValueError("Provide the guardrails and their configuration")
     text = user_message
 
-    autoguard_response = await autoguard_infer(
-        autoguard_api_url, text, task_config, show_toxic_phrases
+    autoalign_response = await autoalign_infer(
+        autoalign_api_url, text, task_config, show_toxic_phrases
     )
-    if autoguard_response["guardrails_triggered"] and show_autoguard_message:
+    if autoalign_response["guardrails_triggered"] and show_autoalign_message:
         print(
-            Styles.YELLOW,
-            f"AutoGuard on Input: {autoguard_response['combined_response']}",
+            f"AutoAlign on Input: {autoalign_response['combined_response']}",
         )
     else:
-        if autoguard_response["pii_fast"]["guarded"] and show_autoguard_message:
+        if autoalign_response["pii_fast"]["guarded"] and show_autoalign_message:
             print(
-                Styles.YELLOW,
-                f"AutoGuard on Input: {autoguard_response['pii_fast']['response']}",
+                f"AutoAlign on Input: {autoalign_response['pii_fast']['response']}",
             )
 
-    return autoguard_response
+    return autoalign_response
 
 
-@action(name="autoguard_output_api")
-async def autoguard_output_api(
+@action(name="autoalign_output_api")
+async def autoalign_output_api(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
-    show_autoguard_message: bool = True,
+    show_autoalign_message: bool = True,
     show_toxic_phrases: bool = False,
 ):
-    """Calls AutoGuard API for the bot message and guardrail configuration provided"""
+    """Calls AutoAlign API for the bot message and guardrail configuration provided"""
     bot_message = context.get("bot_message")
-    autoguard_config = llm_task_manager.config.rails.config.autoguard
-    autoguard_api_url = autoguard_config.parameters.get("endpoint")
-    if not autoguard_api_url:
-        raise ValueError("Provide the autoguard endpoint in the config")
-    task_config = getattr(autoguard_config.output, "guardrails_config")
+    autoalign_config = llm_task_manager.config.rails.config.autoalign
+    autoalign_api_url = autoalign_config.parameters.get("endpoint")
+    if not autoalign_api_url:
+        raise ValueError("Provide the autoalign endpoint in the config")
+    task_config = getattr(autoalign_config.output, "guardrails_config")
     if not task_config:
         raise ValueError("Provide the guardrails and their configuration")
 
     text = bot_message
-    autoguard_response = await autoguard_infer(
-        autoguard_api_url, text, task_config, show_toxic_phrases
+    autoalign_response = await autoalign_infer(
+        autoalign_api_url, text, task_config, show_toxic_phrases
     )
-    if autoguard_response["guardrails_triggered"] and show_autoguard_message:
+    if autoalign_response["guardrails_triggered"] and show_autoalign_message:
         print(
-            Styles.YELLOW,
-            f"AutoGuard on LLM Response: {autoguard_response['combined_response']}",
+            f"AutoAlign on LLM Response: {autoalign_response['combined_response']}",
         )
 
-    return autoguard_response
+    return autoalign_response
 
 
-@action(name="autoguard_factcheck_input_api")
-async def autoguard_factcheck_input_api(
+@action(name="autoalign_factcheck_output_api")
+async def autoalign_factcheck_output_api(
     llm_task_manager: LLMTaskManager, context: Optional[dict] = None
 ):
-    """Calls AutoGuard factcheck API and checks whether the user message is factually correct according to given
-    documents"""
-
-    user_message = context.get("user_message")
-    documents = context.get("relevant_chunks", [])
-    autoguard_config = llm_task_manager.config.rails.config.autoguard
-    autoguard_fact_check_api_url = autoguard_config.parameters.get(
-        "fact_check_endpoint"
-    )
-    if not autoguard_fact_check_api_url:
-        raise ValueError("Provide the autoguard factcheck endpoint in the config")
-    if isinstance(documents, str):
-        documents = documents.split("\n")
-    prompt = user_message
-    if isinstance(documents, list) and len(documents) > 0:
-        return await autoguard_factcheck_infer(
-            autoguard_fact_check_api_url, prompt, documents
-        )
-    else:
-        raise ValueError("Provide relevant documents in proper format")
-
-
-@action(name="autoguard_factcheck_output_api")
-async def autoguard_factcheck_output_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
-):
-    """Calls AutoGuard factcheck API and checks whether the bot message is factually correct according to given
+    """Calls AutoAlign factcheck API and checks whether the bot message is factually correct according to given
     documents"""
 
     bot_message = context.get("bot_message")
     documents = context.get("relevant_chunks", [])
-    autoguard_config = llm_task_manager.config.rails.config.autoguard
-    autoguard_fact_check_api_url = autoguard_config.parameters.get(
+    autoalign_config = llm_task_manager.config.rails.config.autoalign
+    autoalign_fact_check_api_url = autoalign_config.parameters.get(
         "fact_check_endpoint"
     )
-    if not autoguard_fact_check_api_url:
-        raise ValueError("Provide the autoguard factcheck endpoint in the config")
+    if not autoalign_fact_check_api_url:
+        raise ValueError("Provide the autoalign factcheck endpoint in the config")
     if isinstance(documents, str):
         documents = documents.split("\n")
     prompt = bot_message
     if isinstance(documents, list) and len(documents) > 0:
-        return await autoguard_factcheck_infer(
-            autoguard_fact_check_api_url, prompt, documents
+        return await autoalign_factcheck_infer(
+            autoalign_fact_check_api_url, prompt, documents
         )
     else:
         raise ValueError("Provide relevant documents in proper format")
-
-
-@action(name="autoguard_retrieve_relevant_chunks")
-async def autoguard_retrieve_relevant_chunks(
-    kb: Optional[KnowledgeBase] = None,
-):
-    """Retrieve knowledge chunks from knowledge base and update the context."""
-    context_updates = {}
-    chunks = [chunk["body"] for chunk in kb.chunks]
-
-    context_updates["relevant_chunks"] = "\n".join(chunks)
-    context_updates["relevant_chunks_sep"] = chunks
-
-    return ActionResult(
-        return_value=context_updates["relevant_chunks"],
-        context_updates=context_updates,
-    )
