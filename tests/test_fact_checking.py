@@ -135,7 +135,7 @@ async def test_fact_checking_wrong(httpx_mock):
 
         chat >> "What is NeMo Guardrails?"
 
-        await chat.bot_async("I don't know the answer that.")
+        await chat.bot_async("I don't know the answer to that.")
 
 
 # TODO: fix this!
@@ -250,4 +250,4 @@ async def test_fact_checking_fallback_self_check_wrong(httpx_mock):
         )
 
         chat >> "What is NeMo Guardrails?"
-        await chat.bot_async("I don't know the answer that.")
+        await chat.bot_async("I don't know the answer to that.")
