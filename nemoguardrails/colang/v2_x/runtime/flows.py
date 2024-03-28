@@ -777,6 +777,5 @@ class State:
     event_matching_heads: Dict[str, List[Tuple[str, str]]] = field(default_factory=dict)
 
     # Helper dictionary that maps active heads (flow_state_uid, head_uid) to event matching names
-    event_matching_heads_reverse_map: Dict[Tuple[str, str], str] = field(
-        default_factory=dict
-    )
+    # The key is constructed as the concatenation of the two ids.
+    event_matching_heads_reverse_map: Dict[str, str] = field(default_factory=dict)
