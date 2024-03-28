@@ -258,6 +258,22 @@ class RetrievalRails(BaseModel):
     )
 
 
+class ActionRails(BaseModel):
+    """Configuration of action rails.
+
+    Action rails control various options related to the execution of actions.
+    Currently, only
+
+    In the future multiple options will be added, e.g., what input validation should be
+    performed per action, output validation, throttling, disabling, etc.
+    """
+
+    instant_actions: Optional[List[str]] = Field(
+        default=None,
+        description="The names of all actions which should finish instantly.",
+    )
+
+
 class SingleCallConfig(BaseModel):
     """Configuration for the single LLM call option for topical rails."""
 
@@ -353,6 +369,9 @@ class Rails(BaseModel):
     )
     dialog: DialogRails = Field(
         default_factory=DialogRails, description="Configuration of the dialog rails."
+    )
+    actions: ActionRails = Field(
+        default_factory=ActionRails, description="Configuration of action rails."
     )
 
 

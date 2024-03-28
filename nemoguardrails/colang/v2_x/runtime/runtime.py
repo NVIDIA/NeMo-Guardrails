@@ -335,7 +335,7 @@ class RuntimeV2_x(Runtime):
         return result, status
 
     @staticmethod
-    def _get_action_finished_event(result: dict) -> Dict[str, Any]:
+    def _get_action_finished_event(result: dict, **kwargs) -> Dict[str, Any]:
         """Helper to return the ActionFinished event from the result of running a local action."""
         return new_event_dict(
             f"{result['action_name']}Finished",
@@ -345,6 +345,7 @@ class RuntimeV2_x(Runtime):
             is_success=True,
             return_value=result["return_value"],
             events=result["new_events"],
+            **kwargs
             # is_system_action=action_meta.get("is_system_action", False),
         )
 
@@ -392,16 +393,34 @@ class RuntimeV2_x(Runtime):
         return action_finished_events, len(pending)
 
     async def process_events(
-        self, events: List[dict], state: Union[Optional[dict], State] = None
+        self,
+        events: List[dict],
+        state: Union[Optional[dict], State] = None,
+        blocking: bool = False,
+        instant_actions: Optional[List[str]] = None,
     ) -> Tuple[List[Dict[str, Any]], State]:
         """Process a sequence of events in a given state.
 
-        The events will be processed one by one, in the input order.
+        Runs an "event processing cycle", i.e., process all input events in the given state, and
+        return the new state and the output events.
+
+        The events will be processed one by one, in the input order. If new events are
+        generated as part of the processing, they will be appended to the input events.
+
+        By default, a processing cycle only waits for the local actions to finish, i.e,
+        if after processing all the input events, there are local actions in progress, the
+        event processing will wait for them to finish.
+
+        In blocking mode, the event processing will also wait for the local async actions.
 
         Args:
             events: A sequence of events that needs to be processed.
             state: The state that should be used as the starting point. If not provided,
               a clean state will be used.
+            blocking: If set, in blocking mode, the processing cycle will wait for
+              all the local async actions as well.
+            instant_actions: The name of the actions which should finish instantly, i.e.,
+              the start event will not be returned to the user and wait for the finish event.
 
         Returns:
             (output_events, output_state) Returns a sequence of output events and an output
@@ -412,7 +431,7 @@ class RuntimeV2_x(Runtime):
         input_events: List[Union[dict, InternalEvent]] = events.copy()
         local_running_actions: List[asyncio.Task[dict]] = []
 
-        if state is None:
+        if state is None or state == {}:
             state = State(flow_states={}, flow_configs=self.flow_configs)
             initialize_state(state)
         elif isinstance(state, dict):
@@ -486,7 +505,31 @@ class RuntimeV2_x(Runtime):
                     if start_action_match:
                         action_name = start_action_match[1]
 
-                        if action_name in self.action_dispatcher.registered_actions:
+                        # If it's an instant action, we finish it right away.
+                        if instant_actions and action_name in instant_actions:
+                            finished_event_data = {
+                                "action_name": action_name,
+                                "start_action_event": out_event,
+                                "return_value": None,
+                                "new_events": [],
+                            }
+
+                            # TODO: figure out a generic way of creating a compliant
+                            #   ...ActionFinished event
+                            extra = {}
+                            if action_name == "UtteranceBotAction":
+                                extra["final_script"] = out_event["script"]
+
+                            action_finished_event = self._get_action_finished_event(
+                                finished_event_data, **extra
+                            )
+
+                            # We send the completion of the action as an output event
+                            # and continue processing it.
+                            output_events.append(action_finished_event)
+                            input_events.append(action_finished_event)
+
+                        elif action_name in self.action_dispatcher.registered_actions:
                             # In this case we need to start the action locally
                             action_fn = self.action_dispatcher.get_action(action_name)
                             execute_async = getattr(action_fn, "action_meta", {}).get(
@@ -505,7 +548,13 @@ class RuntimeV2_x(Runtime):
 
                             # If the function is not async, or async execution is disabled
                             # we execute the actions as a local action.
-                            if not execute_async or self.disable_async_execution:
+                            # Also, if we're running this in blocking mode, we add all local
+                            # actions as non-async.
+                            if (
+                                not execute_async
+                                or self.disable_async_execution
+                                or blocking
+                            ):
                                 local_running_actions.append(local_action)
                             else:
                                 main_flow_uid = state.main_flow_state.uid

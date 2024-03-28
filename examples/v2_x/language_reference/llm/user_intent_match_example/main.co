@@ -6,9 +6,9 @@ flow main
     while True
         when user greeted
             bot say "Hi there!"
-        orwhen user said goodbye
+        or when user said goodbye
             bot say "Goodbye!"
-        orwhen unhandled user intent
+        or when unhandled user intent
             bot say "Thanks for sharing!"
 
 flow user greeted

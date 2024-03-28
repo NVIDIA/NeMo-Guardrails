@@ -1592,7 +1592,7 @@ def _add_head_to_event_matching_structures(
     else:
         heads.append((flow_state.uid, head.uid))
     state.event_matching_heads_reverse_map.update(
-        {(flow_state.uid, head.uid): ref_event_name}
+        {flow_state.uid + head.uid: ref_event_name}
     )
 
 
@@ -1600,11 +1600,11 @@ def _remove_head_from_event_matching_structures(
     state: State, flow_state: FlowState, head: FlowHead
 ) -> bool:
     event_name = state.event_matching_heads_reverse_map.get(
-        (flow_state.uid, head.uid), None
+        flow_state.uid + head.uid, None
     )
     if event_name is not None:
         state.event_matching_heads[event_name].remove((flow_state.uid, head.uid))
-        state.event_matching_heads_reverse_map.pop((flow_state.uid, head.uid))
+        state.event_matching_heads_reverse_map.pop(flow_state.uid + head.uid)
         return True
     return False
 

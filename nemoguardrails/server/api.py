@@ -128,6 +128,10 @@ class RequestBody(BaseModel):
     options: Optional[GenerationOptions] = Field(
         default=None, description="Additional options for controlling the generation."
     )
+    state: Optional[dict] = Field(
+        default=None,
+        description="A state object that should be used to continue the interaction.",
+    )
 
     @validator("config_ids", always=True)
     def check_if_set(cls, v, values, **kwargs):
@@ -152,6 +156,10 @@ class ResponseBody(BaseModel):
     )
     log: Optional[GenerationLog] = Field(
         default=None, description="Additional logging information."
+    )
+    state: Optional[dict] = Field(
+        default=None,
+        description="A state object that should be used to continue the interaction in the future.",
     )
 
 
@@ -318,6 +326,7 @@ async def chat_completion(body: RequestBody, request: Request):
                     messages=messages,
                     streaming_handler=streaming_handler,
                     options=body.options,
+                    state=body.state,
                 )
             )
 
@@ -326,7 +335,7 @@ async def chat_completion(body: RequestBody, request: Request):
             return StreamingResponse(streaming_handler)
         else:
             res = await llm_rails.generate_async(
-                messages=messages, options=body.options
+                messages=messages, options=body.options, state=body.state
             )
 
             if isinstance(res, GenerationResponse):
@@ -347,6 +356,7 @@ async def chat_completion(body: RequestBody, request: Request):
                 result["llm_output"] = res.llm_output
                 result["output_data"] = res.output_data
                 result["log"] = res.log
+                result["state"] = res.state
 
             return result
 
