@@ -19,6 +19,7 @@ flow _bot_say $text
 flow user said $text -> $transcript
   _user_said $text as $user_said
   $transcript = $user_said.event.final_transcript
+  return $transcript
 
 @meta(user_action=True)
 flow user said something -> $transcript
