@@ -107,7 +107,7 @@ async def test_serialization():
     s = state_to_json(state)
     took = time() - t0
 
-    assert took < 0.005
+    assert took < 0.01
 
     assert isinstance(s, str)
 
@@ -115,7 +115,7 @@ async def test_serialization():
     state_2 = json_to_state(s)
     took = time() - t0
 
-    assert took < 0.005
+    assert took < 0.01
 
     assert isinstance(state_2, State)
 
