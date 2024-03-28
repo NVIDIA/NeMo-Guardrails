@@ -412,7 +412,7 @@ class RuntimeV2_x(Runtime):
         input_events: List[Union[dict, InternalEvent]] = events.copy()
         local_running_actions: List[asyncio.Task[dict]] = []
 
-        if state is None:
+        if state is None or state == {}:
             state = State(flow_states={}, flow_configs=self.flow_configs)
             initialize_state(state)
         elif isinstance(state, dict):

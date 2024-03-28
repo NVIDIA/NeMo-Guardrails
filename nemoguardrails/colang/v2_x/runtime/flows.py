@@ -217,6 +217,28 @@ class Action:
         # Number of flows where this action is still active
         self.flow_scope_count = 0
 
+    def to_dict(self):
+        return {
+            "uid": self.uid,
+            "name": self.name,
+            "flow_uid": self.flow_uid,
+            "status": self.status.name,
+            "context": self.context,
+            "start_event_arguments": self.start_event_arguments,
+            "flow_scope_count": self.flow_scope_count,
+        }
+
+    @staticmethod
+    def from_dict(d):
+        action = Action(
+            name=d["name"], arguments=d["start_event_arguments"], flow_uid=d["flow_uid"]
+        )
+        action.uid = d["uid"]
+        action.status = ActionStatus[d["status"]]
+        action.context = d["context"]
+        action.flow_scope_count = d["flow_scope_count"]
+        return action
+
     # Process an event
     def process_event(self, event: ActionEvent) -> None:
         """Processes event and updates action accordingly."""
