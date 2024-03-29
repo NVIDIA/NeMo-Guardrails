@@ -98,6 +98,7 @@ def initialize_state(state: State) -> None:
     main_flow = add_new_flow_instance(
         state, create_flow_instance(main_flow_config, new_readable_uid("main"), "0", {})
     )
+    main_flow.activated = True
     if main_flow_config.loop_id is None:
         main_flow.loop_id = new_readable_uid("main")
     else:
@@ -478,31 +479,20 @@ def _process_internal_events_without_default_matchers(
                 event.arguments.get("activated", None)
                 and flow_id in state.flow_id_states
             ):
-                # Check if there already exists an instance of the same activated flow
-                for activated_flow in state.flow_id_states[flow_id]:
-                    if activated_flow.status != FlowStatus.STARTED:
-                        continue
-                    has_same_arguments = False
-                    for idx, arg in enumerate(state.flow_configs[flow_id].parameters):
-                        val = activated_flow.arguments[arg.name]
-                        if (
-                            arg.name in event.arguments
-                            and val == event.arguments[arg.name]
-                        ):
-                            has_same_arguments = True
-                        elif (
-                            f"${idx}" in event.arguments
-                            and val == event.arguments[f"${idx}"]
-                        ):
-                            has_same_arguments = True
-                        else:
-                            has_same_arguments = False
-                            break
-                    if has_same_arguments:
-                        started_instance = activated_flow
-                        break
+                assert isinstance(event, InternalEvent)
+                started_instance = _check_for_activated_flow_instance(state, event)
 
-            if not started_instance:
+            if started_instance:
+                started_event = started_instance.started_event(
+                    event.matching_scores,
+                    {"flow_instance_uid": event.arguments["flow_instance_uid"]},
+                )
+                _push_internal_event(
+                    state,
+                    started_event,
+                )
+                handled_event_loops.add("all_loops")
+            else:
                 add_new_flow_instance(
                     state,
                     create_flow_instance(
@@ -512,15 +502,7 @@ def _process_internal_events_without_default_matchers(
                         event.arguments,
                     ),
                 )
-            else:
-                started_event = started_instance.started_event(
-                    event.matching_scores,
-                    {"flow_instance_uid": event.arguments["flow_instance_uid"]},
-                )
-                _push_internal_event(
-                    state,
-                    started_event,
-                )
+
     elif event.name == InternalEvents.FINISH_FLOW:
         if "flow_instance_uid" in event.arguments:
             flow_instance_uid = event.arguments["flow_instance_uid"]
@@ -590,6 +572,31 @@ def _process_internal_events_without_default_matchers(
         handled_event_loops.add("all_loops")
 
     return handled_event_loops
+
+
+def _check_for_activated_flow_instance(
+    state: State, event: InternalEvent
+) -> Optional[FlowState]:
+    # Check if there already exists an instance of the same activated flow
+    flow_id = event.arguments["flow_id"]
+    for activated_flow in state.flow_id_states[flow_id]:
+        if activated_flow.status != FlowStatus.STARTED or not activated_flow.activated:
+            continue
+        has_same_arguments = False
+        for idx, arg in enumerate(state.flow_configs[flow_id].parameters):
+            val = activated_flow.arguments[arg.name]
+            if arg.name in event.arguments and val == event.arguments[arg.name]:
+                has_same_arguments = True
+            elif f"${idx}" in event.arguments and val == event.arguments[f"${idx}"]:
+                has_same_arguments = True
+            else:
+                has_same_arguments = False
+                break
+
+        if has_same_arguments:
+            return activated_flow
+
+    return None
 
 
 def _get_all_head_candidates(state: State, event: Event) -> List[Tuple[str, str]]:
@@ -757,9 +764,9 @@ def _resolve_action_conflicts(
                         index = competing_flow_state.action_uids.index(
                             competing_event.action_uid
                         )
-                        competing_flow_state.action_uids[
-                            index
-                        ] = winning_event.action_uid
+                        competing_flow_state.action_uids[index] = (
+                            winning_event.action_uid
+                        )
                         del state.actions[competing_event.action_uid]
 
                     advancing_heads.append(head)
@@ -860,6 +867,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
                     # since this would end in an infinite loop
                     if flow_finished and flow_state.activated:
                         flow_finished = False
+                        head.status = FlowHeadStatus.INACTIVE
             elif not flow_aborted:
                 elem = get_element_from_head(state, head)
                 if elem and is_action_op_element(elem):
@@ -1514,7 +1522,7 @@ def _finish_flow(
                 intent = intent_flow_config.meta_tag("user_intent")
 
             if not isinstance(intent, str):
-                intent = flow_state.flow_id
+                intent = intent_flow_config.id
 
         # Create event based on meta tag
         if isinstance(meta_tag_parameters, str):
