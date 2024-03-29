@@ -53,7 +53,7 @@ def test_hello_world_3():
     )
     chat = TestChat(
         config,
-        llm_completions=[" user express greeting"],
+        llm_completions=[" user expressed greeting"],
     )
 
     chat >> "hi there!"
