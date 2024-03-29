@@ -764,9 +764,9 @@ def _resolve_action_conflicts(
                         index = competing_flow_state.action_uids.index(
                             competing_event.action_uid
                         )
-                        competing_flow_state.action_uids[index] = (
-                            winning_event.action_uid
-                        )
+                        # Adding _action_uid to avoid formatting flipping by black.
+                        _action_uid = winning_event.action_uid
+                        competing_flow_state.action_uids[index] = _action_uid
                         del state.actions[competing_event.action_uid]
 
                     advancing_heads.append(head)
