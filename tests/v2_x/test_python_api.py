@@ -37,9 +37,6 @@ config = RailsConfig.from_content(
     flow main
       activate greeting
       activate math question
-
-      # TODO: remove this
-      wait indefinitely
     """,
     """
     colang_version: "2.x"

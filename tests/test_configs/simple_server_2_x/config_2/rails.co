@@ -16,6 +16,3 @@ flow greeting
 flow main
   activate greeting
   activate math question
-
-  # TODO: remove this
-  wait indefinitely
