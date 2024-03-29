@@ -110,6 +110,3 @@ flow llm continuation
   activate continue on undefined user utterance
   activate continue on undefined user intent
   activate continue on undefined flow
-
-  # TODO: should this be needed?
-  wait indefinitely

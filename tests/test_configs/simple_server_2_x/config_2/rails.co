@@ -1,0 +1,18 @@
+import core
+
+flow math question
+  $text = user said "what is 2+2"
+
+  bot say "Let me think."
+  $result = await WolframAlphaAction(query=$text)
+  bot say $result
+
+flow greeting
+  user said "hi"
+  bot say "Hello!"
+  user said "hi"
+  bot say "Hello again!"
+
+flow main
+  activate greeting
+  activate math question
