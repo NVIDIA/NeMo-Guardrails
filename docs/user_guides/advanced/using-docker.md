@@ -77,7 +77,7 @@ docker run \
 To use the Chat CLI interface, run the Docker container in interactive mode:
 
 ```bash
-docker run -i \
+docker run -it \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v </path/to/local/config/>:/config \
   nemoguardrails chat --config=/config --verbose

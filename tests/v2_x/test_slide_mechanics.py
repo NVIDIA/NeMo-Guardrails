@@ -126,24 +126,6 @@ def test_if_branching_mechanic():
                 "type": "StartUtteranceBotAction",
                 "script": "Next",
             },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
         ],
     )
 
@@ -206,12 +188,6 @@ def test_action_reference_member_access():
                 "type": "StartUtteranceBotAction",
                 "script": "Hello",
             },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
         ],
     )
 
@@ -244,9 +220,6 @@ def test_flow_references_member_access():
                 "type": "StartUtteranceBotAction",
                 "script": "Hello",
             },
-            {
-                "type": "StopUtteranceBotAction",
-            },
         ],
     )
 
@@ -277,15 +250,6 @@ def test_expressions_in_strings():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "It\"s {->} 'Roger!'",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
             },
         ],
     )
@@ -376,24 +340,6 @@ def test_break_continue_statement_a():
                 "type": "StartUtteranceBotAction",
                 "script": "Done",
             },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
         ],
     )
 
@@ -430,15 +376,6 @@ def test_break_continue_statement_b():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "C",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
             },
         ],
     )

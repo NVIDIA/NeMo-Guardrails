@@ -15,20 +15,14 @@ flow _bot_say $text
 
 # PUBLIC
 
-@meta(user_action='user said "{$transcript}"')
 flow user said $text -> $transcript
   _user_said $text as $user_said
   $transcript = $user_said.event.final_transcript
   return $transcript
 
-@meta(user_action=True)
 flow user said something -> $transcript
   _user_said as $user_said
-  send UserActionLog(flow_id="user said", parameter=$user_said.event.final_transcript, intent_flow_id="user said something")
   $transcript = $user_said.event.final_transcript
 
-  return $transcript
-
-@meta(bot_action=True)
 flow bot say $text
   await _bot_say $text
