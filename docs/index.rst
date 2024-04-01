@@ -29,28 +29,19 @@ NVIDIA NeMo Guardrails
    :name: User Guides
    :maxdepth: 2
 
-   user_guides/cli
-   user_guides/colang-language-syntax-guide
    user_guides/configuration-guide
    user_guides/guardrails-library
    user_guides/guardrails-process
+   user_guides/colang-language-syntax-guide
    user_guides/llm-support
    user_guides/python-api
+   user_guides/cli
    user_guides/server-guide
-   user_guides/detailed_logging/index
-   user_guides/input_output_rails_only/index
-   user_guides/jailbreak_detection_heuristics/index
    user_guides/langchain/index
+   user_guides/detailed_logging/index
+   user_guides/jailbreak_detection_heuristics/index
    user_guides/llm/index
    user_guides/multi_config_api/index
-
-.. toctree::
-   :caption: Evaluation
-   :name: Evaluation
-   :maxdepth: 2
-
-   evaluation/README
-   evaluation/llm-vulnerability-scanning
 
 .. toctree::
    :caption: Security
@@ -61,22 +52,30 @@ NVIDIA NeMo Guardrails
    security/red-teaming
 
 .. toctree::
+   :caption: Evaluation
+   :name: Evaluation
+   :maxdepth: 2
+
+   evaluation/README
+   evaluation/llm-vulnerability-scanning
+
+.. toctree::
    :caption: Advanced User Guides
    :name: Advanced User Guides
    :maxdepth: 2
 
-   user_guides/advanced/align-score-deployment
-   user_guides/advanced/bot-message-instructions
-   user_guides/advanced/embedding-search-providers
-   user_guides/advanced/event-based-api
-   user_guides/advanced/extract-user-provided-values
    user_guides/advanced/generation-options
+   user_guides/advanced/prompt-customization
+   user_guides/advanced/embedding-search-providers
+   user_guides/advanced/using-docker
+   user_guides/advanced/streaming
+   user_guides/advanced/align-score-deployment
+   user_guides/advanced/extract-user-provided-values
+   user_guides/advanced/bot-message-instructions
+   user_guides/advanced/event-based-api
    user_guides/advanced/jailbreak-detection-heuristics-deployment
    user_guides/advanced/llama-guard-deployment
    user_guides/advanced/nested-async-loop
-   user_guides/advanced/prompt-customization
-   user_guides/advanced/streaming
-   user_guides/advanced/using-docker
    user_guides/advanced/vertexai-setup
 
 .. toctree::

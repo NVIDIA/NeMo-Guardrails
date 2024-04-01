@@ -1,4 +1,4 @@
-Langchain
+LangChain
 =========
 
 .. toctree::

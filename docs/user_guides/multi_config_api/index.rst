@@ -1,4 +1,4 @@
-Multi Config Api
+Multi Config API
 ================
 
 .. toctree::

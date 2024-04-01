@@ -1,4 +1,4 @@
-Llm
+LLMs
 ===
 
 .. toctree::

@@ -1,4 +1,4 @@
-Nvidia Ai Endpoints
+NVIDIA AI Endpoints
 ===================
 
 .. toctree::

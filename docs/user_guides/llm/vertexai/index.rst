@@ -1,5 +1,5 @@
-Vertexai
-========
+Vertex AI
+=========
 
 .. toctree::
    :maxdepth: 2
