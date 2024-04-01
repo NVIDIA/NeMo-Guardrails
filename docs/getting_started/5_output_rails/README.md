@@ -161,7 +161,7 @@ As we can see, the LLM did generate the message containing the word "idiot", how
 The following figure depicts the process:
 
 <div align="center">
-<img src="../../_assets/puml/output_rails_fig_1.png" width="815">
+<img src="../../_static/puml/output_rails_fig_1.png" width="815">
 </div>
 
 ## Custom Output Rail

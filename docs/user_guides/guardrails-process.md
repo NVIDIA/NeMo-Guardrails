@@ -7,7 +7,7 @@ This guide provides an overview of the main types of rails supported in NeMo Gua
 NeMo Guardrails has support for five main categories of rails: input, dialog, output, retrieval, and execution. The diagram below provides an overview of the high-level flow through these categories of flows.
 
 <p style="text-align: center;">
-<img src="../_assets/images/programmable_guardrails_flow.png" style="max-width: 913px; width: 75%;">
+<img src="../_static/images/programmable_guardrails_flow.png" style="max-width: 913px; width: 75%;">
 </p>
 
 ## Categories of Rails
@@ -29,7 +29,7 @@ There are five types of rails supported in NeMo Guardrails:
 The diagram below depicts the guardrails process in detail:
 
 <div aling="center">
-  <img src="../_assets/puml/master_rails_flow.png" width="75%">
+  <img src="../_static/puml/master_rails_flow.png" width="75%">
 </div>
 
 The guardrails process has multiple stages that a user message goes through:
@@ -44,7 +44,7 @@ The guardrails process has multiple stages that a user message goes through:
 The diagram below depicts the dialog rails flow in detail:
 
 <p align="center">
-  <img src="../_assets/puml/dialog_rails_flow.png" width="500">
+  <img src="../_static/puml/dialog_rails_flow.png" width="500">
 </p>
 
 The dialog rails flow has multiple stages that a user message goes through:
@@ -60,5 +60,5 @@ The dialog rails flow has multiple stages that a user message goes through:
 When the `single_llm_call.enabled` is set to `True`, the dialog rails flow will be simplified to a single LLM call that predicts all the steps at once. The diagram below depicts the simplified dialog rails flow:
 
 <p align="center">
-  <img src="../_assets/puml/single_llm_call_flow.png" width="500">
+  <img src="../_static/puml/single_llm_call_flow.png" width="500">
 </p>

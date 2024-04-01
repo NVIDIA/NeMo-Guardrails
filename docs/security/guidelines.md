@@ -10,7 +10,7 @@ Consider the LLM to be, in effect, a web browser under the complete control of t
 
 ## Assumed Interaction Model
 
-![](../_assets/images/llm-api-interaction-model.png)
+![](../_static/images/llm-api-interaction-model.png)
 
 We assume that the data flow for accessing external resources has the following logical components:
 

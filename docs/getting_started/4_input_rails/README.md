@@ -284,7 +284,7 @@ print(info.llm_calls[0].completion)
 The following figure depicts in more details how the self-check input rail works:
 
 <div align="center">
-<img src="../../_assets/puml/input_rails_fig_1.png" width="815">
+<img src="../../_static/puml/input_rails_fig_1.png" width="815">
 </div>
 
 The `self check input` rail calls the `self_check_input` action, which in turn calls the LLM using the `self_check_input` task prompt.
@@ -328,7 +328,7 @@ print(info.llm_calls[0].completion)
 Because the input rail was not triggered, the flow continued as usual.
 
 <div align="center">
-<img src="../../_assets/puml/input_rails_fig_2.png" width="740">
+<img src="../../_static/puml/input_rails_fig_2.png" width="740">
 </div>
 
 Note that the final answer is not correct.
