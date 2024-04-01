@@ -50,7 +50,7 @@ rails:
 
 2. Define the `self_check_input` prompt in the `prompts.yml` file:
 
-```yml
+```yaml
 prompts:
   - task: self_check_input
     content: |-
@@ -63,7 +63,7 @@ prompts:
 
 The above is an example prompt you can use with the *self check input rail*. See the [Example Prompts](#example-prompts) section below for more details. The `self_check_input` prompt has an input variable `{{ user_input }}` which includes the input from the user. The completion must be "yes" if the input should be blocked and "no" otherwise.
 
-The self-check input rail executes the [`self_check_input` action](../../nemoguardrails/library/self_check/input_check/actions.py), which returns `True` if the input should be allowed, and `False` otherwise:
+The self-check input rail executes the [`self_check_input` action](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/self_check/input_check/actions.py), which returns `True` if the input should be allowed, and `False` otherwise:
 
 ```colang
 define flow self check input
@@ -89,7 +89,7 @@ This section provides two example prompts you can use with the self-check input 
 
 This prompt relies on the capability of the model to understand what "breaking moderation policies" and "good aligned responses" mean.
 
-```yml
+```yaml
 prompts:
   - task: self_check_input
     content: >
@@ -152,7 +152,7 @@ rails:
 
 2. Define the `self_check_output` prompt in the `prompts.yml` file:
 
-```yml
+```yaml
 prompts:
   - task: self_check_output
     content: |-
@@ -167,7 +167,7 @@ prompts:
 
 The above is an example prompt you can use with the *self check output rail*. See the [Example Prompts](#example-prompts-1) section below for more details. The `self_check_output` prompt has an input variable `{{ bot_response }}` which includes the output from the bot. The completion must be "yes" if the output should be blocked and "no" otherwise.
 
-The self-check output rail executes the [`self_check_output` action](../../nemoguardrails/library/self_check/output_check/actions.py), which returns `True` if the output should be allowed, and `False` otherwise:
+The self-check output rail executes the [`self_check_output` action](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/self_check/output_check/actions.py), which returns `True` if the output should be allowed, and `False` otherwise:
 
 ```colang
 define flow self check output
@@ -193,7 +193,7 @@ This section provides two example prompts for the self-check output rail. The si
 
 This prompt relies on the capability of the model to understand what "legal", "ethical" and "not harmful to any person" mean.
 
-```yml
+```yaml
 prompts:
   - task: self_check_output
     content: >
@@ -236,7 +236,7 @@ prompts:
 
 The goal of the self-check fact-checking output rail is to ensure that the answer to a RAG (Retrieval Augmented Generation) query is grounded in the provided evidence extracted from the knowledge base (KB).
 
-NeMo Guardrails uses the concept of **relevant chunks** (which are stored in the `$relevant_chunks` context variable) as the evidence against which fact-checking should be performed. The relevant chunks can be extracted automatically, if the built-in knowledge base support is used, or provided directly alongside the query (see the [Getting Started Guide example](../getting_started/7_rag)).
+NeMo Guardrails uses the concept of **relevant chunks** (which are stored in the `$relevant_chunks` context variable) as the evidence against which fact-checking should be performed. The relevant chunks can be extracted automatically, if the built-in knowledge base support is used, or provided directly alongside the query (see the [Getting Started Guide example](../getting_started/7_rag/README.md)).
 
 **IMPORTANT**: The performance of this rail is strongly dependent on the capability of the LLM to follow the instructions in the `self_check_facts` prompt.
 
@@ -255,7 +255,7 @@ rails:
 
 2. Define the `self_check_facts` prompt in the `prompts.yml` file:
 
-```yml
+```yaml
 prompts:
   - task: self_check_facts
     content: |-
@@ -268,7 +268,7 @@ prompts:
 
 The above is an example prompt that you can use with the *self check facts rail*. The `self_check_facts` prompt has two input variables: `{{ evidence }}`, which includes the relevant chunks, and `{{ response }}`, which includes the bot response that should be fact-checked. The completion must be "yes" if the response is factually correct and "no" otherwise.
 
-The self-check fact-checking rail executes the [`self_check_facts` action](../../nemoguardrails/library/self_check/output_check/actions.py), which returns a score between `0.0` (response is not accurate) and `1.0` (response is accurate). The reason a number is returned, instead of a boolean, is to keep a consistent API with other methods that return a score, e.g., the AlignScore method below.
+The self-check fact-checking rail executes the [`self_check_facts` action](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/self_check/output_check/actions.py), which returns a score between `0.0` (response is not accurate) and `1.0` (response is accurate). The reason a number is returned, instead of a boolean, is to keep a consistent API with other methods that return a score, e.g., the AlignScore method below.
 
 ```colang
 define subflow self check facts
@@ -304,7 +304,7 @@ define flow answer report question
   bot $answer
 ```
 
-Please refer to the [Custom RAG Output Rails example](../../examples/configs/rag/custom_rag_output_rails/README.md).
+Please refer to the [Custom RAG Output Rails example](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/rag/custom_rag_output_rails/README.md).
 
 ### Hallucination Detection
 
@@ -325,7 +325,7 @@ rails:
 
 2. Define a `self_check_hallucinations` prompt in the `prompts.yml` file:
 
-```yml
+```yaml
 prompts:
   - task: self_check_hallucinations
     content: |-
@@ -391,7 +391,7 @@ define flow answer report question
   bot $answer
 ```
 
-Please refer to the [Custom RAG Output Rails example](../../examples/configs/rag/custom_rag_output_rails/README.md).
+Please refer to the [Custom RAG Output Rails example](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/rag/custom_rag_output_rails/README.md).
 
 #### Implementation Details
 
@@ -411,7 +411,7 @@ This category of rails relies on open-source models and libraries.
 
 NeMo Guardrails provides out-of-the-box support for the [AlignScore metric (Zha et al.)](https://aclanthology.org/2023.acl-long.634.pdf), which uses a RoBERTa-based model for scoring factual consistency in model responses with respect to the knowledge base.
 
-In our testing, we observed an average latency of ~220ms on hosting AlignScore as an HTTP service, and ~45ms on direct inference with the model loaded in-memory. This makes it much faster than the self-check method. However, this method requires an on-prem deployment of the publicly available AlignScore model. Please see the [AlignScore Deployment](./advanced/align-score-deployment.md) guide for more details.
+In our testing, we observed an average latency of ~220ms on hosting AlignScore as an HTTP service, and ~45ms on direct inference with the model loaded in-memory. This makes it much faster than the self-check method. However, this method requires an on-prem deployment of the publicly available AlignScore model. Please see the [AlignScore Deployment](advanced/align-score-deployment.md) guide for more details.
 
 #### Usage
 
@@ -443,7 +443,7 @@ define flow
 
 NeMo Guardrails provides out-of-the-box support for content moderation using Meta's [Llama Guard](https://ai.meta.com/research/publications/llama-guard-llm-based-input-output-safeguard-for-human-ai-conversations/) model.
 
-In our testing, we observe significantly improved input and output content moderation performance compared to the [self-check method](#llm-self-checking). Please see additional documentation for more details on the [recommended deployment method](./advanced/llama-guard-deployment.md) and the [performance evaluation](./../evaluation/README.md#llamaguard-based-moderation-rails-performance) numbers.
+In our testing, we observe significantly improved input and output content moderation performance compared to the [self-check method](#llm-self-checking). Please see additional documentation for more details on the [recommended deployment method](advanced/llama-guard-deployment.md) and the [performance evaluation](../evaluation/README.md#llamaguard-based-moderation-rails-performance) numbers.
 
 #### Usage
 
@@ -475,7 +475,7 @@ rails:
 
 3. Define the `llama_guard_check_input` and the `llama_guard_check_output` prompts in the `prompts.yml` file:
 
-```yml
+```yaml
 prompts:
   - task: llama_guard_check_input
     content: |
@@ -491,7 +491,7 @@ prompts:
       O2: ...
 ```
 
-The rails execute the [`llama_guard_check_*` actions](../../nemoguardrails/library/llama_guard/actions.py), which return `True` if the user input or the bot message should be allowed, and `False` otherwise, along with a list of the unsafe content categories as defined in the Llama Guard prompt.
+The rails execute the [`llama_guard_check_*` actions](.https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/llama_guard/actions.py), which return `True` if the user input or the bot message should be allowed, and `False` otherwise, along with a list of the unsafe content categories as defined in the Llama Guard prompt.
 
 ```colang
 define flow llama guard check input
@@ -506,7 +506,7 @@ define flow llama guard check input
 # (similar flow for checking output)
 ```
 
-A complete example configuration that uses Llama Guard for input and output moderation is provided in this [example folder](./../../examples/configs/llama_guard/README.md).
+A complete example configuration that uses Llama Guard for input and output moderation is provided in this [example folder](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/llama_guard/README.md).
 
 
 ### Presidio-based Sensitive Data Detection
@@ -635,7 +635,7 @@ rails:
 
 #### Custom Detection
 
-If you want to implement a completely different sensitive data detection mechanism, you can override the default actions [`detect_sensitive_data`](../../nemoguardrails/library/sensitive_data_detection/actions.py) and [`mask_sensitive_data`](../../nemoguardrails/library/sensitive_data_detection/actions.py).
+If you want to implement a completely different sensitive data detection mechanism, you can override the default actions [`detect_sensitive_data`](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/sensitive_data_detection/actions.py) and [`mask_sensitive_data`](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/sensitive_data_detection/actions.py).
 
 
 ## Third-Party APIs
@@ -659,7 +659,7 @@ rails:
 
 The `activefence moderation` flow uses the maximum risk score with an 0.85 threshold to decide if the input should be allowed or not (i.e., if the risk score is above the threshold, it is considered a violation). The `activefence moderation detailed` has individual scores per category of violation.
 
-To customize the scores, you have to overwrite the [default flows](../../nemoguardrails/library/activefence/flows.co) in your config. For example, to change the threshold for `activefence moderation` you can add the following flow to your config:
+To customize the scores, you have to overwrite the [default flows](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/activefence/flows.co) in your config. For example, to change the threshold for `activefence moderation` you can add the following flow to your config:
 
 ```colang
 define subflow activefence moderation
@@ -764,7 +764,7 @@ To compute the perplexity of a string, the current implementation uses the `gpt2
 
 #### Setup
 
-The recommended way for using the jailbreak detection heuristics is to [deploy the jailbreak detection heuristics server](../user_guides/advanced/jailbreak-detection-heuristics-deployment.md) separately.
+The recommended way for using the jailbreak detection heuristics is to [deploy the jailbreak detection heuristics server](advanced/jailbreak-detection-heuristics-deployment.md) separately.
 
 For quick testing, you can use the jailbreak detection heuristics rail locally by first installing `transformers` and `tourch`.
 

@@ -1,6 +1,6 @@
 # Using LLMs hosted on Vertex AI
 
-This guide teaches you how to use NeMo Guardrails with LLMs hosted on Vertex AI. It uses the [ABC Bot configuration](../../../../examples/bots/abc) and changes the model to `gemini-1.0-pro`.
+This guide teaches you how to use NeMo Guardrails with LLMs hosted on Vertex AI. It uses the [ABC Bot configuration](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/bots/abc/README.md) and changes the model to `gemini-1.0-pro`.
 
 This guide assumes you have configured and tested working with Vertex AI models. If not, refer to [this guide](../../advanced/vertexai-setup.md).
 
@@ -91,7 +91,7 @@ Summary: 5 LLM call(s) took 3.99 seconds .
 
 ## Evaluation
 
-The `gemini-1.0-pro` and `text-bison` models have been evaluated for topical rails, and `gemini-1.0-pro` has also been evaluated as a self-checking model for hallucination and content moderation. Evaluation results can be found [here](../../../../docs/evaluation/README.md).
+The `gemini-1.0-pro` and `text-bison` models have been evaluated for topical rails, and `gemini-1.0-pro` has also been evaluated as a self-checking model for hallucination and content moderation. Evaluation results can be found [here](../../../evaluation/README.md).
 
 ## Conclusion
 

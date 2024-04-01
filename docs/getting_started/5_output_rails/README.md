@@ -1,6 +1,6 @@
 # Output Rails
 
-This guide describes how to add output rails to a guardrails configuration. This guide builds on the previous guide, [Input Rails](../4_input_rails), developing further the demo ABC Bot.
+This guide describes how to add output rails to a guardrails configuration. This guide builds on the previous guide, [Input Rails](../4_input_rails/README.md), developing further the demo ABC Bot.
 
 ## Prerequisites
 
@@ -292,4 +292,4 @@ I cannot talk about proprietary technology.
 
 ## Next
 
-The next guide, [Topical Rails](../6_topical_rails), adds a topical rails to the ABC bot, to make sure it only responds to questions related to the employment situation.
+The next guide, [Topical Rails](../6_topical_rails/README.md), adds a topical rails to the ABC bot, to make sure it only responds to questions related to the employment situation.

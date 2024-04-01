@@ -68,7 +68,7 @@ result = await app.generate_async(
 print(result)
 ```
 
-For the complete working example, check out this [demo script](../../../examples/scripts/demo_streaming.py).
+For the complete working example, check out this [demo script](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/scripts/demo_streaming.py).
 
 ### Server API
 
@@ -90,7 +90,7 @@ POST /v1/chat/completions
 ### Streaming for LLMs deployed using HuggingFacePipeline
 
 We also support streaming for LLMs deployed using `HuggingFacePipeline`.
-One example is provided in the [HF Pipeline Dolly](./../../../examples/configs/llm/hf_pipeline_dolly/README.md) configuration.
+One example is provided in the [HF Pipeline Dolly](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/llm/hf_pipeline_dolly/README.md) configuration.
 
 To use streaming for HF Pipeline LLMs, you first need to set the streaming flag in your `config.yml`.
 

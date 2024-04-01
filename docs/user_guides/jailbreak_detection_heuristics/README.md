@@ -2,7 +2,7 @@
 
 This guide demonstrates how to use jailbreak detection heuristics in a guardrails configuration to detect malicious prompts.
 
-We will use the guardrails configuration for the ABC Bot defined for the [topical rails example](../../getting_started/6_topical_rails) part of the [Getting Started Guide](../../getting_started).
+We will use the guardrails configuration for the ABC Bot defined for the [topical rails example](../../getting_started/6_topical_rails/README.md) part of the [Getting Started Guide](../../getting_started/README.md).
 
 ```bash
 # Init: remove any existing configuration and copy the ABC bot from topical rails example
@@ -70,7 +70,7 @@ More information about these heuristics can be found in the [Guardrails Library]
 
 ### Activating Jailbreak Detection Heuristics
 
-To activate the jailbreak detection heuristics, we first need to include the `jailbreak detection heuristics` flow as an input rail in our guardrails configuration. We can do this by adding the following to the [config.yml](./config/config.yml) of the ABC bot:
+To activate the jailbreak detection heuristics, we first need to include the `jailbreak detection heuristics` flow as an input rail in our guardrails configuration. We can do this by adding the following to the [config.yml](config/config.yml) of the ABC bot:
 
 ```colang
 rails:
@@ -79,7 +79,7 @@ rails:
       - jailbreak detection heuristics
 ```
 
-To the same file we need to configure the jailbreak detection heuristics. We can do this by adding the following to the [config.yml](./config/config.yml)
+To the same file we need to configure the jailbreak detection heuristics. We can do this by adding the following to the [config.yml](config/config.yml)
 
 ```colang
 rails:
@@ -98,7 +98,7 @@ To test the bot with the jailbreak detection heuristics as the input rail, we ne
 ```python
 from nemoguardrails import RailsConfig, LLMRails
 
-config = RailsConfig.from_path("../../../docs/getting_started/6_topical_rails/config/")
+config = RailsConfig.from_path("../../getting_started/6_topical_rails/config/")
 rails = LLMRails(config)
 messages = [{
     "role": "user",

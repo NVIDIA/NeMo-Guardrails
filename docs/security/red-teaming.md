@@ -12,7 +12,7 @@ To run a red teaming process, there are three steps involved:
 2. Create a set of challenges (`challenges.json`) and add them to the `config` folder.
 3. Start the server `nemoguardrails server` and use the Chat UI to interact with various configurations.
 
-For a server configuration template with two guardrails configuration and a set of challenges, check out [this example](../../examples/configs/red-teaming).
+For a server configuration template with two guardrails configuration and a set of challenges, check out [this example](../../examples/configs/red-teaming/README.md).
 
 ## Challenges
 
@@ -54,4 +54,4 @@ The UI enables the user to rate the attack's success (No Success, Some Success, 
 
 ## Recording the results
 
-The sample configuration [here](../../examples/configs/red-teaming) includes an example of how to use a "custom logger" to save the ratings, including the complete history of the conversation, in a CSV file.
+The sample configuration [here](../../examples/configs/red-teaming/README.md) includes an example of how to use a "custom logger" to save the ratings, including the complete history of the conversation, in a CSV file.

@@ -125,7 +125,7 @@ You can specify additional parameters when using NeMo LLM models using the `para
 
 The `api_host`, `api_key`, and `organization_id` are fetched automatically from the environment variables `NGC_API_HOST`, `NGC_API_KEY`, and `NGC_ORGANIZATION_ID`, respectively.
 
-For more details, please refer to the NeMo LLM Service documentation and check out the [NeMo LLM example configuration](../../examples/configs/llm/nemollm).
+For more details, please refer to the NeMo LLM Service documentation and check out the [NeMo LLM example configuration](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/llm/nemollm/README.md).
 
 #### TRT-LLM
 
@@ -206,7 +206,7 @@ models:
 
 NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../architecture/README.md#the-guardrails-process) and for the [knowledge base](#knowledge-base-documents) functionality. The default embedding search uses FastEmbed for computing the embeddings (the `all-MiniLM-L6-v2` model) and [Annoy](https://github.com/spotify/annoy) for performing the search. As shown in the previous section, the embeddings model supports both FastEmbed and OpenAI. SentenceTransformers is also supported.
 
-For advanced use cases or integrations with existing knowledge bases, you can [provide a custom embedding search provider](./advanced/embedding-search-providers.md).
+For advanced use cases or integrations with existing knowledge bases, you can [provide a custom embedding search provider](advanced/embedding-search-providers.md).
 
 
 ### General Instructions
@@ -287,7 +287,7 @@ The full list of tasks used by the NeMo Guardrails toolkit is the following:
 - `self_check_output`: check if bot response should be allowed;
 - `self_check_hallucination`: check if the bot response is a hallucination.
 
-You can check the default prompts in the [prompts](../../nemoguardrails/llm/prompts) folder.
+You can check the default prompts in the [prompts](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/llm/prompts) folder.
 
 ### Multi-step Generation
 
@@ -408,7 +408,7 @@ Retrieval rails process the retrieved chunks, i.e., the `$relevant_chunks` varia
 
 ### Dialog Rails
 
-Dialog rails enforce specific predefined conversational paths. To use dialog rails, you must define canonical form forms for various user messages and use them to trigger the dialog flows. Check out the [Hello World](../../examples/bots/hello_world) bot for a quick example. For a slightly more advanced example, check out the [ABC bot](../../examples/bots/abc), where dialog rails are used to ensure the bot does not talk about specific topics.
+Dialog rails enforce specific predefined conversational paths. To use dialog rails, you must define canonical form forms for various user messages and use them to trigger the dialog flows. Check out the [Hello World](.https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/bots/hello_world/README.md) bot for a quick example. For a slightly more advanced example, check out the [ABC bot](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/bots/abc/README.md), where dialog rails are used to ensure the bot does not talk about specific topics.
 
 The use of dialog rails requires a three-step process:
 

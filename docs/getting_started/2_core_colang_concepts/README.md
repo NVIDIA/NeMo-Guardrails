@@ -224,7 +224,7 @@ The prompt has four logical sections:
 
 2. A sample conversation, which can also be [configured](../../user_guides/configuration-guide.md#sample-conversation) using the `sample_conversation` key in *config.yml*.
 
-3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details see [ABC Bot](../../../examples/bots/abc).
+3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details see [ABC Bot](../../../examples/bots/abc/README.md).
 
 4. The current conversation preceded by the first two turns from the sample conversation.
 
@@ -327,4 +327,4 @@ This guide provides a detailed overview of two core Colang concepts: *messages* 
 
 ## Next
 
-The next guide, [Demo Use Case](../3_demo_use_case), guides you through selecting a demo use case to implement different types of rails, such as for input, output, or dialog.
+The next guide, [Demo Use Case](../3_demo_use_case/README.md), guides you through selecting a demo use case to implement different types of rails, such as for input, output, or dialog.

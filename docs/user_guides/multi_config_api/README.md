@@ -4,7 +4,7 @@ This guide describes how to use multiple configurations as part of the same serv
 
 ## Motivation
 
-When running a guardrails server, it is convenient to create *atomic configurations* which can be reused across multiple "complete" configurations. In this guide, we use [these example configurations](../../../examples/server_configs/atomic):
+When running a guardrails server, it is convenient to create *atomic configurations* which can be reused across multiple "complete" configurations. In this guide, we use [these example configurations](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/server_configs/atomic):
 1. `input_checking`: which uses the self-check input rail.
 2. `output_checking`: which uses the self-check output rail.
 3. `main`: which uses the `gpt-3.5-turbo-instruct` model with no guardrails.

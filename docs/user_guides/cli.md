@@ -7,7 +7,7 @@ For testing purposes, the Guardrails toolkit provides a command line chat that c
 ```
 > nemoguardrails chat --config examples/ [--verbose] [--verbose-llm-calls]
 ```
-#### Options
+## Options
 - `--config`: The configuration that should be used. Can be a folder or a .co/.yml file.
 - `--verbose`: In verbose mode, detailed debugging information is also shown.
 - `--verbose-llm-calls`: In verbose LLM calls mode, the debugging information includes the entire prompt that is sent to the LLM and the completion.
