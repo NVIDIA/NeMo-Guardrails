@@ -261,6 +261,16 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
                 "`pip install langchain-google-vertexai`."
             )
 
+    elif model_config.engine == "cohere" and "command-r" in model_config.model:
+        try:
+            from langchain_cohere import ChatCohere
+
+            return ChatCohere
+        except ImportError:
+            raise ImportError(
+                "Could not import langchain_cohere, please install it with "
+                "`pip install -U langchain-cohere`."
+            )
     else:
         return _providers[model_config.engine]
 

@@ -20,3 +20,6 @@ NEMO_API_URL_GPT_43B_002 = (
 NEMO_API_URL_GPT_43B_905 = (
     "https://api.llm.ngc.nvidia.com/v1/models/gpt-43b-905/completions"
 )
+COHEREAI_API_URL_CHAT = (
+    "https://api.cohere.ai/v1/chat"
+)

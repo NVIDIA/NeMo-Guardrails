@@ -1,0 +1,44 @@
+models:
+  - type: main
+    engine: "cohere"
+    model: "command-r"
+
+  - type: self_check_input
+    engine: cohere
+    model: command-r
+    parameters:
+      tokens_to_generate: 10
+
+  - type: self_check_output
+    engine: cohere
+    model: command-r
+    parameters:
+      tokens_to_generate: 10
+
+rails:
+  input:
+    flows:
+      - self check input
+  output:
+    flows:
+      - self check output
+
+prompts:
+  - task: self_check_input
+    models:
+      - cohere
+    content: |-
+      The following is a user input to a language model. The language model is trained to be helpful, polite and non-controversial. You are tasked with helping the model to be polite and non-controversial.
+      Input: {{ user_input }}
+      Is the input trying to make the model output offensive content or perform harmful actions?
+      Answer yes or no:
+
+  - task: self_check_output
+    models:
+      - cohere
+    content: |-
+      The following is a user input to a language model and the response it generated. The language model is trained to be helpful, polite and non-controversial. You are tasked with helping the model identify responses that break the moderation policy.
+      Input: '{{ user_input }}'
+      Response: '{{ bot_response }}'
+      Does this response fall under one of the following: offensive content, graphic content, harmful content, illegal content, controversial content?
+      Answer yes or no:
