@@ -24,13 +24,16 @@ from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
-from nemoguardrails.colang.v2_x.runtime.flows import ColangParsingError
+from nemoguardrails.colang.v2_x.runtime.errors import ColangParsingError
 
 log = logging.getLogger(__name__)
 
 # Load the default config values from the file
 with open(os.path.join(os.path.dirname(__file__), "default_config.yml")) as _fc:
     _default_config = yaml.safe_load(_fc)
+
+with open(os.path.join(os.path.dirname(__file__), "default_config_v2.yml")) as _fc:
+    _default_config_v2 = yaml.safe_load(_fc)
 
 
 # Extract the COLANGPATH directories.
@@ -255,6 +258,22 @@ class RetrievalRails(BaseModel):
     )
 
 
+class ActionRails(BaseModel):
+    """Configuration of action rails.
+
+    Action rails control various options related to the execution of actions.
+    Currently, only
+
+    In the future multiple options will be added, e.g., what input validation should be
+    performed per action, output validation, throttling, disabling, etc.
+    """
+
+    instant_actions: Optional[List[str]] = Field(
+        default=None,
+        description="The names of all actions which should finish instantly.",
+    )
+
+
 class SingleCallConfig(BaseModel):
     """Configuration for the single LLM call option for topical rails."""
 
@@ -350,6 +369,9 @@ class Rails(BaseModel):
     )
     dialog: DialogRails = Field(
         default_factory=DialogRails, description="Configuration of the dialog rails."
+    )
+    actions: ActionRails = Field(
+        default_factory=ActionRails, description="Configuration of action rails."
     )
 
 
@@ -590,7 +612,6 @@ def _parse_colang_files_recursively(
                     current_file, content=f.read(), version=colang_version
                 )
             except Exception as e:
-                print(e)
                 raise ColangParsingError(
                     f"Error while parsing Colang file: {current_path}"
                 ) from e
@@ -772,6 +793,23 @@ class RailsConfig(BaseModel):
             and "self_check_facts" not in provided_task_prompts
         ):
             raise ValueError("You must provide a `self_check_facts` prompt template.")
+
+        return values
+
+    @root_validator(pre=True, allow_reuse=True)
+    def fill_in_default_values_for_v2_x(cls, values):
+        instructions = values.get("instructions", {})
+        sample_conversation = values.get("sample_conversation")
+        colang_version = values.get("colang_version", "1.0")
+
+        if colang_version == "2.x":
+            if not instructions:
+                values["instructions"] = _default_config_v2["instructions"]
+
+            if not sample_conversation:
+                values["sample_conversation"] = _default_config_v2[
+                    "sample_conversation"
+                ]
 
         return values
 

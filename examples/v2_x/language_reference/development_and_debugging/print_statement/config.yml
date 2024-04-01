@@ -1,0 +1,4 @@
+colang_version: "2.x"
+
+import_paths:
+    - tests/test_configs/multi_modal_demo_v2_x/

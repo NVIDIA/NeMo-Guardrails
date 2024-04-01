@@ -1,0 +1,6 @@
+flow main
+    match UtteranceUserActionFinished(final_transcript="Hi")
+    send StartUtteranceBotAction(script="Hi there! How are you?")
+    match UtteranceUserActionFinished(final_transcript="Good and you?")
+    send StartUtteranceBotAction(script="Great! Thanks")
+    send StartGestureBotAction(gesture="Thumbs up")

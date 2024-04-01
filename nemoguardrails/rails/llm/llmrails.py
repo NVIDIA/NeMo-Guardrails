@@ -18,10 +18,11 @@ import asyncio
 import importlib.util
 import logging
 import os
+import re
 import threading
 import time
 import warnings
-from typing import Any, AsyncIterator, List, Optional, Tuple, Type, Union
+from typing import Any, AsyncIterator, List, Optional, Tuple, Type, Union, cast
 
 from langchain.llms.base import BaseLLM
 
@@ -32,7 +33,12 @@ from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.flows import compute_context
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
 from nemoguardrails.colang.v2_x.lang.utils import new_uuid
+from nemoguardrails.colang.v2_x.runtime.flows import Action, State
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
+from nemoguardrails.colang.v2_x.runtime.serialization import (
+    json_to_state,
+    state_to_json,
+)
 from nemoguardrails.context import (
     explain_info_var,
     generation_options_var,
@@ -84,7 +90,7 @@ class LLMRails:
         self.verbose = verbose
 
         if self.verbose:
-            set_verbose(True)
+            set_verbose(True, llm_calls=True)
 
         # We allow the user to register additional embedding search providers, so we keep
         # an index of them.
@@ -337,8 +343,11 @@ class LLMRails:
                         "nlpcloud",
                         "petals",
                         "trt_llm",
+                        "vertexai",
                     ]:
                         kwargs["model_name"] = llm_config.model
+                    elif llm_config.engine == "nvidia_ai_endpoints":
+                        kwargs["model"] = llm_config.model
                     else:
                         # The `__fields__` attribute is computed dynamically by pydantic.
                         if "model" in provider_cls.__fields__:
@@ -395,7 +404,7 @@ class LLMRails:
                 kwargs = esp_config.parameters
                 return self.embedding_search_providers[esp_config.name](**kwargs)
 
-    def _get_events_for_messages(self, messages: List[dict]):
+    def _get_events_for_messages(self, messages: List[dict], state: Any):
         """Return the list of events corresponding to the provided messages.
 
         Tries to find a prefix of messages for which we have already a list of events
@@ -415,56 +424,91 @@ class LLMRails:
         """
         events = []
 
-        # We try to find the longest prefix of messages for which we have a cache
-        # of events.
-        p = len(messages) - 1
-        while p > 0:
-            cache_key = get_history_cache_key(messages[0:p])
-            if cache_key in self.events_history_cache:
-                events = self.events_history_cache[cache_key].copy()
-                break
+        if self.config.colang_version == "1.0":
+            # We try to find the longest prefix of messages for which we have a cache
+            # of events.
+            p = len(messages) - 1
+            while p > 0:
+                cache_key = get_history_cache_key(messages[0:p])
+                if cache_key in self.events_history_cache:
+                    events = self.events_history_cache[cache_key].copy()
+                    break
 
-            p -= 1
+                p -= 1
 
-        # For the rest of the messages, we transform them directly into events.
-        # TODO: Move this to separate function once more types of messages are supported.
-        for idx in range(p, len(messages)):
-            msg = messages[idx]
-            if msg["role"] == "user":
-                events.append(
-                    {
-                        "type": "UtteranceUserActionFinished",
-                        "final_transcript": msg["content"],
-                    }
-                )
-
-                # If it's not the last message, we also need to add the `UserMessage` event
-                if idx != len(messages) - 1:
+            # For the rest of the messages, we transform them directly into events.
+            # TODO: Move this to separate function once more types of messages are supported.
+            for idx in range(p, len(messages)):
+                msg = messages[idx]
+                if msg["role"] == "user":
                     events.append(
                         {
-                            "type": "UserMessage",
-                            "text": msg["content"],
+                            "type": "UtteranceUserActionFinished",
+                            "final_transcript": msg["content"],
                         }
                     )
 
-            elif msg["role"] == "assistant":
-                action_uid = new_uuid()
-                start_event = new_event_dict(
-                    "StartUtteranceBotAction",
-                    script=msg["content"],
-                    action_uid=action_uid,
-                )
-                finished_event = new_event_dict(
-                    "UtteranceBotActionFinished",
-                    final_script=msg["content"],
-                    is_success=True,
-                    action_uid=action_uid,
-                )
-                events.extend([start_event, finished_event])
-            elif msg["role"] == "context":
-                events.append({"type": "ContextUpdate", "data": msg["content"]})
-            elif msg["role"] == "event":
-                events.append(msg["event"])
+                    # If it's not the last message, we also need to add the `UserMessage` event
+                    if idx != len(messages) - 1:
+                        events.append(
+                            {
+                                "type": "UserMessage",
+                                "text": msg["content"],
+                            }
+                        )
+
+                elif msg["role"] == "assistant":
+                    action_uid = new_uuid()
+                    start_event = new_event_dict(
+                        "StartUtteranceBotAction",
+                        final_transcript=msg["content"],
+                        action_uid=action_uid,
+                    )
+                    finished_event = new_event_dict(
+                        "UtteranceBotActionFinished",
+                        final_transcript=msg["content"],
+                        is_success=True,
+                        action_uid=action_uid,
+                    )
+                    events.extend([start_event, finished_event])
+                elif msg["role"] == "context":
+                    events.append({"type": "ContextUpdate", "data": msg["content"]})
+                elif msg["role"] == "event":
+                    events.append(msg["event"])
+        else:
+            for idx in range(len(messages)):
+                msg = messages[idx]
+                if msg["role"] == "user":
+                    events.append(
+                        {
+                            "type": "UtteranceUserActionFinished",
+                            "final_transcript": msg["content"],
+                        }
+                    )
+
+                elif msg["role"] == "assistant":
+                    raise ValueError(
+                        "Providing `assistant` messages as input is not supported for Colang 2.0 configurations."
+                    )
+                elif msg["role"] == "context":
+                    events.append({"type": "ContextUpdate", "data": msg["content"]})
+                elif msg["role"] == "event":
+                    events.append(msg["event"])
+                elif msg["role"] == "tool":
+                    action_uid = msg["tool_call_id"]
+                    return_value = msg["content"]
+                    action: Action = state.actions[action_uid]
+                    events.append(
+                        new_event_dict(
+                            f"{action.name}Finished",
+                            action_uid=action_uid,
+                            action_name=action.name,
+                            status="success",
+                            is_success=True,
+                            return_value=return_value,
+                            events=[],
+                        )
+                    )
 
         return events
 
@@ -473,6 +517,7 @@ class LLMRails:
         prompt: Optional[str] = None,
         messages: Optional[List[dict]] = None,
         options: Optional[Union[dict, GenerationOptions]] = None,
+        state: Optional[Union[dict, State]] = None,
         streaming_handler: Optional[StreamingHandler] = None,
         return_context: bool = False,
     ) -> Union[str, dict, GenerationResponse, Tuple[dict, dict]]:
@@ -494,6 +539,7 @@ class LLMRails:
             prompt: The prompt to be used for completion.
             messages: The history of messages to be used to generate the next message.
             options: Options specific for the generation.
+            state: The state object that should be used as the starting point.
             streaming_handler: If specified, and the config supports streaming, the
               provided handler will be used for streaming.
             return_context: Whether to return the context at the end of the run.
@@ -502,6 +548,17 @@ class LLMRails:
             The completion (when a prompt is provided) or the next message.
 
         System messages are not yet supported."""
+        # If a state object is specified, then we switch to "generation options" mode.
+        # This is because we want the output to be a GenerationResponse which will contain
+        # the output state.
+        if state is not None:
+            # We deserialize the state if needed.
+            if isinstance(state, dict) and state.get("version", "1.0") == "2.x":
+                state = json_to_state(state["state"])
+
+            if options is None:
+                options = GenerationOptions()
+
         # We allow options to be specified both as a dict and as an object.
         if options and isinstance(options, dict):
             options = GenerationOptions(**options)
@@ -566,45 +623,103 @@ class LLMRails:
         # Initialize the LLM stats
         llm_stats = LLMStats()
         llm_stats_var.set(llm_stats)
+        processing_log = []
 
         # The array of events corresponding to the provided sequence of messages.
-        events = self._get_events_for_messages(messages)
+        events = self._get_events_for_messages(messages, state)
 
-        # Compute the new events.
-        processing_log = []
-        new_events = await self.runtime.generate_events(
-            events, processing_log=processing_log
-        )
+        if self.config.colang_version == "1.0":
+            # If we had a state object, we also need to prepend the events from the state.
+            state_events = []
+            if state:
+                assert isinstance(state, dict)
+                state_events = state["events"]
+
+            # Compute the new events.
+            new_events = await self.runtime.generate_events(
+                state_events + events, processing_log=processing_log
+            )
+            output_state = None
+        else:
+            # In generation mode, by default the bot response is an instant action.
+            instant_actions = ["UtteranceBotAction"]
+            if self.config.rails.actions.instant_actions is not None:
+                instant_actions = self.config.rails.actions.instant_actions
+
+            # Cast this explicitly to avoid certain warnings
+            runtime: RuntimeV2_x = cast(RuntimeV2_x, self.runtime)
+
+            # Compute the new events.
+            # In generation mode, the processing is always blocking, i.e., it waits for
+            # all local actions (sync and async).
+            new_events, output_state = await runtime.process_events(
+                events, state=state, instant_actions=instant_actions, blocking=True
+            )
+            # We also encode the output state as a JSON
+            output_state = {"state": state_to_json(output_state), "version": "2.x"}
 
         # Extract and join all the messages from StartUtteranceBotAction events as the response.
         responses = []
+        response_tool_calls = []
+        response_events = []
         new_extra_events = []
-        for event in new_events:
-            if event["type"] == "StartUtteranceBotAction":
-                # Check if we need to remove a message
-                if event["script"] == "(remove last message)":
-                    responses = responses[0:-1]
-                else:
-                    responses.append(event["script"])
 
-                # For the messages interface, we need to consider the UtteranceBotAction finished
-                # as soon as we return the message, hence we add the finished event to the new events.
-                # new_extra_events.append(
-                #     new_event_dict(
-                #         "UtteranceBotActionFinished",
-                #         action_uid=event["action_uid"],
-                #         is_success=True,
-                #         final_script=event["script"],
-                #     )
-                # )
+        # The processing is different for Colang 1.0 and 2.0
+        if self.config.colang_version == "1.0":
+            for event in new_events:
+                if event["type"] == "StartUtteranceBotAction":
+                    # Check if we need to remove a message
+                    if event["script"] == "(remove last message)":
+                        responses = responses[0:-1]
+                    else:
+                        responses.append(event["script"])
+        else:
+            for event in new_events:
+                start_action_match = re.match(r"Start(.*Action)", event["type"])
+
+                if start_action_match:
+                    action_name = start_action_match[1]
+                    # TODO: is there an elegant way to extract just the arguments?
+                    arguments = {
+                        k: v
+                        for k, v in event.items()
+                        if k != "type"
+                        and k != "uid"
+                        and k != "event_created_at"
+                        and k != "source_uid"
+                        and k != "action_uid"
+                    }
+                    response_tool_calls.append(
+                        {
+                            "id": event["action_uid"],
+                            "type": "function",
+                            "function": {"name": action_name, "arguments": arguments},
+                        }
+                    )
+
+                elif event["type"] == "UtteranceBotActionFinished":
+                    responses.append(event["final_script"])
+                else:
+                    # We just append the event
+                    response_events.append(event)
 
         new_message = {"role": "assistant", "content": "\n".join(responses)}
+        if response_tool_calls:
+            new_message["tool_calls"] = response_tool_calls
+        if response_events:
+            new_message["events"] = response_events
 
-        # Save the new events in the history and update the cache
-        events.extend(new_events)
-        events.extend(new_extra_events)
-        cache_key = get_history_cache_key(messages + [new_message])
-        self.events_history_cache[cache_key] = events
+        if self.config.colang_version == "1.0":
+            events.extend(new_events)
+            events.extend(new_extra_events)
+
+            # If a state object is not used, then we use the implicit caching
+            if state is None:
+                # Save the new events in the history and update the cache
+                cache_key = get_history_cache_key(messages + [new_message])
+                self.events_history_cache[cache_key] = events
+            else:
+                output_state = {"events": events}
 
         # If logging is enabled, we log the conversation
         # TODO: add support for logging flag
@@ -632,62 +747,89 @@ class LLMRails:
             else:
                 res = GenerationResponse(response=[new_message])
 
-            # If output variables are specified, we extract their values
-            if options.output_vars:
-                context = compute_context(events)
-                if isinstance(options.output_vars, list):
-                    # If we have only a selection of keys, we filter to only that.
-                    res.output_data = {k: context.get(k) for k in options.output_vars}
-                else:
-                    # Otherwise, we return the full context
-                    res.output_data = context
+            if self.config.colang_version == "1.0":
+                # If output variables are specified, we extract their values
+                if options.output_vars:
+                    context = compute_context(events)
+                    if isinstance(options.output_vars, list):
+                        # If we have only a selection of keys, we filter to only that.
+                        res.output_data = {
+                            k: context.get(k) for k in options.output_vars
+                        }
+                    else:
+                        # Otherwise, we return the full context
+                        res.output_data = context
 
-                # If the `return_context` is used, then we return a tuple to keep
-                # the interface compatible.
-                # TODO: remove this in 0.10.0.
-                if return_context:
-                    return new_message, context
+                    # If the `return_context` is used, then we return a tuple to keep
+                    # the interface compatible.
+                    # TODO: remove this in 0.10.0.
+                    if return_context:
+                        return new_message, context
 
-            _log = compute_generation_log(processing_log)
+                _log = compute_generation_log(processing_log)
 
-            # Include information about activated rails and LLM calls if requested
-            if options.log.activated_rails or options.log.llm_calls:
-                res.log = GenerationLog()
+                # Include information about activated rails and LLM calls if requested
+                if options.log.activated_rails or options.log.llm_calls:
+                    res.log = GenerationLog()
 
-                # We always include the stats
-                res.log.stats = _log.stats
+                    # We always include the stats
+                    res.log.stats = _log.stats
 
-                if options.log.activated_rails:
-                    res.log.activated_rails = _log.activated_rails
+                    if options.log.activated_rails:
+                        res.log.activated_rails = _log.activated_rails
 
-                if options.log.llm_calls:
-                    res.log.llm_calls = []
+                    if options.log.llm_calls:
+                        res.log.llm_calls = []
+                        for activated_rail in _log.activated_rails:
+                            for executed_action in activated_rail.executed_actions:
+                                res.log.llm_calls.extend(executed_action.llm_calls)
+
+                # Include internal events if requested
+                if options.log.internal_events:
+                    if res.log is None:
+                        res.log = GenerationLog()
+
+                    res.log.internal_events = new_events
+
+                # Include the Colang history if requested
+                if options.log.colang_history:
+                    if res.log is None:
+                        res.log = GenerationLog()
+
+                    res.log.colang_history = get_colang_history(events)
+
+                # Include the raw llm output if requested
+                if options.llm_output:
+                    # Currently, we include the output from the generation LLM calls.
                     for activated_rail in _log.activated_rails:
-                        for executed_action in activated_rail.executed_actions:
-                            res.log.llm_calls.extend(executed_action.llm_calls)
+                        if activated_rail.type == "generation":
+                            for executed_action in activated_rail.executed_actions:
+                                for llm_call in executed_action.llm_calls:
+                                    res.llm_output = llm_call.raw_response
+            else:
+                if options.output_vars:
+                    raise ValueError(
+                        "The `output_vars` option is not supported for Colang 2.0 configurations."
+                    )
 
-            # Include internal events if requested
-            if options.log.internal_events:
-                if res.log is None:
-                    res.log = GenerationLog()
+                if (
+                    options.log.activated_rails
+                    or options.log.llm_calls
+                    or options.log.internal_events
+                    or options.log.colang_history
+                ):
+                    raise ValueError(
+                        "The `log` option is not supported for Colang 2.0 configurations."
+                    )
 
-                res.log.internal_events = new_events
+                if options.llm_output:
+                    raise ValueError(
+                        "The `llm_output` option is not supported for Colang 2.0 configurations."
+                    )
 
-            # Include the Colang history if requested
-            if options.log.colang_history:
-                if res.log is None:
-                    res.log = GenerationLog()
-
-                res.log.colang_history = get_colang_history(events)
-
-            # Include the raw llm output if requested
-            if options.llm_output:
-                # Currently, we include the output from the generation LLM calls.
-                for activated_rail in _log.activated_rails:
-                    if activated_rail.type == "generation":
-                        for executed_action in activated_rail.executed_actions:
-                            for llm_call in executed_action.llm_calls:
-                                res.llm_output = llm_call.raw_response
+            # Include the state
+            if state is not None:
+                res.state = output_state
 
             return res
         else:
@@ -721,6 +863,7 @@ class LLMRails:
         messages: Optional[List[dict]] = None,
         return_context: bool = False,
         options: Optional[Union[dict, GenerationOptions]] = None,
+        state: Optional[dict] = None,
     ):
         """Synchronous version of generate_async."""
 
@@ -737,6 +880,7 @@ class LLMRails:
                 prompt=prompt,
                 messages=messages,
                 options=options,
+                state=state,
                 return_context=return_context,
             )
         )
@@ -824,6 +968,7 @@ class LLMRails:
 
         # Compute the new events.
         # We need to protect 'process_events' to be called only once at a time
+        # TODO (cschueller): Why is this?
         async with process_events_semaphore:
             output_events, output_state = await self.runtime.process_events(
                 events, state
@@ -831,7 +976,7 @@ class LLMRails:
 
         took = time.time() - t0
         # Small tweak, disable this when there were no events (or it was just too fast).
-        if took > 0.01:
+        if took > 0.1:
             log.info("--- :: Total processing took %.2f seconds." % took)
             log.info("--- :: Stats: %s" % llm_stats)
 

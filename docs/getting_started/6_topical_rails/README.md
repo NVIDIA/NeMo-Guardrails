@@ -1,6 +1,6 @@
 # Topical Rails
 
-This guide will teach you what *topical rails* are and how to integrate them into your guardrails configuration. This guide builds on the [previous guide](../5_output_rails), developing further the demo ABC Bot.
+This guide will teach you what *topical rails* are and how to integrate them into your guardrails configuration. This guide builds on the [previous guide](../5_output_rails/README.md), developing further the demo ABC Bot.
 
 ## Prerequisites
 

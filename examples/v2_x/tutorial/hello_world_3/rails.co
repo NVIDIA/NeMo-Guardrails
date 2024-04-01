@@ -1,0 +1,17 @@
+import core
+import llm
+
+
+flow user expressed greeting
+  user said "hi" or user said "hello"
+
+flow bot express greeting
+  bot say "Hello world!"
+
+flow greeting
+  user expressed greeting
+  bot express greeting
+
+flow main
+  activate llm continuation
+  activate greeting

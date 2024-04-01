@@ -109,7 +109,7 @@ prompts:
 from nemoguardrails import RailsConfig
 from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 
-config = RailsConfig.from_path("./config")
+config = RailsConfig.from_path("config")
 guardrails = RunnableRails(config)
 ```
 

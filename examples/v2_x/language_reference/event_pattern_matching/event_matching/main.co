@@ -1,0 +1,5 @@
+flow main
+    match Event1()
+    send Success1()
+    match Event2(param="a")
+    send Success2()

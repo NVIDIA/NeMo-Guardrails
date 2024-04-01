@@ -122,6 +122,6 @@ NeMo Guardrails can also be used through Docker. For details on how to build and
 
 ## What's next?
 
-* Check out the [Getting Started Guide](../getting_started) and start with the ["Hello World" example](../getting_started/1_hello_world).
-* Explore more examples in the [examples](../../examples) folder.
-* Review the [User Guides](../user_guides).
+* Check out the [Getting Started Guide](../getting_started/README.md) and start with the ["Hello World" example](../getting_started/1_hello_world/README.md).
+* Explore more examples in the [examples](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples) folder.
+* Review the [User Guides](../README.md).

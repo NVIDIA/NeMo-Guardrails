@@ -4,11 +4,11 @@ This topic describes a use case used in the remaining guide topics. The use case
 
 The following guide topics lead you through a step-by-step configuration process, addressing various challenges that might arise.
 
-1. [Input moderation](../4_input_rails): Verify that any user input is safe before proceeding.
-2. [Output moderation](../5_output_rails): Ensure that the bot's output is not offensive and does not include specific words.
-3. [Preventing off-topic questions](../6_topical_rails): Guarantee that the bot only responds to specific topics.
-4. [Retrieval augmented generation](../7_rag): Integrate external knowledge bases.
+1. [Input moderation](../4_input_rails/README.md): Verify that any user input is safe before proceeding.
+2. [Output moderation](../5_output_rails/README.md): Ensure that the bot's output is not offensive and does not include specific words.
+3. [Preventing off-topic questions](../6_topical_rails/README.md): Guarantee that the bot only responds to specific topics.
+4. [Retrieval augmented generation](../7_rag/README.md): Integrate external knowledge bases.
 
 ## Next
 
-Start with adding [Input Moderation](../4_input_rails) to the ABC Bot.
+Start with adding [Input Moderation](../4_input_rails/README.md) to the ABC Bot.

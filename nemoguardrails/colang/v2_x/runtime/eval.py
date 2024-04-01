@@ -13,19 +13,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import re
 from functools import partial
-from typing import Any, List
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from simpleeval import EvalWithCompoundTypes
 
+from nemoguardrails.colang.v2_x.lang.colang_ast import Element
 from nemoguardrails.colang.v2_x.runtime import system_functions
-from nemoguardrails.colang.v2_x.runtime.flows import ColangValueError
+from nemoguardrails.colang.v2_x.runtime.errors import ColangValueError
+from nemoguardrails.colang.v2_x.runtime.flows import FlowState, State
 from nemoguardrails.colang.v2_x.runtime.utils import AttributeDict
+from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
 from nemoguardrails.utils import new_uid
 
 log = logging.getLogger(__name__)
+
+
+class ComparisonExpression:
+    """An expression to compare to values."""
+
+    def __init__(self, operator: Callable[[Any], bool], value: Any) -> None:
+        if not isinstance(value, (int, float)):
+            raise ColangValueError(
+                f"Comparison operators don't support values of type '{type(value)}'"
+            )
+        self.value = value
+        self.operator = operator
+
+    def compare(self, value: Any) -> bool:
+        """Compare given value with the expression's value."""
+        if not isinstance(value, type(self.value)):
+            raise ColangValueError(
+                "Comparing variables of different types is not supported!"
+            )
+
+        return self.operator(value)
 
 
 def eval_expression(expr: str, context: dict) -> Any:
@@ -39,77 +64,66 @@ def eval_expression(expr: str, context: dict) -> Any:
 
         return expr
 
-    # We search for all inner expressions marked by double curly brackets and evaluate them first
-    inner_expression_pattern = r"\{\{(.*?)\}\}"
-    inner_expressions = re.findall(inner_expression_pattern, expr)
-    if inner_expressions:
-        inner_expression_values = []
-        for inner_expression in inner_expressions:
-            try:
-                value = eval_expression(inner_expression, context)
-            except Exception as ex:
-                raise ColangValueError(
-                    f"Error evaluating inner expression: '{expr}'"
-                ) from ex
-            value = str(value).replace('"', '\\"').replace("'", "\\'")
-            inner_expression_values.append(value)
+    # We search for all expressions in strings within curly brackets and evaluate them first
+    # Find first all strings
+    string_pattern = r'("(?:\\"|[^"])*?")|(\'(?:\\\'|[^\'])*?\')'
+    string_expressions_matches = re.findall(string_pattern, expr)
+    string_expression_values = []
+    for string_expression_match in string_expressions_matches:
+        string_expression = (
+            string_expression_match[0]
+            if string_expression_match[0]
+            else string_expression_match[1]
+        )
+        if string_expression:
+            # Find expressions within curly brackets, ignoring double curly brackets
+            expression_pattern = r"{(?!\{)([^{}]+)\}(?!\})"
+            inner_expressions = re.findall(expression_pattern, string_expression)
+            if inner_expressions:
+                inner_expression_values = []
+                for inner_expression in inner_expressions:
+                    try:
+                        value = eval_expression(inner_expression, context)
+                    except Exception as ex:
+                        raise ColangValueError(
+                            f"Error evaluating inner expression: '{inner_expression}'"
+                        ) from ex
+                    value = str(value).replace('"', '\\"').replace("'", "\\'")
+                    inner_expression_values.append(value)
+                string_expression = re.sub(
+                    expression_pattern,
+                    lambda x: inner_expression_values.pop(0),
+                    string_expression,
+                )
+                string_expression = string_expression.replace("{{", "{").replace(
+                    "}}", "}"
+                )
+            string_expression_values.append(string_expression)
+    if string_expression_values:
         expr = re.sub(
-            inner_expression_pattern,
-            lambda x: inner_expression_values.pop(0),
+            string_pattern,
+            lambda x: string_expression_values.pop(0),
             expr,
         )
 
-    index_counter = 0
-
-    def replace_with_index(name, _match):
-        nonlocal index_counter
-        if _match.group(1) or _match.group(3):
-            replacement = f"{name}_{index_counter}"
-            index_counter += 1
-            return replacement
-        else:
-            return _match.group(0)
-
-    # If the expression contains the pattern r"(.*?)" it is considered a regular expression
-    expr_locals = {}
-    # This pattern first tries to match escaped quotes, then it matches any string enclosed by quotes
-    # finally it tries to match (and capture in a group) the r"" strings. At this point we know that we
-    # are not within a quote. We are doing this for both quoting styles ' and " separately
-    # Regular expressions are found if a match contains either non-empty group 1 or group 3
-    regex_pattern = (
-        r'\\"|"(?:\\"|[^"])*"|(r\"(.*?)\")|\\\'|\'(?:\\\'|[^\'])*\'|(r\'(.*?)\')'
-    )
-    regular_expressions = [
-        exp for exp in re.findall(regex_pattern, expr) if exp[1] or exp[3]
-    ]
-    updated_expr = re.sub(regex_pattern, partial(replace_with_index, "regex"), expr)
-
-    for idx, regular_expression in enumerate(regular_expressions):
-        try:
-            regex = (
-                regular_expression[1]
-                if regular_expression[1] != ""
-                else regular_expression[3]
-            )
-            compiled_regex = re.compile(regex)
-            expr_locals[f"regex_{idx}"] = compiled_regex
-        except Exception as ex:
-            raise ColangValueError(
-                f"Error in compiling regular expression '{expr}'"
-            ) from ex
-
     # We search for all variable names starting with $, remove the $ and add
     # the value in the dict for eval
+    expr_locals = {}
     regex_pattern = r"\$([a-zA-Z_][a-zA-Z0-9_]*)"
-    var_names = re.findall(regex_pattern, updated_expr)
-    updated_expr = re.sub(regex_pattern, r"var_\1", updated_expr)
+    var_names = re.findall(regex_pattern, expr)
+    updated_expr = re.sub(regex_pattern, r"var_\1", expr)
 
     for var_name in var_names:
         # if we've already computed the value, we skip
         if f"var_{var_name}" in expr_locals:
             continue
 
-        val = context.get(var_name, None)
+        # Check if it is a global variable
+        global_var_name = f"_global_{var_name}"
+        if global_var_name in context:
+            val = context.get(global_var_name, None)
+        else:
+            val = context.get(var_name, None)
 
         # We transform dicts to AttributeDict so we can access their keys as attributes
         # e.g. write things like $speaker.name
@@ -121,26 +135,43 @@ def eval_expression(expr: str, context: dict) -> Any:
     # Finally, just evaluate the expression
     try:
         # TODO: replace this with something even more restrictive.
+        functions: Dict[str, Callable] = {
+            "len": len,
+            "flow": system_functions.flow,  # TODO: Consider this to remove
+            "action": system_functions.action,  # TODO: Consider this to remove
+            "regex": _create_regex,
+            "search": _regex_search,
+            "find_all": _regex_findall,
+            "uid": new_uid,
+            "str": _to_str,
+            "pretty_str": _pretty_str,
+            "escape": _escape_string,
+            "is_int": _is_int,
+            "is_float": _is_float,
+            "is_bool": _is_bool,
+            "is_str": _is_str,
+            "is_regex": _is_regex,
+            "less_than": _less_than_operator,
+            "equal_less_than": _equal_or_less_than_operator,
+            "greater_than": _greater_than_operator,
+            "equal_greater_than": _equal_or_greater_than_operator,
+            "not_equal_to": _not_equal_to_operator,
+        }
+        if "_state" in context:
+            functions.update({"flows_info": partial(_flows_info, context["_state"])})
+
+        # TODO: replace this with something even more restrictive.
         s = EvalWithCompoundTypes(
-            functions={
-                "len": len,
-                "flow": system_functions.flow,
-                "action": system_functions.action,
-                "search": _regex_search,
-                "findall": _regex_findall,
-                "uid": new_uid,
-                "str": _to_str,
-                "escape": _escape_string,
-                "is_int": _is_int,
-                "is_float": _is_float,
-                "is_bool": _is_bool,
-                "is_str": _is_str,
-            },
+            functions=functions,
             names=expr_locals,
         )
         return s.eval(updated_expr)
-    except Exception as ex:
-        raise ColangValueError(f"Error evaluating '{expr}': {str(ex)}")
+    except Exception as e:
+        raise ColangValueError(f"Error evaluating '{expr}'") from e
+
+
+def _create_regex(pattern: str) -> re.Pattern:
+    return re.compile(pattern)
 
 
 def _regex_search(pattern: str, string: str) -> bool:
@@ -152,6 +183,15 @@ def _regex_findall(pattern: str, string: str) -> List[str]:
 
 
 def _to_str(data: Any) -> str:
+    if isinstance(data, (dict, list, set)):
+        return json.dumps(data, indent=4)
+    return str(data)
+
+
+def _pretty_str(data: Any) -> str:
+    if isinstance(data, (dict, list, set)):
+        string = json.dumps(data, indent=4)
+        return SimplifyFormatter().format(string)
     return str(data)
 
 
@@ -178,3 +218,87 @@ def _is_bool(val: Any) -> bool:
 def _is_str(val: Any) -> bool:
     """Check if it is an integer."""
     return isinstance(val, str)
+
+
+def _is_regex(val: Any) -> bool:
+    """Check if it is an integer."""
+    return isinstance(val, re.Pattern)
+
+
+def _less_than_operator(v_ref: Any) -> ComparisonExpression:
+    """Create less then comparison expression."""
+    return ComparisonExpression(lambda val, v_ref=v_ref: val < v_ref, v_ref)
+
+
+def _equal_or_less_than_operator(v_ref: Any) -> ComparisonExpression:
+    """Create equal or less than comparison expression."""
+    return ComparisonExpression(lambda val, val_ref=v_ref: val <= val_ref, v_ref)
+
+
+def _greater_than_operator(v_ref: Any) -> ComparisonExpression:
+    """Create less then comparison expression."""
+    return ComparisonExpression(lambda val, val_ref=v_ref: val > val_ref, v_ref)
+
+
+def _equal_or_greater_than_operator(v_ref: Any) -> ComparisonExpression:
+    """Create equal or less than comparison expression."""
+    return ComparisonExpression(lambda val, val_ref=v_ref: val >= val_ref, v_ref)
+
+
+def _not_equal_to_operator(v_ref: Any) -> ComparisonExpression:
+    """Create a not equal comparison expression."""
+    return ComparisonExpression(lambda val, val_ref=v_ref: val != val_ref, v_ref)
+
+
+def _flows_info(state: State, flow_instance_uid: Optional[str] = None) -> dict:
+    """Return a summary of the provided state, or all states by default."""
+    if flow_instance_uid is not None and flow_instance_uid in state.flow_states:
+        summary = {"flow_instance_uid": flow_instance_uid}
+        summary.update(
+            _flow_state_related_to_source(state, state.flow_states[flow_instance_uid])
+        )
+
+        return summary
+    else:
+        summary = {}
+        for flow_state in state.flow_states.values():
+            summary.update(
+                {flow_state.uid: _flow_state_related_to_source(state, flow_state)}
+            )
+        return summary
+
+
+def _flow_state_related_to_source(state: State, flow_state: FlowState):
+    flow_config = state.flow_configs[flow_state.flow_id]
+    flow_head_source_lines: Set[int] = set()
+    for head in flow_state.active_heads.values():
+        element = flow_config.elements[head.position]
+        if isinstance(element, Element) and element._source is not None:
+            flow_head_source_lines.add(element._source.line)
+    summary: dict = {
+        "flow_id": flow_state.flow_id,
+        "loop_id": flow_state.loop_id,
+        "status": flow_state.status.value,
+        "flow_hierarchy": _get_flow_state_hierarchy(state, flow_state.uid)[:-1],
+        "active_statement_at_lines": list(flow_head_source_lines),
+    }
+
+    if flow_state.action_uids:
+        summary.update({"action_uids": flow_state.action_uids})
+
+    if flow_state.child_flow_uids:
+        summary.update({"child_flow_uids": flow_state.child_flow_uids})
+
+    return summary
+
+
+def _get_flow_state_hierarchy(state: State, flow_state_uid: str) -> List[str]:
+    if flow_state_uid not in state.flow_states:
+        return []
+    flow_state = state.flow_states[flow_state_uid]
+    if flow_state.parent_uid is None:
+        return [flow_state.uid]
+    else:
+        result = _get_flow_state_hierarchy(state, flow_state.parent_uid)
+        result.append(flow_state.uid)
+        return result

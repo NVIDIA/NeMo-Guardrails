@@ -8,7 +8,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![arXiv](https://img.shields.io/badge/arXiv-2310.10501-b31b1b.svg)](https://arxiv.org/abs/2310.10501)
 
-> **LATEST RELEASE / DEVELOPMENT VERSION**: The [main](https://github.com/NVIDIA/NeMo-Guardrails/tree/main) branch tracks the latest released beta version: [0.8.1](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.8.1). For the latest development version, checkout the [develop](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop) branch.
+> **LATEST RELEASE / DEVELOPMENT VERSION**: The [main](https://github.com/NVIDIA/NeMo-Guardrails/tree/main) branch tracks the latest released beta version: [0.8.2](https://github.com/NVIDIA/NeMo-Guardrails/tree/v0.8.2). For the latest development version, checkout the [develop](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop) branch.
 
 > **DISCLAIMER**: The beta release is undergoing active development and may be subject to changes and improvements, which could cause instability and unexpected behavior. We currently do not recommend deploying this beta version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback are invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit. The examples provided within the documentation are for educational purposes to get started with NeMo Guardrails, and are not meant for use in production applications.
 
@@ -37,7 +37,7 @@ For more detailed instructions, see the [Installation Guide](docs/getting_starte
 NeMo Guardrails enables developers building LLM-based applications to easily add **programmable guardrails** between the application code and the LLM.
 
 <div align="center">
-  <img src="https://github.com/NVIDIA/NeMo-Guardrails/raw/develop/docs/_assets/images/programmable_guardrails.png"  width="75%" alt="Programmable Guardrails">
+  <img src="https://github.com/NVIDIA/NeMo-Guardrails/raw/develop/docs/_static/images/programmable_guardrails.png"  width="75%" alt="Programmable Guardrails">
 </div>
 
 Key benefits of adding *programmable guardrails* include:
@@ -53,7 +53,7 @@ Key benefits of adding *programmable guardrails* include:
 NeMo Guardrails provides several mechanisms for protecting an LLM-powered chat application against common LLM vulnerabilities, such as jailbreaks and prompt injections. Below is a sample overview of the protection offered by different guardrails configuration for the example [ABC Bot](./examples/bots/abc) included in this repository. For more details, please refer to the [LLM Vulnerability Scanning](./docs/evaluation/llm-vulnerability-scanning.md) page.
 
 <div align="center">
-<img src="https://github.com/NVIDIA/NeMo-Guardrails/raw/develop/docs/_assets/images/abc-llm-vulnerability-scan-results.png" width="750">
+<img src="https://github.com/NVIDIA/NeMo-Guardrails/raw/develop/docs/_static/images/abc-llm-vulnerability-scan-results.png" width="750">
 </div>
 
 
@@ -105,7 +105,7 @@ You can use NeMo Guardrails with multiple LLMs like OpenAI GPT-3.5, GPT-4, LLaMa
 NeMo Guardrails supports five main types of guardrails:
 
 <div align="center">
-  <img src="https://github.com/NVIDIA/NeMo-Guardrails/raw/develop/docs/_assets/images/programmable_guardrails_flow.png"  width="75%" alt="Programmable Guardrails Flow">
+  <img src="https://github.com/NVIDIA/NeMo-Guardrails/raw/develop/docs/_static/images/programmable_guardrails_flow.png"  width="75%" alt="Programmable Guardrails Flow">
 </div>
 
 1. **Input rails**: applied to the input from the user; an input rail can reject the input, stopping any additional processing, or alter the input (e.g., to mask potentially sensitive data, to rephrase).

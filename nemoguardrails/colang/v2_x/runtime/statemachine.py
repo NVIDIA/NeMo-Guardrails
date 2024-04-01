@@ -47,13 +47,18 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     WaitForHeads,
 )
 from nemoguardrails.colang.v2_x.lang.expansion import expand_elements
-from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
+from nemoguardrails.colang.v2_x.runtime.errors import (
+    ColangRuntimeError,
+    ColangValueError,
+)
+from nemoguardrails.colang.v2_x.runtime.eval import (
+    ComparisonExpression,
+    eval_expression,
+)
 from nemoguardrails.colang.v2_x.runtime.flows import (
     Action,
     ActionEvent,
     ActionStatus,
-    ColangRuntimeError,
-    ColangValueError,
     Event,
     FlowConfig,
     FlowHead,
@@ -66,7 +71,7 @@ from nemoguardrails.colang.v2_x.runtime.flows import (
     State,
 )
 from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
-from nemoguardrails.utils import new_event_dict, new_uid
+from nemoguardrails.utils import console, new_event_dict, new_uid
 
 log = logging.getLogger(__name__)
 
@@ -91,8 +96,9 @@ def initialize_state(state: State) -> None:
     # Create main flow state first
     main_flow_config = state.flow_configs["main"]
     main_flow = add_new_flow_instance(
-        state, create_flow_instance(main_flow_config, "0")
+        state, create_flow_instance(main_flow_config, new_readable_uid("main"), "0", {})
     )
+    main_flow.activated = True
     if main_flow_config.loop_id is None:
         main_flow.loop_id = new_readable_uid("main")
     else:
@@ -105,25 +111,6 @@ def initialize_flow(state: State, flow_config: FlowConfig) -> None:
     # Transform and resolve flow configuration element notation (actions, flows, ...)
     flow_config.elements = expand_elements(flow_config.elements, state.flow_configs)
 
-    # Extract flow loop id if available
-    # TODO: deprecate this convention in the favor of the `@loop("some_id")` decorator.
-    if flow_config.source_code:
-        match = re.search(r"#\W*meta:\W*loop_id\W*=\W*(\w*)", flow_config.source_code)
-        if match:
-            flow_config.loop_id = match.group(1)
-
-    # Extract loop id from decorator if available
-    if "loop" in flow_config.decorators:
-        decorator = flow_config.decorators["loop"]
-        if "id" in decorator.parameters:
-            flow_config.loop_id = decorator.parameters["id"]
-        elif "$0" in decorator.parameters:
-            flow_config.loop_id = decorator.parameters["$0"]
-        else:
-            raise ValueError(
-                f"No loop id specified for @loop decorator for flow `{flow_config.id}`"
-            )
-
     # Extract all the label elements
     for idx, element in enumerate(flow_config.elements):
         if isinstance(element, Label):
@@ -131,7 +118,10 @@ def initialize_flow(state: State, flow_config: FlowConfig) -> None:
 
 
 def create_flow_instance(
-    flow_config: FlowConfig, flow_hierarchy_position: str
+    flow_config: FlowConfig,
+    flow_instance_uid: str,
+    flow_hierarchy_position: str,
+    event_arguments: Dict[str, Any],
 ) -> FlowState:
     """Create a new flow instance that can be added."""
     loop_uid: Optional[str] = None
@@ -142,38 +132,53 @@ def create_flow_instance(
         loop_uid = flow_config.loop_id
     # For type InteractionLoopType.PARENT we keep it None to infer loop_id at run_time from parent
 
-    flow_uid = new_readable_uid(flow_config.id)
-
     head_uid = new_uid()
     flow_state = FlowState(
-        uid=flow_uid,
+        uid=flow_instance_uid,
         flow_id=flow_config.id,
         loop_id=loop_uid,
         hierarchy_position=flow_hierarchy_position,
         heads={
             head_uid: FlowHead(
                 uid=head_uid,
-                flow_state_uid=flow_uid,
+                flow_state_uid=flow_instance_uid,
                 matching_scores=[],
             )
         },
     )
 
+    if "context" in event_arguments:
+        if flow_config.parameters:
+            raise ColangRuntimeError(
+                f"Context cannot be shared to flows with parameters: '{flow_config.id}'"
+            )
+        # Replace local context with context from parent flow (shared flow context)
+        flow_state.context = event_arguments["context"]
+
     # Add all the flow parameters
     for idx, param in enumerate(flow_config.parameters):
-        flow_state.arguments.append(param.name)
+        if param.name in event_arguments:
+            val = event_arguments[param.name]
+        else:
+            val = (
+                eval_expression(param.default_value_expr, {})
+                if param.default_value_expr
+                else None
+            )
+        flow_state.arguments[param.name] = val
         flow_state.context.update(
             {
-                param.name: (
-                    eval_expression(param.default_value_expr, {})
-                    if param.default_value_expr
-                    else None
-                ),
+                param.name: val,
             }
         )
+
     # Add the positional flow parameter identifiers
     for idx, param in enumerate(flow_config.parameters):
-        flow_state.arguments.append(f"${idx}")
+        positional_param = f"${idx}"
+        if positional_param in event_arguments:
+            val = event_arguments[positional_param]
+            flow_state.arguments[param.name] = val
+            flow_state.arguments[positional_param] = val
 
     # Add all flow return members
     for idx, member in enumerate(flow_config.return_members):
@@ -326,7 +331,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> State
                                 assert flow_state.loop_id
                                 handled_event_loops.add(flow_state.loop_id)
                             log.info(
-                                "Matching head: %s context=%s",
+                                "Matching head :: %s context=%s",
                                 head,
                                 _context_log(flow_state),
                             )
@@ -469,13 +474,35 @@ def _process_internal_events_without_default_matchers(
         # Start new flow state instance if flow exists
         flow_id = event.arguments["flow_id"]
         if flow_id in state.flow_configs and flow_id != "main":
-            add_new_flow_instance(
-                state,
-                create_flow_instance(
-                    state.flow_configs[flow_id],
-                    event.arguments["flow_hierarchy_position"],
-                ),
-            )
+            started_instance = None
+            if (
+                event.arguments.get("activated", None)
+                and flow_id in state.flow_id_states
+            ):
+                assert isinstance(event, InternalEvent)
+                started_instance = _check_for_activated_flow_instance(state, event)
+
+            if started_instance:
+                started_event = started_instance.started_event(
+                    event.matching_scores,
+                    {"flow_instance_uid": event.arguments["flow_instance_uid"]},
+                )
+                _push_internal_event(
+                    state,
+                    started_event,
+                )
+                handled_event_loops.add("all_loops")
+            else:
+                add_new_flow_instance(
+                    state,
+                    create_flow_instance(
+                        state.flow_configs[flow_id],
+                        event.arguments["flow_instance_uid"],
+                        event.arguments["flow_hierarchy_position"],
+                        event.arguments,
+                    ),
+                )
+
     elif event.name == InternalEvents.FINISH_FLOW:
         if "flow_instance_uid" in event.arguments:
             flow_instance_uid = event.arguments["flow_instance_uid"]
@@ -498,7 +525,7 @@ def _process_internal_events_without_default_matchers(
                             state,
                             flow_state,
                             event.matching_scores,
-                            event.arguments.get("deactivate", "False"),
+                            event.arguments.get("deactivate", False),
                         )
                         assert flow_state.loop_id
                         handled_event_loops.add(flow_state.loop_id)
@@ -545,6 +572,31 @@ def _process_internal_events_without_default_matchers(
         handled_event_loops.add("all_loops")
 
     return handled_event_loops
+
+
+def _check_for_activated_flow_instance(
+    state: State, event: InternalEvent
+) -> Optional[FlowState]:
+    # Check if there already exists an instance of the same activated flow
+    flow_id = event.arguments["flow_id"]
+    for activated_flow in state.flow_id_states[flow_id]:
+        if activated_flow.status != FlowStatus.STARTED or not activated_flow.activated:
+            continue
+        has_same_arguments = False
+        for idx, arg in enumerate(state.flow_configs[flow_id].parameters):
+            val = activated_flow.arguments[arg.name]
+            if arg.name in event.arguments and val == event.arguments[arg.name]:
+                has_same_arguments = True
+            elif f"${idx}" in event.arguments and val == event.arguments[f"${idx}"]:
+                has_same_arguments = True
+            else:
+                has_same_arguments = False
+                break
+
+        if has_same_arguments:
+            return activated_flow
+
+    return None
 
 
 def _get_all_head_candidates(state: State, event: Event) -> List[Tuple[str, str]]:
@@ -607,6 +659,7 @@ def _handle_event_matching(
             _start_flow(state, flow_state, event.arguments)
         elif event.name == InternalEvents.FLOW_STARTED:
             # Add started flow to active scopes
+            # TODO: Make this independent from matching to FlowStarted event since otherwise it could be added elsewhere
             for scope_uid in head.scope_uids:
                 if scope_uid in flow_state.scopes:
                     flow_state.scopes[scope_uid][0].append(
@@ -711,9 +764,9 @@ def _resolve_action_conflicts(
                         index = competing_flow_state.action_uids.index(
                             competing_event.action_uid
                         )
-                        competing_flow_state.action_uids[
-                            index
-                        ] = winning_event.action_uid
+                        # Adding _action_uid to avoid formatting flipping by black.
+                        _action_uid = winning_event.action_uid
+                        competing_flow_state.action_uids[index] = _action_uid
                         del state.actions[competing_event.action_uid]
 
                     advancing_heads.append(head)
@@ -793,7 +846,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
 
             all_heads_are_waiting = False
             if not flow_finished and not flow_aborted:
-                # Check if all all flow heads are waiting at a 'match' or a 'wait_for_heads' element
+                # Check if all flow heads are waiting at a 'match' or a 'wait_for_heads' element
                 all_heads_are_waiting = True
                 for temp_head in flow_state.active_heads.values():
                     element = flow_config.elements[temp_head.position]
@@ -807,10 +860,14 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
             if flow_finished or all_heads_are_waiting:
                 if flow_state.status == FlowStatus.STARTING:
                     flow_state.status = FlowStatus.STARTED
-                    event = create_internal_flow_event(
-                        InternalEvents.FLOW_STARTED, flow_state, head.matching_scores
-                    )
+                    event = flow_state.started_event(head.matching_scores)
                     _push_internal_event(state, event)
+
+                    # Avoid an activated flow that was just started from finishing
+                    # since this would end in an infinite loop
+                    if flow_finished and flow_state.activated:
+                        flow_finished = False
+                        head.status = FlowHeadStatus.INACTIVE
             elif not flow_aborted:
                 elem = get_element_from_head(state, head)
                 if elem and is_action_op_element(elem):
@@ -825,7 +882,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
             colang_error_event = Event(
                 name="ColangError",
                 arguments={
-                    "error_type": str(type(e).__name__),
+                    "type": str(type(e).__name__),
                     "error": str(e),
                 },
             )
@@ -856,10 +913,6 @@ def slide(
 ) -> List[FlowHead]:
     """Try to slide a flow with the provided head."""
     new_heads: List[FlowHead] = []
-
-    # TODO: Implement global/local flow context handling
-    # context = state.context
-    # context = flow_state.context
 
     while True:
         # if we reached the end, we stop
@@ -934,11 +987,16 @@ def slide(
 
         elif isinstance(element, Label):
             if element.name == "start_new_flow_instance":
-                new_event = _create_restart_flow_internal_event(
-                    flow_state, head.matching_scores
-                )
-                _push_left_internal_event(state, new_event)
-                flow_state.new_instance_started = True
+                if flow_state.status is not FlowStatus.STARTED:
+                    log.warning(
+                        "Did not restart flow '%s' at"
+                        " label 'start_new_flow_instance' since this would have created an infinite loop!",
+                        flow_state.flow_id,
+                    )
+                else:
+                    new_event = flow_state.start_event(head.matching_scores)
+                    _push_left_internal_event(state, new_event)
+                    flow_state.new_instance_started = True
             head.position += 1
 
         elif isinstance(element, Goto):
@@ -1107,14 +1165,20 @@ def slide(
                 break
 
         elif isinstance(element, Assignment):
-            # We need to first evaluate the expression
-            expr_val = eval_expression(
-                element.expression, _get_eval_context(state, flow_state)
-            )
-            if element.key in flow_state.global_variables:
-                state.context.update({element.key: expr_val})
+            # Check if we have a conflict with flow attribute
+            if element.key in flow_state.__dict__:
+                warning = f"Reserved flow attribute name '{element.key}' cannot be used as variable!"
+                log.warning(warning)
+                print(warning)
             else:
-                flow_state.context.update({element.key: expr_val})
+                # We need to first evaluate the expression
+                expr_val = eval_expression(
+                    element.expression, _get_eval_context(state, flow_state)
+                )
+                if f"_global_{element.key}" in flow_state.context:
+                    state.context.update({element.key: expr_val})
+                else:
+                    flow_state.context.update({element.key: expr_val})
             head.position += 1
 
         elif isinstance(element, Return):
@@ -1149,7 +1213,9 @@ def slide(
             head.position += 1
 
         elif isinstance(element, Print):
-            print(eval_expression(element.info, _get_eval_context(state, flow_state)))
+            console.print(
+                eval_expression(element.info, _get_eval_context(state, flow_state))
+            )
             head.position += 1
 
         elif isinstance(element, Priority):
@@ -1164,7 +1230,10 @@ def slide(
             head.position += 1
 
         elif isinstance(element, Global):
-            flow_state.global_variables.add(element.name.lstrip("$"))
+            var_name = element.name.lstrip("$")
+            flow_state.context[f"_global_{var_name}"] = None
+            if var_name not in state.context:
+                state.context[var_name] = None
             head.position += 1
 
         elif isinstance(element, CatchPatternFailure):
@@ -1231,6 +1300,7 @@ def _start_flow(state: State, flow_state: FlowState, event_arguments: dict) -> N
         parent_flow = state.flow_states[parent_flow_uid]
         flow_state.parent_uid = parent_flow_uid
         parent_flow.child_flow_uids.append(flow_state.uid)
+        flow_state.parent_head_uid = event_arguments["source_head_uid"]
 
         loop_id = state.flow_configs[flow_state.flow_id].loop_id
         if loop_id is not None:
@@ -1240,12 +1310,15 @@ def _start_flow(state: State, flow_state: FlowState, event_arguments: dict) -> N
                 flow_state.loop_id = loop_id
         else:
             flow_state.loop_id = parent_flow.loop_id
-        flow_state.context.update({"loop_id": flow_state.loop_id})
         flow_state.activated = event_arguments.get("activated", False)
 
         # Update context with event/flow parameters
         # TODO: Check if we really need all arguments int the context
-        flow_state.context.update(event_arguments)
+        # flow_state.context.update(event_arguments)
+        # Inherit parent context
+        # context = event_arguments.get("context", None)
+        # if context:
+        #     flow_state.context = context
         # Resolve positional flow parameters to their actual name in the flow
         last_idx = -1
         for idx, arg in enumerate(flow_state.arguments):
@@ -1297,9 +1370,7 @@ def _abort_flow(
     flow_state.status = FlowStatus.STOPPED
 
     # Generate FlowFailed event
-    event = create_internal_flow_event(
-        InternalEvents.FLOW_FAILED, flow_state, matching_scores
-    )
+    event = flow_state.failed_event(matching_scores)
     _push_internal_event(state, event)
 
     log.info(
@@ -1312,7 +1383,7 @@ def _abort_flow(
         and not deactivate_flow
         and not flow_state.new_instance_started
     ):
-        event = _create_restart_flow_internal_event(flow_state, matching_scores)
+        event = flow_state.start_event(head.matching_scores)
         _push_left_internal_event(state, event)
         flow_state.new_instance_started = True
 
@@ -1327,6 +1398,10 @@ def _finish_flow(
 
     # Deactivate all activated child flows
     for child_flow_uid in flow_state.child_flow_uids:
+        # TODO (cschueller): check why this was the case
+        if child_flow_uid not in state.flow_states:
+            continue
+
         child_flow_state = state.flow_states[child_flow_uid]
         if child_flow_state.activated:
             child_flow_state.activated = False
@@ -1337,6 +1412,10 @@ def _finish_flow(
 
     # Abort all running child flows
     for child_flow_uid in flow_state.child_flow_uids:
+        # TODO (cschueller): check why this was the case
+        if child_flow_uid not in state.flow_states:
+            continue
+
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
             _abort_flow(state, child_flow_state, matching_scores, True)
@@ -1384,24 +1463,26 @@ def _finish_flow(
     flow_state.status = FlowStatus.FINISHED
 
     # Generate FlowFinished event
-    event = create_internal_flow_event(
-        InternalEvents.FLOW_FINISHED, flow_state, matching_scores
-    )
+    event = flow_state.finished_event(matching_scores)
     _push_internal_event(state, event)
 
-    # Check if it was an user/bot intent/action flow a generate internal events
+    # Check if it was an user/bot intent/action flow and generate internal events
     # TODO: Let's refactor that once we have the new llm prompting
     event_type: Optional[str] = None
-    source_code = state.flow_configs[flow_state.flow_id].source_code
-    if source_code is not None:
-        if "meta: user intent" in source_code:
-            event_type = InternalEvents.USER_INTENT_LOG
-        elif "meta: bot intent" in source_code:
-            event_type = InternalEvents.BOT_INTENT_LOG
-        elif "meta: user action" in source_code:
-            event_type = InternalEvents.USER_ACTION_LOG
-        elif "meta: bot action" in source_code:
-            event_type = InternalEvents.BOT_ACTION_LOG
+    flow_config = state.flow_configs[flow_state.flow_id]
+    meta_tag_parameters = None
+    if flow_config.has_meta_tag("user_intent"):
+        meta_tag_parameters = flow_config.meta_tag("user_intent")
+        event_type = InternalEvents.USER_INTENT_LOG
+    elif flow_config.has_meta_tag("bot_intent"):
+        meta_tag_parameters = flow_config.meta_tag("bot_intent")
+        event_type = InternalEvents.BOT_INTENT_LOG
+    elif flow_config.has_meta_tag("user_action"):
+        meta_tag_parameters = flow_config.meta_tag("user_action")
+        event_type = InternalEvents.USER_ACTION_LOG
+    elif flow_config.has_meta_tag("bot_action"):
+        meta_tag_parameters = flow_config.meta_tag("bot_action")
+        event_type = InternalEvents.BOT_ACTION_LOG
 
     if (
         event_type == InternalEvents.USER_INTENT_LOG
@@ -1417,7 +1498,7 @@ def _finish_flow(
                     or len(flow_state.flow_id) < 18
                     else flow_state.flow_id[18:]
                 ),
-                "parameter": flow_state.context.get("$0", None),
+                "parameter": flow_state.arguments.get("$0", None),
             },
             matching_scores,
         )
@@ -1432,27 +1513,44 @@ def _finish_flow(
         # TODO: Generalize to multi intents
         intent = None
         for flow_state_uid in reversed(hierarchy):
-            flow_config = state.flow_configs[state.flow_states[flow_state_uid].flow_id]
-            if flow_config.source_code is not None:
-                match = re.search(
-                    r'#\W*meta:\W*(bot intent|user intent)(\W*=\W*"([a-zA-Z0-9_ ]*)")?',
-                    flow_config.source_code,
-                )
-                if match:
-                    if match.group(3) is not None:
-                        intent = match.group(3)
-                    else:
-                        intent = flow_config.id
+            intent_flow_config = state.flow_configs[
+                state.flow_states[flow_state_uid].flow_id
+            ]
+            if intent_flow_config.has_meta_tag("bot_intent"):
+                intent = intent_flow_config.meta_tag("bot_intent")
+            elif intent_flow_config.has_meta_tag("user_intent"):
+                intent = intent_flow_config.meta_tag("user_intent")
 
-        event = create_internal_event(
-            event_type,
-            {
-                "flow_id": flow_state.flow_id,
-                "parameter": flow_state.context.get("$0", None),
-                "intent_flow_id": intent,
-            },
-            matching_scores,
-        )
+            if not isinstance(intent, str):
+                intent = intent_flow_config.id
+
+        # Create event based on meta tag
+        if isinstance(meta_tag_parameters, str):
+            name = eval_expression(
+                '"' + meta_tag_parameters.replace('"', '\\"') + '"',
+                _get_eval_context(state, flow_state),
+            )
+            event = create_internal_event(
+                event_type,
+                {
+                    "flow_id": name,
+                    "parameter": None,
+                    "intent_flow_id": intent,
+                },
+                matching_scores,
+            )
+        else:
+            # TODO: Generalize to multi flow parameters
+            event = create_internal_event(
+                event_type,
+                {
+                    "flow_id": flow_state.flow_id,
+                    "parameter": flow_state.arguments.get("$0", None),
+                    "intent_flow_id": intent,
+                },
+                matching_scores,
+            )
+
         _push_internal_event(state, event)
 
     log.info(
@@ -1466,7 +1564,7 @@ def _finish_flow(
         and not deactivate_flow
         and not flow_state.new_instance_started
     ):
-        event = _create_restart_flow_internal_event(flow_state, matching_scores)
+        event = flow_state.start_event(head.matching_scores)
         _push_left_internal_event(state, event)
         flow_state.new_instance_started = True
 
@@ -1502,7 +1600,7 @@ def _add_head_to_event_matching_structures(
     else:
         heads.append((flow_state.uid, head.uid))
     state.event_matching_heads_reverse_map.update(
-        {(flow_state.uid, head.uid): ref_event_name}
+        {flow_state.uid + head.uid: ref_event_name}
     )
 
 
@@ -1510,11 +1608,11 @@ def _remove_head_from_event_matching_structures(
     state: State, flow_state: FlowState, head: FlowHead
 ) -> bool:
     event_name = state.event_matching_heads_reverse_map.get(
-        (flow_state.uid, head.uid), None
+        flow_state.uid + head.uid, None
     )
     if event_name is not None:
         state.event_matching_heads[event_name].remove((flow_state.uid, head.uid))
-        state.event_matching_heads_reverse_map.pop((flow_state.uid, head.uid))
+        state.event_matching_heads_reverse_map.pop(flow_state.uid + head.uid)
         return True
     return False
 
@@ -1637,7 +1735,7 @@ def _get_flow_state_hierarchy(state: State, flow_state_uid: str) -> List[str]:
         return []
     flow_state = state.flow_states[flow_state_uid]
     if flow_state.parent_uid is None:
-        return []
+        return [flow_state.uid]
     else:
         result = _get_flow_state_hierarchy(state, flow_state.parent_uid)
         result.append(flow_state.uid)
@@ -1721,7 +1819,7 @@ def _compute_event_comparison_score(
 
         # TODO: Generalize this with mismatch using e.g. the 'not' keyword
         if match_score > 0.0:
-            if "flow_start_uid" in ref_event.arguments and (
+            if "flow_instance_uid" in ref_event.arguments and (
                 (
                     ref_event.name == InternalEvents.FLOW_FINISHED
                     and event.name == InternalEvents.FLOW_FAILED
@@ -1817,6 +1915,8 @@ def _compute_arguments_dict_matching_score(args: Any, ref_args: Any) -> float:
         args = str(args)
         if not ref_args.search(args):
             return 0.0
+    elif isinstance(ref_args, ComparisonExpression):
+        return ref_args.compare(args)
     elif not isinstance(ref_args, type(args)):
         return 0.0
     elif isinstance(ref_args, dict):
@@ -1925,9 +2025,11 @@ def get_event_name_from_element(
             # Flow object
             assert element_spec.name
             flow_config = state.flow_configs[element_spec.name]
-            temp_flow_state = create_flow_instance(flow_config, "")
+            temp_flow_state = create_flow_instance(flow_config, "", "", {})
             flow_event_name = element_spec.members[0]["name"]
             flow_event: InternalEvent = temp_flow_state.get_event(flow_event_name, {})
+            del flow_event.arguments["source_flow_instance_uid"]
+            del flow_event.arguments["flow_instance_uid"]
             return flow_event.name
         elif element_spec.spec_type == SpecType.ACTION:
             # Action object
@@ -2013,7 +2115,7 @@ def get_event_from_element(
         if element_spec.spec_type == SpecType.FLOW:
             # Flow object
             flow_config = state.flow_configs[element_spec.name]
-            temp_flow_state = create_flow_instance(flow_config, "")
+            temp_flow_state = create_flow_instance(flow_config, "", "", {})
             flow_event_name = element_spec.members[0]["name"]
             flow_event_arguments = element_spec.members[0]["arguments"]
             flow_event_arguments = _evaluate_arguments(
@@ -2022,6 +2124,8 @@ def get_event_from_element(
             flow_event: InternalEvent = temp_flow_state.get_event(
                 flow_event_name, flow_event_arguments
             )
+            del flow_event.arguments["source_flow_instance_uid"]
+            del flow_event.arguments["flow_instance_uid"]
             if element["op"] == "match":
                 # Delete flow reference from event since it is only a helper object
                 flow_event.flow = None
@@ -2101,95 +2205,6 @@ def _generate_action_event_from_actionable_element(
     # state.next_steps_comment = element.get("_source_mapping", {}).get("comment")
 
 
-def _create_restart_flow_internal_event(
-    flow_state: FlowState, matching_scores: List[float]
-) -> InternalEvent:
-    # TODO: Check if this creates unwanted side effects of arguments being passed and keeping their state
-    arguments = dict(
-        [
-            (arg, flow_state.context[arg])
-            for arg in flow_state.arguments
-            if arg in flow_state.context
-        ]
-    )
-    arguments.update(
-        {
-            "flow_id": flow_state.context["flow_id"],
-            "source_flow_instance_uid": flow_state.context["source_flow_instance_uid"],
-            "source_head_uid": flow_state.context["source_head_uid"],
-            "flow_hierarchy_position": flow_state.context["flow_hierarchy_position"],
-            "activated": flow_state.context["activated"],
-        }
-    )
-    return create_internal_event(InternalEvents.START_FLOW, arguments, matching_scores)
-
-
-def create_finish_flow_internal_event(
-    flow_instance_uid: str,
-    source_flow_instance_uid: str,
-    matching_scores: List[float],
-) -> InternalEvent:
-    """Returns 'FinishFlow' internal event"""
-    arguments = {
-        "flow_instance_uid": flow_instance_uid,
-        "source_flow_instance_uid": source_flow_instance_uid,
-    }
-    return create_internal_event(
-        InternalEvents.FINISH_FLOW,
-        arguments,
-        matching_scores,
-    )
-
-
-def create_stop_flow_internal_event(
-    flow_instance_uid: str,
-    source_flow_instance_uid: str,
-    matching_scores: List[float],
-    deactivate_flow: bool = False,
-) -> InternalEvent:
-    """Returns 'StopFlow' internal event"""
-    arguments: Dict[str, Any] = {
-        "flow_instance_uid": flow_instance_uid,
-        "source_flow_instance_uid": source_flow_instance_uid,
-    }
-    if deactivate_flow:
-        arguments["activated"] = False
-
-    return create_internal_event(
-        InternalEvents.STOP_FLOW,
-        arguments,
-        matching_scores,
-    )
-
-
-def create_internal_flow_event(
-    event_name: str,
-    source_flow_state: FlowState,
-    matching_scores: List[float],
-    arguments: Optional[dict] = None,
-) -> InternalEvent:
-    """Creates and returns a internal flow event"""
-    if arguments is None:
-        arguments = dict()
-    for arg in source_flow_state.arguments:
-        if arg in source_flow_state.context:
-            arguments.update({arg: source_flow_state.context[arg]})
-    arguments.update(
-        {
-            "source_flow_instance_uid": source_flow_state.uid,
-            "flow_id": source_flow_state.flow_id,
-            "return_value": source_flow_state.context.get("_return_value", None),
-        }
-    )
-    if "flow_start_uid" in source_flow_state.context:
-        arguments["flow_start_uid"] = source_flow_state.context["flow_start_uid"]
-    return create_internal_event(
-        event_name,
-        arguments,
-        matching_scores,
-    )
-
-
 def create_internal_event(
     event_name: str, event_args: dict, matching_scores: List[float]
 ) -> InternalEvent:
@@ -2218,9 +2233,10 @@ def create_umim_event(event: Event, event_args: Dict[str, Any]) -> Dict[str, Any
 def _get_eval_context(state: State, flow_state: FlowState) -> dict:
     context = flow_state.context.copy()
     # Link global variables
-    for var in flow_state.global_variables:
-        if var in state.context:
-            context.update({var: state.context[var]})
-        else:
-            context.update({var: None})
+    for var in flow_state.context.keys():
+        if var.startswith("_global_"):
+            context.update({var: state.context[var[8:]]})
+    # Add state as _state
+    context.update({"_state": state})
+    context.update({"self": flow_state})
     return context

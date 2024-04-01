@@ -34,7 +34,7 @@ docker build -t nemoguardrails .
 
 ### 3. \[Optional] Build the AlignScore Server Image
 
-If you want to use AlignScore-based fact-checking, you can also build a Docker image using the provided [Dockerfile](../../../nemoguardrails/library/factchecking/align_score/Dockerfile).
+If you want to use AlignScore-based fact-checking, you can also build a Docker image using the provided [Dockerfile](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/factchecking/align_score/Dockerfile).
 
 ```bash
 cd nemoguardrails/library/factchecking/align_score
@@ -45,7 +45,7 @@ NOTE: the provided Dockerfile downloads only the `base` AlignScore image. If you
 
 ### 4. \[Optional] Build the Jailbreak Detection Heuristics Server Image
 
-If you want to use the jailbreak detection heuristics server, you can also build a Docker image using the provided [Dockerfile](../../../nemoguardrails/library/jailbreak_detection/Dockerfile).
+If you want to use the jailbreak detection heuristics server, you can also build a Docker image using the provided [Dockerfile](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/jailbreak_detection/Dockerfile).
 
 ```bash
 cd nemoguardrails/jailbreak_detection
@@ -77,7 +77,7 @@ docker run \
 To use the Chat CLI interface, run the Docker container in interactive mode:
 
 ```bash
-docker run -i \
+docker run -it \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
   -v </path/to/local/config/>:/config \
   nemoguardrails chat --config=/config --verbose

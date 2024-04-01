@@ -38,7 +38,7 @@ start_main_flow_event = InternalEvent(name="StartFlow", arguments={"flow_id": "m
 
 
 def test_send_umim_action_event():
-    """Test to start an UMIM event"""
+    """Test to send an UMIM event."""
 
     content = """
     flow main
@@ -58,7 +58,7 @@ def test_send_umim_action_event():
 
 
 def test_match_umim_action_event():
-    """Test to match an UMIM event"""
+    """Test to match an UMIM event."""
 
     content = """
     flow main
@@ -111,16 +111,13 @@ def test_start_action():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello world",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
+            }
         ],
     )
 
 
 def test_start_match_action_on_action_parameter():
-    """Test to start and match an UMIM action based on action parameters"""
+    """Test to start and match an UMIM action based on action parameters."""
 
     content = """
     flow main
@@ -161,7 +158,7 @@ def test_start_match_action_on_action_parameter():
 
 
 def test_start_mismatch_action_on_action_parameter():
-    """Test to start and match an UMIM action based on action parameters"""
+    """Test to start and mismatch an UMIM action based on action parameters."""
 
     content = """
     flow main
@@ -194,7 +191,7 @@ def test_start_mismatch_action_on_action_parameter():
 
 
 def test_start_match_action_on_event_parameter():
-    """Test to start and match an UMIM action based on action parameters"""
+    """Test to start and match an UMIM action based on action parameters."""
 
     content = """
     flow main
@@ -235,7 +232,7 @@ def test_start_match_action_on_event_parameter():
 
 
 def test_start_mismatch_action_on_event_parameter():
-    """Test to start and match an UMIM action based on action parameters"""
+    """Test to start and mismatch an UMIM action based on event parameters."""
 
     content = """
     flow main
@@ -268,7 +265,7 @@ def test_start_mismatch_action_on_event_parameter():
 
 
 def test_start_match_action_with_reference():
-    """Test to start and match an UMIM action based on action parameters"""
+    """Test to start and match an UMIM action based on action reference."""
 
     content = """
     flow main
@@ -309,7 +306,7 @@ def test_start_match_action_with_reference():
 
 
 def test_await_action():
-    """Test to await an UMIM action"""
+    """Test to await an UMIM action."""
 
     content = """
     flow main
@@ -349,7 +346,7 @@ def test_await_action():
 
 
 def test_implicit_action_state_update():
-    """Test the action state update"""
+    """Test the implicit action state update."""
 
     content = """
     flow main
@@ -383,8 +380,8 @@ def test_implicit_action_state_update():
     assert state.actions[action_uid].status == ActionStatus.FINISHED
 
 
-def test_start_a_flow():
-    """Test the start of a child flow with full event notation"""
+def test_start_a_flow_expanded_notation():
+    """Test the start of a child flow with expanded notation."""
 
     content = """
     flow a
@@ -392,8 +389,8 @@ def test_start_a_flow():
 
     flow main
       # start a
-      send StartFlow(flow_id="a")
-      match FlowStarted(flow_id="a")
+      send StartFlow(flow_id="a", flow_instance_uid="01234")
+      match FlowStarted(flow_id="a", flow_instance_uid="01234")
     """
 
     state = run_to_completion(_init_state(content), start_main_flow_event)
@@ -411,8 +408,8 @@ def test_start_a_flow():
     )
 
 
-def test_start_a_flow_compact_notation():
-    """Test the start of a child flow using 'start' notation"""
+def test_start_a_flow_short_notation():
+    """Test the start of a child flow using short notation."""
 
     content = """
     flow a
@@ -438,7 +435,7 @@ def test_start_a_flow_compact_notation():
 
 
 def test_start_match_flow_with_reference():
-    """Test to start and match an UMIM action based on action parameters"""
+    """Test to start and match end of a flow based on flow reference."""
 
     content = """
     flow bot say hello
@@ -481,8 +478,77 @@ def test_start_match_flow_with_reference():
     )
 
 
+def test_user_action_reference():
+    """Test user action event matching based on references."""
+
+    content = """
+    flow main
+      match UtteranceUserAction.Started() as $event_ref
+      start UtteranceBotAction(script="Started user action: {$event_ref.action.name}")
+      match $event_ref.action.Finished(final_transcript="End")
+      start UtteranceBotAction(script="Success")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionStarted",
+            "uid": "d4a265bb-4a27-4d28-8ca5-80cc73dc4707",
+            "event_created_at": "2023-09-12T13:01:16.334940+00:00",
+            "source_uid": "umim_tui_app",
+            "action_uid": "cc63b1a0-5703-4e80-b66b-2734c13abcf3",
+            "action_info_modality": "user_speech",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Started user action: UtteranceUserAction",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "uid": "d4a265bb-4a27-4d28-8ca5-80cc73dc4707",
+            "event_created_at": "2023-09-12T13:01:16.334940+00:00",
+            "source_uid": "umim_tui_app",
+            "action_uid": "cc63b1a0-5703-4e80-b66b-2734c13abcf3",
+            "final_transcript": "End",
+            "is_success": True,
+            "action_info_modality": "user_speech",
+            "action_info_modality_policy": "replace",
+            "action_finished_at": "2023-09-12T13:01:16.334954+00:00",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+
 def test_await_a_flow():
-    """Test await a child flow"""
+    """Test await a child flow."""
 
     content = """
     flow a
@@ -490,9 +556,9 @@ def test_await_a_flow():
 
     flow main
       # await a
-      send StartFlow(flow_id="a")
-      match FlowStarted(flow_id="a")
-      match FlowFinished(flow_id="a")
+      send StartFlow(flow_id="a", flow_instance_uid="01234")
+      match FlowStarted(flow_id="a", flow_instance_uid="01234")
+      match FlowFinished(flow_id="a", flow_instance_uid="01234")
       start UtteranceBotAction(script="Flow a finished")
     """
 
@@ -518,8 +584,8 @@ def test_await_a_flow():
     )
 
 
-def test_await_a_flow_compact_notation():
-    """Test await a child flow with compact notation 'await'"""
+def test_await_a_flow_short_notation():
+    """Test await a child flow with short notation."""
 
     content = """
     flow a
@@ -552,8 +618,43 @@ def test_await_a_flow_compact_notation():
     )
 
 
+def test_await_multimodal_action():
+    """Test await statement with multimodal actions."""
+
+    content = """
+    flow bot say $text
+      await UtteranceBotAction(script=$text) as $action
+
+    flow bot gesture $gesture
+      await GestureBotAction(gesture=$gesture) as $action
+
+    flow bot express $text
+      await bot say $text
+
+    flow main
+        start bot express "Hi"
+        start bot gesture "Wave"
+        match UtteranceUserAction().Finished()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hi",
+            },
+            {
+                "type": "StartGestureBotAction",
+                "gesture": "Wave",
+            },
+        ],
+    )
+
+
 def test_start_child_flow_two_times():
-    """Test start a child flow two times"""
+    """Test start a child flow two times."""
 
     content = """
     flow a
@@ -580,8 +681,8 @@ def test_start_child_flow_two_times():
     )
 
 
-def test_event_simple_parameter_match():
-    """Test start a child flow two times"""
+def test_simple_event_parameter_match():
+    """Test a simple event parameter match."""
 
     content = """
     flow main
@@ -662,8 +763,8 @@ def test_event_simple_parameter_match():
     )
 
 
-def test_event_dict_parameter_match():
-    """Test start a child flow two times"""
+def test_dict_event_parameter_match():
+    """Test event match with dictionary parameters."""
 
     content = """
     flow main
@@ -744,14 +845,14 @@ def test_event_dict_parameter_match():
     )
 
 
-def test_event_set_parameter_match():
-    """Test start a child flow two times"""
+def test_set_event_parameter_match():
+    """Test event match with set parameters."""
 
     content = """
     flow main
       match Event1(param={"a"})
       start UtteranceBotAction(script="OK1")
-      match Event1(param={r".*"})
+      match Event1(param={regex(".*")})
       start UtteranceBotAction(script="OK2")
       match Event1(param={"c","a"})
       await UtteranceBotAction(script="OK3")
@@ -844,8 +945,8 @@ def test_event_set_parameter_match():
     )
 
 
-def test_event_list_parameter_match():
-    """Test start a child flow two times"""
+def test_list_event_parameter_match():
+    """Test event match with list parameters."""
 
     content = """
     flow main
@@ -853,7 +954,7 @@ def test_event_list_parameter_match():
       start UtteranceBotAction(script="OK1")
       match Event1(param=[1,2])
       start UtteranceBotAction(script="OK2")
-      match Event1(param=[r".*",2])
+      match Event1(param=[regex(".*"),2])
       await UtteranceBotAction(script="OK3")
     """
     state = run_to_completion(_init_state(content), start_main_flow_event)
@@ -966,13 +1067,13 @@ def test_event_list_parameter_match():
     )
 
 
-def test_event_custom_regex_parameter_match():
-    """Test more complex regex parameters."""
+def test_custom_regex_event_parameter_match():
+    """Test more complex regex event parameters."""
 
     content = """
     flow main
       while True
-        when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": r"\\bemail\\b", "value": r".*"}]) as $e
+        when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": regex("\\\\bemail\\\\b"), "value": regex(".*")}]) as $e
           start UtteranceBotAction(script="Success")
     """
     state = run_to_completion(_init_state(content), start_main_flow_event)
@@ -1025,13 +1126,13 @@ def test_event_custom_regex_parameter_match():
     )
 
 
-def test_event_corner_cases_regex_parameter_match():
-    """Test corner cases for regex matches"""
+def test_corner_cases_regex_event_parameter_matching():
+    """Test corner cases for regex matches."""
 
     content = """
     flow main
       while True
-        when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id" : "ter", "r": 'r"[ab]+"', "value": r"^[r'a]+$"}]) as $e
+        when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id" : "ter", "r": regex("[ab]+"), "value": regex("^[r'a]+$")}]) as $e
           start UtteranceBotAction(script="Success")
     """
 
@@ -1044,9 +1145,7 @@ def test_event_corner_cases_regex_parameter_match():
         state,
         {
             "type": "VisualFormSceneActionInputUpdated",
-            "interim_inputs": [
-                {"id": "ter", "r": 'r"[ab]+"', "value": "rar'araaaaarr"}
-            ],
+            "interim_inputs": [{"id": "ter", "r": "abbbaa", "value": "rar'araaaaarr"}],
         },
     )
     assert is_data_in_events(
@@ -1062,9 +1161,7 @@ def test_event_corner_cases_regex_parameter_match():
         state,
         {
             "type": "VisualFormSceneActionInputUpdated",
-            "interim_inputs": [
-                {"id": "ter", "r": 'r"[ab]+"', "value": 'rar"araaaaarr'}
-            ],
+            "interim_inputs": [{"id": "ter", "r": "abbbaa", "value": 'rar"araaaaarr'}],
         },
     )
     assert is_data_in_events(
@@ -1074,6 +1171,7 @@ def test_event_corner_cases_regex_parameter_match():
 
 
 def test_action_event_requeuing():
+    """Test queuing of action events."""
     config = RailsConfig.from_content(
         colang_content="""
         flow main
@@ -1096,16 +1194,16 @@ def test_action_event_requeuing():
     chat << "started\nsuccess"
 
 
-def test_update_context():
-    """Test to update the context."""
+def test_context_update():
+    """Test to update the context through events."""
 
     content = """
     flow main
       global $test
       match UtteranceUserAction.Finished(final_transcript="step1")
-      start UtteranceBotAction(script="{{$test}}")
+      start UtteranceBotAction(script="{$test}")
       match UtteranceUserAction.Finished(final_transcript="step2")
-      start UtteranceBotAction(script="{{$test}}")
+      start UtteranceBotAction(script="{$test}")
     """
     state = run_to_completion(_init_state(content), start_main_flow_event)
     assert is_data_in_events(
@@ -1174,12 +1272,18 @@ def test_update_context():
     )
 
 
-def test_match_internal_event():
-    """Test to update the context."""
+def test_match_hierarchy_of_internal_events():
+    """Test internal event matching for a typical flow hierarchy."""
 
     content = """
     flow _bot_say $text
       await UtteranceBotAction(script=$text) as $action
+
+    flow bot say $text
+      await _bot_say $text
+
+    flow bot started saying something
+      match FlowStarted(flow_id="_bot_say") as $event
 
     flow bot express $text
       await _bot_say $text
@@ -1188,12 +1292,9 @@ def test_match_internal_event():
       await bot express "hi"
         or bot express "hello"
 
-    flow bot started saying something
-      match FlowStarted(flow_id="_bot_say") as $event
-
     flow a
       await bot started saying something
-      _bot_say "test"
+      bot say "test"
 
     flow main
       activate a
@@ -1214,5 +1315,142 @@ def test_match_internal_event():
     )
 
 
+def test_event_number_parameter_comparison():
+    """Test to match events based on numeric parameters."""
+
+    content = """
+    flow main
+      match Event(p=less_than(5))
+      start UtteranceBotAction(script="success")
+      match Event(p=equal_less_than(5))
+      start UtteranceBotAction(script="success")
+      match Event(p=greater_than(10.1))
+      start UtteranceBotAction(script="success")
+      match Event(p=equal_greater_than(10.1))
+      start UtteranceBotAction(script="success")
+      match Event(p=not_equal_to(100))
+      start UtteranceBotAction(script="success")
+      match Event()
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 6,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 3,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 5,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 10.0,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 10.2,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 10.1,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 100,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event",
+            "p": 99,
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_match_internal_event()
+    test_custom_regex_event_parameter_match()

@@ -3,4 +3,4 @@ flow main
   $value = 3
   match UtteranceUserAction.Finished(final_transcript="start")
   $sum = await CustomTestAction(param=5)
-  start UtteranceBotAction(script="{{$sum}}")
+  start UtteranceBotAction(script="{$sum}")

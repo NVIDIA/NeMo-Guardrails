@@ -29,7 +29,7 @@
                 {
                     "name": "keyword.control.flow.colang",
                     "comment": "Must be the first word in the line.",
-                    "match": "(^[ \t]*)\\b(send|start|match|await|activate|abort|while|if|else|elif|when|orwhen|or when|break|continue|return|priority|global|print|log)\\b"
+                    "match": "(?<=(^|=)[ \t]*)\\b(send|start|match|await|activate|abort|while|if|else|elif|when|orwhen|or when|break|continue|return|priority|global|print|log)\\b"
                 },
                 {
                     "name": "keyword.control.flow.colang",
@@ -38,7 +38,7 @@
                 },
                 {
                     "name": "support.function.builtin.colang",
-                    "match": "\\b(len|regex|search|findall|uid|str|escape|isint|isfloat|isbool|isstr|isregex)\\b"
+                    "match": "\\b(len|regex|search|find_all|uid|str|pretty_str|escape|is_int|is_float|is_bool|is_str|is_regex|flows_info)\\b"
                 },
                 {
                     "name": "variable.other.colang",
@@ -52,7 +52,7 @@
                 },
                 {
                     "comment": "Highlight actions and events that use the brackets notation.",
-                    "begin": "([[:alpha:]][[:word:]]*)(?:\\.|\\w)*(\\()",
+                    "begin": "([[:alpha:]][[:word:]]*(?:\\.|\\w)*)(\\()",
                     "end": "(\\))",
                     "beginCaptures": {
                         "1": {
@@ -85,15 +85,6 @@
         "python-patterns": {
             "patterns": [
                 {
-                    "include": "#comments"
-                },
-                {
-                    "include": "#docstring-statement"
-                },
-                {
-                    "include": "#docstring"
-                },
-                {
                     "include": "#list"
                 },
                 {
@@ -106,7 +97,22 @@
                     "include": "#number"
                 },
                 {
+                    "include": "#string"
+                },
+                {
                     "include": "#decorator"
+                },
+                {
+                    "include": "#import"
+                },
+                {
+                    "include": "#comments"
+                },
+                {
+                    "include": "#docstring-statement"
+                },
+                {
+                    "include": "#docstring"
                 }
             ]
         },
@@ -1749,7 +1755,7 @@
             "patterns": [
                 {
                     "name": "support.function.builtin.colang",
-                    "match": "(?x)\n  (?<!\\.) \\b(\n    len | search | regex | findall | uid | str | escape | isint | isfloat | isbool | isstr | isregex | print | log\n  )\\b\n"
+                    "match": "(?x)\n  (?<!\\.) \\b(\n    len | search | regex | find_all | uid | str | escape | is_int | is_float | is_bool | is_str | is_regex | print | log\n  )\\b\n"
                 }
             ]
         },

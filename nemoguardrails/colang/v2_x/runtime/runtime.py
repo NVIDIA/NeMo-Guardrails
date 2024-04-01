@@ -26,12 +26,12 @@ from langchain.chains.base import Chain
 from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
-from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
-from nemoguardrails.colang.v2_x.runtime.flows import (
+from nemoguardrails.colang.v2_x.lang.colang_ast import Decorator, Flow
+from nemoguardrails.colang.v2_x.runtime.errors import (
     ColangRuntimeError,
-    Event,
-    FlowStatus,
+    ColangSyntaxError,
 )
+from nemoguardrails.colang.v2_x.runtime.flows import Event, FlowStatus
 from nemoguardrails.colang.v2_x.runtime.statemachine import (
     FlowConfig,
     InternalEvent,
@@ -69,7 +69,10 @@ class RuntimeV2_x(Runtime):
     async def _add_flows_action(self, state: "State", **args: dict) -> List[str]:
         log.info("Start AddFlowsAction! %s", args)
         flow_content = args["config"]
-        assert isinstance(flow_content, str)
+        if not isinstance(flow_content, str):
+            raise ColangRuntimeError(
+                "Parameter 'config' in AddFlowsAction is not of type 'str'!"
+            )
         # Parse new flow
         try:
             parsed_flow = parse_colang_file(
@@ -79,7 +82,9 @@ class RuntimeV2_x(Runtime):
                 include_source_mapping=True,
             )
         except Exception as e:
-            print("Failed parsing a generated flow\n%s\n%s", flow_content, e)
+            warning = f"Failed parsing a generated flow\n{flow_content}\n{e}"
+            log.warning(warning)
+            print(warning)
             return []
             # Alternatively, we could through an exceptions
             # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
@@ -87,14 +92,17 @@ class RuntimeV2_x(Runtime):
         added_flows: List[str] = []
         for flow in parsed_flow["flows"]:
             if flow.name in state.flow_configs:
-                print("Flow '%s' already exists! Not loaded!", flow.name)
+                warning = "Flow '{flow.name}' already exists! Not loaded!"
+                log.warning(warning)
+                print(warning)
                 break
 
             flow_config = FlowConfig(
                 id=flow.name,
-                loop_id=None,
                 elements=expand_elements(flow.elements, state.flow_configs),
+                decorators=convert_decorator_list_to_dictionary(flow.decorators),
                 parameters=flow.parameters,
+                return_members=flow.return_members,
                 source_code=flow.source_code,
             )
 
@@ -124,19 +132,7 @@ class RuntimeV2_x(Runtime):
 
     def _init_flow_configs(self) -> None:
         """Initializes the flow configs based on the config."""
-        self.flow_configs = {}
-
-        for flow in self.config.flows:
-            assert isinstance(flow, Flow)
-            flow_id = flow.name
-            self.flow_configs[flow_id] = FlowConfig(
-                id=flow_id,
-                elements=flow.elements,
-                decorators={decorator.name: decorator for decorator in flow.decorators},
-                parameters=flow.parameters,
-                return_members=flow.return_members,
-                source_code=flow.source_code,
-            )
+        self.flow_configs = create_flow_configs_from_flow_list(self.config.flows)
 
     async def generate_events(self, events: List[dict]) -> List[dict]:
         raise NotImplementedError("Stateless API not supported for Colang 2.x, yet.")
@@ -248,7 +244,7 @@ class RuntimeV2_x(Runtime):
                 ):
                     kwargs["llm"] = self.registered_action_params[f"{action_name}_llm"]
 
-                log.info("Executing action :: %s", action_name)
+                log.info("Running action :: %s", action_name)
                 result, status = await self.action_dispatcher.execute_action(
                     action_name, kwargs
                 )
@@ -339,7 +335,7 @@ class RuntimeV2_x(Runtime):
         return result, status
 
     @staticmethod
-    def _get_action_finished_event(result: dict) -> Dict[str, Any]:
+    def _get_action_finished_event(result: dict, **kwargs) -> Dict[str, Any]:
         """Helper to return the ActionFinished event from the result of running a local action."""
         return new_event_dict(
             f"{result['action_name']}Finished",
@@ -349,6 +345,7 @@ class RuntimeV2_x(Runtime):
             is_success=True,
             return_value=result["return_value"],
             events=result["new_events"],
+            **kwargs
             # is_system_action=action_meta.get("is_system_action", False),
         )
 
@@ -396,16 +393,34 @@ class RuntimeV2_x(Runtime):
         return action_finished_events, len(pending)
 
     async def process_events(
-        self, events: List[dict], state: Union[Optional[dict], State] = None
+        self,
+        events: List[dict],
+        state: Union[Optional[dict], State] = None,
+        blocking: bool = False,
+        instant_actions: Optional[List[str]] = None,
     ) -> Tuple[List[Dict[str, Any]], State]:
         """Process a sequence of events in a given state.
 
-        The events will be processed one by one, in the input order.
+        Runs an "event processing cycle", i.e., process all input events in the given state, and
+        return the new state and the output events.
+
+        The events will be processed one by one, in the input order. If new events are
+        generated as part of the processing, they will be appended to the input events.
+
+        By default, a processing cycle only waits for the local actions to finish, i.e,
+        if after processing all the input events, there are local actions in progress, the
+        event processing will wait for them to finish.
+
+        In blocking mode, the event processing will also wait for the local async actions.
 
         Args:
             events: A sequence of events that needs to be processed.
             state: The state that should be used as the starting point. If not provided,
               a clean state will be used.
+            blocking: If set, in blocking mode, the processing cycle will wait for
+              all the local async actions as well.
+            instant_actions: The name of the actions which should finish instantly, i.e.,
+              the start event will not be returned to the user and wait for the finish event.
 
         Returns:
             (output_events, output_state) Returns a sequence of output events and an output
@@ -416,7 +431,7 @@ class RuntimeV2_x(Runtime):
         input_events: List[Union[dict, InternalEvent]] = events.copy()
         local_running_actions: List[asyncio.Task[dict]] = []
 
-        if state is None:
+        if state is None or state == {}:
             state = State(flow_states={}, flow_configs=self.flow_configs)
             initialize_state(state)
         elif isinstance(state, dict):
@@ -446,7 +461,7 @@ class RuntimeV2_x(Runtime):
         # we continue the processing.
         while input_events or local_running_actions:
             for event in input_events:
-                log.info("Processing event %s", event)
+                log.info("Processing event :: %s", event)
 
                 event_name = event["type"] if isinstance(event, dict) else event.name
 
@@ -468,7 +483,7 @@ class RuntimeV2_x(Runtime):
                         new_event = Event(
                             name="ColangError",
                             arguments={
-                                "error_type": str(type(e).__name__),
+                                "type": str(type(e).__name__),
                                 "error": str(e),
                             },
                         )
@@ -490,7 +505,31 @@ class RuntimeV2_x(Runtime):
                     if start_action_match:
                         action_name = start_action_match[1]
 
-                        if action_name in self.action_dispatcher.registered_actions:
+                        # If it's an instant action, we finish it right away.
+                        if instant_actions and action_name in instant_actions:
+                            finished_event_data = {
+                                "action_name": action_name,
+                                "start_action_event": out_event,
+                                "return_value": None,
+                                "new_events": [],
+                            }
+
+                            # TODO: figure out a generic way of creating a compliant
+                            #   ...ActionFinished event
+                            extra = {}
+                            if action_name == "UtteranceBotAction":
+                                extra["final_script"] = out_event["script"]
+
+                            action_finished_event = self._get_action_finished_event(
+                                finished_event_data, **extra
+                            )
+
+                            # We send the completion of the action as an output event
+                            # and continue processing it.
+                            output_events.append(action_finished_event)
+                            input_events.append(action_finished_event)
+
+                        elif action_name in self.action_dispatcher.registered_actions:
                             # In this case we need to start the action locally
                             action_fn = self.action_dispatcher.get_action(action_name)
                             execute_async = getattr(action_fn, "action_meta", {}).get(
@@ -509,7 +548,13 @@ class RuntimeV2_x(Runtime):
 
                             # If the function is not async, or async execution is disabled
                             # we execute the actions as a local action.
-                            if not execute_async or self.disable_async_execution:
+                            # Also, if we're running this in blocking mode, we add all local
+                            # actions as non-async.
+                            if (
+                                not execute_async
+                                or self.disable_async_execution
+                                or blocking
+                            ):
                                 local_running_actions.append(local_action)
                             else:
                                 main_flow_uid = state.main_flow_state.uid
@@ -612,3 +657,58 @@ class RuntimeV2_x(Runtime):
             "context_updates": context_updates,
             "start_action_event": start_action_event,
         }
+
+
+def convert_decorator_list_to_dictionary(
+    decorators: List[Decorator],
+) -> Dict[str, Dict[str, Any]]:
+    """Convert list of decorators to a dictionary merging the parameters of decorators with same name."""
+    decorator_dict: Dict[str, Dict[str, Any]] = {}
+    for decorator in decorators:
+        item = decorator_dict.get(decorator.name, None)
+        if item:
+            item.update(decorator.parameters)
+        else:
+            decorator_dict[decorator.name] = decorator.parameters
+    return decorator_dict
+
+
+def create_flow_configs_from_flow_list(flows: List[Flow]) -> Dict[str, FlowConfig]:
+    """Create a flow config dictionary and resolves flow overriding."""
+    flow_configs: Dict[str, FlowConfig] = {}
+    override_flows: Dict[str, FlowConfig] = {}
+
+    # Create two dictionaries with normal and override flows
+    for flow in flows:
+        assert isinstance(flow, Flow)
+        config = FlowConfig(
+            id=flow.name,
+            elements=flow.elements,
+            decorators=convert_decorator_list_to_dictionary(flow.decorators),
+            parameters=flow.parameters,
+            return_members=flow.return_members,
+            source_code=flow.source_code,
+        )
+
+        if config.is_override:
+            if flow.name in override_flows:
+                raise ColangSyntaxError(
+                    f"Multiple override flows with name '{flow.name}' detected! There can only be one!"
+                )
+            override_flows[flow.name] = config
+        elif flow.name in flow_configs:
+            raise ColangSyntaxError(
+                f"Multiple non-overriding flows with name '{flow.name}' detected! There can only be one!"
+            )
+        else:
+            flow_configs[flow.name] = config
+
+    # Override normal flows
+    for override_flow in override_flows.values():
+        if override_flow.id not in flow_configs:
+            raise ColangSyntaxError(
+                f"Override flow with name '{override_flow.id}' does not override any flow with that name!"
+            )
+        flow_configs[override_flow.id] = override_flow
+
+    return flow_configs

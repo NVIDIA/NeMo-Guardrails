@@ -28,3 +28,5 @@ eval_outputs
 .mypy_cache
 .python-version
 local_cache
+# Ignore example configs created in user guides
+docs/user_guides/llm/vertexai/config

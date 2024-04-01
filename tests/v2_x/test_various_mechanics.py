@@ -36,7 +36,7 @@ start_main_flow_event = InternalEvent(name="StartFlow", arguments={"flow_id": "m
 
 
 def test_multi_flow_level_member_access():
-    """"""
+    """Test access of child of child flow attributes."""
 
     content = """
     flow user said $transcript
@@ -79,14 +79,14 @@ def test_multi_flow_level_member_access():
     )
 
 
-def test_FlowStart_event_fallback():
-    """"""
+def test_flow_start_event_fallback():
+    """Test the flow start fallback case."""
 
     content = """
     flow a
       match StartFlow() as $ref
       start UtteranceBotAction(script="Success")
-      send FlowStarted(flow_id=$ref.arguments.flow_id, flow_start_uid=$ref.arguments.flow_start_uid ,param="test")
+      send FlowStarted(flow_id=$ref.arguments.flow_id, flow_instance_uid=$ref.arguments.flow_instance_uid ,param="test")
 
     flow main
       start a
@@ -110,23 +110,21 @@ def test_FlowStart_event_fallback():
                 "type": "StartUtteranceBotAction",
                 "script": "End",
             },
-            {
-                "type": "StopUtteranceBotAction",
-            },
         ],
     )
 
 
 def test_multi_level_member_match_from_reference():
-    """"""
+    """Test matching based on reference attributes."""
 
     content = """
     flow a
       match UtteranceUserAction.Finished(final_transcript="Done")
 
     flow main
-      send StartFlow(flow_id="a")
-      match FlowStarted(flow_id="a") as $event_ref
+      $flow_instance_uid = "(a){uid()}"
+      send StartFlow(flow_id="a", flow_instance_uid=$flow_instance_uid)
+      match FlowStarted(flow_id="a", flow_instance_uid=$flow_instance_uid) as $event_ref
       match $event_ref.flow.Finished()
       start UtteranceBotAction(script="End")
     """
@@ -158,16 +156,19 @@ def test_multi_level_member_match_from_reference():
     )
 
 
-def test_flow_deactivation_on_parent_flow_finished():
-    """"""
+def test_flow_end_on_parent_flow_finished():
+    """Check that a flow gets stopped when its parent flow has ended."""
 
     content = """
-    flow a
+    flow child
       start UtteranceBotAction(script="Started")
       match UtteranceUserAction.Finished(final_transcript="too late")
 
+    flow parent
+      start child
+
     flow main
-      start a
+      start parent
     """
 
     config = _init_state(content)
@@ -198,7 +199,7 @@ def test_flow_deactivation_on_parent_flow_finished():
 
 
 def test_event_action_wrapper_abstraction():
-    """"""
+    """Test a common action abstraction use case."""
 
     content = """
     flow user said $text
@@ -278,104 +279,6 @@ def test_event_action_wrapper_abstraction():
     )
 
 
-# TODO: Check if we really need this
-# def test_start_sibling_flow_mechanism():
-#     """"""
-
-#     content = """
-#     flow a
-#       match UtteranceUserAction.Finished(final_transcript="1")
-#       send StartSiblingFlow(flow_id="a")
-#       start UtteranceBotAction(script="A")
-#       match UtteranceUserAction.Finished(final_transcript="2")
-#       start UtteranceBotAction(script="B")
-
-#     flow main
-#       activate a
-#       match UtteranceUserAction.Finished(final_transcript="End")
-#     """
-
-#     config = _init_state(content)
-#     state = run_to_completion(config, start_main_flow_event)
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [],
-#     )
-#     state = run_to_completion(
-#         state,
-#         {
-#             "type": "UtteranceUserActionFinished",
-#             "final_transcript": "1",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "A",
-#             },
-#         ],
-#     )
-#     state = run_to_completion(
-#         state,
-#         {
-#             "type": "UtteranceUserActionFinished",
-#             "final_transcript": "1",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "A",
-#             },
-#         ],
-#     )
-#     state = run_to_completion(
-#         state,
-#         {
-#             "type": "UtteranceUserActionFinished",
-#             "final_transcript": "2",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "B",
-#             },
-#             {
-#                 "type": "StopUtteranceBotAction",
-#             },
-#             {
-#                 "type": "StopUtteranceBotAction",
-#             },
-#             {
-#                 "type": "StopUtteranceBotAction",
-#             },
-#         ],
-#     )
-#     state = run_to_completion(
-#         state,
-#         {
-#             "type": "UtteranceUserActionFinished",
-#             "final_transcript": "1",
-#         },
-#     )
-#     assert is_data_in_events(
-#         state.outgoing_events,
-#         [
-#             {
-#                 "type": "StartUtteranceBotAction",
-#                 "script": "A",
-#             },
-#         ],
-#     )
-
-
 # def test_stop_flow():
 #     """"""
 
@@ -385,7 +288,7 @@ def test_event_action_wrapper_abstraction():
 
 #     flow user said failed $transcript
 #       match (user said $transcript).Failed()
-#       start UtteranceBotAction(script="flow user said {{$transcript}} failed")
+#       start UtteranceBotAction(script="flow user said {$transcript} failed")
 
 #     flow main
 #       activate user said failed "hi" and user said failed "bye"
@@ -461,77 +364,8 @@ def test_event_action_wrapper_abstraction():
 #     )
 
 
-def test_user_action_reference():
-    """"""
-
-    content = """
-    flow main
-      match UtteranceUserAction.Started() as $event_ref
-      start UtteranceBotAction(script="Started user action: {{$event_ref.action.name}}")
-      match $event_ref.action.Finished(final_transcript="End")
-      start UtteranceBotAction(script="Success")
-    """
-
-    config = _init_state(content)
-    state = run_to_completion(config, start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [],
-    )
-    state = run_to_completion(
-        state,
-        {
-            "type": "UtteranceUserActionStarted",
-            "uid": "d4a265bb-4a27-4d28-8ca5-80cc73dc4707",
-            "event_created_at": "2023-09-12T13:01:16.334940+00:00",
-            "source_uid": "umim_tui_app",
-            "action_uid": "cc63b1a0-5703-4e80-b66b-2734c13abcf3",
-            "action_info_modality": "user_speech",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Started user action: UtteranceUserAction",
-            },
-        ],
-    )
-    state = run_to_completion(
-        state,
-        {
-            "type": "UtteranceUserActionFinished",
-            "uid": "d4a265bb-4a27-4d28-8ca5-80cc73dc4707",
-            "event_created_at": "2023-09-12T13:01:16.334940+00:00",
-            "source_uid": "umim_tui_app",
-            "action_uid": "cc63b1a0-5703-4e80-b66b-2734c13abcf3",
-            "final_transcript": "End",
-            "is_success": True,
-            "action_info_modality": "user_speech",
-            "action_info_modality_policy": "replace",
-            "action_finished_at": "2023-09-12T13:01:16.334954+00:00",
-        },
-    )
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Success",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-        ],
-    )
-
-
 def test_stop_bot_action():
-    """"""
+    """Test stopping an action."""
 
     content = """
     flow main
@@ -565,44 +399,8 @@ def test_stop_bot_action():
     )
 
 
-# TODO: Double-check if the behavior of an or-group makes sense in combination with separated interaction loops
-def test_independent_flow_loop_mechanics():
-    """"""
-
-    content = """
-    flow bot say $script
-      # meta: loop_id=NEW
-      await UtteranceBotAction(script=$script)
-
-    flow main
-      start bot say "Hi" or bot say "Hello"
-    """
-
-    config = _init_state(content)
-    state = run_to_completion(config, start_main_flow_event)
-    assert is_data_in_events(
-        state.outgoing_events,
-        [
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Hi",
-            },
-            {
-                "type": "StartUtteranceBotAction",
-                "script": "Hello",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
-        ],
-    )
-
-
 def test_list_parameters():
-    """"""
+    """Test list flow parameters."""
 
     content = """
     flow bot say $scripts
@@ -620,16 +418,13 @@ def test_list_parameters():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hi",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
+            }
         ],
     )
 
 
 def test_dict_parameters():
-    """"""
+    """Test dict flow parameters."""
 
     content = """
     flow bot say $scripts
@@ -647,28 +442,22 @@ def test_dict_parameters():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
+            }
         ],
     )
 
 
 def test_mixed_multimodal_group_actions():
-    """"""
+    """Testing common used case of mixed multimodal flows."""
 
     content = """
     flow bot say $text
-      # meta: exclude from llm
       await UtteranceBotAction(script=$text) as $action
 
     flow bot gesture $gesture
-      # meta: exclude from llm
       await GestureBotAction(gesture=$gesture) as $action
 
     flow bot express $text
-      # meta: exclude from llm
       await bot say $text
 
     flow bot express feeling well
@@ -680,7 +469,6 @@ def test_mixed_multimodal_group_actions():
         and (bot gesture "Thumbs down" or bot gesture "Sad face")
 
     flow main
-      #bot say "One" and (bot gesture "Two" or bot gesture "Three")
       bot express feeling well
         or bot express feeling bad
       match NeverComingEvent()
@@ -726,16 +514,16 @@ def test_mixed_multimodal_group_actions():
 
 
 def test_iternal_unhandled_event():
-    """"""
+    """Test unhandled event handling."""
 
     content = """
     flow undefined flows
       match UnhandledEvent(event="StartFlow") as $event
-      await UtteranceBotAction(script="Undefined flow: {{$event.arguments.flow_id}}")
+      await UtteranceBotAction(script="Undefined flow: {$event.arguments.flow_id}")
 
     flow unexpected user utterance
       match UnhandledEvent(event="UtteranceUserActionFinished") as $event
-      await UtteranceBotAction(script="Unexpected user utterance: {{$event.arguments.final_transcript}}")
+      await UtteranceBotAction(script="Unexpected user utterance: {$event.arguments.final_transcript}")
 
     flow main
       activate undefined flows
@@ -774,7 +562,7 @@ def test_iternal_unhandled_event():
 
 
 def test_references_in_groups():
-    """"""
+    """Test use of references in groups in child flow."""
 
     content = """
     flow bot say $script
@@ -786,7 +574,7 @@ def test_references_in_groups():
 
     flow main
       bot greets as $ref
-      bot say $ref.context.ref.context.action.context.script
+      bot say $ref.ref.context.action.context.script
       match NeverComingEvent()
     """
 
@@ -821,11 +609,11 @@ def test_references_in_groups():
 
 
 def test_regular_expressions_action_parameters():
-    """"""
+    """Test use of regex in action parameters."""
 
     content = """
     flow main
-      match UtteranceUserAction.Finished(final_transcript=r"\\bmatch\\b")
+      match UtteranceUserAction.Finished(final_transcript=regex("\\\\bmatch\\\\b"))
       send StartUtteranceBotAction(script="Success")
     """
 
@@ -854,14 +642,14 @@ def test_regular_expressions_action_parameters():
 
 
 def test_regular_expressions_flow_parameters():
-    """"""
+    """Test use of regex in flow parameters."""
 
     content = """
     flow user said $transcript
       match UtteranceUserAction.Finished(final_transcript=$transcript)
 
     flow main
-      user said r"\\bmatch\\b"
+      user said (regex("\\\\bmatch\\\\b"))
       send StartUtteranceBotAction(script="Success")
     """
 
@@ -890,12 +678,11 @@ def test_regular_expressions_flow_parameters():
 
 
 def test_expr_func_search():
-    """"""
+    """Test Colang function search."""
 
     content = """
     flow main
-      $test = "{{search('\\\\bmatch\\\\b', 'dsfkjdsfhds match sfsd')}}"
-      if $test == "True"
+      if search('\\\\bmatch\\\\b', 'dsfkjdsfhds match sfsd')
         send StartUtteranceBotAction(script="Success")
     """
 
@@ -913,13 +700,13 @@ def test_expr_func_search():
 
 
 def test_generate_value_with_NLD():
-    """"""
+    """Test NLD instructions."""
 
     content = """
     flow main
       #$test = await GenerateValueAction(var_name="number", instructions="Extract the number the user guessed.")
-      $test = '''Generate a random number'''
-      send StartUtteranceBotAction(script="{{$test}}")
+      $test = i'Generate a random number'
+      send StartUtteranceBotAction(script="{$test}")
     """
 
     config = _init_state(content)
@@ -935,5 +722,34 @@ def test_generate_value_with_NLD():
     )
 
 
+def test_flow_states_info():
+    """Test the generation of flow states info."""
+
+    content = """
+    flow a
+        match Event1()
+
+    flow main
+      activate a
+      $fs = flows_info()
+      if $self.uid in $fs
+        await UtteranceBotAction(script="Success")
+      else
+        await UtteranceBotAction(script="Failed")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Success",
+            }
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_mixed_multimodal_group_actions()
+    test_flow_states_info()

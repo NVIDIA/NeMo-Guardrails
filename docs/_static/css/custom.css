@@ -1,0 +1,9 @@
+.swagger-ui code {
+    white-space: pre-wrap;
+}
+
+.microlight code {
+    color: white;
+    background: none;
+    border: none;
+}

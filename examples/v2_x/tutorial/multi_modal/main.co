@@ -1,0 +1,22 @@
+import avatars
+
+flow main
+  user expressed greeting
+  bot express greeting
+
+flow user expressed greeting
+  user expressed verbal greeting
+    or user gestured "Greeting gesture"
+
+flow user expressed verbal greeting
+  user said "hi"
+    or user said "hello"
+
+flow bot express greeting
+  bot express verbal greeting
+    and bot gesture "Smile and wave with one hand."
+
+flow bot express verbal greeting
+  bot say "Hi there!"
+    or bot say "Welcome!"
+    or bot say "Hello!"

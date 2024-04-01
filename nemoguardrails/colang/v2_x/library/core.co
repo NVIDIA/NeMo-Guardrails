@@ -1,21 +1,28 @@
-flow user said $text -> $transcript
-  # meta: user action
-  match UtteranceUserAction.Finished(final_transcript=$text) as $event
-  $transcript = $event.arguments.final_transcript
+# meta: exclude from llm
 
-flow user said something -> $transcript
-  match UtteranceUserAction.Finished() as $event
-  send UserActionLog(flow_id="user said", parameter=$event.arguments.final_transcript, intent_flow_id="user said something")
-  $transcript = $event.arguments.final_transcript
+# INTERNAL
 
-flow unhandled user intent -> $intent
-  match UnhandledEvent(event="FinishFlow", flow_id=r"^user ", loop_ids={$loop_id}) as $event
-  $intent = $event.arguments.flow_id
+flow _user_said $text -> $event
+  """Core flow for when the user says something."""
+  if $text
+    match UtteranceUserAction.Finished(final_transcript=$text) as $event
+  else
+    match UtteranceUserAction.Finished() as $event
 
 flow _bot_say $text
   """It's an internal helper for higher semantic level flows"""
   await UtteranceBotAction(script=$text) as $action
 
+# PUBLIC
+
+flow user said $text -> $transcript
+  _user_said $text as $user_said
+  $transcript = $user_said.event.final_transcript
+  return $transcript
+
+flow user said something -> $transcript
+  _user_said as $user_said
+  $transcript = $user_said.event.final_transcript
+
 flow bot say $text
-  # meta: bot action
   await _bot_say $text

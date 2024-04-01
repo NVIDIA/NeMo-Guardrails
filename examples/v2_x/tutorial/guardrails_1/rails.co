@@ -1,0 +1,41 @@
+import guardrails
+import core
+import llm
+
+
+flow user expressed greeting
+  user said "hi" or user said "hello"
+
+flow bot express greeting
+  bot say "Hello world!"
+
+flow greeting
+  user expressed greeting
+  bot express greeting
+
+flow input rails $input_text
+  $input_safe = await self check input $input_text
+
+  if not $input_safe
+    bot say "I'm sorry, I can't respond to that."
+    abort
+
+flow self check input $input_text -> $input_safe
+  """Decide if the following user message is ok to process.
+
+  Check if the user saying anything inappropriate and if so, mark it as unsafe.
+  Output the result in the following format:
+
+    $is_safe = True / False
+
+  User message: "{{ input_text }}"".
+  Write your conclusion on the next line, using the above format. Stop after one line.
+  """
+  ...
+
+  return $is_safe
+
+
+flow main
+  activate llm continuation
+  activate greeting

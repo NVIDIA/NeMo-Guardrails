@@ -80,7 +80,7 @@ start_main_flow_event = InternalEvent(name="StartFlow", arguments={"flow_id": "m
 
 
 def test_match_and_grouping():
-    """"""
+    """Test basic and-grouping mechanic with start and match statement."""
 
     content = """
     flow bot say $script
@@ -156,7 +156,7 @@ def test_match_and_grouping():
 
 
 def test_start_or_grouping():
-    """"""
+    """Test basic or-grouping mechanic with start statement."""
 
     content = """
     flow bot say $script
@@ -177,7 +177,7 @@ def test_start_or_grouping():
 
 
 def test_await_or_grouping():
-    """"""
+    """Test basic or-grouping mechanic with await statement."""
 
     content = """
     flow user said $transcript
@@ -287,19 +287,19 @@ def test_await_or_grouping():
 
 
 def test_when_or_cases_with_same_references():
-    """"""
+    """Test when / orwhen statement mechanics."""
 
     content = """
     flow user said $transcript
       match UtteranceUserAction().Finished(final_transcript=$transcript) as $ref
-      $transcript = $ref.arguments.final_transcript
+      $transcript = $ref.final_transcript
 
     flow main
       while True
         when user said "A" as $ref
-          start UtteranceBotAction(script="case A:{{$ref.context.transcript}}")
+          start UtteranceBotAction(script="case A:{$ref.context.transcript}")
         orwhen user said "B" as $ref
-          start UtteranceBotAction(script="case B:{{$ref.context.transcript}}")
+          start UtteranceBotAction(script="case B:{$ref.context.transcript}")
     """
 
     state = run_to_completion(_init_state(content), start_main_flow_event)
@@ -342,7 +342,7 @@ def test_when_or_cases_with_same_references():
 
 
 def test_await_actions_with_same_references():
-    """"""
+    """Test references with action grouping."""
 
     content = """
     flow main
@@ -401,7 +401,7 @@ def test_await_actions_with_same_references():
 
 
 def test_await_flows_with_same_references():
-    """"""
+    """Test references with flow grouping."""
 
     content = """
     flow user said $transcript
@@ -454,11 +454,10 @@ def test_await_flows_with_same_references():
 
 
 def test_await_or_group_finish():
-    """"""
+    """Test or-grouping with await flow statements."""
 
     content = """
     flow bot say $text
-      # meta: exclude from llm
       await UtteranceBotAction(script=$text) as $action
 
     flow bot express greeting
@@ -494,7 +493,7 @@ def test_await_or_group_finish():
 
 
 def test_await_and_or_grouping():
-    """"""
+    """Test mixed and-or-grouping with await flow statements."""
 
     content = """
     flow user said $transcript
@@ -601,8 +600,8 @@ def test_await_and_or_grouping():
     )
 
 
-def test_await_and_group_immediate_end():
-    """"""
+def test_await_and_or_group_with_flow_hierarchy():
+    """Test and-or-grouping with flow hierarchies."""
 
     content = """
     flow _bot_say $text
