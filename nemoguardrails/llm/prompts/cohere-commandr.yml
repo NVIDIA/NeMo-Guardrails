@@ -99,6 +99,15 @@ prompts:
       - "{{ sample_conversation | to_messages }}"
 
       - type: system
+        content: |-
+          {% if relevant_chunks %}
+          # This is some additional context:
+          ```markdown
+          {{ relevant_chunks }}
+          ```
+          {% endif %}"
+
+      - type: system
         content: "Now show examples on how you think and answer. Your response should include following parts: Bot intent and Bot message."
 
       - "{{ examples | to_messages}}"
