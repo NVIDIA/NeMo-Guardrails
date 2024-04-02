@@ -1,0 +1,8 @@
+models:
+  - type: main
+    engine: cohere
+    model: command-r
+
+  - type: embeddings
+    engine: cohere
+    model: embed-english-light-v3.0
