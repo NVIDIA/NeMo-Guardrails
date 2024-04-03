@@ -295,7 +295,7 @@ The example rails residing in the repository are excellent starting points. We e
 
 This toolkit is licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
-## Hot to cite
+## How to cite
 
 If you use this work, please cite the [EMNLP 2023 paper](https://aclanthology.org/2023.emnlp-demo.40) that introduces it.
 
