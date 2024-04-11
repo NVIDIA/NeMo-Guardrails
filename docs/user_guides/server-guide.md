@@ -111,7 +111,7 @@ The Guardrails Server has basic support for storing the conversation threads. Th
 
 To use server-side threads, you have to register a datastore. To do this, you must create a `config.py` file in the root of the configurations folder (i.e., the folder containing all the guardrails configurations the server must load). Inside `config.py` use the `register_datastore` function to register the datastore you want to use.
 
-Out-of-the-box, NeMo Guardrails has support for `MemoryStore` (useful for quick testing) and `RedisStore`. If you want to use a different backend, you can implement the [`DataStore`](../../nemoguardrails/server/datastore/datastore.py) interface and register a different instance in `config.py`.
+Out-of-the-box, NeMo Guardrails has support for `MemoryStore` (useful for quick testing) and `RedisStore`. If you want to use a different backend, you can implement the [`DataStore`](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/server/datastore/datastore.py) interface and register a different instance in `config.py`.
 
 > NOTE: to use `RedisStore` you must install `aioredis >= 2.0.1`.
 
@@ -133,7 +133,7 @@ POST /v1/chat/completions
 
 > NOTE: for security reasons, the `thread_id` must have a minimum length of 16 characters.
 
-As an example, check out this [configuration](../../examples/configs/threads).
+As an example, check out this [configuration](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/threads/README.md).
 
 
 #### Limitations
@@ -166,7 +166,7 @@ The OpenAPI specification for the actions server is available at `http://localho
 
 #### `/v1/actions/list`
 
-To list the [available actions](./python-api.md#actions) for the server, use the `/v1/actions/list` endpoint.
+To list the [available actions](python-api.md#actions) for the server, use the `/v1/actions/list` endpoint.
 
 ```
 GET /v1/actions/list

@@ -224,7 +224,7 @@ The prompt has four logical sections:
 
 2. A sample conversation, which can also be [configured](../../user_guides/configuration-guide.md#sample-conversation) using the `sample_conversation` key in *config.yml*.
 
-3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details see [ABC Bot](../../../examples/bots/abc).
+3. A set of examples for converting user utterances to canonical forms. The top five most relevant examples are chosen by performing a vector search against all the user message examples. For more details see [ABC Bot](../../../examples/bots/abc/README.md).
 
 4. The current conversation preceded by the first two turns from the sample conversation.
 
@@ -270,7 +270,7 @@ In our "Hello World" example, the predefined messages "Hello world!" and "How ar
 In the previous example, the LLM is prompted once. The following figure provides a summary of the outlined sequence of steps:
 
 <div align="center">
-<img src="../../_assets/puml/core_colang_concepts_fig_1.png" width="486">
+<img src="../../_static/puml/core_colang_concepts_fig_1.png" width="486">
 </div>
 
 Let's examine the same process for the follow-up question "What is the capital of France?".
@@ -318,7 +318,7 @@ Summary: 3 LLM call(s) took 1.79 seconds and used 1374 tokens.
 Based on these steps, we can see that the `ask general question` canonical form is predicted for the user utterance "What is the capital of France?". Since there is no flow that matches it, the LLM is asked to predict the next step, which in this case is `bot response for general question`. Also, since there is no predefined response, the LLM is asked a third time to predict the final message.
 
 <div align="center">
-<img src="../../_assets/puml/core_colang_concepts_fig_2.png" width="686">
+<img src="../../_static/puml/core_colang_concepts_fig_2.png" width="686">
 </div>
 
 ## Wrapping up
@@ -327,4 +327,4 @@ This guide provides a detailed overview of two core Colang concepts: *messages* 
 
 ## Next
 
-The next guide, [Demo Use Case](../3_demo_use_case), guides you through selecting a demo use case to implement different types of rails, such as for input, output, or dialog.
+The next guide, [Demo Use Case](../3_demo_use_case/README.md), guides you through selecting a demo use case to implement different types of rails, such as for input, output, or dialog.

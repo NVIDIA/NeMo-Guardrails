@@ -11,14 +11,14 @@ This document aims to provide a summary of the evaluation experiments we have em
 the performance of various LLMs for the different type of rails.
 
 For more details about the evaluation of guardrails, including datasets and quantitative results,
-please read [this document](../../nemoguardrails/eval/README.md).
+please read [this document](../evaluation/README.md).
 The tools used for evaluation are described in the same file, for a summary of topics [read this section](../README.md#evaluation-tools) from the user guide.
 Any new LLM available in Guardrails should be evaluated using at least this set of tools.
 
 ## LLM Support and Guidance
 
 The following tables summarize the LLM support for the main features of NeMo Guardrails, focusing on the different rails available out of the box.
-If you want to use an LLM and you cannot see a prompt in the [prompts folder](../../nemoguardrails/llm/prompts), please also check the configuration defined in the [LLM examples' configurations](../../examples/configs/llm).
+If you want to use an LLM and you cannot see a prompt in the [prompts folder](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/llm/prompts), please also check the configuration defined in the [LLM examples' configurations](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/llm/README.md).
 
 | Feature                                            | gpt-3.5-turbo-instruct    | text-davinci-003          | nemollm-43b               | llama-2-13b-chat          | falcon-7b-instruct        | gpt-3.5-turbo             | gpt-4              | gpt4all-13b-snoozy   | vicuna-7b-v1.3       | mpt-7b-instruct      | dolly-v2-3b          | HF Pipeline model                  |
 |----------------------------------------------------|---------------------------|---------------------------|---------------------------|---------------------------|---------------------------|---------------------------|--------------------|----------------------|----------------------|----------------------|----------------------|------------------------------------|
@@ -44,4 +44,4 @@ Table legend:
 The performance numbers reported in the table above for each LLM-feature pair are as follows:
 - the banking dataset evaluation for dialog (topical) rails
 - fact-checking using MSMARCO dataset and moderation rails experiments
-More details in the [evaluation docs](../../nemoguardrails/eval/README.md).
+More details in the [evaluation docs](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/eval/README.md).

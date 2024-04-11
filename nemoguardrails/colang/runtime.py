@@ -77,18 +77,24 @@ class Runtime:
         """
         self.registered_action_params[name] = value
 
-    async def generate_events(self, events: List[dict]) -> List[dict]:
+    async def generate_events(
+        self, events: List[dict], processing_log: Optional[List[dict]] = None
+    ) -> List[dict]:
         """Generates the next events based on the provided history.
 
         This is a wrapper around the `process_events` method, that will keep
         processing the events until the `listen` event is produced.
+
+        Args:
+            events (List[dict]): The list of events.
+            processing_log (Optional[List[dict]]): The processing log so far. This will be mutated.
 
         :return: The list of events.
         """
         raise NotImplementedError()
 
     async def process_events(
-        self, events: List[dict], state: Optional[dict] = None
+        self, events: List[dict], state: Optional[Any] = None, blocking: bool = False
     ) -> Tuple[List[dict], Any]:
         """Process a sequence of events in a given state.
 
@@ -98,6 +104,8 @@ class Runtime:
             events: A sequence of events that needs to be processed.
             state: The state that should be used as the starting point. If not provided,
               a clean state will be used.
+            blocking: In blocking mode, the event processing will also wait for all
+              local async actions.
 
         Returns:
             (output_events, output_state) Returns a sequence of output events and an output

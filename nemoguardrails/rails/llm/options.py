@@ -404,6 +404,10 @@ class GenerationResponse(BaseModel):
     log: Optional[GenerationLog] = Field(
         default=None, description="Additional logging information."
     )
+    state: Optional[dict] = Field(
+        default=None,
+        description="A state object which can be used in subsequent calls to continue the interaction.",
+    )
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # AlignScore Deployment
 
-**NOTE**: The recommended way to use AlignScore with NeMo Guardrails is using the provided [Dockerfile](../../../nemoguardrails/library/factchecking/align_score/Dockerfile). For more details, check out how to [build and use the image](./using-docker.md).
+**NOTE**: The recommended way to use AlignScore with NeMo Guardrails is using the provided [Dockerfile](https://github.com/NVIDIA/NeMo-Guardrails/blob/develop/nemoguardrails/library/factchecking/align_score/Dockerfile). For more details, check out how to [build and use the image](using-docker.md).
 
 In order to deploy an AlignScore server, follow these steps:
 

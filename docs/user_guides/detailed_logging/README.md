@@ -1,4 +1,4 @@
-# Getting Detailed Logging Information with Output Variables
+# Output Variables
 
 Begin by importing `nemoguardrails` and setting the path to your config
 

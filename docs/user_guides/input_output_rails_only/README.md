@@ -2,7 +2,7 @@
 
 This guide demonstrates how [generation options](../advanced/generation-options.md) can be used to activate only a specific set of rails - input and output rails in this case, and to disable the other rails defined in a guardrails configuration.
 
-We will use the guardrails configuration for the ABC Bot defined for the [topical rails example](../../getting_started/6_topical_rails) part of the [Getting Started Guide](../../getting_started).
+We will use the guardrails configuration for the ABC Bot defined for the [topical rails example](../../getting_started/6_topical_rails/README.md) part of the [Getting Started Guide](../../getting_started/README.md).
 
 ## Prerequisites
 
@@ -102,7 +102,7 @@ To test the bot with the default behaviour having all the rails active, we just 
 ```python
 from nemoguardrails import RailsConfig, LLMRails
 
-config = RailsConfig.from_path("./config")
+config = RailsConfig.from_path("config")
 rails = LLMRails(config)
 messages = [{
     "role": "user",

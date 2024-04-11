@@ -78,7 +78,7 @@ rails:
 ```python
 from nemoguardrails import RailsConfig, LLMRails
 
-config = RailsConfig.from_path("./config")
+config = RailsConfig.from_path("config")
 rails = LLMRails(config)
 
 rails.register_action(CheckKeywordsRunnable(), "check_keywords")

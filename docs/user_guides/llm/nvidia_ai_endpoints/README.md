@@ -1,6 +1,6 @@
 # Using LLMs hosted on NVIDIA AI Foundation
 
-This guide teaches you how to use NeMo Guardrails with LLMs hosted on NVIDIA AI Foundation. It uses the [ABC Bot configuration](../../../../examples/bots/abc) and changes the model to `playground_mixtral_8x7b`.
+This guide teaches you how to use NeMo Guardrails with LLMs hosted on NVIDIA AI Foundation. It uses the [ABC Bot configuration](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/bots/abc/README.md) and changes the model to `playground_mixtral_8x7b`.
 
 ## Prerequisites
 

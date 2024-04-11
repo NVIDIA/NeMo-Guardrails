@@ -111,10 +111,7 @@ def test_start_action():
             {
                 "type": "StartUtteranceBotAction",
                 "script": "Hello world",
-            },
-            {
-                "type": "StopUtteranceBotAction",
-            },
+            }
         ],
     )
 
@@ -1456,4 +1453,4 @@ def test_event_number_parameter_comparison():
 
 
 if __name__ == "__main__":
-    test_event_number_parameter_comparison()
+    test_custom_regex_event_parameter_match()

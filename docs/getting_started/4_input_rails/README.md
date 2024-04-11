@@ -1,6 +1,6 @@
 # Input Rails
 
-This topic demonstrates how to add input rails to a guardrails configuration. As discussed in the previous guide, [Demo Use Case](../3_demo_use_case), this topic guides you through building the ABC Bot.
+This topic demonstrates how to add input rails to a guardrails configuration. As discussed in the previous guide, [Demo Use Case](../3_demo_use_case/README.md), this topic guides you through building the ABC Bot.
 
 ## Prerequisites
 
@@ -105,7 +105,7 @@ Summary: 1 LLM call(s) took 0.92 seconds and used 106 tokens.
 1. Task `general` took 0.92 seconds and used 106 tokens.
 ```
 
-The summary shows that a single call was made to the LLM using the prompt for the task `general`. In contrast to the [Core Colang Concepts guide](../2_core_colang_concepts), where the `generate_user_intent` task is used as a first phase for each user message, if no user canonical forms are defined for the Guardrails configuration, the `general` task is used instead. Take a closer look at the prompt and the completion:
+The summary shows that a single call was made to the LLM using the prompt for the task `general`. In contrast to the [Core Colang Concepts guide](../2_core_colang_concepts/README.md), where the `generate_user_intent` task is used as a first phase for each user message, if no user canonical forms are defined for the Guardrails configuration, the `general` task is used instead. Take a closer look at the prompt and the completion:
 
 ```python
 print(info.llm_calls[0].prompt)
@@ -284,7 +284,7 @@ print(info.llm_calls[0].completion)
 The following figure depicts in more details how the self-check input rail works:
 
 <div align="center">
-<img src="../../_assets/puml/input_rails_fig_1.png" width="815">
+<img src="../../_static/puml/input_rails_fig_1.png" width="815">
 </div>
 
 The `self check input` rail calls the `self_check_input` action, which in turn calls the LLM using the `self_check_input` task prompt.
@@ -328,7 +328,7 @@ print(info.llm_calls[0].completion)
 Because the input rail was not triggered, the flow continued as usual.
 
 <div align="center">
-<img src="../../_assets/puml/input_rails_fig_2.png" width="740">
+<img src="../../_static/puml/input_rails_fig_2.png" width="740">
 </div>
 
 Note that the final answer is not correct.
@@ -364,4 +364,4 @@ Input rails also have the ability to alter the message from the user. By changin
 
 ## Next
 
-The next guide, [Output Rails](../5_output_rails), adds output moderation to the bot.
+The next guide, [Output Rails](../5_output_rails/README.md), adds output moderation to the bot.

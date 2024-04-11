@@ -2,20 +2,47 @@
 import utils
 
 
-@loop(id="auto_log")
+@loop(id="action_log")
+flow log user action
+  """Record user actions to the interaction log."""
+  match FlowFinished(flow_id=regex("^user said")) as $event
+  $info = flows_info($event.flow.uid)
+  $count = 1
+  while $count < len($info.flow_hierarchy)
+    $intent_flow_uid = $info.flow_hierarchy[$count]
+    $intent_flow_name = find_all("\((user (?!said).*)\)", $intent_flow_uid)
+    if $intent_flow_name
+      send UserActionLog(flow_id=$event.flow_id, parameter=$event.flow.transcript, intent_flow_id=$intent_flow_name[0])
+      break
+    $count = $count + 1
+
+@loop(id="intent_log")
 flow log user intent
   """Record user intents to the interaction log."""
-  match FlowFinished(flow_id=regex("^user ")) as $event
-  if $event.flow_id not in ["user said"]
-    send UserIntentLog(flow_id=$event.flow_id, parameter=None)
+  match FlowFinished(flow_id=regex("^user (?!said)")) as $event
+  send UserIntentLog(flow_id=$event.flow_id, parameter=None)
 
 
-@loop(id="auto_log")
+@loop(id="action_log")
+flow log bot action
+  """Record bot actions to the interaction log."""
+  match FlowFinished(flow_id=regex("^bot say")) as $event
+  $info = flows_info($event.flow.uid)
+  $count = 1
+  while $count < len($info.flow_hierarchy)
+    $intent_flow_uid = $info.flow_hierarchy[$count]
+    $intent_flow_name = find_all("\((bot (?!say).*)\)", $intent_flow_uid)
+    if $intent_flow_name
+      send BotActionLog(flow_id=$event.flow_id, parameter=$event.text, intent_flow_id=$intent_flow_name[0])
+      break
+    $count = $count + 1
+
+
+@loop(id="intent_log")
 flow log bot intent
   """Record bot intents to the interaction log."""
-  match FlowFinished(flow_id=regex("^bot ")) as $event
-  if $event.flow_id not in ["bot say"]
-    send BotIntentLog(flow_id=$event.flow_id, parameter=None)
+  match FlowFinished(flow_id=regex("^bot (?!say)")) as $event
+  send BotIntentLog(flow_id=$event.flow_id, parameter=None)
 
 
 flow unhandled user utterance -> $event
@@ -75,12 +102,11 @@ flow continue on undefined flow
 
 
 flow llm continuation
+  activate log user action
   activate log user intent
+  activate log bot action
   activate log bot intent
 
   activate continue on undefined user utterance
   activate continue on undefined user intent
   activate continue on undefined flow
-
-  # TODO: should this be needed?
-  wait indefinitely
