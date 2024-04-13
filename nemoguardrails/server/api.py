@@ -133,14 +133,6 @@ class RequestBody(BaseModel):
         description="A state object that should be used to continue the interaction.",
     )
 
-    @validator("config_ids", always=True)
-    def check_if_set(cls, v, values, **kwargs):
-        if v is not None and values.get("config_id") is not None:
-            raise ValueError("Only one of config_id or config_ids should be specified")
-        if v is None and values.get("config_id") is None:
-            raise ValueError("Either config_id or config_ids must be specified")
-        return v
-
 
 class ResponseBody(BaseModel):
     messages: List[dict] = Field(
@@ -256,7 +248,10 @@ async def chat_completion(body: RequestBody, request: Request):
     TODO: add support for explicit state object.
     """
     if not body.config_ids:
-        body.config_ids = [body.config_id]
+        if body.config_id:
+            body.config_ids = [body.config_id]
+        else:
+            body.config_ids = ["config"]
     log.info("Got request for config %s", body.config_id)
     for logger in registered_loggers:
         asyncio.get_event_loop().create_task(
