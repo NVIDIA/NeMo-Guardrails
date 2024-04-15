@@ -1,6 +1,6 @@
-# Using LLMs hosted on NVIDIA AI Foundation
+# Using LLMs hosted on NVIDIA AI Catalog
 
-This guide teaches you how to use NeMo Guardrails with LLMs hosted on NVIDIA AI Foundation. It uses the [ABC Bot configuration](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/bots/abc/README.md) and changes the model to `playground_mixtral_8x7b`.
+This guide teaches you how to use NeMo Guardrails with LLMs hosted on NVIDIA AI Catalog. It uses the [ABC Bot configuration](../../../../examples/bots/abc) and changes the model to `ai-mixtral-8x7b-instruct`.
 
 ## Prerequisites
 
@@ -12,9 +12,15 @@ Before you begin, ensure you have the following prerequisites in place:
 pip install -U --quiet langchain-nvidia-ai-endpoints
 ```
 
+```
+
+[notice] A new release of pip is available: 23.3.2 -> 24.0
+[notice] To update, run: pip install --upgrade pip
+```
+
 2. An NVIDIA NGC account to access AI Foundation Models. To create a free account go to [NVIDIA NGC website](https://ngc.nvidia.com/).
 
-3. An API key from NVIDIA AI Foundation Endpoints:
+3. An API key from NVIDIA AI Catalog:
     -  Generate an API key by navigating to the AI Foundation Models section on the NVIDIA NGC website, selecting a model with an API endpoint, and generating an API key.
     -  Export the NVIDIA API key as an environment variable:
 
@@ -38,14 +44,14 @@ To get started, copy the ABC bot configuration into a subdirectory called `confi
 cp -r ../../../../examples/bots/abc config
 ```
 
-Update the `models` section of the `config.yml` file to the desired model supported by NVIDIA AI Foundation Endpoints:
+Update the `models` section of the `config.yml` file to the desired model supported by NVIDIA AI Catalog:
 
 ```yaml
 ...
 models:
   - type: main
     engine: nvidia_ai_endpoints
-    model: playground_mixtral_8x7b
+    model: ai-mixtral-8x7b-instruct
 ...
 ```
 
@@ -60,6 +66,10 @@ config = RailsConfig.from_path("./config")
 rails = LLMRails(config)
 ```
 
+```
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]
+```
+
 Test that it works:
 
 ```python
@@ -72,11 +82,11 @@ print(response['content'])
 ```
 
 ```
-The ABC Company provides eligible employees with 20 days of paid vacation time per year, accrued monthly. However, I would need to access your specific information to provide an exact number of days you have taken or accrued. Please refer to the employee handbook or contact HR for more information.
+The ABC Company provides eligible employees with 20 days of paid vacation time
 ```
 
 You can see that the bot responds correctly.
 
 ## Conclusion
 
-In this guide, you learned how to connect a NeMo Guardrails configuration to an NVIDIA AI Foundation LLM model. This guide uses `playground_mixtral_8x7b`, however, you can connect any other model by following the same steps.
+In this guide, you learned how to connect a NeMo Guardrails configuration to an NVIDIA AI Catalog LLM model. This guide uses `ai-mixtral-8x7b-instruct`, however, you can connect any other model by following the same steps.
