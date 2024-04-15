@@ -1,7 +1,7 @@
 import avatars
 
 flow main
-  activate generating user intent for unhandled user utterance
+  activate continuation on undefined user utterance
 
   while True
     when unhandled user intent

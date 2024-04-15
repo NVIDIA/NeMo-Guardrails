@@ -3,4 +3,4 @@ flow main
 
     while True
         when user said something
-            generate then continue interaction
+            continuation on undefined user intent

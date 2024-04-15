@@ -1,6 +1,18 @@
 # meta: exclude from llm
 import utils
 
+@loop("llm_response_polling")
+flow polling llm request response $interval=1.0
+  match StartGenerateUserIntentAction() as $event_ref
+    or StartGenerateFlowContinuationAction() as $event_ref
+    or StartGenerateFlowFromNameAction() as $event_ref
+    or StartGenerateValueAction() as $event_ref
+    or StartGenerateFlowFromInstructionsAction() as $event_ref
+  start repeating timer "llm_response_polling" $interval as $polling_timer
+  start bot posture "Thinking, idle" as $posture
+  match $event_ref.action.Finished()
+  send $polling_timer.Stop()
+  send $posture.Stop()
 
 @loop(id="action_log")
 flow log user action
@@ -49,18 +61,20 @@ flow unhandled user utterance -> $event
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
 
 
-flow continue on undefined user utterance
+flow continuation on undefined user utterance
   """Continue the interaction on a user utterance that was not defined."""
-  #match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
+  activate tracking bot talking state
+  global $bot_talking_state
+  
   await unhandled user utterance as $ref
-  $event = $ref.event
-
-  $action = 'user said "{$event.final_transcript}"'
-  $intent = await GenerateUserIntentAction(user_action=$action, max_example_flows=20)
+  if $bot_talking_state != True
+    # Don't invoke llm while bot is talking
+    $action = 'user said "{$ref.event.final_transcript}"'
+    $intent = await GenerateUserIntentAction(user_action=$action, max_example_flows=20)
 
   # We need to log the user action
-  send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id=$intent)
-  # TODO: check why this is needed and the auto logging is not triggered.
+  send UserActionLog(flow_id="user said", parameter=$ref.event.final_transcript, intent_flow_id=$intent)
+  # We need to add the generated user intent to the intent log
   send UserIntentLog(flow_id=$intent, parameter=None)
   # Generate the 'user intent' by sending out the FinishFlow event
   send FinishFlow(flow_id=$intent)
@@ -71,7 +85,7 @@ flow unhandled user intent -> $intent
   $intent = $event.arguments.flow_id
 
 
-flow continue on undefined user intent
+flow continuation on undefined user intent
   """Generates next bot intent for unhandled user intents."""
   await unhandled user intent
 
@@ -80,12 +94,14 @@ flow continue on undefined user intent
 
   if $exists == False
     $flows = await AddFlowsAction(config=$flow_info.body)
+    if len($flows) == 0
+      print "Parsing failed for LLM generated flow!"
+    else
+      await await_flow_by_name $flow_info.name
+      await RemoveFlowsAction(flow_ids=[$flow_info.name])
 
-  await await_flow_by_name $flow_info.name
-  await RemoveFlowsAction(flow_ids=[$flow_info.name])
 
-
-flow continue on undefined flow
+flow continuation on undefined flow
   """We want to start an undefined flow."""
   match UnhandledEvent(event="StartFlow") as $event
 
@@ -101,12 +117,14 @@ flow continue on undefined flow
   await RemoveFlowsAction(flow_ids=[$event.flow_id])
 
 
-flow llm continuation
+flow logging of bot user interaction
   activate log user action
   activate log user intent
   activate log bot action
   activate log bot intent
 
-  activate continue on undefined user utterance
-  activate continue on undefined user intent
-  activate continue on undefined flow
+flow llm continuation
+  activate logging of bot user interaction
+  activate continuation on undefined user utterance
+  activate continuation on undefined user intent
+  activate continuation on undefined flow
