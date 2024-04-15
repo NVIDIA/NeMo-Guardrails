@@ -9,6 +9,11 @@ flow wait $time_s $timer_id = "wait_timer_{uid()}"
   """Wait the specified number of seconds before continuing."""
   await TimerBotAction(timer_name=$timer_id, duration=$time_s)
 
+flow repeating timer $timer_id $interval_s
+  """Start a repeating timer."""
+  while True
+    await wait $interval_s $timer_id
+
 flow await_flow_by_name $flow_name
   """Start a flow with the provided name and wait for it to finish."""
   $new_flow_instance_uid = "($flow_name){uid()}"

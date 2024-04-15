@@ -1,5 +1,5 @@
 flow main
-    activate track bot talking state
+    activate tracking bot talking state
     activate poll llm request response 1.0
     activate trigger user intent for unhandled user utterance
 

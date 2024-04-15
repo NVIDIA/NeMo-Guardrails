@@ -207,14 +207,14 @@ flow showcase selector
   while True
     log "while loop restarted"
     if $showcase_selection_ui == None
-      activate continuation on undefined user utterance
+      activate continuation on unhandled user utterance
       activate handling bot talking interruption "inform"
       start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the guessing game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Guessing Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}]) as $showcase_selection_ui
       start bot inform "Please pick one of the showcases."
 
     when user was silent 15.0
       log "user was silent"
-      start continuation on undefined user intent as $llm_continuation
+      start continuation on unhandled user intent as $llm_continuation
       when $llm_continuation.Finished()
         log "user was silent llm response done"
       orwhen user started saying something
@@ -225,12 +225,12 @@ flow showcase selector
 
     orwhen unhandled user intent as $intent_ref
       log "unhandled user intent: '{$intent_ref.intent}'"
-      continuation on undefined user intent
+      continuation on unhandled user intent
       log "unhandled user intent response done"
 
     orwhen user picked number guessing game showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on undefined user utterance", deactivate=True)
+      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the number guessing game!"
@@ -238,7 +238,7 @@ flow showcase selector
 
     orwhen user picked multimodality showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on undefined user utterance", deactivate=True)
+      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the multimodality showcase!"
@@ -246,7 +246,7 @@ flow showcase selector
 
     orwhen user picked backchanneling showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on undefined user utterance", deactivate=True)
+      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the backchanneling example!"
@@ -254,7 +254,7 @@ flow showcase selector
 
     orwhen user picked posture showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on undefined user utterance", deactivate=True)
+      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the posture showcase!"
@@ -262,7 +262,7 @@ flow showcase selector
 
     orwhen user picked proactive showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on undefined user utterance", deactivate=True)
+      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the proactive turn-taking example!"
@@ -280,10 +280,10 @@ flow showcase selector
 
 @meta(exclude_from_llm=True)
 flow main
-  #activate catching unexpected user utterance
+  #activate notification of unexpected user utterance
   activate ignored_utterance_action_bugfix
-  activate catching start of undefined flows
-  activate catching colang error
+  activate notification of undefined flow start "Excuse me, what did you say?"
+  activate notification of colang errors "Excuse me, what did you say?"
   activate polling llm request response 1.0
   activate tracking bot talking state
   #activate faq

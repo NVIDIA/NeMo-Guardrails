@@ -3,4 +3,4 @@ flow main
 
     while True
         when user said something
-            continuation on undefined user intent
+            continuation on unhandled user intent

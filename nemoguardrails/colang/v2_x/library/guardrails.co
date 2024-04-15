@@ -18,7 +18,7 @@ flow _user_said $text -> $event
 
 
 @override
-flow unhandled user utterance -> $event
+flow user said something unexpected -> $event
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
 
   $text = $event.final_transcript
