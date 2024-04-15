@@ -461,12 +461,12 @@ class LLMRails:
                     action_uid = new_uuid()
                     start_event = new_event_dict(
                         "StartUtteranceBotAction",
-                        final_transcript=msg["content"],
+                        script=msg["content"],
                         action_uid=action_uid,
                     )
                     finished_event = new_event_dict(
                         "UtteranceBotActionFinished",
-                        final_transcript=msg["content"],
+                        final_script=msg["content"],
                         is_success=True,
                         action_uid=action_uid,
                     )
