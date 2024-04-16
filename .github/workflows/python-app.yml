@@ -35,8 +35,8 @@ jobs:
         pip install ".[dev]"
     - name: Run pre-commit hooks
       run: |
-        python -m pre-commit install
-        python -m pre-commit run --all-files
+        pre-commit install
+        pre-commit run --all-files
     - name: Test with pytest
       run: |
         pytest
