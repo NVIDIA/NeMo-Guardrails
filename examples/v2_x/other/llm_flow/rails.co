@@ -10,5 +10,6 @@ flow main
 
   bot say "<<the response>>"
   """
-  $question = await user said something
+  user said something as $ref
+  $question = $ref.final_transcript
   ...

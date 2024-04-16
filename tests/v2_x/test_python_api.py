@@ -22,10 +22,11 @@ config = RailsConfig.from_content(
     import core
 
     flow math question
-      $text = user said "what is 2+2"
+      $question = "what is 2+2"
+      user said $question
 
       bot say "Let me think."
-      $result = await WolframAlphaAction(query=$text)
+      $result = await WolframAlphaAction(query=$question)
       bot say $result
 
     flow greeting
@@ -127,3 +128,7 @@ def test_actions_1():
             "role": "assistant",
         }
     ]
+
+
+if __name__ == "__main__":
+    test_actions_1()
