@@ -42,7 +42,7 @@
                 },
                 {
                     "name": "variable.other.colang",
-                    "match": "\\$[[:alpha:]][[:word:]]+(.[[:alpha:]][[:word:]]*)*\\b"
+                    "match": "\\$[[:alpha:]][[:word:]]+([[:alpha:]][[:word:]]*)*\\b"
                 },
                 {
                     "match": "\\b(i)(?=(\\\".*?\\\")|('.*?'))",
