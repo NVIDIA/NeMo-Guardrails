@@ -281,6 +281,7 @@ def _flow_state_related_to_source(state: State, flow_state: FlowState):
         "status": flow_state.status.value,
         "flow_hierarchy": _get_flow_state_hierarchy(state, flow_state.uid)[:-1],
         "active_statement_at_lines": list(flow_head_source_lines),
+        "meta_tags": flow_config.decorators.get("meta", []),
     }
 
     if flow_state.action_uids:
