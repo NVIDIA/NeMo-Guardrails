@@ -1,3 +1,9 @@
+import core
+import avatars
+import llm
+import timing
+import utils
+
 flow showcase backchannelling interaction
   bot inform "First, I am going to ask you about your day and will react to keywords such as nice, great or terrible."
   bot inform "Try to answer with a long sentence that contains one of these keywords to see the effect."
@@ -35,7 +41,6 @@ flow bot reacts to user said something
   bot say "Hmm?"
 
 @meta(exclude_from_llm=True)
-@meta(user_intent=True)
 flow user said something with pause $time_s
   while True
     match UtteranceUserAction.Finished() as $event

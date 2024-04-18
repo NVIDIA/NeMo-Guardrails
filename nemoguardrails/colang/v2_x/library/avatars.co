@@ -10,7 +10,9 @@
 ################################################################
 
 # meta: exclude from llm
+import core
 import llm
+import timing
 
 # -----------------------------------
 # User Event Flows
@@ -74,37 +76,6 @@ flow user interrupted bot talking $sentence_length=15
         log "Bot interrupted by user with: {$transcript}"
         return
 
-@loop("user_was_silent")
-@meta(user_intent=True)
-flow user was silent $time_s
-  """Wait for when user was silent for $time_s seconds."""
-  while True
-    start wait $time_s as $timer_ref
-    when $timer_ref.Finished()
-      break
-    orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
-      send $timer_ref.Stop()
-      match UtteranceUserAction.Finished()
-    orwhen UtteranceUserAction.Finished()
-      send $timer_ref.Stop()
-
-@loop("user_did_not_respond")
-@meta(user_intent=True)
-flow user didnt respond $time_s
-  """Wait for when user was silent for $time_s seconds while bot was silent."""
-  while True
-    start wait $time_s as $timer_ref
-    when $timer_ref.Finished()
-      break
-    orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
-      send $timer_ref.Stop()
-      match UtteranceUserAction.Finished()
-    orwhen UtteranceBotAction.Started()
-      send $timer_ref.Stop()
-      match UtteranceBotAction.Finished()
-    orwhen UtteranceUserAction.Finished() or UtteranceBotAction.Finished()
-      send $timer_ref.Stop()
-
 # ----------------------------------
 # Bot Action Flows
 # -----------------------------------
@@ -167,26 +138,11 @@ flow bot started a posture -> $posture
   match FlowStarted(flow_id="bot posture") as $event
   $posture = $event.posture
 
-@meta(bot_action=True)
 flow bot started an action -> $action
   """Wait for the bot to start with any action."""
   match bot started saying something as $action
     or bot started a gesture as $action
     or bot started a posture as $action
-
-@loop("bot_was_silent")
-@meta(bot_intent=True)
-flow bot was silent $time_s
-  """Wait for the bot to be silent (no utterance) for given time."""
-  while True
-    start wait $time_s as $timer_ref
-    when $timer_ref.Finished()
-      break
-    orwhen UtteranceBotAction.Started()
-      send $timer_ref.Stop()
-      match UtteranceBotAction.Finished()
-    orwhen UtteranceBotAction.Finished()
-      send $timer_ref.Stop()
 
 # ----------------------------------
 # State Tracking Flows
@@ -246,6 +202,7 @@ flow managing bot postures
   activate managing listening posture
   activate managing thinking posture
   activate managing talking posture
+  activate managing idle posture
   start bot posture "attentive"
 
 @loop("managing_listening_posture")
@@ -274,3 +231,10 @@ flow managing thinking posture
   else
     start bot posture "thinking"
     bot started saying something
+
+@loop("managing_idle_posture")
+flow managing idle posture
+  """Start and stop idle posture."""
+  match (polling llm request response).Started()
+  start bot posture "Thinking, idle" as $posture
+  match (polling llm request response).Finished()

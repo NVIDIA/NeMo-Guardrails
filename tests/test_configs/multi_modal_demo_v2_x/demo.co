@@ -1,4 +1,8 @@
+import core
 import avatars
+import llm
+import timing
+import utils
 
 # ----------------------------------
 # Skill interaction flows
@@ -40,41 +44,34 @@ flow reaction bot question repetition for user silence $time_s $max_repetitions=
 # Note: To enable the LLM prompt generation extraction use only one single statement
 # -----------------------------------
 
-@meta(bot_intent=True)
 flow bot express greeting
   (bot express "Hi there!"
     or bot express "Welcome!"
     or bot express "Hello!")
     and bot gesture "Wave with one hand"
 
-@meta(bot_intent=True)
 flow bot express feeling well
   (bot express "I am good!"
     or bot express "I am great!")
     and (bot gesture "Thumbs up" or bot gesture "Smile")
 
-@meta(bot_intent=True)
 flow bot express feeling bad
   (bot express "I am not good!"
     or bot express "I am a bit under the weather!")
     and (bot gesture "Thumbs down" or bot gesture "Sad face")
 
-@meta(bot_intent=True)
 flow bot inform about service
   bot inform "You can ask or instruct me whatever you want and I will do it!"
     and bot gesture "Open up both hands making a presenting gesture"
 
-@meta(bot_intent=True)
 flow bot ask how are you
   (bot say "How are you doing?"
     or bot say "How is it going?")
     and bot gesture "Pay attention to user"
 
-@meta(bot_intent=True)
 flow bot make short pause
   wait 2.0
 
-@meta(bot_intent=True)
 flow bot make long pause
   wait 5.0
 
@@ -83,17 +80,14 @@ flow bot make long pause
 # Note: To enable the LLM prompt generation extraction use only one single statement
 # -----------------------------------
 
-@meta(user_intent=True)
 flow user expressed greeting
   user said "hi"
     or user said "Welcome!"
     or user said "Hello!"
 
-@meta(user_intent=True)
 flow user expressed done
   user said (regex("(?i).*done.*|.*end.*showcase.*|.*exit.*"))
 
-@meta(user_intent=True)
 flow user asked how are you
   user said "how are you"
 
@@ -207,14 +201,14 @@ flow showcase selector
   while True
     log "while loop restarted"
     if $showcase_selection_ui == None
-      activate continuation on unhandled user utterance
+      activate generating user intent for unhandled user utterance
       activate handling bot talking interruption "inform"
       start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the guessing game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Guessing Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}]) as $showcase_selection_ui
       start bot inform "Please pick one of the showcases."
 
     when user was silent 15.0
       log "user was silent"
-      start continuation on unhandled user intent as $llm_continuation
+      start llm continue interaction as $llm_continuation
       when $llm_continuation.Finished()
         log "user was silent llm response done"
       orwhen user started saying something
@@ -225,12 +219,12 @@ flow showcase selector
 
     orwhen unhandled user intent as $intent_ref
       log "unhandled user intent: '{$intent_ref.intent}'"
-      continuation on unhandled user intent
+      llm continue interaction
       log "unhandled user intent response done"
 
     orwhen user picked number guessing game showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
+      send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the number guessing game!"
@@ -238,7 +232,7 @@ flow showcase selector
 
     orwhen user picked multimodality showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
+      send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the multimodality showcase!"
@@ -246,7 +240,7 @@ flow showcase selector
 
     orwhen user picked backchanneling showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
+      send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the backchanneling example!"
@@ -254,7 +248,7 @@ flow showcase selector
 
     orwhen user picked posture showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
+      send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the posture showcase!"
@@ -262,7 +256,7 @@ flow showcase selector
 
     orwhen user picked proactive showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
+      send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the proactive turn-taking example!"
@@ -285,7 +279,9 @@ flow main
   activate notification of undefined flow start "Excuse me, what did you say?"
   activate notification of colang errors "Excuse me, what did you say?"
   activate polling llm request response 1.0
+  activate automating bot user intent logging
   activate tracking bot talking state
+  activate managing idle posture
   #activate faq
 
   start scene show textual information $title="Welcome to the Tech Demo of Colang 2.0" $text="" $header_image="https://blogs.nvidia.com/wp-content/uploads/2023/04/NeMo-Guardrails-KV-x1280.jpg" as $welcome_ui

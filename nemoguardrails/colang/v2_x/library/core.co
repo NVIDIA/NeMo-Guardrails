@@ -5,45 +5,58 @@
 # -----------------------------------
 
 flow _user_said $text -> $event
-  """The internal flow for all semantic level bot utterance flows."""
+  """The internal flow for all semantic 'user said' flows."""
   if $text
     match UtteranceUserAction.Finished(final_transcript=$text) as $event
   else
     match UtteranceUserAction.Finished() as $event
 
+flow _user_saying $text -> $event
+  """The internal flow for all semantic 'user saying' flows."""
+  if $text
+    # This matches to a transcript where after some initial characters it finds $text followed optionally by up to two words
+    match UtteranceUserAction.TranscriptUpdated(interim_transcript=regex("(?i).*({$text})((\s*\w+\s*){0,2})\W*$")) as $event
+  else
+    match UtteranceUserAction.TranscriptUpdated() as $event
+
+flow _user_said_something_unexpected -> $event
+  """The internal flow for all semantic 'user said something unexpected' flows."""
+  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
+
 @meta(user_action='user said "{$transcript}"')
 flow user said $text -> $transcript
   """Wait for a user to have said given text."""
-  _user_said $text as $user_said
+  await _user_said $text as $user_said
   $transcript = $user_said.event.final_transcript
 
+@meta(user_action='user said "{$transcript}"')
 flow user said something -> $transcript
   """Wait for a user to have said something."""
-  _user_said as $user_said
-  send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id="user said something")
+  await _user_said as $user_said
   $transcript = $user_said.event.final_transcript
 
+#@meta(user_action='user said "{$transcript}"')
 flow user saying $text -> $transcript
   """Wait for a user to say given text while talking."""
-  # This matches to a transcript where after some initial characters it finds $text followed optionally by up to two words
-  match UtteranceUserAction.TranscriptUpdated(interim_transcript=regex("(?i).*({$text})((\s*\w+\s*){0,2})\W*$")) as $event
-  $transcript = $event.interim_transcript
+  await _user_saying $text as $user_saying
+  $transcript = $user_saying.event.interim_transcript
 
+#@meta(user_action='user said "{$transcript}"')
 flow user saying something -> $transcript
   """Wait for any ongoing user utterance"""
   # Wait for any ongoing user utterance
-  match UtteranceUserAction.TranscriptUpdated() as $event
-  #send UserActionLog(flow_id="user saying", parameter=$event.interim_transcript, intent_flow_id="user saying something")
-  $transcript = $event.interim_transcript
+  await _user_saying as $user_saying
+  $transcript = $user_saying.event.interim_transcript
 
 flow user started saying something
   """Wait for start of user utterance."""
   match UtteranceUserAction.Started()
 
+@meta(user_action='user said "{$transcript}"')
 flow user said something unexpected -> $event, $transcript
   """Wait for a user to have said something unexpected (no active match statement)"""
-  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
-  send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id=None)
+  await _user_said_something_unexpected as $user_said
+  $event = $user_said.event
   $transcript = $event.final_transcript
 
 # -----------------------------------
