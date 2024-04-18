@@ -394,7 +394,7 @@ def test_when_or_core_mechanics():
           start UtteranceBotAction(script="A")
         orwhen UtteranceUserAction().Finished(final_transcript="B")
           start UtteranceBotAction(script="B")
-        orwhen user said "C"
+        or when user said "C"
           start UtteranceBotAction(script="C")
           break
     """
@@ -919,4 +919,4 @@ def test_out_flow_variables():
 
 
 if __name__ == "__main__":
-    test_expressions_in_strings()
+    test_when_or_core_mechanics()
