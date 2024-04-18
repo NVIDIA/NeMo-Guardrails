@@ -28,18 +28,21 @@ flow user said $text -> $transcript
   """Wait for a user to have said given text."""
   await _user_said $text as $user_said
   $transcript = $user_said.event.final_transcript
+  return $transcript
 
 @meta(user_action='user said "{$transcript}"')
 flow user said something -> $transcript
   """Wait for a user to have said something."""
   await _user_said as $user_said
   $transcript = $user_said.event.final_transcript
+  return $transcript
 
 #@meta(user_action='user said "{$transcript}"')
 flow user saying $text -> $transcript
   """Wait for a user to say given text while talking."""
   await _user_saying $text as $user_saying
   $transcript = $user_saying.event.interim_transcript
+  return $transcript
 
 #@meta(user_action='user said "{$transcript}"')
 flow user saying something -> $transcript
@@ -47,6 +50,7 @@ flow user saying something -> $transcript
   # Wait for any ongoing user utterance
   await _user_saying as $user_saying
   $transcript = $user_saying.event.interim_transcript
+  return $transcript
 
 flow user started saying something
   """Wait for start of user utterance."""
@@ -58,6 +62,7 @@ flow user said something unexpected -> $event, $transcript
   await _user_said_something_unexpected as $user_said
   $event = $user_said.event
   $transcript = $event.final_transcript
+  return $transcript
 
 # -----------------------------------
 # Bot action flows
