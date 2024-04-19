@@ -1,0 +1,22 @@
+flow main
+    start pattern a as $flow_ref_a
+    start pattern b as $flow_ref_b
+    match $flow_ref_a.Finished() and $flow_ref_b.Finished()
+    bot say "End"
+    match RestartEvent()
+
+flow pattern a
+    user said "Bye"
+    bot say "Goodbye"
+
+flow pattern b
+    user said "Hi"
+    bot say "Hello"
+    user said "Bye"
+    bot say "Goodbye"
+
+flow user said $text
+    match UtteranceUserAction.Finished(final_transcript=$text)
+
+flow bot say $text
+    await UtteranceBotAction(script=$text)

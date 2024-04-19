@@ -345,7 +345,7 @@ class RuntimeV2_x(Runtime):
             is_success=True,
             return_value=result["return_value"],
             events=result["new_events"],
-            **kwargs
+            **kwargs,
             # is_system_action=action_meta.get("is_system_action", False),
         )
 

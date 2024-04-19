@@ -1466,6 +1466,27 @@ def _finish_flow(
     event = flow_state.finished_event(matching_scores)
     _push_internal_event(state, event)
 
+    _log_action_or_intents(state, flow_state, matching_scores)
+
+    log.info(
+        "Flow finished: '%s' context=%s",
+        _get_readable_flow_state_hierarchy(state, flow_state.uid),
+        _context_log(flow_state),
+    )
+
+    if (
+        flow_state.activated
+        and not deactivate_flow
+        and not flow_state.new_instance_started
+    ):
+        event = flow_state.start_event(head.matching_scores)
+        _push_left_internal_event(state, event)
+        flow_state.new_instance_started = True
+
+
+def _log_action_or_intents(
+    state: State, flow_state: FlowState, matching_scores: List[float]
+) -> None:
     # Check if it was an user/bot intent/action flow and generate internal events
     # TODO: Let's refactor that once we have the new llm prompting
     event_type: Optional[str] = None
@@ -1484,24 +1505,38 @@ def _finish_flow(
         meta_tag_parameters = flow_config.meta_tag("bot_action")
         event_type = InternalEvents.BOT_ACTION_LOG
 
+    if isinstance(meta_tag_parameters, str):
+        meta_tag_parameters = eval_expression(
+            '"' + meta_tag_parameters.replace('"', '\\"') + '"',
+            _get_eval_context(state, flow_state),
+        )
+
     if (
         event_type == InternalEvents.USER_INTENT_LOG
         or event_type == InternalEvents.BOT_INTENT_LOG
     ):
+        if isinstance(meta_tag_parameters, str):
+            name = meta_tag_parameters
+            parameter = None
+        else:
+            # TODO: Generalize to multi flow parameters
+            name = (
+                flow_state.flow_id
+                if not flow_state.flow_id.startswith("_dynamic_")
+                or len(flow_state.flow_id) < 18
+                else flow_state.flow_id[18:]
+            )
+            parameter = flow_state.arguments.get("$0", None)
+
         event = create_internal_event(
             event_type,
-            # TODO: Refactor how we define intents and their relation to flow names
             {
-                "flow_id": (
-                    flow_state.flow_id
-                    if not flow_state.flow_id.startswith("_dynamic_")
-                    or len(flow_state.flow_id) < 18
-                    else flow_state.flow_id[18:]
-                ),
-                "parameter": flow_state.arguments.get("$0", None),
+                "flow_id": name,
+                "parameter": parameter,
             },
             matching_scores,
         )
+
         _push_internal_event(state, event)
 
     elif (
@@ -1513,60 +1548,47 @@ def _finish_flow(
         # TODO: Generalize to multi intents
         intent = None
         for flow_state_uid in reversed(hierarchy):
-            intent_flow_config = state.flow_configs[
-                state.flow_states[flow_state_uid].flow_id
-            ]
+            parent_flow_state = state.flow_states[flow_state_uid]
+            intent_flow_config = state.flow_configs[parent_flow_state.flow_id]
             if intent_flow_config.has_meta_tag("bot_intent"):
                 intent = intent_flow_config.meta_tag("bot_intent")
             elif intent_flow_config.has_meta_tag("user_intent"):
                 intent = intent_flow_config.meta_tag("user_intent")
+            elif "_bot_intent" in parent_flow_state.context:
+                intent = parent_flow_state.context["_bot_intent"]
+            elif "_user_intent" in parent_flow_state.context:
+                intent = parent_flow_state.context["_user_intent"]
 
-            if not isinstance(intent, str):
+            if isinstance(intent, str):
+                intent = eval_expression(
+                    '"' + intent.replace('"', '\\"') + '"',
+                    _get_eval_context(state, parent_flow_state),
+                )
+                break
+            elif isinstance(intent, bool):
                 intent = intent_flow_config.id
+                break
 
         # Create event based on meta tag
         if isinstance(meta_tag_parameters, str):
-            name = eval_expression(
-                '"' + meta_tag_parameters.replace('"', '\\"') + '"',
-                _get_eval_context(state, flow_state),
-            )
-            event = create_internal_event(
-                event_type,
-                {
-                    "flow_id": name,
-                    "parameter": None,
-                    "intent_flow_id": intent,
-                },
-                matching_scores,
-            )
+            name = meta_tag_parameters
+            parameter = None
         else:
             # TODO: Generalize to multi flow parameters
-            event = create_internal_event(
-                event_type,
-                {
-                    "flow_id": flow_state.flow_id,
-                    "parameter": flow_state.arguments.get("$0", None),
-                    "intent_flow_id": intent,
-                },
-                matching_scores,
-            )
+            name = flow_state.flow_id
+            parameter = flow_state.arguments.get("$0", None)
+
+        event = create_internal_event(
+            event_type,
+            {
+                "flow_id": name,
+                "parameter": parameter,
+                "intent_flow_id": intent,
+            },
+            matching_scores,
+        )
 
         _push_internal_event(state, event)
-
-    log.info(
-        "Flow finished: '%s' context=%s",
-        _get_readable_flow_state_hierarchy(state, flow_state.uid),
-        _context_log(flow_state),
-    )
-
-    if (
-        flow_state.activated
-        and not deactivate_flow
-        and not flow_state.new_instance_started
-    ):
-        event = flow_state.start_event(head.matching_scores)
-        _push_left_internal_event(state, event)
-        flow_state.new_instance_started = True
 
 
 def _flow_head_changed(state: State, flow_state: FlowState, head: FlowHead) -> None:

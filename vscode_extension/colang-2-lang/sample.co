@@ -36,7 +36,7 @@ flow this is another to continue $in_var = "default" -> $out_var_1 = "test" $out
     when user said "Hi"
         $instruction = i'this is an instruction\n'
         break
-    orwhen user said something
+    or when user said something
         $instruction = i"this is an instruction"
         log "Yes 'sdf'!"
         return

@@ -1,0 +1,16 @@
+flow main
+    start pattern a as $flow_ref_a
+    start pattern b as $flow_ref_b
+    match $flow_ref_a.Finished() and $flow_ref_b.Finished()
+    await UtteranceBotAction(script="End")
+    match RestartEvent()
+
+flow pattern a
+    match UtteranceUserAction.Finished(final_transcript="Bye")
+    await UtteranceBotAction(script="Goodbye") as $action_ref
+
+flow pattern b
+    match UtteranceUserAction.Finished(final_transcript="Hi")
+    await UtteranceBotAction(script="Hello")
+    match UtteranceUserAction.Finished(final_transcript="Bye")
+    await UtteranceBotAction(script="Goodbye") as $action_ref

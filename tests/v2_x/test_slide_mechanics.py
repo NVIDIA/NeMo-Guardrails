@@ -392,9 +392,9 @@ def test_when_or_core_mechanics():
       while True
         when UtteranceUserActionFinished(final_transcript="A")
           start UtteranceBotAction(script="A")
-        orwhen UtteranceUserAction().Finished(final_transcript="B")
+        or when UtteranceUserAction().Finished(final_transcript="B")
           start UtteranceBotAction(script="B")
-        orwhen user said "C"
+        or when user said "C"
           start UtteranceBotAction(script="C")
           break
     """
@@ -472,7 +472,7 @@ def test_when_or_bot_action_mechanics():
       while True
         when UtteranceBotAction(script="Happens immediately")
           start UtteranceBotAction(script="A")
-        orwhen UtteranceUserActionFinished(final_transcript="B")
+        or when UtteranceUserActionFinished(final_transcript="B")
           start UtteranceBotAction(script="B")
           break
     """
@@ -547,9 +547,9 @@ def test_when_or_group_mechanics():
       while True
         when UtteranceUserActionFinished(final_transcript="A")
           start UtteranceBotAction(script="A")
-        orwhen (user said "B" and user said "C")
+        or when (user said "B" and user said "C")
           start UtteranceBotAction(script="BC")
-        orwhen (user said "D" or user said "E")
+        or when (user said "D" or user said "E")
           start UtteranceBotAction(script="DE")
           break
     """
@@ -644,9 +644,9 @@ def test_when_or_competing_events_mechanics():
       while True
         when user said "hello"
           start UtteranceBotAction(script="A")
-        orwhen user said something
+        or when user said something
           start UtteranceBotAction(script="B")
-        orwhen user said "hi"
+        or when user said "hi"
           start UtteranceBotAction(script="C")
           break
     """
@@ -761,7 +761,7 @@ def test_inside_when_failure_handling():
       start UtteranceBotAction(script="Start")
       when UtteranceUserAction.Finished(final_transcript="A")
         await b
-      orwhen UtteranceUserAction.Finished(final_transcript="B")
+      or when UtteranceUserAction.Finished(final_transcript="B")
         await b
 
     flow b
@@ -919,4 +919,4 @@ def test_out_flow_variables():
 
 
 if __name__ == "__main__":
-    test_expressions_in_strings()
+    test_when_or_core_mechanics()
