@@ -84,6 +84,11 @@ def init_embedding_model(embedding_model: str, embedding_engine: str) -> Embeddi
 
             model = OpenAIEmbeddingModel(embedding_model)
 
+        elif embedding_engine == "nvidia_ai_endpoints":
+            from .langchain_nvidia import LangchainNvidiaEmbeddingModel
+
+            model = LangchainNvidiaEmbeddingModel(embedding_model)
+
         else:
             raise ValueError(f"Invalid embedding engine: {embedding_engine}")
 
