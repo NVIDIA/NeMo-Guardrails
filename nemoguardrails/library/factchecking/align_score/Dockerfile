@@ -1,8 +1,8 @@
 # Use python:3.10 as the base image
-FROM python:3.10 as base
+FROM python:3.10
 
 # Install git
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git
 
 # Set working directory
 WORKDIR /app
