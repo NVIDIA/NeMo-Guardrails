@@ -19,6 +19,7 @@ import re
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Set
 
+import simpleeval
 from simpleeval import EvalWithCompoundTypes
 
 from nemoguardrails.colang.v2_x.lang.colang_ast import Element
@@ -135,28 +136,30 @@ def eval_expression(expr: str, context: dict) -> Any:
     # Finally, just evaluate the expression
     try:
         # TODO: replace this with something even more restrictive.
-        functions: Dict[str, Callable] = {
-            "len": len,
-            "flow": system_functions.flow,  # TODO: Consider this to remove
-            "action": system_functions.action,  # TODO: Consider this to remove
-            "regex": _create_regex,
-            "search": _regex_search,
-            "find_all": _regex_findall,
-            "uid": new_uid,
-            "str": _to_str,
-            "pretty_str": _pretty_str,
-            "escape": _escape_string,
-            "is_int": _is_int,
-            "is_float": _is_float,
-            "is_bool": _is_bool,
-            "is_str": _is_str,
-            "is_regex": _is_regex,
-            "less_than": _less_than_operator,
-            "equal_less_than": _equal_or_less_than_operator,
-            "greater_than": _greater_than_operator,
-            "equal_greater_than": _equal_or_greater_than_operator,
-            "not_equal_to": _not_equal_to_operator,
-        }
+        functions = simpleeval.DEFAULT_FUNCTIONS.copy()
+        functions.update(
+            {
+                "len": len,
+                "flow": system_functions.flow,  # TODO: Consider this to remove
+                "action": system_functions.action,  # TODO: Consider this to remove
+                "regex": _create_regex,
+                "search": _regex_search,
+                "find_all": _regex_findall,
+                "uid": new_uid,
+                "pretty_str": _pretty_str,
+                "escape": _escape_string,
+                "is_int": _is_int,
+                "is_float": _is_float,
+                "is_bool": _is_bool,
+                "is_str": _is_str,
+                "is_regex": _is_regex,
+                "less_than": _less_than_operator,
+                "equal_less_than": _equal_or_less_than_operator,
+                "greater_than": _greater_than_operator,
+                "equal_greater_than": _equal_or_greater_than_operator,
+                "not_equal_to": _not_equal_to_operator,
+            }
+        )
         if "_state" in context:
             functions.update({"flows_info": partial(_flows_info, context["_state"])})
 
@@ -180,12 +183,6 @@ def _regex_search(pattern: str, string: str) -> bool:
 
 def _regex_findall(pattern: str, string: str) -> List[str]:
     return re.findall(pattern, string)
-
-
-def _to_str(data: Any) -> str:
-    if isinstance(data, (dict, list, set)):
-        return json.dumps(data, indent=4)
-    return str(data)
 
 
 def _pretty_str(data: Any) -> str:
