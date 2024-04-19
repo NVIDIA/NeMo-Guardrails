@@ -4,8 +4,8 @@ flow main
     bot say "{{$utterance}}"
     user said something
 
+@loop("llm_response_polling")
 flow poll llm request response $interval
-  # meta: loop_id=llm_response_polling
   match StartGenerateUserIntentAction() as $event_ref
     or StartGenerateFlowContinuationAction() as $event_ref
     or StartGenerateFlowFromNameAction() as $event_ref
