@@ -109,6 +109,7 @@ flow continuation on undefined flow
 
 
 flow llm generate interaction continuation flow -> $flow_name
+  """Generate a flow that continues the current interaction."""
   activate polling llm request response
   # Generate continuation based current interaction history
 
@@ -126,6 +127,7 @@ flow llm generate interaction continuation flow -> $flow_name
 
 
 flow llm continue interaction
+  """Generate and continue with a suitable interaction."""
   $flow_name = await llm generate interaction continuation flow
 
   if $flow_name
@@ -136,7 +138,7 @@ flow llm continue interaction
 # Interaction History Logging
 # -----------------------------------
 flow automating bot user intent logging
-  """Automated user and bot intent flows logging."""
+  """Activate all automated user and bot intent flows logging based on flow naming."""
   activate marking user intent flows
   activate marking bot intent flows
   activate logging marked user intent flows
