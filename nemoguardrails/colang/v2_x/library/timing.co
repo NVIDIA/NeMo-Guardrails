@@ -22,10 +22,10 @@ flow user was silent $time_s
     start wait $time_s as $timer_ref
     when $timer_ref.Finished()
       break
-    orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
+    or when UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
       send $timer_ref.Stop()
       match UtteranceUserAction.Finished()
-    orwhen UtteranceUserAction.Finished()
+    or when UtteranceUserAction.Finished()
       send $timer_ref.Stop()
 
 @loop("user_did_not_respond")
@@ -36,13 +36,13 @@ flow user didnt respond $time_s
     start wait $time_s as $timer_ref
     when $timer_ref.Finished()
       break
-    orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
+    or when UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
       send $timer_ref.Stop()
       match UtteranceUserAction.Finished()
-    orwhen UtteranceBotAction.Started()
+    or when UtteranceBotAction.Started()
       send $timer_ref.Stop()
       match UtteranceBotAction.Finished()
-    orwhen UtteranceUserAction.Finished() or UtteranceBotAction.Finished()
+    or when UtteranceUserAction.Finished() or UtteranceBotAction.Finished()
       send $timer_ref.Stop()
 
 @loop("bot_was_silent")
@@ -53,8 +53,8 @@ flow bot was silent $time_s
     start wait $time_s as $timer_ref
     when $timer_ref.Finished()
       break
-    orwhen UtteranceBotAction.Started()
+    or when UtteranceBotAction.Started()
       send $timer_ref.Stop()
       match UtteranceBotAction.Finished()
-    orwhen UtteranceBotAction.Finished()
+    or when UtteranceBotAction.Finished()
       send $timer_ref.Stop()

@@ -63,7 +63,7 @@ flow generating user intent for unhandled user utterance
   # And we also need to log the generated user intent if not done by another mechanism
   when UserIntentLog(flow_id=$intent)
     return
-  orwhen UnhandledEvent(event="FinishFlow", flow_id=$intent)
+  or when UnhandledEvent(event="FinishFlow", flow_id=$intent)
     send UserIntentLog(flow_id=$intent, parameter=None)
 
 flow unhandled user intent -> $intent
@@ -192,7 +192,7 @@ flow tracking unhandled user intent state
   global $user_intent_state
   when unhandled user intent as $flow
     $unhandled_user_intent_state = $flow.context.flow_name
-  orwhen FlowFinished(flow_id=regex("^user ")) as $event
+  or when FlowFinished(flow_id=regex("^user ")) as $event
     $unhandled_user_intent_state = None
 
 

@@ -24,10 +24,10 @@ flow showcase posture capabilities
     when user expressed done
       bot inform "That was fun."
       break
-    orwhen VisualInformationSceneAction.ConfirmationUpdated()
+    or when VisualInformationSceneAction.ConfirmationUpdated()
       bot inform "OK. Let's go back"
       break
-    orwhen user said something
+    or when user said something
       bot ask "So now I am again in the talking posture. We can keep interacting like this if you want to see the posture changes or you can just say 'I am done with this' to end the showcase."
 
 flow listening posture

@@ -47,7 +47,7 @@ flow user said something with pause $time_s
     start wait $time_s as $timer_ref
     when $timer_ref.Finished()
       break
-    orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
+    or when UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
       send $timer_ref.Stop()
 
   return $event.final_transcript
@@ -78,11 +78,11 @@ flow bot asks email address
   while True
     when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : regex("@$")}])
         bot say "And now only the domain missing!"
-    orwhen VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : regex("^[-\w\.]+@([\w-]+\.)+[\w-]{2,4}$")}])
+    or when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : regex("^[-\w\.]+@([\w-]+\.)+[\w-]{2,4}$")}])
         bot say "Looks like a valid email address to me, just click ok to confirm" and bot gesture "success"
-    orwhen VisualFormSceneAction.ConfirmationUpdated(confirmation_status="confirm")
+    or when VisualFormSceneAction.ConfirmationUpdated(confirmation_status="confirm")
         bot say "Thank you" and bot gesture "bowing"
         break
-    orwhen VisualFormSceneAction.ConfirmationUpdated(confirmation_status="cancel")
+    or when VisualFormSceneAction.ConfirmationUpdated(confirmation_status="cancel")
         bot say "OK. Maybe another time."
         break

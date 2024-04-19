@@ -5,11 +5,11 @@ flow bot ask confirmation question $utterance $max_repetition=2
   while $repetition_count < $max_repetition
     when user confirms
       return "confirmed"
-    orwhen user denies
+    or when user denies
       return "denied"
-    orwhen user said something as $user_said
+    or when user said something as $user_said
       $repetition_count = 1
       bot say """Respond to user saying '{$user said.event.utterance.text}' but remind user to either confirm or deny the question"""
-    orwhen user silent "5s"
+    or when user silent "5s"
       $repetition_count += 1
       bot say "Just say 'yes' to confirm!"

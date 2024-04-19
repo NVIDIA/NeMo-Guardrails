@@ -27,16 +27,16 @@ flow reaction bot question repetition for user silence $time_s $max_repetitions=
       start GenerateValueAction(var_name="new_question_variation", instructions="Make a different variation of the following question: '{$question}'. Never repeat the same question (see the logs above) and respond only with the question text and nothing else.") as $llm_request
       when $llm_request.Finished() as $llm_request_result
         $prompt = $llm_request_result.return_value
-      orwhen user started saying something
+      or when user started saying something
         continue
 
       if not is_str($prompt)
         $prompt = "So, what do you think?"
       bot ask $prompt
       $repetition = $repetition + 1
-    orwhen user said something or bot said something
+    or when user said something or bot said something
       break
-    orwhen bot asked something
+    or when bot asked something
       continue
 
 # ----------------------------------
@@ -185,10 +185,10 @@ flow check limitations with user
   while True
     when user was silent 20.0
       start bot say "Please confirm by saying 'I understand the limitations'."
-    orwhen user confirmed limitations
+    or when user confirmed limitations
       bot say "Great! With that out of the way, let's start the demo"
       break
-    orwhen user said something
+    or when user said something
       bot say "Sorry, I am not sure if this was a confirmation. Can you rephrase?."
 
 
@@ -211,18 +211,18 @@ flow showcase selector
       start llm continue interaction as $llm_continuation
       when $llm_continuation.Finished()
         log "user was silent llm response done"
-      orwhen user started saying something
+      or when user started saying something
         log "user started saying something while llm response generation"
         if $bot_talking_state == False
           send $llm_continuation.Stop()
           log "user said something during bot thinking (user silent llm response generation)"
 
-    orwhen unhandled user intent as $intent_ref
+    or when unhandled user intent as $intent_ref
       log "unhandled user intent: '{$intent_ref.intent}'"
       llm continue interaction
       log "unhandled user intent response done"
 
-    orwhen user picked number guessing game showcase
+    or when user picked number guessing game showcase
       send $showcase_selection_ui.Stop()
       send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
@@ -230,7 +230,7 @@ flow showcase selector
       bot inform "Great! You picked the number guessing game!"
       showcase number guessing game
 
-    orwhen user picked multimodality showcase
+    or when user picked multimodality showcase
       send $showcase_selection_ui.Stop()
       send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
@@ -238,7 +238,7 @@ flow showcase selector
       bot inform "Great! You picked the multimodality showcase!"
       showcase multimodality
 
-    orwhen user picked backchanneling showcase
+    or when user picked backchanneling showcase
       send $showcase_selection_ui.Stop()
       send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
@@ -246,7 +246,7 @@ flow showcase selector
       bot inform "Great! You picked the backchanneling example!"
       showcase backchannelling interaction
 
-    orwhen user picked posture showcase
+    or when user picked posture showcase
       send $showcase_selection_ui.Stop()
       send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
@@ -254,7 +254,7 @@ flow showcase selector
       bot inform "Great! You picked the posture showcase!"
       showcase posture capabilities
 
-    orwhen user picked proactive showcase
+    or when user picked proactive showcase
       send $showcase_selection_ui.Stop()
       send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
@@ -262,7 +262,7 @@ flow showcase selector
       bot inform "Great! You picked the proactive turn-taking example!"
       showcase proactive turn taking
 
-    orwhen user wanted to end conversation
+    or when user wanted to end conversation
       send $showcase_selection_ui.Stop()
       $showcase_selection_ui = None
       bot say "Ok! It was great talking to you! Goodbye!"
@@ -315,6 +315,6 @@ flow ignored_utterance_action_bugfix
       send UtteranceBotActionFinished(action_uid=$event.action_uid, final_script="", is_success=False, failure_reason="ActionStarted event timeout")
     $number_of_failed_utterance_actions = $number_of_failed_utterance_actions + 1
     log "action_started_timer triggered {$event.action_uid}"
-  orwhen UtteranceBotActionStarted(action_uid=$event.action_uid)
+  or when UtteranceBotActionStarted(action_uid=$event.action_uid)
     $number_of_failed_utterance_actions = 0
     log "Event UtteranceBotActionStarted {$event.action_uid}"

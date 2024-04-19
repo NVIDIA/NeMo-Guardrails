@@ -65,10 +65,10 @@ flow user interrupted bot talking $sentence_length=15
       when user saying something as $user_saying_ref
         $transcript = $user_saying_ref.context.event.interim_transcript
         log "User saying something: {$transcript}"
-      orwhen user said something as $user_said_ref
+      or when user said something as $user_said_ref
         $transcript = $user_said_ref.context.transcript
         log "User said something: {$transcript}"
-      orwhen bot said something
+      or when bot said something
         log "Bot finished talking without interruption"
         break
 
@@ -153,12 +153,12 @@ flow tracking visual choice selection state
   global $choice_selection_state
   when VisualChoiceSceneAction.Started()
     $choice_selection_state = None
-  orwhen VisualChoiceSceneAction.ChoiceUpdated() as $event
+  or when VisualChoiceSceneAction.ChoiceUpdated() as $event
     if len($event.current_choice) > 0
       $choice_selection_state = $event.current_choice[0]
     else
       $choice_selection_state = None
-  orwhen VisualChoiceSceneAction.Finished()
+  or when VisualChoiceSceneAction.Finished()
     $choice_selection_state = None
 
 # ----------------------------------

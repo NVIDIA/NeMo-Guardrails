@@ -49,5 +49,5 @@ flow bot ask user to pick a color
   bot say "What color would you like? Red or blue?"
   when user expressed a color choice red
     bot say "I like red!"
-  orwhen user expressed a color choice blue
+  or when user expressed a color choice blue
     bot say "I don't like blue!"

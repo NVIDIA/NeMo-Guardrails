@@ -32,7 +32,7 @@ flow bot ask user to pick a color
   bot say "What color would you like? Red or blue?"
   when user said "Red"
     bot say "I like red!"
-  orwhen user said "Blue"
+  or when user said "Blue"
     bot say "I don't like blue!"
 
 # A little game
