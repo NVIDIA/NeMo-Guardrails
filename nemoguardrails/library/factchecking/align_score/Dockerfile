@@ -1,8 +1,8 @@
 # Use python:3.10 as the base image
-FROM python:3.10
+FROM python:3.10 as base
 
 # Install git
-RUN apt-get update && apt-get install -y git
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -10,7 +10,7 @@ WORKDIR /app
 # Clone and install the alignscore package
 RUN git clone https://github.com/yuh-zha/AlignScore.git
 WORKDIR /app/AlignScore
-RUN pip install .
+RUN pip install --no-cache-dir .
 
 # Download the Spacy en_core_web_sm model
 RUN python -m spacy download en_core_web_sm
@@ -24,11 +24,14 @@ RUN curl -OL https://huggingface.co/yzha/AlignScore/resolve/main/AlignScore-base
 # Switch
 WORKDIR /app
 
-# Copy the source code
-COPY . /app
+# Copy requirements.txt
+COPY requirements.txt .
 
 # Install the minimal set of requirements for AlignScore Server
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the source code
+COPY . .
 
 # Download the punkt model to speed up start time
 RUN python -c "import nltk; nltk.download('punkt')"
