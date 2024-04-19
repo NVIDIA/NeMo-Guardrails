@@ -41,7 +41,7 @@ def test_multi_flow_level_member_access():
     content = """
     flow user said $transcript
       match UtteranceUserAction.Finished(final_transcript=$transcript) as $event
-      $final_transcript = $event.arguments.final_transcript
+      $final_transcript = $event.final_transcript
 
     flow user instructed bot
       user said "do something" as $user_said_flow
@@ -519,11 +519,11 @@ def test_iternal_unhandled_event():
     content = """
     flow undefined flows
       match UnhandledEvent(event="StartFlow") as $event
-      await UtteranceBotAction(script="Undefined flow: {$event.arguments.flow_id}")
+      await UtteranceBotAction(script="Undefined flow: {$event.flow_id}")
 
     flow unexpected user utterance
       match UnhandledEvent(event="UtteranceUserActionFinished") as $event
-      await UtteranceBotAction(script="Unexpected user utterance: {$event.arguments.final_transcript}")
+      await UtteranceBotAction(script="Unexpected user utterance: {$event.final_transcript}")
 
     flow main
       activate undefined flows

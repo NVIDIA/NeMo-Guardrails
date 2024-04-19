@@ -1,0 +1,10 @@
+flow main
+    start bot handle user welcoming
+    match RestartEvent() # <- This statement is only processed once the previous flow has started
+
+flow bot handle user welcoming
+    start UtteranceBotAction(script="Hi")
+    start GestureBotAction(gesture="Wave") as $action_ref
+    match $action_ref.Finished() # <- At this point the flow is considered to have started
+    match UtteranceUserAction().Finished()
+    start UtteranceBotAction(script="How are you?")

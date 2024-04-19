@@ -68,7 +68,7 @@ flow generating user intent for unhandled user utterance
 
 flow unhandled user intent -> $intent
   match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$self.loop_id}) as $event
-  $intent = $event.arguments.flow_id
+  $intent = $event.flow_id
 
 
 flow continuation on unhandled user intent
@@ -191,7 +191,7 @@ flow tracking unhandled user intent state
   """Track most recent unhandled user intent state in global variable $user_intent_state."""
   global $user_intent_state
   when unhandled user intent as $flow
-    $unhandled_user_intent_state = $flow.context.flow_name
+    $unhandled_user_intent_state = $flow.flow_name
   or when FlowFinished(flow_id=regex("^user ")) as $event
     $unhandled_user_intent_state = None
 
