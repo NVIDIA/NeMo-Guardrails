@@ -1,9 +1,11 @@
+import core
+
 flow main
-    activate manage user presence
+    activate managing user presence
     bot say "Welcome"
     match RestartEvent()
 
-flow manage user presence
+flow managing user presence
     user said "Hi"
 
     start_new_flow_instance: # Start a new instance of the flow and continue with this one
@@ -11,9 +13,3 @@ flow manage user presence
     bot say "Hello again"
     user said "Bye"
     bot say "Goodbye"
-
-flow bot say $text
-  await UtteranceBotAction(script=$text)
-
-flow user said $text
-  match UtteranceUserAction.Finished(final_transcript=$text)
