@@ -20,6 +20,7 @@ from typing import Any, List, Optional, Union
 from jinja2 import Environment, meta
 
 from nemoguardrails.llm.filters import (
+    co_v2,
     colang,
     colang_without_identifiers,
     first_turns,
@@ -55,6 +56,7 @@ class LLMTaskManager:
 
         # Register the default filters.
         self.env.filters["colang"] = colang
+        self.env.filters["co_v2"] = co_v2
         self.env.filters["colang_without_identifiers"] = colang_without_identifiers
         self.env.filters["remove_text_messages"] = remove_text_messages
         self.env.filters["first_turns"] = first_turns
