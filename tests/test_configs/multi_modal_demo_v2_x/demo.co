@@ -279,7 +279,7 @@ flow main
   activate notification of undefined flow start "Excuse me, what did you say?"
   activate notification of colang errors "Excuse me, what did you say?"
   activate polling llm request response 1.0
-  activate automating bot user intent logging
+  activate automating intent detection
   activate tracking bot talking state
   activate managing idle posture
   #activate faq

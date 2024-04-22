@@ -37,7 +37,7 @@ flow polling llm request response $interval=1.0
 
 flow llm continuation
   """Activate all LLM based interaction continuations."""
-  activate automating bot user intent logging
+  activate automating intent detection
   activate generating user intent for unhandled user utterance
   activate continuation on unhandled user intent
   activate continuation on undefined flow
@@ -137,7 +137,7 @@ flow llm continue interaction
 # -----------------------------------
 # Interaction History Logging
 # -----------------------------------
-flow automating bot user intent logging
+flow automating intent detection
   """Activate all automated user and bot intent flows logging based on flow naming."""
   activate marking user intent flows
   activate marking bot intent flows
