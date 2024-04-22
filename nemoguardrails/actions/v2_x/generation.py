@@ -16,6 +16,7 @@
 """A set of actions for generating various types of completions using an LLMs."""
 import logging
 import re
+import textwrap
 from ast import literal_eval
 from typing import Any, List, Optional, Tuple
 
@@ -716,7 +717,12 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         flow_config = state.flow_configs[triggering_flow_id]
         docstrings = re.findall(r'"""(.*?)"""', flow_config.source_code, re.DOTALL)
-        assert len(docstrings) > 0
+
+        if len(docstrings) > 0:
+            docstring = docstrings[0]
+            self._last_docstring = docstring
+        else:
+            docstring = self._last_docstring
 
         render_context = {}
         render_context.update(state.context)
@@ -724,7 +730,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         # TODO: add the context of the flow
         prompt = self.llm_task_manager._render_string(
-            docstrings[0], context=render_context, events=events
+            textwrap.dedent(docstring), context=render_context, events=events
         )
 
         # We make this call with temperature 0 to have it as deterministic as possible.
