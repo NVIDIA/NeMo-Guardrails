@@ -1,0 +1,7 @@
+import core
+import llm
+
+flow main
+    while True
+        user said something
+        llm continue interaction

@@ -5,6 +5,7 @@ import llm
 import utils
 
 flow main
+  activate automating intent detection
   activate generating user intent for unhandled user utterance
 
   while True
