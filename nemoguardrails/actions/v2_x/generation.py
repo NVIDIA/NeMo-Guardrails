@@ -49,6 +49,7 @@ from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.filters import colang
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.types import Task
+from nemoguardrails.logging import verbose
 from nemoguardrails.utils import console
 
 log = logging.getLogger(__name__)
@@ -627,9 +628,15 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 lines[i] = "  " + lines[i]
 
         body = "\n".join(lines)
+        body = f"""flow {flow_name}\n{body}"""
 
-        return {
-            "name": flow_name,
-            "parameters": [],
-            "body": f"""flow {flow_name}\n{body}""",
-        }
+        if verbose.verbose_mode_enabled:
+            console.print("[bold]Creating flow:[/]")
+            for line in body.split("\n"):
+                text = Text(line, style="black on yellow", end="\n")
+                text.pad_right(console.width)
+                console.print(text)
+
+            console.print("")
+
+        return {"name": flow_name, "parameters": [], "body": body}
