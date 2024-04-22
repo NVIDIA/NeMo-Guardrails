@@ -1,0 +1,16 @@
+import core
+
+flow main
+    start pattern a
+    when pattern b
+        bot say "Pattern b has finished"
+    else
+        bot say "Pattern b has failed"
+
+flow pattern a
+    user said "Hello"
+    bot say "Hello"
+
+flow pattern b
+    user said something
+    bot say "Hi"
