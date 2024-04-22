@@ -448,14 +448,14 @@ class LLMRails:
                         }
                     )
 
-                    # If it's not the last message, we also need to add the `UserMessage` event
-                    if idx != len(messages) - 1:
-                        events.append(
-                            {
-                                "type": "UserMessage",
-                                "text": msg["content"],
-                            }
-                        )
+                    # # If it's not the last message, we also need to add the `UserMessage` event
+                    # if idx != len(messages) - 1:
+                    #     events.append(
+                    #         {
+                    #             "type": "UserMessage",
+                    #             "text": msg["content"],
+                    #         }
+                    #     )
 
                 elif msg["role"] == "assistant":
                     action_uid = new_uuid()
