@@ -1,0 +1,5 @@
+flow main
+    $value = "Hi"
+    $value_copy = $value # Copy of the value
+    await UtteranceBotAction(script=$value_copy)
+    match AnEvent()

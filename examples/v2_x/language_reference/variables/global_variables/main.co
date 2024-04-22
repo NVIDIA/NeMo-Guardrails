@@ -1,0 +1,10 @@
+flow main
+    global $transcript
+    await bot said something
+    await UtteranceBotAction(script=$transcript)
+    match AnEvent()
+
+flow bot said something
+    global $transcript
+    match UtteranceUserAction.Finished() as $event_ref
+    $transcript = $event_ref.final_transcript
