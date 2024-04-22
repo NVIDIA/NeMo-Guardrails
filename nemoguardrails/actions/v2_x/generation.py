@@ -731,6 +731,27 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         render_context.update(state.context)
         render_context.update(state.flow_id_states[triggering_flow_id][0].context)
 
+        # We also extract dynamically the list of tools
+        tools = []
+        for flow_config in state.flow_configs.values():
+            if flow_config.decorators.get("meta", {}).get("tool") is True:
+                # We get rid of the first line, which is the decorator
+                body = flow_config.source_code.split("\n", maxsplit=1)[1]
+
+                # We only need the part up to the docstring
+                # TODO: improve the logic below for extracting the "header"
+                lines = body.split("\n")
+                for i in range(len(lines)):
+                    if lines[i].endswith('"""'):
+                        lines = lines[0 : i + 1]
+                        break
+
+                tools.append("\n".join(lines))
+
+        tools = textwrap.indent("\n\n".join(tools), "  ")
+
+        render_context["tools"] = tools
+
         # TODO: add the context of the flow
         prompt = self.llm_task_manager._render_string(
             textwrap.dedent(docstring), context=render_context, events=events

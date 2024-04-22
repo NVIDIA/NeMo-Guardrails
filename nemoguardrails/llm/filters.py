@@ -28,6 +28,103 @@ def colang(events: List[dict]) -> str:
     return get_colang_history(events)
 
 
+def co_v2(
+    events: List[dict],
+) -> str:
+    """Creates a history of user messages and bot responses in colang format.
+
+    user said "Hi, how are you today?"
+    bot say "Greetings! I am the official NVIDIA Benefits Ambassador AI bot and I'm here to assist you."
+    user said "What can you help me with?"
+    bot say "As an AI, I can provide you with a wide range of services, such as ..."
+
+    """
+
+    history = ""
+
+    if not events:
+        return history
+
+    system_actions = [
+        "retrieve_relevant_chunks",
+        "create_event",
+        "wolfram alpha request",
+        "summarize_document",
+        "apify",
+        "bing_search",
+        "google_search",
+        "google_serper",
+        "openweather_query",
+        "searx_search",
+        "serp_api_query",
+        "wikipedia_query",
+        "wolframalpha_query",
+        "zapier_nla_query",
+        "call activefence api",
+        "jailbreak_detection_heuristics",
+        "check_hallucination",
+        "llama_guard_check_input",
+        "llama_guard_check_output",
+        "alignscore_check_facts",
+        "alignscore request",
+        "self_check_facts",
+        "self_check_input",
+        "self_check_output",
+        "AddFlowsAction",
+        "RemoveFlowsAction",
+        "CheckForActiveEventMatchAction",
+        "CheckFlowDefinedAction",
+        "CheckValidFlowExistsAction",
+        "generate_bot_message",
+        "GenerateFlowAction",
+        "GenerateFlowContinuationAction",
+        "GenerateFlowFromInstructionsAction",
+        "GenerateFlowFromNameAction",
+        "generate_intent_steps_message",
+        "generate_next_step",
+        "GenerateUserIntentAction",
+        "GenerateValueAction",
+        "GetLastUserMessageAction",
+    ]
+
+    # TODO: figure out why we have a duplicated StartUtteranceBotAction event.
+    processed_ids = set()
+
+    for idx, event in enumerate(events):
+        if isinstance(event, dict):
+            if event["uid"] not in processed_ids:
+                if event["type"] == "UtteranceUserActionFinished":
+                    history += f'  user said "{event["final_transcript"]}"\n'
+                elif event["type"] == "StartUtteranceBotAction":
+                    history += f'  bot say "{event["script"]}"\n'
+
+                elif event["type"] == "StartTool":
+                    s = f'  await {event["flow_name"]}'
+                    for k, v in event.items():
+                        if k in [
+                            "type",
+                            "uid",
+                            "event_created_at",
+                            "source_uid",
+                            "flow_name",
+                        ]:
+                            continue
+                        s += f' ${k}="{v}"'
+                    history += s + "\n"
+
+                elif (
+                    event["type"].endswith("ActionFinished")
+                    and event.get("action_name")
+                    and event["action_name"] not in system_actions
+                ):
+                    # history += f"  await {str(event['action_name'])}()\n"
+                    history += f"  # {str(event.get('return_value'))}\n"
+
+                processed_ids.add(event["uid"])
+
+    return history
+
+
 def colang_without_identifiers(events: List[dict]) -> str:
     """Filter that turns an array of events into a colang history."""
     return remove_action_intent_identifiers([get_colang_history(events)])[0]
