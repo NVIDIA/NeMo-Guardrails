@@ -42,7 +42,7 @@ class VerboseHandler(logging.StreamHandler):
         msg = self.format(record)
 
         # We check if we're using the spacial syntax with "::" which denotes a title.
-        if "::" in msg:
+        if " :: " in msg:
             title, body = msg.split(" :: ", 1)
             title = title.strip()
 
@@ -57,11 +57,18 @@ class VerboseHandler(logging.StreamHandler):
                     console.print("")
 
             # For prompts, we also start the blinking cursor.
-            elif title == "Prompt":
+            elif title in ["Prompt", "Prompt Messages"]:
                 if verbose_llm_calls:
                     console.print(f"[cyan]{title}[/]")
                     console.print("")
+
+                    if title == "Prompt Messages":
+                        body = body.split("\n", 3)[3]
+
                     for line in body.split("\n"):
+                        if line.strip() == "[/]":
+                            continue
+
                         text = Text(line, style="black on #909090", end="\n")
                         text.pad_right(console.width)
                         console.print(text)
