@@ -577,13 +577,47 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         with llm_params(llm, temperature=self.config.lowest_temperature):
             result = await llm_call(llm, prompt)
 
-        lines = _remove_leading_empty_lines(result).split("\n")
+        result = _remove_leading_empty_lines(result)
+        lines = result.split("\n")
+        if "codeblock" in lines[0]:
+            lines = lines[1:]
 
         if len(lines) == 0 or (len(lines) == 1 and lines[0] == ""):
             return {
                 "name": "bot inform LLM issue",
                 "body": 'flow bot inform LLM issue\n  bot say "Sorry! There was an issue in the LLM result form GenerateFlowContinuationAction!"',
             }
+
+        # We make sure that we stop at a user action, and replace it with "..."
+        for i in range(len(lines)):
+            if lines[i].startswith("  user "):
+                lines = lines[0:i]
+                lines.append("  wait user input")
+                lines.append("  ...")
+                break
+            elif "await " in lines[i]:
+                # Force to wait and continue the generation when the result is received
+                lines = lines[0 : i + 1]
+                lines.append("  ...")
+                break
+            elif lines[i].strip() == "...":
+                # Don't parse anything after "..."
+                lines = lines[0 : i + 1]
+                break
+
+            elif re.match(r"  await .* -> \$.*", lines[i]):
+                # The LLM could be tempted to use the definition syntax when calling the flows
+                lines[i] = re.sub(r"  await (.*) -> (\$.*)", r"\2 = await \1", lines[i])
+
+            elif lines[i].strip().startswith("bot say") and "..." in result:
+                # Always wait for user input after the bot says something
+                lines = lines[0 : i + 1]
+                lines.append("  wait user input")
+                lines.append("  ...")
+                break
+
+            elif "user input" in lines[i] or "user select" in lines[i]:
+                lines[i] = "  wait user input"
 
         uuid = new_uuid()[0:8]
 
