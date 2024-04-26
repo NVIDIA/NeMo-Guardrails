@@ -158,6 +158,7 @@ rails:
       - self check facts
       - self check hallucination
       - activefence moderation
+      - gotitai rag truthcheck
 
   config:
     # Configure the types of entities that should be masked on user input.
@@ -208,7 +209,7 @@ NeMo Guardrails comes with a set of [built-in guardrails](docs/user_guides/guard
 
 > **NOTE**: The built-in guardrails are only intended to enable you to get started quickly with NeMo Guardrails. For production use cases, further development and testing of the rails are needed.
 
-Currently, the guardrails library includes guardrails for: [jailbreak detection](docs/user_guides/guardrails-library.md#jailbreak-detection), [output moderation](docs/user_guides/guardrails-library.md#output-moderation), [fact-checking](docs/user_guides/guardrails-library.md#fact-checking), [sensitive data detection](docs/user_guides/guardrails-library.md#sensitive-data-detection), [hallucination detection](docs/user_guides/guardrails-library.md#hallucination-detection) and [input moderation using ActiveFence](docs/user_guides/guardrails-library.md#active-fence).
+Currently, the guardrails library includes guardrails for: [jailbreak detection](docs/user_guides/guardrails-library.md#jailbreak-detection), [output moderation](docs/user_guides/guardrails-library.md#output-moderation), [fact-checking](docs/user_guides/guardrails-library.md#fact-checking), [sensitive data detection](docs/user_guides/guardrails-library.md#sensitive-data-detection), [hallucination detection](docs/user_guides/guardrails-library.md#hallucination-detection), [input moderation using ActiveFence](docs/user_guides/guardrails-library.md#active-fence) and [hallucination detection for RAG applications using Got It AI's TruthChecker API](docs/user_guides/guardrails-library.md#got-it-ai).
 
 ## CLI
 
@@ -271,7 +272,7 @@ Evaluating the safety of a LLM-based conversational application is a complex tas
 
 ## How is this different?
 
-There are many ways guardrails can be added to an LLM-based conversational application. For example: explicit moderation endpoints (e.g., OpenAI, ActiveFence), critique chains (e.g. constitutional chain), parsing the output (e.g. guardrails.ai), individual guardrails (e.g., LLM-Guard).
+There are many ways guardrails can be added to an LLM-based conversational application. For example: explicit moderation endpoints (e.g., OpenAI, ActiveFence), critique chains (e.g. constitutional chain), parsing the output (e.g. guardrails.ai), individual guardrails (e.g., LLM-Guard), hallucination detection for RAG applications (e.g., Got It AI).
 
 NeMo Guardrails aims to provide a flexible toolkit that can integrate all these complementary approaches into a cohesive LLM guardrails layer. For example, the toolkit provides out-of-the-box integration with ActiveFence, AlignScore and LangChain chains.
 
