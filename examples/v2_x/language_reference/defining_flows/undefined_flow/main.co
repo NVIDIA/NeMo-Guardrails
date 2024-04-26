@@ -1,0 +1,13 @@
+flow main
+    activate catching of undefined flow start
+    bot solve all your problems
+    match RestartEvent()
+
+flow catching of undefined flow start
+    match UnhandledEvent(event="StartFlow") as $event
+    bot say "Cannot start the undefined flow: '{$event.flow_id}'!"
+    # We need to abort the flow that sent the FlowStart event since it might be waiting for it
+    send StopFlow(flow_instance_uid=$event.source_flow_instance_uid)
+
+flow bot say $text
+    await UtteranceBotAction(script=$text)

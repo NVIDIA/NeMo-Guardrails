@@ -16,6 +16,7 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
 
 3. Third-Party APIs
    - [ActiveFence Moderation](#activefence)
+   - [Got It AI RAG TruthChecker](#got-it-ai)
    - OpenAI Moderation API - *[COMING SOON]*
 
 4. Other
@@ -707,6 +708,37 @@ Following is the list of guardrails that are currently supported:
 
 More details regarding the configuration and usage of these can be found [here](../../nemoguardrails/library/autoalign/README.md).
 
+
+### Got It AI
+
+Got It AI's Hallucination Manager helps you to detect and manage hallucinations in your AI models.
+The [TruthChecker API for RAG applications](https://www.app.got-it.ai/hallucination-manager) is a part of the Hallucination Manager suite of APIs.
+
+Existing fact-checking methods are not sufficient to detect hallucinations in AI models for real-world RAG applications. The TruthChecker API performs a dual task to determine whether a response is a `hallucination` or not:
+1. Check for faithfulness of the generated response to the retrieved knowledge chunks.
+2. Check for the relevance of the response to the user query and the conversation history.
+
+The TruthChecker API can be configured to work for open-domain use-case or for a specific domain or knowledge base. By default, the TruthChecker API is configured to work for open-domain and we expect it to deliver strong performance on specific domains. However, for an enhanced experience for a specific domain or knowledge base, you can fine-tuning the model on the knowledge base and unlock benefits like secure on-premise model deployments.
+
+Please [contact the Got It AI team](https://www.app.got-it.ai/) for more information on how to fine-tune the truthchecker api for your specific domain or knowledge base.
+
+[Got It AI's TruthChecker API for RAG applications](https://www.app.got-it.ai/hallucination-manager) can be used in Nemo Guardrails as an output rail out-of-the-box (you need to have the `GOTITAI_API_KEY` environment variable set).
+
+```yaml
+rails:
+  output:
+    flows:
+      - gotitai rag truthcheck
+```
+
+To trigger the fact-checking rail, you have to set the `$check_facts` context variable to `True` before a bot message that requires fact-checking, e.g.:
+
+```colang
+define flow
+  user ask about report
+  $check_facts = True
+  bot provide report answer
+```
 
 ## Other
 

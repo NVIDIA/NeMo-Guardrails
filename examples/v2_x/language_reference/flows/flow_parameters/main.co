@@ -1,6 +1,0 @@
-flow bot say $text $volume=1.0
-    await UtteranceBotAction(script=$text, intensity=$volume)
-
-flow main
-    # Say 'Hi' with the default volume of 1.0
-    bot say "Hi"

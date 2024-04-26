@@ -32,7 +32,7 @@ flow bot ask user to pick a color
   bot say "What color would you like? Red or blue?"
   when user said "Red"
     bot say "I like red!"
-  orwhen user said "Blue"
+  or when user said "Blue"
     bot say "I don't like blue!"
 
 # A little game
@@ -138,7 +138,7 @@ flow fallback
     match $event_ref.flow.Finished()
 
 @meta(exclude_from_llm=True)
-flow handling start of undefined flow
+flow continuation on undefined flow
   """If we reach a point where we need to start a flow that does not exist, we generate it."""
 
   match UnhandledEvent(event="StartFlow") as $event
@@ -149,7 +149,7 @@ flow handling start of undefined flow
 
   if not $exists
     $flow_id = $event.flow_id
-    log "'handling start of undefined flow' -> generate new flow '{$event.flow_id}'"
+    log "'continuation on undefined flow' -> generate new flow '{$event.flow_id}'"
     $flow_source = await GenerateFlowFromNameAction(name=$flow_id)
     await AddFlowsAction(config=$flow_source)
     send StartFlow(flow_id=$flow_id)
@@ -174,7 +174,7 @@ flow main
   activate custom instructions
   activate unknown intent
   activate fallback
-  activate handling start of undefined flow
+  activate continuation on undefined flow
   # activate question
   # activate tell the user the weather
 
