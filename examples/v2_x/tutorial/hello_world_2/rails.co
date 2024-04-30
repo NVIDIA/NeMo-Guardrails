@@ -5,8 +5,7 @@ flow main
   bot express greeting
 
 flow user expressed greeting
-  user said "hi"
-    or user said "hello"
+  user said "hi" or user said "hello"
 
 flow bot express greeting
   bot say "Hello world!"

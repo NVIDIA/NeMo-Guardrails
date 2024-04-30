@@ -3,5 +3,3 @@ import core
 flow main
   user said "hi"
   bot say "Hello World!"
-  user said "hi"
-  bot say "Test"

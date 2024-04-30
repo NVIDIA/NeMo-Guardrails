@@ -2,7 +2,6 @@ import core
 import avatars
 import timing
 import llm
-import utils
 
 flow main
   activate automating intent detection
