@@ -66,6 +66,36 @@ flow generating user intent for unhandled user utterance
   or when UnhandledEvent(event="FinishFlow", flow_id=$intent)
     send UserIntentLog(flow_id=$intent, parameter=None)
 
+
+flow continuation on unhandled user utterance
+  """Continue the interaction on an unexpected user utterance."""
+  activate tracking bot talking state
+  global $bot_talking_state
+
+  await _user_said_something_unexpected as $user_said
+  $event = $user_said.event
+  if $bot_talking_state != True
+    # Don't invoke llm while bot is talking
+    $action = 'user said "{$event.final_transcript}"'
+    await GenerateUserIntentAction(user_action=$action, max_example_flows=20) as $action_ref
+    $user_intent = $action_ref.return_value
+    $bot_intent = $action_ref.bot_intent
+    $bot_action = $action_ref.bot_action
+    print $bot_intent
+    print $bot_action
+
+  # Generate the 'user intent' by sending out the FinishFlow event
+  send FinishFlow(flow_id=$intent, info="llm", priority=True)
+
+  # We need to log the user action
+  send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id=$intent)
+  # And we also need to log the generated user intent if not done by another mechanism
+  when UserIntentLog(flow_id=$intent)
+    return
+  or when UnhandledEvent(event="FinishFlow", flow_id=$intent)
+    send UserIntentLog(flow_id=$intent, parameter=None)
+
+
 flow unhandled user intent -> $intent
   match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$self.loop_id}) as $event
   $intent = $event.flow_id

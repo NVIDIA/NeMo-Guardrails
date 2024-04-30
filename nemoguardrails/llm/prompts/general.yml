@@ -132,6 +132,27 @@ prompts:
           user action: {{ user_action }}
           user intent:
       stop:
+          - "\n"
+
+    # Prompt for detecting the user message canonical form and bot action continuation.
+    - task: generate_user_intent_and_bot_action_from_user_action
+      content: |-
+          """
+          {{ general_instructions }}
+          """
+
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
+
+          # These are the most likely user intents:
+          {{ examples }}
+
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
+
+          user action: {{ user_action }}
+          user intent:
+      stop:
           - "user intent:"
 
     # Prompt for generating the value of a context variable.

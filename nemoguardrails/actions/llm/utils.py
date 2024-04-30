@@ -476,6 +476,25 @@ def get_initial_actions(strings: List[str]) -> List[str]:
     return previous_strings
 
 
+def get_first_bot_intent(strings: List[str]) -> Optional[str]:
+    """Returns first bot intent."""
+    for string in strings:
+        if string.startswith("bot intent: "):
+            return string.replace("bot intent: ", "")
+    return None
+
+
+def get_first_bot_action(strings: List[str]) -> Optional[str]:
+    """Returns first bot action."""
+    action: Optional[str] = None
+    for string in strings:
+        if string.startswith("bot action: "):
+            action = string.replace("bot action: ", "")
+        elif action and (string.startswith("  and") or string.startswith("  or")):
+            action = action + string
+    return action
+
+
 def escape_flow_name(name: str) -> str:
     """Escape invalid keywords in flow names."""
     # TODO: We need to figure out how we can distinguish from valid flow parameters
