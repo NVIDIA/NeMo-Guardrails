@@ -66,7 +66,7 @@ def test_guardrails_1():
     )
     chat = TestChat(
         config,
-        llm_completions=["$is_safe = True", "$is_safe = False"],
+        llm_completions=["True", "False"],
     )
 
     chat >> "hi"
