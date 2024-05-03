@@ -168,7 +168,22 @@ def eval_expression(expr: str, context: dict) -> Any:
             functions=functions,
             names=expr_locals,
         )
-        return s.eval(updated_expr)
+
+        result = s.eval(updated_expr)
+
+        # Assign back changed values to dictionary variables
+        for var_name, val in expr_locals.items():
+            if isinstance(val, AttributeDict):
+                var_name = var_name[4:]
+                global_var_name = f"_global_{var_name}"
+                if global_var_name in context:
+                    context[global_var_name].clear()
+                    context[global_var_name].update(val)
+                else:
+                    context[var_name].clear()
+                    context[var_name].update(val)
+
+        return result
     except Exception as e:
         raise ColangValueError(f"Error evaluating '{expr}'") from e
 
