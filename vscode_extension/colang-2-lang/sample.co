@@ -34,10 +34,10 @@ flow this is another to continue $in_var = "default" -> $out_var_1 = "test" $out
 
     # This is a comment
     when user said "Hi"
-        $instruction = i'this is an instruction\n'
+        $instruction = ...'this is an instruction\n'
         break
     or when user said something
-        $instruction = i"this is an instruction"
+        $instruction = ..."this is an instruction"
         log "Yes 'sdf'!"
         return
     or when user said something
