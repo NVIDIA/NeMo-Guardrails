@@ -1,0 +1,10 @@
+import core
+
+flow main
+    bot count to 10
+
+flow bot count to $number
+    $current_number = 1
+    while $current_number < $number
+        bot say "{$current_number}"
+        $current_number = $current_number + 1

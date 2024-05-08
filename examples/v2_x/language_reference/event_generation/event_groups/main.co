@@ -1,4 +1,0 @@
-flow main
-    send StartUtteranceBotAction(script="Hi") and StartGestureBotAction(gesture="Wave")
-    send StartGestureBotAction(gesture="Ping") or StartGestureBotAction(gesture="Pong")
-    match AnEvent()
