@@ -734,6 +734,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         # We also extract dynamically the list of tools
         tools = []
+        tool_names = []
         for flow_config in state.flow_configs.values():
             if flow_config.decorators.get("meta", {}).get("tool") is True:
                 # We get rid of the first line, which is the decorator
@@ -748,10 +749,12 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                         break
 
                 tools.append("\n".join(lines))
+                tool_names.append("`" + flow_config.id + "`")
 
         tools = textwrap.indent("\n\n".join(tools), "  ")
 
         render_context["tools"] = tools
+        render_context["tool_names"] = ", ".join(tool_names)
 
         # TODO: add the context of the flow
         prompt = self.llm_task_manager._render_string(
