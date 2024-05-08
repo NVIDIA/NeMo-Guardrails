@@ -114,8 +114,6 @@ def _get_prompt(
 
 def get_prompt(config: RailsConfig, task: Union[str, Task]) -> TaskPrompt:
     """Return the prompt for the given task."""
-    # Currently, we use the main model for all tasks
-    # TODO: add support to use different models for different tasks
 
     # Fetch current task parameters like name, models to use, and the prompting mode
     task_name = str(task.value) if isinstance(task, Task) else task
