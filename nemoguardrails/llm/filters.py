@@ -92,7 +92,7 @@ def co_v2(
 
     for idx, event in enumerate(events):
         if isinstance(event, dict):
-            if event["uid"] not in processed_ids:
+            if event.get("uid") is None or event["uid"] not in processed_ids:
                 if event["type"] == "UtteranceUserActionFinished":
                     history += f'  user said "{event["final_transcript"]}"\n'
                 elif event["type"] == "StartUtteranceBotAction":
@@ -120,7 +120,7 @@ def co_v2(
                     # history += f"  await {str(event['action_name'])}()\n"
                     history += f"  # {str(event.get('return_value'))}\n"
 
-                processed_ids.add(event["uid"])
+                processed_ids.add(event.get("uid"))
 
     return history
 
