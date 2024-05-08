@@ -561,7 +561,8 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         if len(docstrings) > 0:
             docstring = docstrings[0]
-            self._last_docstring = docstring
+            if "one-off" not in docstring:
+                self._last_docstring = docstring
         else:
             docstring = self._last_docstring
 
