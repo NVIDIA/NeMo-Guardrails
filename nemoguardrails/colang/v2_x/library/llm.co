@@ -10,7 +10,7 @@ import utils
 flow bot say something like $text
   """Trigger a bot utterance similar to given text."""
   activate polling llm request response
-  $variation = i"Return a single string that is a new variation of: {$text}"
+  $variation = ..."Return a single string that is a new variation of: {$text}"
   await bot say $variation
 
 
