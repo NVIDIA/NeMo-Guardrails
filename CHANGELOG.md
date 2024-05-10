@@ -7,7 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-* Colang 2.0 Documentation.
+* [Colang 2.0 Documentation](https://docs.nvidia.com/nemo/guardrails/colang_2/overview.html).
+* Revamped [NeMo Guardrails Documentation](https://docs.nvidia.com/nemo-guardrails).
 
 ### Fixed
 
