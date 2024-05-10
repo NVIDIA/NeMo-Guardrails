@@ -1,5 +1,0 @@
-flow main
-    match StartEvent()
-    send StartUtteranceBotAction(script="Hello") as $ref_event
-    match UtteranceBotActionFinished(action_uid=$ref_event.action_uid)
-    send StartGestureBotAction(gesture="Wave")

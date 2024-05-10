@@ -1,3 +1,0 @@
-flow main
-    match Event1(param=["a","b"])
-    send StartUtteranceBotAction(script="Success")

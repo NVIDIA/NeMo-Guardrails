@@ -1,7 +1,0 @@
-flow main
-    match Event1(param=r"(?i)test.*")
-    send StartUtteranceBotAction(script="Success 1")
-    match Event1(param=r"1\d*0")
-    send StartUtteranceBotAction(script="Success 2")
-    match Event1(param=["a",r".*","b"])
-    send StartUtteranceBotAction(script="Success 3")

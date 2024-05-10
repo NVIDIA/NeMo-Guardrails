@@ -3,6 +3,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2024-05-08
+
+### Added
+
+* [Colang 2.0 Documentation](https://docs.nvidia.com/nemo/guardrails/colang_2/overview.html).
+* Revamped [NeMo Guardrails Documentation](https://docs.nvidia.com/nemo-guardrails).
+
+### Fixed
+
+* [#461](https://github.com/NVIDIA/NeMo-Guardrails/pull/461) Feature/ccl cleanup.
+* [#483](https://github.com/NVIDIA/NeMo-Guardrails/pull/483) Fix dictionary expression evaluation bug.
+* [#467](https://github.com/NVIDIA/NeMo-Guardrails/pull/467) Feature/colang doc related cleanups.
+* [#484](https://github.com/NVIDIA/NeMo-Guardrails/pull/484) Enable parsing of `..."<NLD>"` expressions.
+* [#478](https://github.com/NVIDIA/NeMo-Guardrails/pull/478) Fix #420 - evaluate not working with chat models.
+
+
+## [0.8.3] - 2024-04-18
+
+### Changed
+
+* [#453](https://github.com/NVIDIA/NeMo-Guardrails/pull/453) Update documentation for NVIDIA API Catalog example.
+
+### Fixed
+
+* [#382](https://github.com/NVIDIA/NeMo-Guardrails/pull/382) Fix issue with `lowest_temperature` in self-check and hallucination rails.
+* [#454](https://github.com/NVIDIA/NeMo-Guardrails/pull/454) Redo fix for #385.
+* [#442](https://github.com/NVIDIA/NeMo-Guardrails/pull/442) Fix README type by @dileepbapat.
+
+
 ## [0.8.2] - 2024-04-01
 
 ### Added

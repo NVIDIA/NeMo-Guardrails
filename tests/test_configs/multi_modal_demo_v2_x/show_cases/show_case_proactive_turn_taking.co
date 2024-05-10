@@ -1,16 +1,22 @@
+import core
+import avatars
+import llm
+import timing
+import utils
+
 flow showcase proactive turn taking
   activate reaction bot question repetition for user silence 5 1000
 
   bot inform "I am going to ask you questions and if you don't respond within 5 seconds I will repeat them."
 
   while True
-    $question = i"Ask a random question that can be answered with just yes or no."
+    $question = ..."Ask a random question that can be answered with just yes or no."
     if not is_str($question)
       $question = "Do you like Avatars?"
     bot ask $question
     when user said something
       bot say "Great, you have answered! I will keep asking you questions until you say 'Exit the showcase'!"
-    orwhen user expressed done
+    or when user expressed done
       wait 1
       bot inform "Ok! You see, that's how I can be proactive and repeat the question. That's it!"
       break

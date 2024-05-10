@@ -1,0 +1,3 @@
+flow main
+    match UtteranceUserActionFinished() as $event_ref
+    send StartUtteranceBotAction(script=$event_ref.final_transcript)

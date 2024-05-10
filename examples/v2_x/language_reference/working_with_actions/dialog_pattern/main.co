@@ -1,8 +1,0 @@
-flow main
-    match UtteranceUserAction.Finished(final_transcript="Hi")
-    start UtteranceBotAction(script="Hi there! How are you?") as $ref_action_1
-    match $ref_action_1.Finished()
-    match UtteranceUserAction.Finished(final_transcript="Good and you?")
-    start UtteranceBotAction(script="Great! Thanks") as $ref_action_2
-    start GestureBotAction(gesture="Thumbs up") as $ref_action_3
-    match $ref_action_2.Finished() and $ref_action_3.Finished()

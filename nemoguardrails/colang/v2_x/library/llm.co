@@ -1,112 +1,228 @@
 # meta: exclude from llm
+import core
+import timing
 import utils
 
+# -----------------------------------
+# LLM Enabled Bot Actions
+# -----------------------------------
 
-@loop(id="action_log")
-flow log user action
-  """Record user actions to the interaction log."""
-  match FlowFinished(flow_id=regex("^user said")) as $event
-  $info = flows_info($event.flow.uid)
-  $count = 1
-  while $count < len($info.flow_hierarchy)
-    $intent_flow_uid = $info.flow_hierarchy[$count]
-    $intent_flow_name = find_all("\((user (?!said).*)\)", $intent_flow_uid)
-    if $intent_flow_name
-      send UserActionLog(flow_id=$event.flow_id, parameter=$event.flow.transcript, intent_flow_id=$intent_flow_name[0])
-      break
-    $count = $count + 1
-
-@loop(id="intent_log")
-flow log user intent
-  """Record user intents to the interaction log."""
-  match FlowFinished(flow_id=regex("^user (?!said)")) as $event
-  send UserIntentLog(flow_id=$event.flow_id, parameter=None)
+flow bot say something like $text
+  """Trigger a bot utterance similar to given text."""
+  activate polling llm request response
+  $variation = ..."Return a single string that is a new variation of: {$text}"
+  await bot say $variation
 
 
-@loop(id="action_log")
-flow log bot action
-  """Record bot actions to the interaction log."""
-  match FlowFinished(flow_id=regex("^bot say")) as $event
-  $info = flows_info($event.flow.uid)
-  $count = 1
-  while $count < len($info.flow_hierarchy)
-    $intent_flow_uid = $info.flow_hierarchy[$count]
-    $intent_flow_name = find_all("\((bot (?!say).*)\)", $intent_flow_uid)
-    if $intent_flow_name
-      send BotActionLog(flow_id=$event.flow_id, parameter=$event.text, intent_flow_id=$intent_flow_name[0])
-      break
-    $count = $count + 1
+# -----------------------------------
+# LLM Utilities
+# -----------------------------------
+
+@loop("llm_response_polling")
+flow polling llm request response $interval=1.0
+  """Start response polling for any LLM invocation."""
+  match StartGenerateUserIntentAction() as $event_ref
+    or StartGenerateFlowContinuationAction() as $event_ref
+    or StartGenerateFlowFromNameAction() as $event_ref
+    or StartGenerateValueAction() as $event_ref
+    or StartGenerateFlowFromInstructionsAction() as $event_ref
+  start repeating timer "llm_response_polling" $interval as $polling_timer
+  match $event_ref.action.Finished()
+  send $polling_timer.Stop()
 
 
-@loop(id="intent_log")
-flow log bot intent
-  """Record bot intents to the interaction log."""
-  match FlowFinished(flow_id=regex("^bot (?!say)")) as $event
-  send BotIntentLog(flow_id=$event.flow_id, parameter=None)
+# -----------------------------------
+# Interaction Continuation
+# -----------------------------------
+
+flow llm continuation
+  """Activate all LLM based interaction continuations."""
+  activate automating intent detection
+  activate generating user intent for unhandled user utterance
+  activate continuation on unhandled user intent
+  activate continuation on undefined flow
 
 
-flow unhandled user utterance -> $event
-  match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
+flow generating user intent for unhandled user utterance
+  """Continue the interaction on an unexpected user utterance."""
+  activate tracking bot talking state
+  global $bot_talking_state
 
+  await _user_said_something_unexpected as $user_said
+  $event = $user_said.event
+  if $bot_talking_state != True
+    # Don't invoke llm while bot is talking
+    $action = 'user said "{$event.final_transcript}"'
+    $intent = await GenerateUserIntentAction(user_action=$action, max_example_flows=20)
 
-flow continue on undefined user utterance
-  """Continue the interaction on a user utterance that was not defined."""
-  #match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
-  await unhandled user utterance as $ref
-  $event = $ref.event
-
-  $action = 'user said "{$event.final_transcript}"'
-  $intent = await GenerateUserIntentAction(user_action=$action, max_example_flows=20)
+  # Generate the 'user intent' by sending out the FinishFlow event
+  send FinishFlow(flow_id=$intent, info="llm", priority=True)
 
   # We need to log the user action
   send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id=$intent)
-  # TODO: check why this is needed and the auto logging is not triggered.
-  send UserIntentLog(flow_id=$intent, parameter=None)
-  # Generate the 'user intent' by sending out the FinishFlow event
-  send FinishFlow(flow_id=$intent)
-
+  # And we also need to log the generated user intent if not done by another mechanism
+  when UserIntentLog(flow_id=$intent)
+    return
+  or when UnhandledEvent(event="FinishFlow", flow_id=$intent)
+    send UserIntentLog(flow_id=$intent, parameter=None)
 
 flow unhandled user intent -> $intent
   match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$self.loop_id}) as $event
-  $intent = $event.arguments.flow_id
+  $intent = $event.flow_id
 
 
-flow continue on undefined user intent
-  """Generates next bot intent for unhandled user intents."""
+flow continuation on unhandled user intent
+  """Generate and start new flow to continue the interaction for an unhandled user intent."""
   await unhandled user intent
+
+  $flow_name = await llm generate interaction continuation flow
+
+  if $flow_name
+    await await_flow_by_name $flow_name
+    await RemoveFlowsAction(flow_ids=[$flow_name])
+
+
+flow continuation on undefined flow
+  """Generate and start a new flow to continue the interaction for the start of an undefined flow."""
+  match UnhandledEvent(event="StartFlow") as $event
+
+  # We explicitly set this here so this can start again recursively if needed.
+  start_new_flow_instance:
+
+  if search('^user ',$event.flow_id)
+    # We have an undefined user intent, so we just fake it to be started by this fallback flow
+
+    send FlowStarted(flow_id=$event.flow_id, flow_instance_uid=$event.flow_instance_uid)
+    # Once this fallback flow receives the user intent it will finish and therefore also trigger the original matcher
+    match FlowFinished(flow_id=$event.flow_id)
+
+  else
+    # We have an undefined bot intent, let's generate a new flow for it
+
+    # Generate a flow and add it to the runtime
+    $flow_source = await GenerateFlowFromNameAction(name=$event.flow_id)
+    await AddFlowsAction(config=$flow_source)
+
+    # Start and wait for it to finish
+    await await_flow_by_name $event.flow_id
+    await RemoveFlowsAction(flow_ids=[$event.flow_id])
+
+
+flow llm generate interaction continuation flow -> $flow_name
+  """Generate a flow that continues the current interaction."""
+  activate polling llm request response
+  # Generate continuation based current interaction history
 
   $flow_info = await GenerateFlowContinuationAction(temperature=0.1)
   $exists = await CheckValidFlowExistsAction(flow_id=$flow_info.name)
 
   if $exists == False
     $flows = await AddFlowsAction(config=$flow_info.body)
+    if len($flows) == 0
+      print "Parsing failed for LLM generated flow!"
+      return None
 
-  await await_flow_by_name $flow_info.name
+  $flow_name = $flow_info.name
+  return $flow_name
+
+
+flow llm continue interaction
+  """Generate and continue with a suitable interaction."""
+  $flow_name = await llm generate interaction continuation flow
+
+  if $flow_name
+    await await_flow_by_name $flow_name
+    await RemoveFlowsAction(flow_ids=[$flow_name])
+
+# -----------------------------------
+# Interaction History Logging
+# -----------------------------------
+flow automating intent detection
+  """Activate all automated user and bot intent flows logging based on flow naming."""
+  activate marking user intent flows
+  activate marking bot intent flows
+  activate logging marked user intent flows
+  activate logging marked bot intent flows
+
+
+@loop(id="intent_log")
+flow marking user intent flows
+  """Marking user intent flows using only naming convention."""
+  match FlowStarted(flow_id=regex("^user (?!said$|saying|started)")) as $event
+  $info = flows_info($event.flow.uid)
+  if "user_intent" not in $info.meta_tags and "user_action" not in $info.meta_tags
+    ($event.flow.context.update({"_user_intent": $event.flow.flow_id}))
+
+
+@loop(id="intent_log")
+flow logging marked user intent flows
+  """Generate user intent logging for marked flows that finish by themselves."""
+  $pattern = "^user (?!said$|saying|started)"
+  match FlowFinished(flow_id=regex($pattern)) as $event
+  $info = flows_info($event.flow.uid)
+  if $event.source_flow_instance_uid == $event.flow_instance_uid and "_user_intent" in $event.flow.context and "user_intent" not in $info.meta_tags and "user_action" not in $info.meta_tags
+    $intent = $event.flow.context["_user_intent"]
+    send UserIntentLog(flow_id=$intent, parameter=None)
+
+
+@loop(id="intent_log")
+flow marking bot intent flows
+  """Marking bot intent flows using only naming convention."""
+  match FlowStarted(flow_id=regex("^bot (?!say$|said|inform$|informed|ask$|asked|express$|expressed|respond$|responded|clarify$|clarified|suggest$|suggested|gesture$|gestured|started)")) as $event
+  $info = flows_info($event.flow.uid)
+  if "bot_intent" not in $info.meta_tags and "bot_action" not in $info.meta_tags
+    ($event.flow.context.update({"_bot_intent": $event.flow.flow_id}))
+
+
+@loop(id="intent_log")
+flow logging marked bot intent flows
+  """Generate user intent logging for marked flows that finish by themselves."""
+  match FlowFinished(flow_id=regex("^bot (?!say$|said|inform$|informed|ask$|asked|express$|expressed|respond$|responded|clarify$|clarified|suggest$|suggested|gesture$|gestured|started)")) as $event
+  $info = flows_info($event.flow.uid)
+  if $event.source_flow_instance_uid == $event.flow_instance_uid and "_bot_intent" in $event.flow.context and "user_intent" not in $info.meta_tags and "user_action" not in $info.meta_tags
+    $intent = $event.flow.context["_bot_intent"]
+    send BotIntentLog(flow_id=$intent, parameter=None)
+
+
+# ----------------------------------
+# State Tracking Flows
+# -----------------------------------
+
+@loop("state_tracking")
+flow tracking unhandled user intent state
+  """Track most recent unhandled user intent state in global variable $user_intent_state."""
+  global $user_intent_state
+  when unhandled user intent as $flow
+    $unhandled_user_intent_state = $flow.flow_name
+  or when FlowFinished(flow_id=regex("^user ")) as $event
+    $unhandled_user_intent_state = None
+
+
+# ----------------------------------
+# Experimental flows (undocumented)
+# ----------------------------------
+
+flow execute llm instruction $instructions
+  """This will create a new flow based on the provided instructions and start it."""
+  $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
+
+  await AddFlowsAction(config=$flow_info.body)
+
+  $new_flow_instance_uid = "($flow_info.name){uid()}"
+  send StartFlow(flow_id=$flow_info.name, flow_instance_uid=$new_flow_instance_uid)
+  match FlowStarted(flow_id=$flow_info.name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
+  match $event_ref.flow.Finished()
   await RemoveFlowsAction(flow_ids=[$flow_info.name])
 
 
-flow continue on undefined flow
-  """We want to start an undefined flow."""
-  match UnhandledEvent(event="StartFlow") as $event
-
-  # We explicitly set this here so this can start again recursively if needed.
-  start_new_flow_instance:
-
-  # Generate a flow and add it to the runtime
-  $flow_source = await GenerateFlowFromNameAction(name=$event.flow_id)
-  await AddFlowsAction(config=$flow_source)
-
-  # Start and wait for it to finish
-  await await_flow_by_name $event.flow_id
-  await RemoveFlowsAction(flow_ids=[$event.flow_id])
+@meta(user_intent=True)
+flow user requested a task
+  user said "do something"
+    or user said "can you do something"
+    or user said "please do"
 
 
-flow llm continuation
-  activate log user action
-  activate log user intent
-  activate log bot action
-  activate log bot intent
-
-  activate continue on undefined user utterance
-  activate continue on undefined user intent
-  activate continue on undefined flow
+flow custom instructions
+  user requested a task
+  $instructions = await GetLastUserMessageAction()
+  execute llm instruction $instructions

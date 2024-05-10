@@ -1,6 +1,0 @@
-flow main
-    match ((UtteranceUserActionFinished(final_transcript="ok") or UtteranceUserActionFinished(final_transcript="sure"))
-            and GestureUserActionFinished(gesture="thumbs up"))
-        or ((UtteranceUserActionFinished(final_transcript="no") or UtteranceUserActionFinished(final_transcript="not sure"))
-            and GestureUserActionFinished(gesture="thumbs down"))
-    send StartUtteranceBotAction(script="Success")

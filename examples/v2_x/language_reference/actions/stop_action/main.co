@@ -1,0 +1,4 @@
+flow main
+    match StartEvent()
+    start UtteranceBotAction(script="Great! Thanks") as $ref_action
+    send $ref_action.Stop()

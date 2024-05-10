@@ -1,5 +1,0 @@
-flow main
-    match UtteranceUserActionFinished(final_transcript="hi") and UtteranceUserActionFinished(final_transcript="you")
-    send StartUtteranceBotAction(script="Success1")
-    match UtteranceUserActionFinished(final_transcript="A") or UtteranceUserActionFinished(final_transcript="B")
-    send StartUtteranceBotAction(script="Success2")

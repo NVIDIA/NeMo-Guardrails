@@ -1,5 +1,0 @@
-flow main
-    match StartEvent()
-    start UtteranceBotAction(script="Great! Thanks") as $ref_action_1
-        and GestureBotAction(gesture="Thumbs up") as $ref_action_2
-    match $ref_action_1.Finished() or $ref_action_2.Finished()

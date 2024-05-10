@@ -1,6 +1,0 @@
-flow main
-    match UtteranceUserAction.Finished(final_transcript="Hi")
-    await UtteranceBotAction(script="Hi there! How are you?")
-    match UtteranceUserAction.Finished(final_transcript="Good and you?")
-    await UtteranceBotAction(script="Great! Thanks")
-        and GestureBotAction(gesture="Thumbs up")

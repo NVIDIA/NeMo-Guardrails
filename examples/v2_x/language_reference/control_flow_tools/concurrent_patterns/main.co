@@ -1,0 +1,13 @@
+import core
+
+flow main
+    bot say "How are you?"
+    bot react to user feeling good or bot react to user feeling bad
+
+flow bot react to user feeling good
+    user said "Good" or user said "Great"
+    bot say "Great"
+
+flow bot react to user feeling bad
+    user said "Bad" or user said "Terrible"
+    bot say "Sorry to hear"

@@ -1,0 +1,7 @@
+flow main
+    match Event(param=regex("(?i)test.*"))
+    send StartUtteranceBotAction(script="Success 1")
+    match Event(param=regex("1\d*0"))
+    send StartUtteranceBotAction(script="Success 2")
+    match Event(param=["a",regex(".*"),"b"])
+    send StartUtteranceBotAction(script="Success 3")

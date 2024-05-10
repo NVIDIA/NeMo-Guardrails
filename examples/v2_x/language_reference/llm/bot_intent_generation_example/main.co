@@ -1,6 +1,0 @@
-flow main
-    activate poll llm request response 1.0
-
-    while True
-        when user said something
-            generate then continue interaction

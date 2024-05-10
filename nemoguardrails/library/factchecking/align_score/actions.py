@@ -18,6 +18,7 @@ from typing import Optional
 
 from langchain.llms import BaseLLM
 
+from nemoguardrails import RailsConfig
 from nemoguardrails.actions import action
 from nemoguardrails.library.factchecking.align_score.request import alignscore_request
 from nemoguardrails.library.self_check.facts.actions import self_check_facts
@@ -31,6 +32,7 @@ async def alignscore_check_facts(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
+    config: Optional[RailsConfig] = None,
 ):
     """Checks the facts for the bot response using an information alignment score."""
     fact_checking_config = llm_task_manager.config.rails.config.fact_checking
@@ -48,7 +50,7 @@ async def alignscore_check_facts(
         )
         # If fallback is enabled, we use AskLLM
         if fallback_to_self_check:
-            return await self_check_facts(llm_task_manager, context, llm)
+            return await self_check_facts(llm_task_manager, context, llm, config)
         else:
             # If we can't verify the facts, we assume it's ok
             # TODO: should this default be configurable?

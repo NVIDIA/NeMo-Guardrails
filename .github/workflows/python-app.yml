@@ -33,6 +33,10 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install ".[dev]"
+    - name: Run pre-commit hooks
+      run: |
+        pre-commit install
+        pre-commit run --all-files
     - name: Test with pytest
       run: |
         pytest

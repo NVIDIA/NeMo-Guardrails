@@ -30,9 +30,9 @@ from langchain.callbacks.manager import (
     CallbackManagerForLLMRun,
 )
 from langchain.llms.base import LLM
-from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain.schema.output import GenerationChunk
 from langchain_community import llms
+from langchain_community.llms import HuggingFacePipeline
 
 from nemoguardrails.rails.llm.config import Model
 

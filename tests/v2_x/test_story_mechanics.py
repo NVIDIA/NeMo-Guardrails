@@ -61,7 +61,7 @@ def test_when_else_deep_hierarchy_case_match():
       while True
         when bot asked something
           start GestureBotAction(gesture="Case 1")
-        orwhen bot said something
+        or when bot said something
           start GestureBotAction(gesture="Case 2")
 
     flow main
@@ -263,10 +263,10 @@ def test_flow_bot_question_repetition():
         start TimerBotAction(timer_name="user_silence", duration=$time_s) as $timer_ref
         when $timer_ref.Finished()
           break
-        orwhen UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
+        or when UtteranceUserAction.Started() or UtteranceUserAction.TranscriptUpdated()
           send $timer_ref.Stop()
           match UtteranceUserAction.Finished()
-        orwhen UtteranceUserAction.Finished()
+        or when UtteranceUserAction.Finished()
           send $timer_ref.Stop()
 
     flow question repetition $time
@@ -274,7 +274,7 @@ def test_flow_bot_question_repetition():
       when user was silent 5.0
         $question = $ref.context.event.arguments.text
         bot ask $question
-      orwhen user said something or bot said something
+      or when user said something or bot said something
         return
 
     flow main
@@ -395,7 +395,7 @@ def test_multi_level_head_merging():
       activate posture management
       when user expressed done
         bot say "Case 1"
-      orwhen user said something
+      or when user said something
         bot say "Case 2"
     """
 

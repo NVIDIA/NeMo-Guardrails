@@ -17,6 +17,7 @@ from typing import Optional
 
 from langchain.llms import BaseLLM
 
+from nemoguardrails import RailsConfig
 from nemoguardrails.actions import action
 from nemoguardrails.actions.llm.utils import llm_call
 from nemoguardrails.context import llm_call_info_var
@@ -31,6 +32,7 @@ async def self_check_facts(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
+    config: Optional[RailsConfig] = None,
 ):
     """Checks the facts for the bot response by appropriately prompting the base llm."""
     evidence = context.get("relevant_chunks", [])
@@ -52,7 +54,7 @@ async def self_check_facts(
     # Initialize the LLMCallInfo object
     llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_FACTS.value))
 
-    with llm_params(llm, temperature=0.0):
+    with llm_params(llm, temperature=config.lowest_temperature):
         entails = await llm_call(llm, prompt, stop=stop)
 
     entails = entails.lower().strip()
