@@ -6,3 +6,8 @@ models:
   - type: embeddings
     engine: cohere
     model: embed-english-light-v3.0
+
+instructions:
+  - type: "general"
+    content:
+      Below is a conversation between an AI assistant and a user.

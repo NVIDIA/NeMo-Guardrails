@@ -6,7 +6,7 @@ This example configuration uses the Cohere chat API. To test it, you need access
 
 ## Configuration
 
-This configuration uses the `command-r` model as the main LLM model and for jailbreak detection and output moderation. Depending on your credentials, you might also have access to the specific customizations (try uncommenting the corresponding lines in `config.yml` and check if you get an error).
+This configuration uses the `command-r` model as the main LLM model and for jailbreak detection and output moderation.
 
 Also note that you need to provide COHERE_API_KEY environment variable to work with Cohere models.
 

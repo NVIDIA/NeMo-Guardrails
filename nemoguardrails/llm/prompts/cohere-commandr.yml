@@ -9,7 +9,7 @@ prompts:
 
       - type: system
         content: |-
-          You are a helpful ai assistant. Your response should include three parts: User intent, Bot intent and Bot message.
+          Be concise, monotone and predictable. Your response should include three parts: User intent, Bot intent and Bot message.
           - User intent: <Extract user intent>
           - Bot intent: <Show what you think>
           - Bot message: <Actual response>
@@ -30,27 +30,6 @@ prompts:
 
     output_parser: "user_intent"
 
-  - task: generate_user_intent
-    models:
-      - cohere/command-r
-    messages:
-      - type: system
-        content: "{{ general_instructions }}"
-
-      - type: system
-        content: |- 
-          You are a helpful ai assistant. Your response should include three parts: User intent, Bot intent and Bot message.
-          - User intent: <Extract user intent>
-          - Bot intent: <Show what you think>
-          - Bot message: <Actual response>
-          Each part can only appear once.
-
-      - "{{ sample_conversation | first_turns(2) | to_messages }}"
-      - "{{ history | colang | to_messages }}"
-
-    mode: compact
-    output_parser: "user_intent"
-
   - task: generate_next_steps
     models:
       - cohere/command-r
@@ -60,7 +39,7 @@ prompts:
 
       - type: system
         content: |- 
-          You are a helpful ai assistant. Your response should include three parts: User intent, Bot intent and Bot message.
+          Be concise, monotone and predictable. Your response should include three parts: User intent, Bot intent and Bot message.
           - User intent: <Extract user intent>
           - Bot intent: <Show what you think>
           - Bot message: <Actual response>
@@ -90,7 +69,7 @@ prompts:
 
       - type: system
         content: |- 
-          You are a helpful ai assistant. Your response should include three parts: User intent, Bot intent and Bot message.
+          Be concise, monotone and predictable. Your response should include three parts: User intent, Bot intent and Bot message.
           - User intent: <Extract user intent>
           - Bot intent: <Show what you think>
           - Bot message: <Actual response>
@@ -131,7 +110,7 @@ prompts:
 
       - type: system
         content: |- 
-          You are a helpful ai assistant. Your response should include three parts: User intent, Bot intent and Bot message.
+          Be concise, monotone and predictable. Your response should include three parts: User intent, Bot intent and Bot message.
           - User intent: <Extract user intent>
           - Bot intent: <Show what you think>
           - Bot message: <Actual response>

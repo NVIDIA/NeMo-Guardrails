@@ -22,7 +22,7 @@ from tests.constants import COHEREAI_API_URL_CHAT
 from tests.utils import TestChat
 
 EXAMPLES_FOLDER = os.path.join(os.path.dirname(__file__), "../../", "examples")
-os.environ['COHERE_API_KEY']='XXXXXXXXX4UsaUWoAk0UYCHcbFaLJAeCjoOpDDrV'
+os.environ['COHERE_API_KEY'] = 'DUMMY'
 
 
 def test_greeting(httpx_mock):
