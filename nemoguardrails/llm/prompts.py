@@ -120,7 +120,7 @@ def get_prompt(config: RailsConfig, task: Union[str, Task]) -> TaskPrompt:
 
     task_model = "unknown"
     if config.models:
-        _models = [model for model in config.models if model.type == task.value]
+        _models = [model for model in config.models if model.type == task_name]
         if not _models: 
             _models = [model for model in config.models if model.type == "main"]
 
