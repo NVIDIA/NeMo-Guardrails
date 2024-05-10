@@ -1,3 +1,5 @@
+import core
+
 flow main
     user said something as $flow
     log $flow.transcript

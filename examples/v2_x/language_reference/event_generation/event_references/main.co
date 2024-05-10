@@ -1,4 +1,0 @@
-flow main
-    send StartUtteranceBotAction(script="Smile") as $event_ref
-    send StartGestureBotAction(gesture=$event_ref.arguments.script)
-    match AnEvent()

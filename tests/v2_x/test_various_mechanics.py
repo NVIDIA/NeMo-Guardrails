@@ -705,7 +705,7 @@ def test_generate_value_with_NLD():
     content = """
     flow main
       #$test = await GenerateValueAction(var_name="number", instructions="Extract the number the user guessed.")
-      $test = i'Generate a random number'
+      $test = ...'Generate a random number'
       send StartUtteranceBotAction(script="{$test}")
     """
 

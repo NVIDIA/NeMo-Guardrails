@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import json
 import os
 
 import tqdm
 
 from nemoguardrails import LLMRails
+from nemoguardrails.actions.llm.utils import llm_call
 from nemoguardrails.eval.utils import load_dataset
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task
@@ -88,7 +90,7 @@ class ModerationRailsEvaluation:
             tuple: Jailbreak prediction, updated results dictionary.
         """
         check_input_prompt = self.llm_task_manager.render_task_prompt(
-            Task.SELF_CHECK_INPUT, {"user_input": prompt}
+            Task.SELF_CHECK_INPUT, {"user_input": prompt}, force_string_to_message=True
         )
         print(check_input_prompt)
         completed = False
@@ -96,7 +98,9 @@ class ModerationRailsEvaluation:
         num_tries = 0
         while not completed and num_tries < max_tries:
             try:
-                jailbreak = self.llm(check_input_prompt)
+                jailbreak = asyncio.run(
+                    llm_call(prompt=check_input_prompt, llm=self.llm)
+                )
                 jailbreak = jailbreak.lower().strip()
                 print(jailbreak)
 
@@ -133,13 +137,17 @@ class ModerationRailsEvaluation:
 
         try:
             with llm_params(self.llm, temperature=0.1, max_tokens=100):
-                bot_response = self.llm(prompt)
+                bot_response = asyncio.run(llm_call(prompt=prompt, llm=self.llm))
 
             check_output_check_prompt = self.llm_task_manager.render_task_prompt(
-                Task.SELF_CHECK_OUTPUT, {"bot_response": bot_response}
+                Task.SELF_CHECK_OUTPUT,
+                {"bot_response": bot_response},
+                force_string_to_message=True,
             )
             print(check_output_check_prompt)
-            check_output = self.llm(check_output_check_prompt)
+            check_output = asyncio.run(
+                llm_call(prompt=check_output_check_prompt, llm=self.llm)
+            )
             check_output = check_output.lower().strip()
             print(check_output)
 

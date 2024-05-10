@@ -1,5 +1,8 @@
+import core
+import avatars
+
 flow main
-    activate handling of bot gesture reaction
+    activate handling bot gesture reaction
     while True
         when user said "Hi"
             bot say "Hi"
@@ -8,11 +11,10 @@ flow main
         or when user said "Bye"
             bot say "Goodbye"
 
-@loop("bot_gesture_handling")
-flow handling of bot gesture reaction
+@loop("bot gesture reaction")
+flow handling bot gesture reaction
     activate reaction of bot to user greeting
     activate reaction of bot to user leaving
-    match WaitEvent() # We have to wait since otherwise the flow finishes
 
 flow reaction of bot to user greeting
     user said "Hi"
@@ -21,15 +23,3 @@ flow reaction of bot to user greeting
 flow reaction of bot to user leaving
     user said "Bye"
     bot gesture "frown"
-
-flow bot say $text
-  await UtteranceBotAction(script=$text)
-
-flow bot gesture $gesture
-  await GestureBotAction(gesture=$gesture)
-
-flow user said $text
-  match UtteranceUserAction.Finished(final_transcript=$text)
-
-flow user said something
-  match UtteranceUserAction.Finished()

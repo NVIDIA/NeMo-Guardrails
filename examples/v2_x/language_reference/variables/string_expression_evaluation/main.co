@@ -1,0 +1,4 @@
+flow main
+    $user_name = "John"
+    await UtteranceBotAction(script="Hi {$user_name}!")
+    match AnEvent()
