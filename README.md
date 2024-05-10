@@ -12,7 +12,11 @@
 
 > **DISCLAIMER**: The beta release is undergoing active development and may be subject to changes and improvements, which could cause instability and unexpected behavior. We currently do not recommend deploying this beta version in a production setting. We appreciate your understanding and contribution during this stage. Your support and feedback are invaluable as we advance toward creating a robust, ready-for-production LLM guardrails toolkit. The examples provided within the documentation are for educational purposes to get started with NeMo Guardrails, and are not meant for use in production applications.
 
-📌 ✨✨✨ **The official NeMo Guardrails documentation has moved to [docs.nvidia.com/nemo-guardrails](https://docs.nvidia.com/nemo-guardrails).** ✨✨✨📌
+✨✨✨
+
+📌 **The official NeMo Guardrails documentation has moved to [docs.nvidia.com/nemo-guardrails](https://docs.nvidia.com/nemo-guardrails).**
+
+✨✨✨
 
 NeMo Guardrails is an open-source toolkit for easily adding *programmable guardrails* to LLM-based conversational applications. Guardrails (or "rails" for short) are specific ways of controlling the output of a large language model, such as not talking about politics, responding in a particular way to specific user requests, following a predefined dialog path, using a particular language style, extracting structured data, and more.
 
