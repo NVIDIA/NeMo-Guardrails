@@ -744,8 +744,8 @@ class RailsConfig(BaseModel):
         description="Whether this configuration should use streaming mode or not.",
     )
 
-    passthrough: bool = Field(
-        default=False,
+    passthrough: Optional[bool] = Field(
+        default=None,
         description="Weather the original prompt should pass through the guardrails configuration as is. "
         "This means it will not be altered in any way. ",
     )

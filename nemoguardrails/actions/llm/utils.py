@@ -64,14 +64,17 @@ async def llm_call(
         # We first need to translate the array of messages into LangChain message format
         messages = []
         for _msg in prompt:
-            if _msg["type"] == "user":
+            msg_type = _msg["type"] if "type" in _msg else _msg["role"]
+            if msg_type == "user":
                 messages.append(HumanMessage(content=_msg["content"]))
-            elif _msg["type"] in ["bot", "assistant"]:
+            elif msg_type in ["bot", "assistant"]:
                 messages.append(AIMessage(content=_msg["content"]))
-            elif _msg["type"] == "system":
+            elif msg_type == "system":
                 messages.append(SystemMessage(content=_msg["content"]))
             else:
-                raise ValueError(f"Unknown message type {_msg['type']}")
+                # TODO: add support for tool-related messages
+                raise ValueError(f"Unknown message type {msg_type}")
+
         result = await llm.agenerate_prompt(
             [ChatPromptValue(messages=messages)], callbacks=all_callbacks, stop=stop
         )
