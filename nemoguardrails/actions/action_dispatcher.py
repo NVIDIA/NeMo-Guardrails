@@ -226,6 +226,7 @@ class ActionDispatcher:
                     return result, "success"
                 except Exception as e:
                     log.warning(f"Error while execution {action_name}: {e}")
+                    log.exception(e)
 
         return None, "failed"
 
