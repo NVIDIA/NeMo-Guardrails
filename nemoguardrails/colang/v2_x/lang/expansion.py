@@ -475,7 +475,9 @@ def _expand_await_element(
                 )
             )
         else:
-            raise ColangSyntaxError(f"Unsupported spec type '{type(element.spec)}'")
+            raise ColangSyntaxError(
+                f"Unsupported spec type '{type(element.spec)}', element '{element.spec.name}' on line {element._source.line}"
+            )
     else:
         # Element group
         normalized_group = normalize_element_groups(element.spec)
