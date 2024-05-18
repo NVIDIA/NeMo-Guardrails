@@ -611,7 +611,7 @@ def _expand_activate_element(
         else:
             # It's an UMIM event
             raise ColangSyntaxError(
-                f"Only flows can be activated but not '{element.spec.spec_type}'!"
+                f"Only flows can be activated but not '{element.spec.spec_type}', element '{element.spec.name}' on line {element._source.line}!"
             )
     elif isinstance(element.spec, dict):
         # Multiple match elements
