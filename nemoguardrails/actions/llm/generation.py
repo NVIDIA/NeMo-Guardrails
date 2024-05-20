@@ -398,9 +398,11 @@ class LLMGenerationActions:
 
             # We make this call with temperature 0 to have it as deterministic as possible.
             generation_options: GenerationOptions = generation_options_var.get()
-            with llm_params(
-                llm, **((generation_options and generation_options.llm_params) or {})
-            ):
+            additional_params = {
+                **((generation_options and generation_options.llm_params) or {}),
+                "temperature": self.config.lowest_temperature,
+            }
+            with llm_params(llm, **additional_params):
                 result = await llm_call(llm, prompt)
 
             # Parse the output using the associated parser
@@ -569,9 +571,11 @@ class LLMGenerationActions:
 
             # We use temperature 0 for next step prediction as well
             generation_options: GenerationOptions = generation_options_var.get()
-            with llm_params(
-                llm, **((generation_options and generation_options.llm_params) or {})
-            ):
+            additional_params = {
+                **((generation_options and generation_options.llm_params) or {}),
+                "temperature": self.config.lowest_temperature,
+            }
+            with llm_params(llm, **additional_params):
                 result = await llm_call(llm, prompt)
 
             # Parse the output using the associated parser
