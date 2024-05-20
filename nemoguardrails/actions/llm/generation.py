@@ -397,7 +397,10 @@ class LLMGenerationActions:
             llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_USER_INTENT.value))
 
             # We make this call with temperature 0 to have it as deterministic as possible.
-            with llm_params(llm, temperature=self.config.lowest_temperature):
+            generation_options: GenerationOptions = generation_options_var.get()
+            with llm_params(
+                llm, **((generation_options and generation_options.llm_params) or {})
+            ):
                 result = await llm_call(llm, prompt)
 
             # Parse the output using the associated parser
@@ -565,7 +568,10 @@ class LLMGenerationActions:
             llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_NEXT_STEPS.value))
 
             # We use temperature 0 for next step prediction as well
-            with llm_params(llm, temperature=self.config.lowest_temperature):
+            generation_options: GenerationOptions = generation_options_var.get()
+            with llm_params(
+                llm, **((generation_options and generation_options.llm_params) or {})
+            ):
                 result = await llm_call(llm, prompt)
 
             # Parse the output using the associated parser
@@ -961,7 +967,10 @@ class LLMGenerationActions:
         # Initialize the LLMCallInfo object
         llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_VALUE.value))
 
-        with llm_params(llm, temperature=self.config.lowest_temperature):
+        generation_options: GenerationOptions = generation_options_var.get()
+        with llm_params(
+            llm, **((generation_options and generation_options.llm_params) or {})
+        ):
             result = await llm_call(llm, prompt)
 
         # Parse the output using the associated parser
