@@ -1139,10 +1139,16 @@ class LLMGenerationActions:
                 _streaming_handler = StreamingHandler()
                 local_streaming_handlers[_streaming_handler.uid] = _streaming_handler
 
+                generation_options: GenerationOptions = generation_options_var.get()
+                additional_params = {
+                    **((generation_options and generation_options.llm_params) or {}),
+                    "temperature": self.config.lowest_temperature,
+                }
+
                 # We buffer the content, so we can get a chance to look at the
                 # first k lines.
                 await _streaming_handler.enable_buffering()
-                with llm_params(llm, temperature=self.config.lowest_temperature):
+                with llm_params(llm, **additional_params):
                     asyncio.create_task(
                         llm_call(
                             llm,
