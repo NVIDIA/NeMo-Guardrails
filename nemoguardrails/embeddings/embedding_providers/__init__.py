@@ -84,6 +84,10 @@ def init_embedding_model(embedding_model: str, embedding_engine: str) -> Embeddi
 
             model = OpenAIEmbeddingModel(embedding_model)
 
+        elif embedding_engine == "cohere":
+            from .cohere import CohereEmbeddingModel
+
+            model = CohereEmbeddingModel(embedding_model)
         else:
             raise ValueError(f"Invalid embedding engine: {embedding_engine}")
 

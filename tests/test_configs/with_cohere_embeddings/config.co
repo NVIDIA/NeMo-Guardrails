@@ -1,0 +1,12 @@
+define user ask about capabilities
+  "What can you do?"
+  "What can you help me with?"
+  "tell me what you can do"
+  "tell me about you"
+
+define bot respond about capabilities
+  "I am an AI assistant that helps answer questions."
+
+define flow
+  user ask about capabilities
+  bot respond about capabilities
