@@ -78,7 +78,7 @@ flow bot asks email address
   while True
     when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : regex("@$")}])
         bot say "And now only the domain missing!"
-    or when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : regex("^[-\w\.]+@([\w-]+\.)+[\w-]{2,4}$")}])
+    or when VisualFormSceneAction.InputUpdated(interim_inputs=[{"id": "email",  "value" : regex("^[-\w\.]+@([\w-]+\.)+[\w-]{{2,4}}$")}])
         bot say "Looks like a valid email address to me, just click ok to confirm" and bot gesture "success"
     or when VisualFormSceneAction.ConfirmationUpdated(confirmation_status="confirm")
         bot say "Thank you" and bot gesture "bowing"
