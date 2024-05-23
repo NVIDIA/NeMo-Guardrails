@@ -1305,6 +1305,17 @@ def _start_flow(state: State, flow_state: FlowState, event_arguments: dict) -> N
     if state.main_flow_state is None or flow_state.uid != state.main_flow_state.uid:
         # Link to parent flow
         parent_flow_uid = event_arguments["source_flow_instance_uid"]
+
+        if parent_flow_uid not in state.flow_states and "activated" in event_arguments:
+            # Find next best parent
+            # TODO: Check if we could remove the parent_flow_uid completely
+            for s in state.flow_states.values():
+                if (
+                    s.status == FlowStatus.STARTED
+                    and flow_state.uid in s.child_flow_uids
+                ):
+                    parent_flow_uid = s.uid
+
         parent_flow = state.flow_states[parent_flow_uid]
         flow_state.parent_uid = parent_flow_uid
         parent_flow.child_flow_uids.append(flow_state.uid)
