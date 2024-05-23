@@ -98,7 +98,7 @@ def initialize_state(state: State) -> None:
     main_flow = add_new_flow_instance(
         state, create_flow_instance(main_flow_config, new_readable_uid("main"), "0", {})
     )
-    main_flow.activated = True
+    main_flow.activated = 1
     if main_flow_config.loop_id is None:
         main_flow.loop_id = new_readable_uid("main")
     else:
@@ -483,6 +483,14 @@ def _process_internal_events_without_default_matchers(
                 started_instance = _check_for_activated_flow_instance(state, event)
 
             if started_instance:
+                started_instance.activated = started_instance.activated + 1
+
+                # We add activated flows still as child flows to keep track for termination
+                parent_flow = state.flow_states[
+                    event.arguments["source_flow_instance_uid"]
+                ]
+                parent_flow.child_flow_uids.append(started_instance.uid)
+
                 started_event = started_instance.started_event(
                     event.matching_scores,
                     {"flow_instance_uid": event.arguments["flow_instance_uid"]},
@@ -539,7 +547,7 @@ def _process_internal_events_without_default_matchers(
                         state=state,
                         flow_state=flow_state,
                         matching_scores=event.matching_scores,
-                        deactivate_flow=flow_state.activated,
+                        deactivate_flow=flow_state.activated > 0,
                     )
                     assert flow_state.loop_id
                     handled_event_loops.add(flow_state.loop_id)
@@ -552,7 +560,7 @@ def _process_internal_events_without_default_matchers(
                             state=state,
                             flow_state=flow_state,
                             matching_scores=event.matching_scores,
-                            deactivate_flow=flow_state.activated,
+                            deactivate_flow=flow_state.activated > 0,
                         )
                         assert flow_state.loop_id
                         handled_event_loops.add(flow_state.loop_id)
@@ -580,7 +588,7 @@ def _check_for_activated_flow_instance(
     # Check if there already exists an instance of the same activated flow
     flow_id = event.arguments["flow_id"]
     for activated_flow in state.flow_id_states[flow_id]:
-        if activated_flow.status != FlowStatus.STARTED or not activated_flow.activated:
+        if activated_flow.status != FlowStatus.STARTED or activated_flow.activated == 0:
             continue
         has_same_arguments = False
         for idx, arg in enumerate(state.flow_configs[flow_id].parameters):
@@ -865,7 +873,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
 
                     # Avoid an activated flow that was just started from finishing
                     # since this would end in an infinite loop
-                    if flow_finished and flow_state.activated:
+                    if flow_finished and flow_state.activated > 0:
                         flow_finished = False
                         head.status = FlowHeadStatus.INACTIVE
             elif not flow_aborted:
@@ -1310,7 +1318,8 @@ def _start_flow(state: State, flow_state: FlowState, event_arguments: dict) -> N
                 flow_state.loop_id = loop_id
         else:
             flow_state.loop_id = parent_flow.loop_id
-        flow_state.activated = event_arguments.get("activated", False)
+        if event_arguments.get("activated", False):
+            flow_state.activated = 1
 
         # Update context with event/flow parameters
         # TODO: Check if we really need all arguments int the context
@@ -1379,7 +1388,7 @@ def _abort_flow(
     )
 
     if (
-        flow_state.activated
+        flow_state.activated > 0
         and not deactivate_flow
         and not flow_state.new_instance_started
     ):
@@ -1403,12 +1412,13 @@ def _finish_flow(
             continue
 
         child_flow_state = state.flow_states[child_flow_uid]
-        if child_flow_state.activated:
-            child_flow_state.activated = False
-            log.info(
-                "Flow deactivated: %s",
-                _get_readable_flow_state_hierarchy(state, child_flow_state.uid),
-            )
+        if child_flow_state.activated > 0:
+            child_flow_state.activated = child_flow_state.activated - 1
+            if child_flow_state.activated == 0:
+                log.info(
+                    "Flow deactivated: %s",
+                    _get_readable_flow_state_hierarchy(state, child_flow_state.uid),
+                )
 
     # Abort all running child flows
     for child_flow_uid in flow_state.child_flow_uids:
@@ -1416,9 +1426,10 @@ def _finish_flow(
         if child_flow_uid not in state.flow_states:
             continue
 
-        child_flow_state = state.flow_states[child_flow_uid]
-        if _is_listening_flow(child_flow_state):
-            _abort_flow(state, child_flow_state, matching_scores, True)
+        if child_flow_state.activated == 0:
+            child_flow_state = state.flow_states[child_flow_uid]
+            if _is_listening_flow(child_flow_state):
+                _abort_flow(state, child_flow_state, matching_scores, True)
 
     # Abort all started actions that have not finished yet
     for action_uid in flow_state.action_uids:
@@ -1475,7 +1486,7 @@ def _finish_flow(
     )
 
     if (
-        flow_state.activated
+        flow_state.activated > 0
         and not deactivate_flow
         and not flow_state.new_instance_started
     ):
