@@ -1367,7 +1367,11 @@ def _abort_flow(
     for child_flow_uid in flow_state.child_flow_uids:
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
-            _abort_flow(state, child_flow_state, matching_scores, True)
+            if child_flow_state.activated > 1:
+                child_flow_state.activated = child_flow_state.activated - 1
+            else:
+                child_flow_state.activated = 0
+                _abort_flow(state, child_flow_state, matching_scores, True)
 
     # Abort all started actions that have not finished yet
     for action_uid in flow_state.action_uids:
@@ -1423,13 +1427,14 @@ def _finish_flow(
             continue
 
         child_flow_state = state.flow_states[child_flow_uid]
-        if child_flow_state.activated > 0:
+        if child_flow_state.activated > 1:
             child_flow_state.activated = child_flow_state.activated - 1
-            if child_flow_state.activated == 0:
-                log.info(
-                    "Flow deactivated: %s",
-                    _get_readable_flow_state_hierarchy(state, child_flow_state.uid),
-                )
+        else:
+            child_flow_state.activated = 0
+            log.info(
+                "Flow deactivated: %s",
+                _get_readable_flow_state_hierarchy(state, child_flow_state.uid),
+            )
 
     # Abort all running child flows
     for child_flow_uid in flow_state.child_flow_uids:
