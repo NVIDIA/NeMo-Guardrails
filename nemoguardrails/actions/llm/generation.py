@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """A set of actions for generating various types of completions using an LLMs."""
+
 import asyncio
 import logging
 import random
@@ -910,6 +911,7 @@ class LLMGenerationActions:
             log.info(f"Generated bot message: {bot_utterance}")
 
         if bot_utterance:
+            bot_utterance = clean_utterance_content(bot_utterance)
             # In streaming mode, we also push this.
             if streaming_handler:
                 await streaming_handler.push_chunk(bot_utterance)
@@ -1279,3 +1281,21 @@ class LLMGenerationActions:
             return ActionResult(
                 events=[new_event_dict("BotMessage", text=text)],
             )
+
+
+def clean_utterance_content(utterance: str) -> str:
+    """
+    Clean an utterance by performing the following operations:
+     - replacing "\\n" with "\n".
+
+    Args:
+        utterance (str): The utterance to clean.
+
+    Returns:
+        str: The cleaned utterance.
+    """
+    if utterance:
+        # If "\n" is used inside a predefined message, it will be returned as is as part of the message.
+        # It should be translated to an actual \n character.
+        utterance = utterance.replace("\\n", "\n")
+    return utterance
