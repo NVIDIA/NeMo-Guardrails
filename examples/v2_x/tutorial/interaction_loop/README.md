@@ -9,16 +9,14 @@ $ nemoguardrails chat --config=examples/v2_x/tutorial/interaction_loop/
 Starting the chat (Press Ctrl + C twice to quit) ...
 
 > hi
-Posture: Thinking, idle.
 
 Hi there!
 
+<< pause for 12 seconds >>
+
 You can ask me anything!
 
+> how are you?
 
-> what can you do
-Posture: Thinking, idle.
-Posture: Thinking, idle.
-
-I can assist you with answering questions, providing information, and following instructions. Is there something specific you would like help with?
+I am doing well, thank you for asking! How can I assist you today?
 ```

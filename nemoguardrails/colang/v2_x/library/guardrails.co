@@ -48,12 +48,14 @@ flow _bot_say $text
 
 
 flow run input rails $input_text
+  """Check user utterances before they get further processed."""
   $input_rails_exist = await CheckFlowDefinedAction(flow_id="input rails")
   if $input_rails_exist
     await input rails $input_text
 
 
 flow run output rails $output_text
+  """Check llm responses before they get further processed."""
   $output_rails_exist = await CheckFlowDefinedAction(flow_id="output rails")
   if $output_rails_exist
     await output rails $output_text
