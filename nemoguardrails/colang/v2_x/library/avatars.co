@@ -63,10 +63,10 @@ flow user interrupted bot talking $sentence_length=15
       log "Bot started talking..."
     while True
       when user saying something as $user_saying_ref
-        $transcript = $user_saying_ref.context.event.interim_transcript
+        $transcript = $user_saying_ref.transcript
         log "User saying something: {$transcript}"
       or when user said something as $user_said_ref
-        $transcript = $user_said_ref.context.transcript
+        $transcript = $user_said_ref.transcript
         log "User said something: {$transcript}"
       or when bot said something
         log "Bot finished talking without interruption"
