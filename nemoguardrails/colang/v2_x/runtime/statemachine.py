@@ -444,7 +444,12 @@ def _clean_up_state(state: State) -> None:
             states_to_be_removed.append(flow_state.uid)
     for flow_state_uid in states_to_be_removed:
         flow_state = state.flow_states[flow_state_uid]
-        if flow_state.parent_uid and flow_state.parent_uid in state.flow_states:
+        if (
+            flow_state.parent_uid
+            and flow_state.parent_uid in state.flow_states
+            and flow_state_uid
+            in state.flow_states[flow_state.parent_uid].child_flow_uids
+        ):
             state.flow_states[flow_state.parent_uid].child_flow_uids.remove(
                 flow_state_uid
             )
@@ -1305,17 +1310,6 @@ def _start_flow(state: State, flow_state: FlowState, event_arguments: dict) -> N
     if state.main_flow_state is None or flow_state.uid != state.main_flow_state.uid:
         # Link to parent flow
         parent_flow_uid = event_arguments["source_flow_instance_uid"]
-
-        if parent_flow_uid not in state.flow_states and "activated" in event_arguments:
-            # Find next best parent
-            # TODO: Check if we could remove the parent_flow_uid completely
-            for s in state.flow_states.values():
-                if (
-                    s.status == FlowStatus.STARTED
-                    and flow_state.uid in s.child_flow_uids
-                ):
-                    parent_flow_uid = s.uid
-
         parent_flow = state.flow_states[parent_flow_uid]
         flow_state.parent_uid = parent_flow_uid
         parent_flow.child_flow_uids.append(flow_state.uid)
@@ -1369,6 +1363,16 @@ def _abort_flow(
         if _is_listening_flow(child_flow_state):
             if child_flow_state.activated > 1:
                 child_flow_state.activated = child_flow_state.activated - 1
+                if child_flow_state.parent_uid == flow_state.uid:
+                    # Find next best parent for the activated child flow
+                    # TODO: Check if we could remove the parent_flow_uid completely
+                    for s in state.flow_states.values():
+                        if (
+                            s.uid != flow_state.uid
+                            and s.status == FlowStatus.STARTED
+                            and flow_state.uid in s.child_flow_uids
+                        ):
+                            child_flow_state.parent_uid = s.uid
             else:
                 child_flow_state.activated = 0
                 _abort_flow(state, child_flow_state, matching_scores, True)
@@ -1429,6 +1433,16 @@ def _finish_flow(
         child_flow_state = state.flow_states[child_flow_uid]
         if child_flow_state.activated > 1:
             child_flow_state.activated = child_flow_state.activated - 1
+            if child_flow_state.parent_uid == flow_state.uid:
+                # Find next best parent for the activated child flow
+                # TODO: Check if we could remove the parent_flow_uid completely
+                for s in state.flow_states.values():
+                    if (
+                        s.uid != flow_state.uid
+                        and s.status == FlowStatus.STARTED
+                        and flow_state.uid in s.child_flow_uids
+                    ):
+                        child_flow_state.parent_uid = s.uid
         else:
             child_flow_state.activated = 0
             log.info(
