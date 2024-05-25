@@ -89,6 +89,18 @@ You can use any LLM provider that is supported by LangChain, e.g., `ai21`, `alep
 
 **IMPORTANT**: while from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g., `openai`, `nemollm`). For others, you can optimize the prompts yourself (see the [LLM Prompts](#llm-prompts) section).
 
+Here's an example configuration for using `llama3` model with [Ollama](https://ollama.com/):
+
+```yaml
+models:
+  - type: main
+    engine: ollama
+    model: llama3
+    parameters:
+      base_url: http://your_base_url
+```
+
+
 #### NeMo LLM Service
 
 In addition to the LLM providers supported by LangChain, NeMo Guardrails also supports NeMo LLM Service. For example, to use the GPT-43B-905 model as the main LLM, you should use the following configuration:
