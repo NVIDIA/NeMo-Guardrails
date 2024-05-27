@@ -1370,7 +1370,7 @@ def _abort_flow(
                         if (
                             s.uid != flow_state.uid
                             and s.status == FlowStatus.STARTED
-                            and flow_state.uid in s.child_flow_uids
+                            and child_flow_state.uid in s.child_flow_uids
                         ):
                             child_flow_state.parent_uid = s.uid
             else:
@@ -1440,7 +1440,7 @@ def _finish_flow(
                     if (
                         s.uid != flow_state.uid
                         and s.status == FlowStatus.STARTED
-                        and flow_state.uid in s.child_flow_uids
+                        and child_flow_state.uid in s.child_flow_uids
                     ):
                         child_flow_state.parent_uid = s.uid
         else:
