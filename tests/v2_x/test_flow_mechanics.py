@@ -1709,11 +1709,11 @@ def test_single_flow_activation():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "test 2",
+                "script": "test 1",
             },
             {
                 "type": "StartUtteranceBotAction",
-                "script": "test 1",
+                "script": "test 2",
             },
         ],
     )
