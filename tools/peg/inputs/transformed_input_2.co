@@ -1,0 +1,14 @@
+define user express greeting
+INDENT
+
+"hello"
+
+DEDENT
+
+define flow salut
+INDENT
+
+user express greeting
+bot express greeting
+
+DEDENT

@@ -1,0 +1,21 @@
+define user express greeting
+INDENT
+
+"hello"
+
+DEDENT
+
+define flow salut
+INDENT
+
+$mode = $mode or "strict"
+
+if $mode == "strict"
+INDENT
+
+user express greeting
+bot express greeting
+
+DEDENT
+
+DEDENT
