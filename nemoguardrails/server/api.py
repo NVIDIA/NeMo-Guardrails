@@ -222,17 +222,20 @@ def _get_rails(config_ids: List[str]) -> LLMRails:
         config_ids = [""]
 
     full_llm_rails_config = None
+
     for config_id in config_ids:
-        full_path = os.path.normpath(os.path.join(app.rails_config_path, config_id))
-        if not full_path.startswith(app.rails_config_path):
-            raise Exception("Not allowed.")
+        base_path = os.path.abspath(app.rails_config_path)
+        full_path = os.path.normpath(os.path.join(base_path, config_id))
+
+        if not full_path.startswith(base_path + os.sep):
+            raise ValueError("Access to the specified path is not allowed.")
 
         rails_config = RailsConfig.from_path(full_path)
 
         if not full_llm_rails_config:
             full_llm_rails_config = rails_config
         else:
-            full_llm_rails_config = full_llm_rails_config + rails_config
+            full_llm_rails_config += rails_config
 
     llm_rails = LLMRails(config=full_llm_rails_config, verbose=True)
     llm_rails_instances[configs_cache_key] = llm_rails
