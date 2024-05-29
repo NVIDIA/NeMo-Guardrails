@@ -1388,13 +1388,21 @@ def _abort_flow(
     for child_flow_uid in list(flow_state.child_flow_uids):
         child_flow_state = state.flow_states[child_flow_uid]
         if _is_listening_flow(child_flow_state):
-            if _is_activated_child_flow(state, child_flow_state):
+            if child_flow_state.activated == 1 or (
+                deactivate_flow and _is_activated_child_flow(state, child_flow_state)
+            ):
+                child_flow_state.activated = 0
                 _abort_flow(state, child_flow_state, matching_scores, True)
-            elif child_flow_state.activated > 1:
+                log.info(
+                    "Flow deactivated: %s",
+                    _get_readable_flow_state_hierarchy(state, child_flow_state.uid),
+                )
+            elif child_flow_state.activated > 1 and not _is_activated_child_flow(
+                state, child_flow_state
+            ):
                 child_flow_state.activated = child_flow_state.activated - 1
                 if child_flow_state.parent_uid == flow_state.uid:
                     # Find next best parent for the activated child flow
-                    # TODO: Check if we could remove the parent_flow_uid completely
                     for s in state.flow_states.values():
                         if (
                             s.uid != flow_state.uid
@@ -1402,8 +1410,6 @@ def _abort_flow(
                             and child_flow_state.uid in s.child_flow_uids
                         ):
                             child_flow_state.parent_uid = s.uid
-            else:
-                _abort_flow(state, child_flow_state, matching_scores, True)
 
     # Abort all started actions that have not finished yet
     for action_uid in flow_state.action_uids:
@@ -1423,13 +1429,14 @@ def _abort_flow(
         _remove_head_from_event_matching_structures(state, flow_state, head)
     flow_state.heads.clear()
 
+    if deactivate_flow:
+        flow_state.activated = 0
+
     # Remove flow uid from parents children list
     if flow_state.activated == 0 and flow_state.parent_uid:
         state.flow_states[flow_state.parent_uid].child_flow_uids.remove(flow_state.uid)
 
     flow_state.status = FlowStatus.STOPPED
-    if deactivate_flow:
-        flow_state.activated = 0
 
     # Generate FlowFailed event
     event = flow_state.failed_event(matching_scores)
@@ -1469,11 +1476,19 @@ def _finish_flow(
             continue
 
         child_flow_state = state.flow_states[child_flow_uid]
-        if child_flow_state.activated > 1:
+        if child_flow_state.activated == 1 or (
+            deactivate_flow and _is_activated_child_flow(state, child_flow_state)
+        ):
+            child_flow_state.activated = 0
+            _abort_flow(state, child_flow_state, matching_scores, False)
+            log.info(
+                "Flow deactivated: %s",
+                _get_readable_flow_state_hierarchy(state, child_flow_state.uid),
+            )
+        elif child_flow_state.activated > 1:
             child_flow_state.activated = child_flow_state.activated - 1
             if child_flow_state.parent_uid == flow_state.uid:
                 # Find next best parent for the activated child flow
-                # TODO: Check if we could remove the parent_flow_uid completely
                 for s in state.flow_states.values():
                     if (
                         s.uid != flow_state.uid
@@ -1482,12 +1497,6 @@ def _finish_flow(
                     ):
                         child_flow_state.parent_uid = s.uid
                         break
-        else:
-            _abort_flow(state, child_flow_state, matching_scores, True)
-            log.info(
-                "Flow deactivated: %s",
-                _get_readable_flow_state_hierarchy(state, child_flow_state.uid),
-            )
 
     # Abort all running child flows
     for child_flow_uid in list(flow_state.child_flow_uids):
@@ -1541,6 +1550,7 @@ def _finish_flow(
         return
 
     flow_state.status = FlowStatus.FINISHED
+
     if deactivate_flow:
         flow_state.activated = 0
 
