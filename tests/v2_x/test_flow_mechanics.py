@@ -1800,6 +1800,8 @@ def test_single_flow_activation_2():
       send FinishFlow(flow_id="a", deactivate=True)
       match Event3()
       send FinishFlow(flow_id="b", deactivate=True)
+      match Event3()
+      activate a
       match WaitEvent()
 
     """
@@ -1985,12 +1987,44 @@ def test_single_flow_activation_2():
     state = run_to_completion(
         state,
         {
-            "type": "Event2",
+            "type": "Event1",
         },
     )
     assert is_data_in_events(
         state.outgoing_events,
         [],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event3",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "a",
+            }
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "first",
+            }
+        ],
     )
 
 
