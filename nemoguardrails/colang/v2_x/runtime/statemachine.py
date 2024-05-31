@@ -622,12 +622,23 @@ def _get_reference_activated_flow_instance(
         has_same_arguments = True
         for idx, arg in enumerate(state.flow_configs[flow_id].parameters):
             val = activated_flow.arguments[arg.name]
-            if (
-                arg.name not in event.arguments or val != event.arguments[arg.name]
-            ) and (
-                f"${idx}" not in event.arguments or val != event.arguments[f"${idx}"]
-            ):
-                has_same_arguments = False
+            # Named flow parameters
+            matched = arg.name in event.arguments and val == event.arguments[arg.name]
+            # Positional flow parameters
+            matched |= (
+                f"${idx}" in event.arguments and val == event.arguments[f"${idx}"]
+            )
+            # Default flow parameters
+            exists: bool = False
+            for p in state.flow_configs[activated_flow.flow_id].parameters:
+                if arg.name == p.name and val == eval_expression(
+                    p.default_value_expr, {}
+                ):
+                    exists = True
+                    break
+            matched |= exists
+
+            if not matched:
                 break
 
         if has_same_arguments:
@@ -1433,7 +1444,11 @@ def _abort_flow(
         flow_state.activated = 0
 
     # Remove flow uid from parents children list
-    if flow_state.activated == 0 and flow_state.parent_uid:
+    if (
+        flow_state.activated == 0
+        and flow_state.parent_uid
+        and flow_state.parent_uid in state.flow_states
+    ):
         state.flow_states[flow_state.parent_uid].child_flow_uids.remove(flow_state.uid)
 
     flow_state.status = FlowStatus.STOPPED
@@ -1555,7 +1570,11 @@ def _finish_flow(
         flow_state.activated = 0
 
     # Remove flow uid from parents children list
-    if flow_state.activated == 0 and flow_state.parent_uid:
+    if (
+        flow_state.activated == 0
+        and flow_state.parent_uid
+        and flow_state.parent_uid in state.flow_states
+    ):
         state.flow_states[flow_state.parent_uid].child_flow_uids.remove(flow_state.uid)
 
     # Generate FlowFinished event
