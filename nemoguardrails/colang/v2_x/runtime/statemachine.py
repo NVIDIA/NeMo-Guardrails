@@ -610,16 +610,19 @@ def _process_internal_events_without_default_matchers(
 def _get_reference_activated_flow_instance(
     state: State, event: InternalEvent
 ) -> Optional[FlowState]:
-    # Check if there already exists an instance of the same activated flow
+    # Find reference instance for the provided flow
     flow_id = event.arguments["flow_id"]
     for activated_flow in state.flow_id_states[flow_id]:
+        # Check if it is not a reference instance
         if activated_flow.activated == 0 or (
             activated_flow.parent_uid
             and activated_flow.flow_id
             == state.flow_states[activated_flow.parent_uid].flow_id
         ):
             continue
-        has_same_arguments = True
+
+        # Check that the reference instance has exactly the same parameters
+        matching_parameters: bool = True
         for idx, arg in enumerate(state.flow_configs[flow_id].parameters):
             val = activated_flow.arguments[arg.name]
             # Named flow parameters
@@ -629,19 +632,15 @@ def _get_reference_activated_flow_instance(
                 f"${idx}" in event.arguments and val == event.arguments[f"${idx}"]
             )
             # Default flow parameters
-            exists: bool = False
-            for p in state.flow_configs[activated_flow.flow_id].parameters:
-                if arg.name == p.name and val == eval_expression(
-                    p.default_value_expr, {}
-                ):
-                    exists = True
-                    break
-            matched |= exists
+            matched |= arg.default_value_expr is not None and val == eval_expression(
+                arg.default_value_expr, {}
+            )
 
             if not matched:
+                matching_parameters = False
                 break
 
-        if has_same_arguments:
+        if matching_parameters:
             return activated_flow
 
     return None
