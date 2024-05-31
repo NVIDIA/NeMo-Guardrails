@@ -441,9 +441,7 @@ def _clean_up_state(state: State) -> None:
         if (
             _is_done_flow(flow_state)
             and (datetime.now() - flow_state.status_updated) > timedelta(seconds=5)
-            and (
-                flow_state.activated == 0 or _is_activated_child_flow(state, flow_state)
-            )
+            and flow_state.activated == 0
         ):
             states_to_be_removed.append(flow_state.uid)
     for flow_state_uid in states_to_be_removed:
@@ -520,7 +518,7 @@ def _process_internal_events_without_default_matchers(
                 )
                 handled_event_loops.add("all_loops")
             else:
-                # Start a new instance of an activate a flow
+                # Start a new instance of an activated flow
 
                 if started_instance and is_activated_child_flow:
                     # Create instance as a child of the activated reference flow
@@ -553,11 +551,12 @@ def _process_internal_events_without_default_matchers(
             flow_id = event.arguments["flow_id"]
             if flow_id in state.flow_id_states:
                 for flow_state in state.flow_id_states[flow_id]:
+                    deactivate = event.arguments.get("deactivate", False)
                     _finish_flow(
                         state,
                         flow_state,
                         event.matching_scores,
-                        event.arguments.get("deactivate", False),
+                        deactivate,
                     )
                     assert flow_state.loop_id
                     handled_event_loops.add(flow_state.loop_id)
@@ -612,10 +611,14 @@ def _get_reference_activated_flow_instance(
     flow_id = event.arguments["flow_id"]
     for activated_flow in state.flow_id_states[flow_id]:
         # Check if it is not a reference instance
-        if activated_flow.activated == 0 or (
-            activated_flow.parent_uid
-            and activated_flow.flow_id
-            == state.flow_states[activated_flow.parent_uid].flow_id
+        if (
+            activated_flow.activated == 0
+            or activated_flow.parent_uid not in state.flow_states
+            or (
+                activated_flow.parent_uid
+                and activated_flow.flow_id
+                == state.flow_states[activated_flow.parent_uid].flow_id
+            )
         ):
             continue
 
@@ -1390,41 +1393,38 @@ def _abort_flow(
     matching_scores: List[float],
     deactivate_flow: bool = False,
 ) -> None:
-    """Abort a flow instance and all its active child flows."""
+    """Abort a flow instance and all its active child flows and decrement number of references of activated flow."""
 
-    # abort all running child flows
-    for child_flow_uid in list(flow_state.child_flow_uids):
-        child_flow_state = state.flow_states[child_flow_uid]
-        if _is_listening_flow(child_flow_state):
-            if child_flow_state.activated == 1 or (
-                deactivate_flow and _is_activated_child_flow(state, child_flow_state)
-            ):
-                child_flow_state.activated = 0
-                _abort_flow(state, child_flow_state, matching_scores, True)
-                log.info(
-                    "Flow deactivated: %s",
-                    _get_readable_flow_state_hierarchy(state, child_flow_state.uid),
-                )
-            elif child_flow_state.activated > 1 and not _is_activated_child_flow(
-                state, child_flow_state
-            ):
-                child_flow_state.activated = child_flow_state.activated - 1
-                if child_flow_state.parent_uid == flow_state.uid:
-                    # Find next best parent for the activated child flow
-                    for s in state.flow_states.values():
-                        if (
-                            s.uid != flow_state.uid
-                            and s.status == FlowStatus.STARTED
-                            and child_flow_state.uid in s.child_flow_uids
-                        ):
-                            child_flow_state.parent_uid = s.uid
+    if deactivate_flow and _is_reference_activated_flow(state, flow_state):
+        # It's a reference activated flow
+        flow_state.activated = flow_state.activated - 1
+        if flow_state.activated == 0:
+            # Abort all activated child flows
+            for child_flow_uid in list(flow_state.child_flow_uids):
+                if state.flow_states[child_flow_uid].flow_id == flow_state.flow_id:
+                    _abort_flow(
+                        state, state.flow_states[child_flow_uid], matching_scores, True
+                    )
+            log.info(
+                "Flow deactivated: %s",
+                _get_readable_flow_state_hierarchy(state, flow_state.uid),
+            )
+        else:
+            return
 
-    if deactivate_flow:
-        flow_state.activated = 0
-
-    if _is_inactive_flow(flow_state):
-        # Skip any inactive flow but deactivated activated reference flows
+    if not _is_listening_flow(flow_state) and flow_state.status != FlowStatus.STOPPING:
+        # Skip the rest for all inactive flows
         return
+
+    # Abort/deactivate all running child flows
+    for child_flow_uid in list(flow_state.child_flow_uids):
+        # TODO (cschueller): check why this was the case
+        if child_flow_uid not in state.flow_states:
+            continue
+
+        child_flow_state = state.flow_states[child_flow_uid]
+        if not _is_child_activated_flow(state, child_flow_state):
+            _abort_flow(state, child_flow_state, matching_scores, True)
 
     # Abort all started actions that have not finished yet
     for action_uid in flow_state.action_uids:
@@ -1464,7 +1464,11 @@ def _abort_flow(
     )
 
     # Restart the flow if it is an activated flow
-    if flow_state.activated > 0 and not flow_state.new_instance_started:
+    if (
+        not deactivate_flow
+        and flow_state.activated > 0
+        and not flow_state.new_instance_started
+    ):
         event = flow_state.start_event(matching_scores)
         if (
             flow_state.parent_uid
@@ -1483,54 +1487,38 @@ def _finish_flow(
     matching_scores: List[float],
     deactivate_flow: bool = False,
 ) -> None:
-    """Finish a flow instance and all its active child flows."""
+    """Finish a flow instance and all its active child flows and decrement number of references of activated flow."""
 
-    # Deactivate all activated child flows
+    if deactivate_flow and _is_reference_activated_flow(state, flow_state):
+        # It's a reference activated flow
+        flow_state.activated = flow_state.activated - 1
+        if flow_state.activated == 0:
+            # Abort all activated child flows
+            for child_flow_uid in list(flow_state.child_flow_uids):
+                if state.flow_states[child_flow_uid].flow_id == flow_state.flow_id:
+                    _abort_flow(
+                        state, state.flow_states[child_flow_uid], matching_scores, True
+                    )
+            log.info(
+                "Flow deactivated: %s",
+                _get_readable_flow_state_hierarchy(state, flow_state.uid),
+            )
+        else:
+            return
+
+    if not _is_listening_flow(flow_state):
+        # Skip the rest for all inactive flows
+        return
+
+    # Abort/deactivate all running child flows
     for child_flow_uid in list(flow_state.child_flow_uids):
         # TODO (cschueller): check why this was the case
         if child_flow_uid not in state.flow_states:
             continue
 
         child_flow_state = state.flow_states[child_flow_uid]
-        if child_flow_state.activated == 1 or (
-            deactivate_flow and _is_activated_child_flow(state, child_flow_state)
-        ):
-            child_flow_state.activated = 0
-            _abort_flow(state, child_flow_state, matching_scores, False)
-            log.info(
-                "Flow deactivated: %s",
-                _get_readable_flow_state_hierarchy(state, child_flow_state.uid),
-            )
-        elif child_flow_state.activated > 1:
-            child_flow_state.activated = child_flow_state.activated - 1
-            if child_flow_state.parent_uid == flow_state.uid:
-                # Find next best parent for the activated child flow
-                for s in state.flow_states.values():
-                    if (
-                        s.uid != flow_state.uid
-                        and s.status == FlowStatus.STARTED
-                        and child_flow_state.uid in s.child_flow_uids
-                    ):
-                        child_flow_state.parent_uid = s.uid
-                        break
-
-    if deactivate_flow:
-        flow_state.activated = 0
-
-    if _is_inactive_flow(flow_state):
-        # Skip any inactive flow but deactivated activated reference flows
-        return
-
-    # Abort all running child flows
-    for child_flow_uid in list(flow_state.child_flow_uids):
-        # TODO (cschueller): check why this was the case
-        if child_flow_uid not in state.flow_states:
-            continue
-
-        if child_flow_state.activated == 0:
-            child_flow_state = state.flow_states[child_flow_uid]
-            if _is_listening_flow(child_flow_state):
-                _abort_flow(state, child_flow_state, matching_scores, True)
+        if not _is_child_activated_flow(state, child_flow_state):
+            _abort_flow(state, child_flow_state, matching_scores, True)
 
     # Abort all started actions that have not finished yet
     for action_uid in flow_state.action_uids:
@@ -1595,7 +1583,11 @@ def _finish_flow(
     )
 
     # Restart the flow if it is an activated flow
-    if flow_state.activated > 0 and not flow_state.new_instance_started:
+    if (
+        not deactivate_flow
+        and flow_state.activated > 0
+        and not flow_state.new_instance_started
+    ):
         event = flow_state.start_event(matching_scores)
         if (
             flow_state.parent_uid
@@ -2388,7 +2380,15 @@ def _get_eval_context(state: State, flow_state: FlowState) -> dict:
     return context
 
 
-def _is_activated_child_flow(state: State, flow_state: FlowState) -> bool:
+def _is_reference_activated_flow(state: State, flow_state: FlowState) -> bool:
+    return (
+        flow_state.activated > 0
+        and flow_state.parent_uid is not None
+        and flow_state.flow_id != state.flow_states[flow_state.parent_uid].flow_id
+    )
+
+
+def _is_child_activated_flow(state: State, flow_state: FlowState) -> bool:
     return (
         flow_state.activated > 0
         and flow_state.parent_uid is not None
