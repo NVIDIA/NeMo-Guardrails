@@ -2,7 +2,6 @@
 
 This examples shows how to add input rails.
 
-
 ## Example Session
 
 ```

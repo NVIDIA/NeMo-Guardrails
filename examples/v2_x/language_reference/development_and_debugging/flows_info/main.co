@@ -1,0 +1,7 @@
+flow main
+    await a
+    match RestartEvent()
+
+flow a
+    $info = flows_info($self.uid)
+    print pretty_str($info)

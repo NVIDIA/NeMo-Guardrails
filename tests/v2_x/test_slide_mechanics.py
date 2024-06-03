@@ -918,5 +918,36 @@ def test_out_flow_variables():
     )
 
 
+def test_expression_evaluation():
+    """Test the different ways of expression evaluations."""
+
+    content = """
+    flow main
+      $dict = {"val": 2 + 3}
+      start bot say number ($dict["val"])
+      ($dict.update({"val":10}))
+      bot say number ($dict["val"] + 1)
+
+    flow bot say number $number
+      await UtteranceBotAction(script="{$number}")
+    """
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "5",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "11",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_when_or_core_mechanics()
+    test_expression_evaluation()

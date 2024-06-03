@@ -1,0 +1,5 @@
+flow main
+    match UtteranceUserAction.Finished() as $ref
+    $ref_copy = $ref # Both references are pointing to same event object
+    await UtteranceBotAction(script=$ref_copy.final_transcript)
+    match AnEvent()

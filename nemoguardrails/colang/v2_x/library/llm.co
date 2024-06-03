@@ -10,7 +10,7 @@ import utils
 flow bot say something like $text
   """Trigger a bot utterance similar to given text."""
   activate polling llm request response
-  $variation = i"Return a single string that is a new variation of: {$text}"
+  $variation = ..."Return a single string that is a new variation of: {$text}"
   await bot say $variation
 
 
@@ -38,7 +38,7 @@ flow polling llm request response $interval=1.0
 
 flow llm continuation
   """Activate all LLM based interaction continuations."""
-  activate automating bot user intent logging
+  activate automating intent detection
   activate generating user intent for unhandled user utterance
   activate continuation on unhandled user intent
   activate continuation on undefined flow
@@ -160,6 +160,7 @@ flow continuation on undefined flow
 
 
 flow llm generate interaction continuation flow -> $flow_name
+  """Generate a flow that continues the current interaction."""
   activate polling llm request response
   # Generate continuation based current interaction history
 
@@ -177,6 +178,7 @@ flow llm generate interaction continuation flow -> $flow_name
 
 
 flow llm continue interaction
+  """Generate and continue with a suitable interaction."""
   $flow_name = await llm generate interaction continuation flow
 
   if $flow_name
@@ -186,8 +188,8 @@ flow llm continue interaction
 # -----------------------------------
 # Interaction History Logging
 # -----------------------------------
-flow automating bot user intent logging
-  """Automated user and bot intent flows logging."""
+flow automating intent detection
+  """Activate all automated user and bot intent flows logging based on flow naming."""
   activate marking user intent flows
   activate marking bot intent flows
   activate logging marked user intent flows

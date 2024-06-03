@@ -1,0 +1,11 @@
+import core
+
+flow main
+    $number_of_users = 1
+    if $number_of_users == 0
+        await user became present
+    elif $number_of_users > 1
+        bot say "I am sorry, I can only interact with a single user!"
+    else
+        bot say "Welcome! Nice to meet you!"
+    match RestartEvent()

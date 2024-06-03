@@ -197,14 +197,21 @@ class LLMTaskManager:
         task: Union[str, Task],
         context: Optional[dict] = None,
         events: Optional[List[dict]] = None,
+        force_string_to_message: Optional[bool] = False,
     ) -> Union[str, List[dict]]:
         """Render the prompt for a specific task.
 
         :param task: The name of the task.
         :param context: The context for rendering the prompt
         :param events: The history of events so far.
+        :param force_string_to_message: Force the string message to a user message.
+        This should be used for chat models that receive a single message in the task prompt.
 
         :return: A string, for completion models, or an array of messages for chat models.
+
+        Note that even chat models can have task prompts defined using a string and not an array of messages.
+        In this case, the chat model will through an error. If you want to solve this problem, use the
+        force_string_to_message parameter to force the string message to a user message.
         """
         prompt = get_prompt(self.config, task)
         if prompt.content:
@@ -221,6 +228,16 @@ class LLMTaskManager:
                 task_prompt = self._render_string(
                     prompt.content, context=context, events=events
                 )
+
+            # Check if the output should be a user message, for chat models
+            if force_string_to_message:
+                return [
+                    {
+                        "type": "user",
+                        "content": task_prompt,
+                    }
+                ]
+
             return task_prompt
         else:
             task_messages = self._render_messages(
