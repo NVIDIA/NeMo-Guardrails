@@ -5,6 +5,7 @@ import timing
 import utils
 
 flow showcase proactive turn taking
+  activate polling llm request response
   activate reaction bot question repetition for user silence 5 1000
 
   bot inform "I am going to ask you questions and if you don't respond within 5 seconds I will repeat them."
