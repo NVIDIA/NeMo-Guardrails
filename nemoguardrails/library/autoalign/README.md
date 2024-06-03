@@ -40,7 +40,7 @@ rails:
     config:
         autoalign:
             parameters:
-                endpoint: "https://nvidia.autoalign.ai/guardrail"
+                endpoint: "https://<AUTOALIGN_ENDPOINT>/guardrail"
             input:
                 guardrails_config:
                     {
@@ -562,7 +562,7 @@ rails:
   config:
     autoalign:
       parameters:
-        fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
+        fact_check_endpoint: "https://<AUTOALIGN_ENDPOINT>/factcheck"
   output:
     flows:
       - autoalign factcheck output
