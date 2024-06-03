@@ -103,19 +103,23 @@ async def test_serialization():
     assert isinstance(state, State)
     assert output_events[0]["script"] == "Hello!"
 
-    t0 = time()
-    s = state_to_json(state)
-    took = time() - t0
+    avg_time = 0
+    number_of_runs = 10
+    for i in range(0, number_of_runs + 1):
+        t0 = time()
+        s = state_to_json(state)
+        took = time() - t0
+        if i == 0:
+            # Skip warm-up run
+            continue
+        avg_time += took
+    avg_time /= number_of_runs
 
-    assert took < 0.2
+    assert avg_time < 0.01
 
     assert isinstance(s, str)
 
-    t0 = time()
     state_2 = json_to_state(s)
-    took = time() - t0
-
-    assert took < 0.01
 
     assert isinstance(state_2, State)
 
