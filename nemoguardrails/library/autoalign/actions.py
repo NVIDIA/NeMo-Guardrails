@@ -224,12 +224,12 @@ async def autoalign_input_api(
         autoalign_api_url, text, task_config, show_toxic_phrases
     )
     if autoalign_response["guardrails_triggered"] and show_autoalign_message:
-        log.info(
+        log.warning(
             f"AutoAlign on Input: {autoalign_response['combined_response']}",
         )
     else:
         if autoalign_response["pii_fast"]["guarded"] and show_autoalign_message:
-            log.info(
+            log.warning(
                 f"AutoAlign on Input: {autoalign_response['pii_fast']['response']}",
             )
 
@@ -258,7 +258,7 @@ async def autoalign_output_api(
         autoalign_api_url, text, task_config, show_toxic_phrases
     )
     if autoalign_response["guardrails_triggered"] and show_autoalign_message:
-        log.info(
+        log.warning(
             f"AutoAlign on LLM Response: {autoalign_response['combined_response']}",
         )
 
