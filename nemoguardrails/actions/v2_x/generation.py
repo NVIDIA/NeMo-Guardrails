@@ -315,12 +315,15 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         user_intent = get_first_nonempty_line(result)
         bot_intent = get_first_bot_intent(result.splitlines())
-        if user_intent is None or bot_intent is None:
+        bot_action = get_first_bot_action(result.splitlines())
+
+        if user_intent is None or bot_action is None:
             raise LlmResponseError(f"Issue with LLM response: {result}")
 
         user_intent = escape_flow_name(user_intent.strip(" "))
-        bot_intent = escape_flow_name(bot_intent.strip(" "))
-        bot_action = get_first_bot_action(result.splitlines())
+
+        if bot_intent:
+            bot_intent = escape_flow_name(bot_intent.strip(" "))
 
         log.info(
             "Canonical form for user intent: %s", user_intent if user_intent else "None"
