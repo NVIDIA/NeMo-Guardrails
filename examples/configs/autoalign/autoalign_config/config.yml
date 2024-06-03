@@ -8,7 +8,7 @@ rails:
     config:
         autoalign:
             parameters:
-                endpoint: "https://nvidia.autoalign.ai/guardrail"
+                endpoint: "<AUTOALIGN_ENDPOINT>"
             input:
                 guardrails_config:
                     {
