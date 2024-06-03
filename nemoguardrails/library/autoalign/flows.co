@@ -13,8 +13,7 @@ define subflow autoalign check output
   else
     $pii_message_output = $output_result["pii_fast"]["response"]
     if $output_result["pii_fast"]["guarded"]
-      bot respond pii output
-      stop
+      $bot_message = $pii_message_output
 
 define subflow autoalign factcheck output
   execute retrieve_relevant_chunks
@@ -25,9 +24,6 @@ define subflow autoalign factcheck output
 
 define bot inform autoalign factcheck output violation
   "Factcheck violation in llm response has been detected by AutoAlign."
-
-define bot respond pii output
-  "$pii_message_output"
 
 define bot refuse to respond
   "I'm sorry, I can't respond to that."
