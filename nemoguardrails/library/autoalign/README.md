@@ -40,7 +40,7 @@ rails:
     config:
         autoalign:
             parameters:
-                endpoint: "<AUTOALIGN_ENDPOINT>"
+                endpoint: "https://<AUTOALIGN_ENDPOINT>/guardrail"
             input:
                 guardrails_config:
                     {
@@ -562,7 +562,7 @@ rails:
   config:
     autoalign:
       parameters:
-        fact_check_endpoint: "<AUTOALIGN_ENDPOINT>"
+        fact_check_endpoint: "https://<AUTOALIGN_ENDPOINT>/factcheck"
   output:
     flows:
       - autoalign factcheck output
