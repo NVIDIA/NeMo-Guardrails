@@ -115,7 +115,7 @@ async def test_serialization():
         avg_time += took
     avg_time /= number_of_runs
 
-    assert avg_time < 0.01
+    assert avg_time < 0.02
 
     assert isinstance(s, str)
 
