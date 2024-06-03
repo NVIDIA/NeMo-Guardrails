@@ -1401,10 +1401,11 @@ def _abort_flow(
         if flow_state.activated == 0:
             # Abort all activated child flows
             for child_flow_uid in list(flow_state.child_flow_uids):
-                if state.flow_states[child_flow_uid].flow_id == flow_state.flow_id:
-                    _abort_flow(
-                        state, state.flow_states[child_flow_uid], matching_scores, True
-                    )
+                child_flow = state.flow_states[child_flow_uid]
+                if child_flow.flow_id == flow_state.flow_id:
+                    _abort_flow(state, child_flow, matching_scores, True)
+                    child_flow.activated = 0
+
             log.info(
                 "Flow deactivated: %s",
                 _get_readable_flow_state_hierarchy(state, flow_state.uid),
@@ -1495,10 +1496,10 @@ def _finish_flow(
         if flow_state.activated == 0:
             # Abort all activated child flows
             for child_flow_uid in list(flow_state.child_flow_uids):
-                if state.flow_states[child_flow_uid].flow_id == flow_state.flow_id:
-                    _abort_flow(
-                        state, state.flow_states[child_flow_uid], matching_scores, True
-                    )
+                child_flow = state.flow_states[child_flow_uid]
+                if child_flow.flow_id == flow_state.flow_id:
+                    _abort_flow(state, child_flow, matching_scores, True)
+                    child_flow.activated = 0
             log.info(
                 "Flow deactivated: %s",
                 _get_readable_flow_state_hierarchy(state, flow_state.uid),
