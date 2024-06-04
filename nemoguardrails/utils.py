@@ -14,7 +14,9 @@
 # limitations under the License.
 import asyncio
 import dataclasses
+import importlib.resources as pkg_resources
 import json
+import os
 import uuid
 from collections import namedtuple
 from datetime import datetime, timezone
@@ -218,3 +220,31 @@ def get_or_create_event_loop():
         asyncio.set_event_loop(loop)
 
     return loop
+
+
+def get_data_path(package_name: str, file_path: str) -> str:
+    """Helper to get the path to the data directory."""
+    try:
+        # Try to get the path from the package resources
+        path = pkg_resources.files(package_name).joinpath(file_path)
+        if path.exists():
+            return str(path)
+    except FileNotFoundError:
+        pass
+
+    # If that fails, try to get the path from the local file system
+    path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", file_path))
+    if os.path.exists(path):
+        return path
+
+    raise FileNotFoundError(f"File not found: {file_path}")
+
+
+def get_examples_data_path(file_path: str) -> str:
+    """Helper to get the path to the examples data directory."""
+    return get_data_path("nemoguardrails", f"examples/{file_path}")
+
+
+def get_chat_ui_data_path(file_path: str) -> str:
+    """Helper to get the path to the chat-ui data directory."""
+    return get_data_path("nemoguardrails", f"chat-ui/{file_path}")
