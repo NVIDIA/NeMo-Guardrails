@@ -29,7 +29,7 @@ from starlette import status
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
 
-from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails import LLMRails, RailsConfig, utils
 from nemoguardrails.rails.llm.options import (
     GenerationLog,
     GenerationOptions,
@@ -81,9 +81,8 @@ if ENABLE_CORS:
     )
 
 # By default, we use the rails in the examples folder
-app.rails_config_path = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "examples", "bots")
-)
+
+app.rails_config_path = utils.get_examples_data_path("bots")
 
 # Weather the chat UI is enabled or not.
 app.disable_chat_ui = False
@@ -430,9 +429,7 @@ async def startup_event():
     # Finally, we register the static frontend UI serving
 
     if not app.disable_chat_ui:
-        FRONTEND_DIR = os.path.join(
-            os.path.dirname(__file__), "..", "..", "chat-ui", "frontend"
-        )
+        FRONTEND_DIR = utils.get_chat_ui_data_path("frontend")
 
         app.mount(
             "/",
