@@ -106,21 +106,22 @@ license-files = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["nemoguardrails*"]
-
-[tool.setuptools.dynamic]
-version = {attr = "nemoguardrails.__version__"}
+exclude = ["chat-ui*", "examples*"]
 
 [tool.setuptools.package-data]
 nemoguardrails = [
+  "chat-ui/**/*",
+  "examples/**/*",
   "**/*.yml",
   "**/*.co",
   "**/*.txt",
   "**/*.json",
   "**/*.lark",
-  "../examples/**/*",
-  "../chat-ui/**/*",
   "eval/data/**/*",
 ]
+
+[tool.setuptools.dynamic]
+version = { attr = "nemoguardrails.__version__" }
 
 [tool.pytest.ini_options]
 addopts = "-p no:warnings"
@@ -133,5 +134,5 @@ log-level = "DEBUG"
 log_cli = "False"
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
