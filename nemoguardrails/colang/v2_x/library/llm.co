@@ -46,6 +46,7 @@ flow llm continuation
 flow generating user intent for unhandled user utterance
   """Continue the interaction on an unexpected user utterance."""
   activate tracking bot talking state
+  activate polling llm request response
   global $bot_talking_state
 
   await _user_said_something_unexpected as $user_said
@@ -84,6 +85,7 @@ flow continuation on unhandled user intent
 
 flow continuation on undefined flow
   """Generate and start a new flow to continue the interaction for the start of an undefined flow."""
+  activate polling llm request response
   match UnhandledEvent(event="StartFlow") as $event
 
   # We explicitly set this here so this can start again recursively if needed.
@@ -204,6 +206,7 @@ flow tracking unhandled user intent state
 
 flow execute llm instruction $instructions
   """This will create a new flow based on the provided instructions and start it."""
+  activate polling llm request response
   $flow_info = await GenerateFlowFromInstructionsAction(instructions=$instructions)
 
   await AddFlowsAction(config=$flow_info.body)

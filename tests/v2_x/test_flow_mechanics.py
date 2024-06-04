@@ -1617,8 +1617,8 @@ def test_flow_context_sharing():
     )
 
 
-def test_single_flow_activation():
-    """Test how a parent flow can share its context with a child flow."""
+def test_single_flow_activation_1():
+    """Test different aspects of the flow activation mechanism."""
 
     content = """
     flow a
@@ -1636,13 +1636,22 @@ def test_single_flow_activation():
       activate z 2
       match WaitEvent()
 
+    @loop("NEW")
     flow z $param
-      await UtteranceBotAction(script="test {$param}")
+      start UtteranceBotAction(script="test {$param}")
+      while True
+        match Event2()
+        start UtteranceBotAction(script="test {$param}")
 
     flow main
       activate a
       activate b
       activate c
+      match Event1()
+      send FinishFlow(flow_id="a", deactivate=True)
+      match Event1()
+      send FinishFlow(flow_id="b", deactivate=True)
+      match Event1()
       await UtteranceBotAction(script="done")
 
     """
@@ -1671,13 +1680,528 @@ def test_single_flow_activation():
                 "type": "StartUtteranceBotAction",
                 "script": "test 2",
             },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            }
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event2",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "test 1",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "test 2",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event2",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "test 2",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
             {
                 "type": "StartUtteranceBotAction",
                 "script": "done",
+            }
+        ],
+    )
+
+
+def test_single_flow_activation_2():
+    """Test different aspects of the flow activation mechanism."""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="a")
+      activate z
+      match WaitEvent()
+
+    flow b
+      start UtteranceBotAction(script="b")
+      activate z
+      match WaitEvent()
+
+    flow z
+      match Event1()
+      start UtteranceBotAction(script="first")
+      start_new_flow_instance:
+      match Event2()
+      start UtteranceBotAction(script="second")
+
+    flow main
+      activate a
+      activate b
+      match Event3()
+      send FinishFlow(flow_id="a", deactivate=True)
+      match Event3()
+      send FinishFlow(flow_id="b", deactivate=True)
+      match Event3()
+      activate a
+      match WaitEvent()
+
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "a",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "b",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "first",
+            }
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "first",
+            }
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event2",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "second",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "first",
+            }
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event3",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            }
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event2",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "second",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "first",
+            }
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "first",
+            }
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event3",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event3",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "a",
+            }
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "first",
+            }
+        ],
+    )
+
+
+def test_single_flow_activation_3():
+    """Test different aspects of the flow activation mechanism."""
+
+    content = """
+    flow a
+      while True
+        when Event2()
+          await b
+
+    flow b
+      activate z
+      start UtteranceBotAction(script="b")
+      match Event3()
+
+    @loop("NEW")
+    flow z $interval=1.0
+      match Event1()
+      start UtteranceBotAction(script="z")
+
+    flow main
+      activate z
+      activate a
+      match WaitEvent()
+
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "z",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "z",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event2",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "b",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "z",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event3",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "z",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event2",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "b",
+            }
+        ],
+    )
+
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "z",
+            },
+            {
+                "type": "StopUtteranceBotAction",
             },
         ],
     )
 
 
 if __name__ == "__main__":
-    test_single_flow_activation()
+    test_single_flow_activation_3()

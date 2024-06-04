@@ -582,13 +582,6 @@ def _expand_activate_element(
         # Single match element
         if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
-            if element.spec.ref is not None:
-                raise ColangSyntaxError(
-                    "Activate statement cannot have a reference assignment!"
-                )
-            element_copy = copy.deepcopy(element)
-            # TODO: Remove assert once SpecOp type is refactored
-            assert isinstance(element_copy.spec, Spec)
             # $_instance_<uid> = (<flow_id>)<uid>
             instance_uid_variable_name = f"_instance_uid_{new_var_uid()}"
             new_elements.append(
@@ -597,17 +590,42 @@ def _expand_activate_element(
                     expression=f"'({element.spec.name}){{uid()}}'",
                 )
             )
-            element_copy.spec.arguments.update(
+            # send StartFlow(flow_id=<flow_id>, flow_instance_uid=$_instance_<uid>)
+            match_arguments = dict(element.spec.arguments)
+            match_arguments.update(
                 {
                     "flow_id": f"'{element.spec.name}'",
                     "flow_instance_uid": f"'{{${instance_uid_variable_name}}}'",
+                }
+            )
+            start_arguments = dict(match_arguments)
+            start_arguments.update(
+                {
                     "activated": "True",
                 }
             )
             new_elements.append(
                 SpecOp(
-                    op="start",
-                    spec=element_copy.spec,
+                    op="send",
+                    spec=Spec(
+                        name=InternalEvents.START_FLOW,
+                        arguments=start_arguments,
+                        spec_type=SpecType.EVENT,
+                    ),
+                )
+            )
+            # match FlowStarted(...)
+            # flow_event_ref_uid = f"_flow_event_ref_{new_var_uid()}"
+            new_elements.append(
+                SpecOp(
+                    op="match",
+                    spec=Spec(
+                        name=InternalEvents.FLOW_STARTED,
+                        arguments=match_arguments,
+                        # ref=_create_ref_ast_dict_helper(flow_event_ref_uid),
+                        spec_type=SpecType.EVENT,
+                    ),
+                    info={"internal": True},
                 )
             )
         else:
