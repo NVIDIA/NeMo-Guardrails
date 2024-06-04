@@ -207,6 +207,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 "examples": examples,
                 "potential_user_intents": ", ".join(potential_user_intents),
                 "user_action": user_action,
+                "context": state.context,
             },
         )
         stop = self.llm_task_manager.get_stop_tokens(
@@ -266,6 +267,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
     )
     async def generate_flow_from_instructions(
         self,
+        state: State,
         instructions: str,
         events: List[dict],
         llm: Optional[BaseLLM] = None,
@@ -298,6 +300,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 "examples": examples,
                 "flow_name": flow_name,
                 "instructions": instructions,
+                "context": state.context,
             },
         )
 
@@ -330,6 +333,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
     )
     async def generate_flow_from_name(
         self,
+        state: State,
         name: str,
         events: List[dict],
         llm: Optional[BaseLLM] = None,
@@ -358,6 +362,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             context={
                 "examples": examples,
                 "flow_name": name,
+                "context": state.context,
             },
         )
 
@@ -384,6 +389,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
     )
     async def generate_flow_continuation(
         self,
+        state: State,
         events: List[dict],
         temperature: Optional[float] = None,
         llm: Optional[BaseLLM] = None,
@@ -421,6 +427,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             events=events,
             context={
                 "examples": examples,
+                "context": state.context,
             },
         )
 
@@ -467,6 +474,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
     @action(name="GenerateValueAction", is_system_action=True, execute_async=True)
     async def generate_value(
         self,
+        state: State,
         instructions: str,
         events: List[dict],
         var_name: Optional[str] = None,
@@ -504,6 +512,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 "examples": examples,
                 "instructions": instructions,
                 "var_name": var_name if var_name else "result",
+                "context": state.context,
             },
         )
 
