@@ -524,6 +524,7 @@ def compute_next_state(state: State, event: dict) -> State:
                 # TODO: optimize this with a dict of statuses
                 # If already there are no more flows to interrupt, we should resume
                 should_resume = flow_state.interrupted_by is None
+                should_abort = False
 
                 # Check if it was waiting on a completed flow
                 if not should_resume:
@@ -531,6 +532,8 @@ def compute_next_state(state: State, event: dict) -> State:
                         if _flow_state.uid == flow_state.interrupted_by:
                             if _flow_state.status == FlowStatus.COMPLETED:
                                 should_resume = True
+                            elif _flow_state.status == FlowStatus.ABORTED:
+                                should_abort = True
                             break
 
                 if should_resume:
@@ -542,6 +545,10 @@ def compute_next_state(state: State, event: dict) -> State:
                     if flow_state.head < 0:
                         flow_state.status = FlowStatus.COMPLETED
 
+                    changes = True
+                elif should_abort:
+                    flow_state.status = FlowStatus.ABORTED
+                    flow_state.interrupted_by = None
                     changes = True
 
     return new_state
