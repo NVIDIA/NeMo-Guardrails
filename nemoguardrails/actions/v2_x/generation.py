@@ -25,6 +25,8 @@ from nemoguardrails.actions.actions import action
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import (
     escape_flow_name,
+    get_first_bot_action,
+    get_first_bot_intent,
     get_first_nonempty_line,
     get_initial_actions,
     get_last_user_utterance_event_v2_x,
@@ -234,6 +236,105 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         return f"{user_intent}" or "user unknown intent"
+
+    @action(
+        name="GenerateUserIntentAndBotAction",
+        is_system_action=True,
+        execute_async=True,
+    )
+    async def generate_user_intent_and_bot_action(
+        self,
+        state: State,
+        events: List[dict],
+        user_action: str,
+        max_example_flows: int = 5,
+        llm: Optional[BaseLLM] = None,
+    ) -> dict:
+        """Generate the canonical form for what the user said i.e. user intent and a suitable bot action."""
+
+        # Use action specific llm if registered else fallback to main llm
+        llm = llm or self.llm
+
+        log.info("Phase 1 :: Generating user intent and bot action")
+
+        # We search for the most relevant similar user intents
+        examples = ""
+        potential_user_intents = []
+
+        if self.user_message_index:
+            results = await self.user_message_index.search(
+                text=user_action, max_results=max_example_flows
+            )
+
+            # We add these in reverse order so the most relevant is towards the end.
+            for result in reversed(results):
+                examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
+                potential_user_intents.append(result.meta["intent"])
+
+        # We add all currently active user intents (heads on match statements)
+        heads = find_all_active_event_matchers(state)
+        for head in heads:
+            element = get_element_from_head(state, head)
+            event = get_event_from_element(
+                state, state.flow_states[head.flow_state_uid], element
+            )
+            if (
+                event.name == InternalEvents.FLOW_FINISHED
+                and "flow_id" in event.arguments
+            ):
+                flow_id = event.arguments["flow_id"]
+                flow_config = state.flow_configs.get(flow_id, None)
+                if isinstance(flow_id, str) and (
+                    flow_config is None
+                    or (
+                        flow_config.has_meta_tag("user_intent")
+                        and flow_id not in potential_user_intents
+                    )
+                ):
+                    examples += f"user intent: {flow_id}\n\n"
+                    potential_user_intents.append(flow_id)
+        examples = examples.strip("\n")
+
+        prompt = self.llm_task_manager.render_task_prompt(
+            task=Task.GENERATE_USER_INTENT_FROM_USER_ACTION,
+            events=events,
+            context={
+                "examples": examples,
+                "potential_user_intents": ", ".join(potential_user_intents),
+                "user_action": user_action,
+            },
+        )
+
+        # We make this call with temperature 0 to have it as deterministic as possible.
+        with llm_params(llm, temperature=self.config.lowest_temperature):
+            result = await llm_call(llm, prompt, stop="user intent:")
+
+        # Parse the output using the associated parser
+        result = self.llm_task_manager.parse_task_output(
+            Task.GENERATE_USER_INTENT_FROM_USER_ACTION, output=result
+        )
+
+        user_intent = get_first_nonempty_line(result)
+        bot_intent = get_first_bot_intent(result.splitlines())
+        bot_action = get_first_bot_action(result.splitlines())
+
+        if user_intent is None or bot_action is None:
+            raise LlmResponseError(f"Issue with LLM response: {result}")
+
+        user_intent = escape_flow_name(user_intent.strip(" "))
+
+        if bot_intent:
+            bot_intent = escape_flow_name(bot_intent.strip(" "))
+
+        log.info(
+            "Canonical form for user intent: %s", user_intent if user_intent else "None"
+        )
+
+        return {
+            "user_intent": user_intent,
+            "bot_intent": bot_intent,
+            "bot_action": bot_action,
+        }
 
     @action(name="CheckValidFlowExistsAction", is_system_action=True)
     async def check_if_flow_exists(self, state: "State", flow_id: str) -> bool:
@@ -469,6 +570,27 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             "body": f'@meta(bot_intent="{intent}")\n'
             + f"flow {flow_name}\n"
             + "\n".join(["  " + l.strip(" ") for l in lines]),
+        }
+
+    @action(name="CreateFlowAction", is_system_action=True, execute_async=True)
+    async def create_flow(
+        self,
+        events: List[dict],
+        name: str,
+        body: str,
+    ) -> dict:
+        """Create a new flow during runtime."""
+
+        uuid = new_uuid()[0:8]
+
+        name = escape_flow_name(name)
+        flow_name = f"_dynamic_{uuid} {name}"
+        # TODO: parse potential parameters from flow name with a regex
+
+        return {
+            "name": flow_name,
+            "parameters": [],
+            "body": f"flow {flow_name}\n  " + body,
         }
 
     @action(name="GenerateValueAction", is_system_action=True, execute_async=True)

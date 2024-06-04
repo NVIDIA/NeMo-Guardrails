@@ -201,7 +201,7 @@ flow showcase selector
   while True
     log "while loop restarted"
     if $showcase_selection_ui == None
-      activate generating user intent for unhandled user utterance
+      activate continuation on unhandled user utterance
       activate handling bot talking interruption "inform"
       start VisualChoiceSceneAction(prompt= "Pick a showcase", support_prompts=["You can click on any option below","Or just say the 'Option C'","Or you can say 'I want to play the guessing game'"],choice_type="selection", allow_multiple_choices=False, options= [{"id": "game", "text": "A: Guessing Game", "image":"number 2 horizontal orientation"}, {"id": "multimodality", "text": "B: Multimodality", "image":"newton s cradle horizontal orientation"}, {"id": "backchanneling", "text": "C: Backchanneling", "image":"channel mixer horizontal orientation"}, {"id": "posture", "text": "D: Posture modulation", "image":"gauge horizontal orientation"}, {"id": "proactive", "text": "E: Proactive turn-taking", "image":"speech bubble horizontal orientation"}]) as $showcase_selection_ui
       start bot inform "Please pick one of the showcases."
@@ -216,11 +216,6 @@ flow showcase selector
         if $bot_talking_state == False
           send $llm_continuation.Stop()
           log "user said something during bot thinking (user silent llm response generation)"
-
-    or when unhandled user intent as $intent_ref
-      log "unhandled user intent: '{$intent_ref.intent}'"
-      llm continue interaction
-      log "unhandled user intent response done"
 
     or when user picked number guessing game showcase
       send $showcase_selection_ui.Stop()
@@ -288,7 +283,7 @@ flow main
     and bot gesture "Welcome user, wave hands"
   send $welcome_ui.Stop()
 
-  check limitations with user
+  #check limitations with user
   activate showcase selector
 
   #showcase number guessing game

@@ -22,6 +22,7 @@ flow bot say something like $text
 flow polling llm request response $interval=1.0
   """Start response polling for any LLM invocation."""
   match StartGenerateUserIntentAction() as $event_ref
+    or StartGenerateUserIntentAndBotAction() as $event_ref
     or StartGenerateFlowContinuationAction() as $event_ref
     or StartGenerateFlowFromNameAction() as $event_ref
     or StartGenerateValueAction() as $event_ref
@@ -66,6 +67,56 @@ flow generating user intent for unhandled user utterance
     return
   or when UnhandledEvent(event="FinishFlow", flow_id=$intent)
     send UserIntentLog(flow_id=$intent, parameter=None)
+
+
+flow continuation on unhandled user utterance
+  """Continue the interaction on an unexpected user utterance.
+  This invokes the llm only once compared to activating flow 'generating user intent for unhandled user utterance'
+  and flow 'continuation on unhandled user intent'"""
+  priority 0.1 # Set a lower priority to allow other flows to wait for 'unhandled user intent'
+  activate tracking bot talking state
+  global $bot_talking_state
+
+  await _user_said_something_unexpected as $user_said
+  $event = $user_said.event
+  if $bot_talking_state != True
+    # Don't invoke llm while bot is talking
+    $action = 'user said "{$event.final_transcript}"'
+    #await GenerateUserIntentAction(user_action=$action, max_example_flows=20) as $action_ref
+    #$user_intent = $action_ref.return_value
+    await GenerateUserIntentAndBotAction(user_action=$action, max_example_flows=20) as $action_ref
+    $user_intent = $action_ref.return_value["user_intent"]
+    $bot_intent = $action_ref.return_value["bot_intent"]
+    $bot_action = $action_ref.return_value["bot_action"]
+
+  # Generate the 'user intent' by sending out the FinishFlow event
+  send FinishFlow(flow_id=$user_intent, info="llm", priority=True)
+
+  # We need to log the user action
+  send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id=$user_intent)
+  # And we also need to log the generated user intent if not done by another mechanism
+  when UserIntentLog(flow_id=$user_intent)
+    return
+  or when UnhandledEvent(event="FinishFlow", flow_id=$user_intent)
+    send UserIntentLog(flow_id=$user_intent, parameter=None)
+    # If the user intent was not handled
+
+    if $bot_intent is not None
+      $exists = await CheckValidFlowExistsAction(flow_id=$bot_intent)
+      $flow_info = await CreateFlowAction(name=$bot_intent, body=$bot_action)
+    else
+      $exists = False
+      $flow_info = await CreateFlowAction(name="bot action", body=$bot_action)
+
+    if $exists == False
+      $flows = await AddFlowsAction(config=$flow_info.body)
+      if len($flows) == 0
+        print "Failed parsing created bot action flow!"
+        return
+      else
+        await await_flow_by_name $flow_info.name
+        await RemoveFlowsAction(flow_ids=[$flow_info.name])
+
 
 flow unhandled user intent -> $intent
   match UnhandledEvent(event="FinishFlow", flow_id=regex("^user "), loop_ids={$self.loop_id}) as $event
