@@ -16,6 +16,7 @@
 import pytest
 
 from nemoguardrails import RailsConfig
+from nemoguardrails.actions.llm.utils import LLMCallException
 from tests.utils import TestChat
 
 config = RailsConfig.from_content(
@@ -57,6 +58,6 @@ def test_2():
         llm_completions=[],
     )
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(LLMCallException):
         chat >> "hello"
         chat << "Hello!"
