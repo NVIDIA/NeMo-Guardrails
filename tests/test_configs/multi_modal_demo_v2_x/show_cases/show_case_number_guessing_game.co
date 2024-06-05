@@ -9,7 +9,7 @@ flow showcase number guessing game
   activate polling llm request response
   activate reaction bot question repetition for user silence 10
 
-  $random_number = ..."A new random explicit integer between 1 and 100, not a function."
+  $random_number = ..."Assign a new random explicit integer number between 1 and 100."
   if not is_int($random_number)
     $random_number = 42
 
@@ -23,7 +23,7 @@ flow showcase number guessing game
   $attempts = 1
   while True
     user said something
-    $user_number = ..."Store the number the user mentioned as an integer for further processing. Set this to 'None' if the user did not mention a number."
+    $user_number = ..."Assign the user mentioned number as an integer. Set this to 'None' if the user did not mention a number."
     log "extracted user number {$user_number}"
     if not is_int($user_number)
       bot express "I don't think this is a number!"
