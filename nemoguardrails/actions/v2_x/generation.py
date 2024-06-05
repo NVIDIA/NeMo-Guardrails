@@ -227,6 +227,10 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         user_intent = get_first_nonempty_line(result)
+        # GTP-4o add often 'user intent: ' in front
+        temp_user_intent = get_first_user_intent(user_intent)
+        if temp_user_intent:
+            user_intent = temp_user_intent
         if user_intent is None:
             raise LlmResponseError(f"Issue with LLM response: {result}")
 
@@ -316,6 +320,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         user_intent = get_first_nonempty_line(result)
+        # GTP-4o add often 'user intent: ' in front
         temp_user_intent = get_first_user_intent(user_intent)
         if temp_user_intent:
             user_intent = temp_user_intent
@@ -659,7 +664,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         if value.endswith(";"):
             value = value[:-1]
 
-        # Remove variable name from the left (GTP4o) if it appears in the result:
+        # Remove variable name from the left if it appears in the result (GTP-4o):
         if isinstance(prompt, str):
             last_prompt_line = prompt.strip().split("\n")[-1]
             value = value.replace(last_prompt_line, "").strip()
