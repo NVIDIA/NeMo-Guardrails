@@ -86,8 +86,37 @@ def get_numbered_lines(content: str):
     i = 0
     multiline_comment = False
     current_comment = None
+    multiline_string = False
+    current_string = None
     while i < len(raw_lines):
         raw_line = raw_lines[i].strip()
+
+        # handle multiline string
+        if multiline_string:
+            current_string += "\n" + raw_line
+            if raw_line.endswith('"'):
+                multiline_string = False
+                lines.append(
+                    {
+                        "text": current_string,
+                        "number": i + 1,
+                        "indentation": multiline_indentation,
+                        "comment": current_comment,
+                    }
+                )
+                current_string = None
+            i += 1
+            continue
+        if (
+            raw_line.startswith('"')
+            and not raw_line.startswith('"""')
+            and not raw_line.endswith('"')
+        ):
+            multiline_string = True
+            current_string = raw_line
+            multiline_indentation = len(raw_lines[i]) - len(raw_line.lstrip())
+            i += 1
+            continue
 
         # If we have a line comment, we record it
         if raw_line.startswith("#"):
