@@ -28,6 +28,7 @@ from nemoguardrails.actions.llm.utils import (
     get_first_bot_action,
     get_first_bot_intent,
     get_first_nonempty_line,
+    get_first_user_intent,
     get_initial_actions,
     get_last_user_utterance_event_v2_x,
     llm_call,
@@ -307,7 +308,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         # We make this call with temperature 0 to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
-            result = await llm_call(llm, prompt, stop="user intent:")
+            result = await llm_call(llm, prompt, stop="\nuser intent:")
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(
@@ -315,6 +316,9 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         user_intent = get_first_nonempty_line(result)
+        temp_user_intent = get_first_user_intent(user_intent)
+        if temp_user_intent:
+            user_intent = temp_user_intent
         bot_intent = get_first_bot_intent(result.splitlines())
         bot_action = get_first_bot_action(result.splitlines())
 
@@ -654,6 +658,11 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         # a ";" at the end of the line. We remove that
         if value.endswith(";"):
             value = value[:-1]
+
+        # Remove variable name from the left (GTP4o) if it appears in the result:
+        if isinstance(prompt, str):
+            last_prompt_line = prompt.strip().split("\n")[-1]
+            value = value.replace(last_prompt_line, "").strip()
 
         log.info("Generated value for $%s: %s", var_name, value)
 
