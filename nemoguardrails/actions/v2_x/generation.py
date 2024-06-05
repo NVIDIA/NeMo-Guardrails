@@ -228,7 +228,8 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         user_intent = get_first_nonempty_line(result)
         # GTP-4o add often 'user intent: ' in front
-        temp_user_intent = get_first_user_intent(user_intent)
+        if user_intent:
+            temp_user_intent = get_first_user_intent([user_intent])
         if temp_user_intent:
             user_intent = temp_user_intent
         if user_intent is None:
@@ -312,7 +313,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         # We make this call with temperature 0 to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
-            result = await llm_call(llm, prompt, stop="\nuser intent:")
+            result = await llm_call(llm, prompt, stop=["\nuser intent:"])
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(
@@ -321,7 +322,8 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         user_intent = get_first_nonempty_line(result)
         # GTP-4o add often 'user intent: ' in front
-        temp_user_intent = get_first_user_intent(user_intent)
+        if user_intent:
+            temp_user_intent = get_first_user_intent([user_intent])
         if temp_user_intent:
             user_intent = temp_user_intent
         bot_intent = get_first_bot_intent(result.splitlines())
