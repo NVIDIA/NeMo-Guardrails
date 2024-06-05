@@ -12,21 +12,17 @@ Before you begin, ensure you have the following prerequisites in place:
 pip install -U --quiet langchain-nvidia-ai-endpoints
 ```
 
-```
-
-[notice] A new release of pip is available: 23.3.2 -> 24.0
-[notice] To update, run: pip install --upgrade pip
-```
-
 2. An NVIDIA NGC account to access AI Foundation Models. To create a free account go to [NVIDIA NGC website](https://ngc.nvidia.com/).
 
 3. An API key from NVIDIA API Catalog:
-    -  Generate an API key by navigating to the AI Foundation Models section on the NVIDIA NGC website, selecting a model with an API endpoint, and generating an API key.
-    -  Export the NVIDIA API key as an environment variable:
+    - Generate an API key by navigating to the AI Foundation Models section on the NVIDIA NGC website, selecting a model with an API endpoint, and generating an API key. You can use this API key for all mdoels available in the NVIDIA API Catalog.
+    - Export the NVIDIA API key as an environment variable:
 
 ```bash
 export NVIDIA_API_KEY=$NVIDIA_API_KEY # Replace with your own key
 ```
+
+> **Note**: The API key is used to access the models hosted on NVIDIA API Catalog. If you are using self-hosted models with NVIDIA NIM, you can skip this step.
 
 4. If you're running this inside a notebook, patch the AsyncIO loop.
 
@@ -40,11 +36,22 @@ nest_asyncio.apply()
 
 To get started, copy the ABC bot configuration into a subdirectory called `config`:
 
-```bash
-cp -r ../../../../examples/bots/abc config
+if you are running this inside a notebook, you can use the following code:
+
+```python
+from nemoguardrails.utils import get_examples_data_path
+!cp -r {get_examples_data_path("bots/abc")} config
 ```
 
-Update the `models` section of the `config.yml` file to the desired model supported by NVIDIA API Catalog:
+otherwise, you can use the following command:
+
+```bash
+cp -r $(python -c 'from nemoguardrails.utils import get_examples_data_path; print(get_examples_data_path("bots/abc"))') config
+```
+
+### Working with NVIDIA API Catalog
+
+If you have obtained the NVIDIA API key, you can use it to access the models hosted on NVIDIA API Catalog. Then update the `config.yml` with the following configuration:
 
 ```yaml
 ...
@@ -52,6 +59,24 @@ models:
   - type: main
     engine: nvidia_ai_endpoints
     model: ai-mixtral-8x7b-instruct
+...
+```
+
+> **Note**: The `ai-mixtral-8x7b-instruct` model is hosted on NVIDIA API Catalog. You can replace it with any other model available in the NVIDIA API Catalog.
+
+### Working with NVIDIA NIMs
+
+When ready to deploy, you can self-host models with NVIDIA NIM—which is included with the NVIDIA AI Enterprise software license—and run them anywhere, giving you ownership of your customizations and full control of your intellectual property (IP) and AI applications.
+
+[Learn more about NIMs](https://developer.nvidia.com/blog/nvidia-nim-offers-optimized-inference-microservices-for-deploying-ai-models-at-scale/)
+
+```yaml
+...
+  - type: main
+    engine: nvidia_ai_endpoints
+    model: ai-mixtral-8x7b-instruct
+    parameters:
+      base_url: http://localhost:8000/v1
 ...
 ```
 
