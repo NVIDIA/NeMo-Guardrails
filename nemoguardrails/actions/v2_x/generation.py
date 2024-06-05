@@ -649,8 +649,12 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             },
         )
 
+        stop = self.llm_task_manager.get_stop_tokens(
+            Task.GENERATE_USER_INTENT_FROM_USER_ACTION
+        )
+
         with llm_params(llm, temperature=0.1):
-            result = await llm_call(llm, prompt)
+            result = await llm_call(llm, prompt, stop)
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(

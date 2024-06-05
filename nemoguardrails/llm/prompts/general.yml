@@ -149,6 +149,8 @@ prompts:
 
           # {{ instructions }}
           ${{ var_name }} =
+      stop:
+          - "\n"
 
     # Prompt for generating a flow from instructions.
     - task: generate_flow_from_instructions
