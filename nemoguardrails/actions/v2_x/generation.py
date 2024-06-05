@@ -647,7 +647,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             },
         )
 
-        with llm_params(llm, temperature=0.5):
+        with llm_params(llm, temperature=0.1):
             result = await llm_call(llm, prompt)
 
         # Parse the output using the associated parser
