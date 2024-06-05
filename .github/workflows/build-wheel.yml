@@ -24,7 +24,11 @@ jobs:
       - name: Build Wheel
         run: |
           pip install build
+          cp -r chat-ui nemoguardrails/chat-ui
+          cp -r examples nemoguardrails/examples
           python -m build --wheel
+          rm -r nemoguardrails/chat-ui
+          rm -r nemoguardrails/examples
           echo "WHEEL_FILE=$(ls dist/*.whl)" >> $GITHUB_ENV
 
       - name: Upload Artifact

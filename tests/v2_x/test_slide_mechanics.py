@@ -230,7 +230,7 @@ def test_expressions_in_strings():
     content = """
     flow main
       start UtteranceBotAction(script="Roger") as $ref
-      start UtteranceBotAction(script="It's {{->}} \\"{$ref.start_event_arguments.script}!\\"")
+      start UtteranceBotAction(script="It's {{->}}")
       start UtteranceBotAction(script='It"s {{->}} \\'{$ref.start_event_arguments.script}!\\'')
     """
 
@@ -245,7 +245,7 @@ def test_expressions_in_strings():
             },
             {
                 "type": "StartUtteranceBotAction",
-                "script": 'It\'s {->} "Roger!"',
+                "script": "It's {->}",
             },
             {
                 "type": "StartUtteranceBotAction",

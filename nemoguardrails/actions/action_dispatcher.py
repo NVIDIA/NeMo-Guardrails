@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from langchain.chains.base import Chain
 from langchain_core.runnables import Runnable
 
+from nemoguardrails.actions.llm.utils import LLMCallException
 from nemoguardrails.logging.callbacks import logging_callbacks
 
 log = logging.getLogger(__name__)
@@ -224,8 +225,14 @@ class ActionDispatcher:
                         # TODO: there should be a common base class here
                         result = fn.run(**params)
                     return result, "success"
+
+                # We forward LLM Call exceptions
+                except LLMCallException as e:
+                    raise e
+
                 except Exception as e:
                     log.warning(f"Error while execution {action_name}: {e}")
+                    log.exception(e)
 
         return None, "failed"
 
