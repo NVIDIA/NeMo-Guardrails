@@ -4,6 +4,8 @@ define subflow autoalign check input
     $autoalign_input_response = $input_result['combined_response']
     bot refuse to respond
     stop
+  else if $input_result["pii_fast"] and $input_result["pii_fast"]["guarded"]:
+    $user_message = $input_result["pii_fast"]["response"]
 
 define subflow autoalign check output
   $output_result = execute autoalign_output_api(show_autoalign_message=True)
