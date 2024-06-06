@@ -42,8 +42,20 @@ class SentenceTransformerEmbeddingModel(EmbeddingModel):
     engine_name = "SentenceTransformers"
 
     def __init__(self, embedding_model: str):
-        from sentence_transformers import SentenceTransformer
-        from torch import cuda
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError:
+            raise ImportError(
+                "Could not import sentence-transformers, please install it with "
+                "`pip install sentence-transformers`."
+            )
+
+        try:
+            from torch import cuda
+        except ImportError:
+            raise ImportError(
+                "Could not import torch, please install it with `pip install torch`."
+            )
 
         device = "cuda" if cuda.is_available() else "cpu"
         self.model = SentenceTransformer(embedding_model, device=device)
