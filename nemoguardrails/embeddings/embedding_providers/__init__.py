@@ -13,44 +13,59 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+
+from __future__ import annotations
+
+from typing import Optional, Type
+
+from . import fastembed, openai, sentence_transformers
+from .base import EmbeddingModel
+from .registry import EmbeddingProviderRegistry
 
 # This is the executor that will be used for computing the embeddings.
 # Currently, we leave this as None, to use the default executor from asyncio.
 # In the future, we might want to customize.
+
 embeddings_executor = None
+
+
+def register_embedding_provider(
+    model: Type[EmbeddingModel], engine_name: Optional[str] = None
+):
+    """Register an embedding provider.
+
+    Args:
+        model (Type[EmbeddingModel]): The embedding model class.
+        engine_name (str): The name of the embedding engine.
+
+    Raises:
+        ValueError: If the engine name is not provided and the model does not have an engine name.
+        TypeError: If the model is not an instance of `EmbeddingModel`.
+        ValueError: If the model does not have 'encode' or 'encode_async' methods.
+    """
+
+    if not engine_name:
+        engine_name = model.engine_name
+
+    if not engine_name:
+        raise ValueError(
+            "The engine name must be provided either in the model or as an argument."
+        )
+
+    registry = EmbeddingProviderRegistry()
+    registry.add(engine_name, model)
+
 
 # The cache for embedding models, to make sure they are singleton.
 _embedding_model_cache = {}
 
 
-class EmbeddingModel:
-    """Generic interface for an embedding model.
+# Add all the implemented embedding providers to the registry.
+# As we are not using the `Registered` class, we need to manually register the providers.
 
-    The embedding model is responsible for creating the embeddings given a list of
-    input texts."""
-
-    async def encode_async(self, documents: List[str]) -> List[List[float]]:
-        """Encode the provided documents into embeddings.
-
-        Args:
-            documents (List[str]): The list of documents for which embeddings should be created.
-
-        Returns:
-            List[List[float]]: The list of embeddings corresponding to the input documents.
-        """
-        raise NotImplementedError()
-
-    def encode(self, documents: List[str]) -> List[List[float]]:
-        """Encode the provided documents into embeddings.
-
-        Args:
-            documents (List[str]): The list of documents for which embeddings should be created.
-
-        Returns:
-            List[List[float]]: The list of embeddings corresponding to the input documents.
-        """
-        raise NotImplementedError()
+register_embedding_provider(fastembed.FastEmbedEmbeddingModel)
+register_embedding_provider(openai.OpenAIEmbeddingModel)
+register_embedding_provider(sentence_transformers.SentenceTransformerEmbeddingModel)
 
 
 def init_embedding_model(embedding_model: str, embedding_engine: str) -> EmbeddingModel:
@@ -66,27 +81,11 @@ def init_embedding_model(embedding_model: str, embedding_engine: str) -> Embeddi
     Raises:
         ValueError: If the embedding engine is invalid.
     """
+
     model_key = f"{embedding_engine}-{embedding_model}"
 
     if model_key not in _embedding_model_cache:
-        if embedding_engine == "SentenceTransformers":
-            from .sentence_transformers import SentenceTransformerEmbeddingModel
-
-            model = SentenceTransformerEmbeddingModel(embedding_model)
-
-        elif embedding_engine == "FastEmbed":
-            from .fastembed import FastEmbedEmbeddingModel
-
-            model = FastEmbedEmbeddingModel(embedding_model)
-
-        elif embedding_engine == "openai":
-            from .openai import OpenAIEmbeddingModel
-
-            model = OpenAIEmbeddingModel(embedding_model)
-
-        else:
-            raise ValueError(f"Invalid embedding engine: {embedding_engine}")
-
+        model = EmbeddingProviderRegistry().get(embedding_engine)(embedding_model)
         _embedding_model_cache[model_key] = model
 
     return _embedding_model_cache[model_key]

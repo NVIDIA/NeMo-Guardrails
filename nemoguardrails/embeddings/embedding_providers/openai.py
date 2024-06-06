@@ -19,7 +19,7 @@ from typing import List, Optional
 import openai
 from openai import AsyncOpenAI, OpenAI
 
-from . import EmbeddingModel
+from .base import EmbeddingModel
 
 # We set the OpenAI async client in an asyncio context variable because we need it
 # to be scoped at the asyncio loop level. The client caches it somewhere, and if the loop
@@ -42,6 +42,8 @@ class OpenAIEmbeddingModel(EmbeddingModel):
     Methods:
         encode: Encode a list of documents into embeddings.
     """
+
+    engine_name = "openai"
 
     def __init__(
         self,

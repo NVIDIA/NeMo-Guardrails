@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
 
 from typing import Any
 
@@ -28,14 +27,6 @@ class EmbeddingProviderRegistry(Registry):
             TypeError: If an item is not an instance of EmbeddingModel.
             ValueError: If an item does not have 'encode' or 'encode_async' methods.
         """
-
-        # for name, item in self.items.items():
-        # delay the import to avoid circular imports
-        from nemoguardrails.embeddings.embedding_providers.base import EmbeddingModel
-
-        if not issubclass(item, EmbeddingModel):
-            raise TypeError(f"{name} is not a subclass of `EmbeddingModel`")
-
         if not callable(getattr(item, "encode", None)):
             raise ValueError(f"{name} does not have an 'encode' method")
 
