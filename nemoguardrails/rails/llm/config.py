@@ -331,12 +331,40 @@ class JailbreakDetectionConfig(BaseModel):
     )
 
 
+class AutoAlignOptions(BaseModel):
+    """List of guardrails that are activated"""
+
+    guardrails_config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="The guardrails configuration that is passed to the AutoAlign endpoint",
+    )
+
+
+class AutoAlignRailConfig(BaseModel):
+    """Configuration data for the AutoAlign API"""
+
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    input: AutoAlignOptions = Field(
+        default_factory=AutoAlignOptions,
+        description="Input configuration for AutoAlign guardrails",
+    )
+    output: AutoAlignOptions = Field(
+        default_factory=AutoAlignOptions,
+        description="Output configuration for AutoAlign guardrails",
+    )
+
+
 class RailsConfigData(BaseModel):
     """Configuration data for specific rails that are supported out-of-the-box."""
 
     fact_checking: FactCheckingRailConfig = Field(
         default_factory=FactCheckingRailConfig,
         description="Configuration data for the fact-checking rail.",
+    )
+
+    autoalign: AutoAlignRailConfig = Field(
+        default_factory=AutoAlignRailConfig,
+        description="Configuration data for the AutoAlign guardrails API.",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
