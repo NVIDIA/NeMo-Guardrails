@@ -201,10 +201,8 @@ async def autoalign_factcheck_infer(
             async for line in response.content:
                 resp = json.loads(line)
                 if resp["task"] == "factcheck":
-                    try:
+                    if resp["response"].startswith("Factcheck Score: "):
                         return float(resp["response"][17:])
-                    except ValueError as _:
-                        return 1.0
     return 1.0
 
 
@@ -273,7 +271,10 @@ async def autoalign_output_api(
 
 @action(name="autoalign_factcheck_output_api")
 async def autoalign_factcheck_output_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+    llm_task_manager: LLMTaskManager,
+    context: Optional[dict] = None,
+    factcheck_threshold: float = 0.0,
+    show_autoalign_message: bool = True,
 ):
     """Calls AutoAlign factcheck API and checks whether the bot message is factually correct according to given
     documents"""
@@ -289,9 +290,14 @@ async def autoalign_factcheck_output_api(
     if not autoalign_fact_check_api_url:
         raise ValueError("Provide the autoalign factcheck endpoint in the config")
     text = bot_message
-    return await autoalign_factcheck_infer(
+    score = await autoalign_factcheck_infer(
         request_url=autoalign_fact_check_api_url,
         text=text,
         documents=documents,
         guardrails_config=guardrails_config,
     )
+    if score < factcheck_threshold and show_autoalign_message:
+        log.warning(
+            f"Factcheck violation in llm response has been detected by AutoAlign with fact check score {score}"
+        )
+    return score

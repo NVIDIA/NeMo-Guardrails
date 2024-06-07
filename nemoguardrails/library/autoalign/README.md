@@ -316,7 +316,7 @@ define bot refuse to respond
 The actions `autoalign_input_api` and `autoalign_output_api` takes in two arguments `show_autoalign_message` and
 `show_toxic_phrases`. Both the arguments expect boolean value being passed to them. The default value of
 `show_autoalign_message` is `True` and for `show_toxic_phrases` is False. The `show_autoalign_message` controls whether
-we will any output from autoalign or not. The response from AutoAlign would be presented as a subtext, when
+we will show any output from autoalign or not. The response from AutoAlign would be presented as a subtext, when
 `show_autoalign_message` is kept `True`. Details regarding the second argument can be found in `text_toxicity_extraction`
 section.
 
@@ -592,37 +592,18 @@ AutoAlign fact checking whenever possible.
 
 Following is the format of the colang file, which is present in the library:
 ```colang
-define subflow autoalign check input
-  $input_result = execute autoalign_input_api(show_autoalign_message=True)
-  if $input_result["guardrails_triggered"]
-    $autoalign_input_response = $input_result['combined_response']
-    bot refuse to respond
-    stop
-
-define subflow autoalign check output
-  $output_result = execute autoalign_output_api(show_autoalign_message=True)
-  if $output_result["guardrails_triggered"]
-    bot refuse to respond
-    stop
-  else
-    $pii_message_output = $output_result["pii_fast"]["response"]
-    if $output_result["pii_fast"]["guarded"]
-      $bot_message = $pii_message_output
-
 define subflow autoalign factcheck output
   if $check_facts == True
     $check_facts = False
-    $output_result = execute autoalign_factcheck_output_api
-    if $output_result < 0.5
-      bot inform autoalign factcheck output violation
-      stop
-
-define bot inform autoalign factcheck output violation
-  "Factcheck violation in llm response has been detected by AutoAlign."
-
-define bot refuse to respond
-  "I'm sorry, I can't respond to that."
+    $threshold = 0.5
+    $output_result = execute autoalign_factcheck_output_api(factcheck_threshold=$threshold)
 ```
+
+The `threshold` can be changed depending upon the use-case, the `output_result`
+variable stores the factcheck score which can be used for further processing.
+The `show_autoalign_message` controls whether we will show any output from autoalign
+or not. The response from AutoAlign would be presented as a subtext, when
+`show_autoalign_message` is kept `True`.
 
 To use this flow you need to have colang file of the following format:
 
@@ -634,7 +615,7 @@ define user ask about pluto
 
 define flow answer report question
   user ask about pluto
-  # For report questions, we activate the fact checking.
+  # For pluto questions, we activate the fact checking.
   $check_facts = True
   bot provide report answer
 ```

@@ -116,9 +116,7 @@ async def test_fact_checking_wrong(httpx_mock):
             "diameter greater than Pluto's, there are four other known moons: Styx, Nix, Kerberos, and Hydra. Styx "
             "and Nix were discovered in 2005, while Kerberos and Hydra were discovered in 2011 and 2012, "
             "respectively. These moons are much smaller than Charon and Pluto, but they are still significant in "
-            "understanding the dynamics of the Pluto system. Isn't that fascinating?"
-            "\n"
-            "Factcheck violation in llm response has been detected by AutoAlign.",
+            "understanding the dynamics of the Pluto system. Isn't that fascinating?",
         ],
     )
 
@@ -154,6 +152,4 @@ async def test_fact_checking_wrong(httpx_mock):
         "and Hydra. Styx and Nix were discovered in 2005, while Kerberos and Hydra were discovered in 2011 "
         "and 2012, respectively. These moons are much smaller than Charon and Pluto, but they are still "
         "significant in understanding the dynamics of the Pluto system. Isn't that fascinating?"
-        "\n"
-        "Factcheck violation in llm response has been detected by AutoAlign."
     )
