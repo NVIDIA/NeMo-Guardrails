@@ -288,15 +288,10 @@ async def autoalign_factcheck_output_api(
     guardrails_config = getattr(autoalign_config.output, "guardrails_config", None)
     if not autoalign_fact_check_api_url:
         raise ValueError("Provide the autoalign factcheck endpoint in the config")
-    if isinstance(documents, str):
-        documents = documents.split("\n")
     text = bot_message
-    if isinstance(documents, list) and len(documents) > 0:
-        return await autoalign_factcheck_infer(
-            request_url=autoalign_fact_check_api_url,
-            text=text,
-            documents=documents,
-            guardrails_config=guardrails_config,
-        )
-    else:
-        raise ValueError("Provide relevant documents in proper format")
+    return await autoalign_factcheck_infer(
+        request_url=autoalign_fact_check_api_url,
+        text=text,
+        documents=documents,
+        guardrails_config=guardrails_config,
+    )
