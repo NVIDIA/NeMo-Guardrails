@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Module for the configuration of rails."""
+
 import logging
 import os
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -484,6 +485,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "streaming",
         "passthrough",
         "raw_llm_call_action",
+        "allow_exceptions",
     ]
 
     for field in additional_fields:
@@ -772,8 +774,13 @@ class RailsConfig(BaseModel):
         description="Whether this configuration should use streaming mode or not.",
     )
 
-    passthrough: Optional[bool] = Field(
-        default=None,
+    allow_exceptions: bool = Field(
+        default=False,
+        description="If true, allows the rails to throw/pass exceptions to the user.",
+    )
+
+    passthrough: bool = Field(
+        default=False,
         description="Weather the original prompt should pass through the guardrails configuration as is. "
         "This means it will not be altered in any way. ",
     )
