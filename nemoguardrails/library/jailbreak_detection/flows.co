@@ -1,3 +1,6 @@
+define bot refuse to respond
+  "I'm sorry, I can't respond to that."
+
 define subflow jailbreak detection heuristics
   """
   Heuristic checks to assess whether the user's prompt is an attempted jailbreak.
@@ -5,8 +8,8 @@ define subflow jailbreak detection heuristics
   $is_jailbreak = execute jailbreak_detection_heuristics
 
   if $is_jailbreak
-    bot refuse to respond
-    stop
-
-define bot refuse to respond
-  "I'm sorry, I can't respond to that."
+    if $config.allow_exceptions
+      create event JailbreakDetectionException(message="Jailbreak attempt detected. The user's prompt was identified as an attempted jailbreak. Please ensure your prompt adheres to the guidelines.")
+    else
+      bot refuse to respond
+      stop

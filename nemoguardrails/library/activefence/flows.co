@@ -18,45 +18,71 @@ define subflow activefence moderation
   $result = execute call activefence api
 
   if $result.max_risk_score > 0.7
-    bot refuse to respond
-    stop
+    if $config.allow_exceptions
+      create event ActiveFenceModerationException(message="ActiveFence moderation triggered. The maximum risk score exceeded the threshold.")
+    else
+      bot refuse to respond
+      stop
 
 define subflow activefence moderation detailed
   """Guardrail based on individual risk scores."""
   $result = execute call activefence api
 
   if $result.violations.get("abusive_or_harmful.harassment_or_bullying", 0) > 0.8
-    bot inform cannot engage in abusive or harmful behavior
-    stop
+    if $config.allow_exceptions
+      create event ActiveFenceHarassmentException(message="ActiveFence moderation triggered. The harassment or bullying risk score exceeded the threshold.")
+    else
+      bot inform cannot engage in abusive or harmful behavior
+      stop
 
   if $result.violations.get("abusive_or_harmful.profanity", 0) > 0.7
-    bot inform cannot engage in abusive or harmful behavior
-    stop
+    if $config.allow_exceptions
+      create event ActiveFenceProfanityException(message="ActiveFence moderation triggered. The profanity risk score exceeded the threshold.")
+    else
+      bot inform cannot engage in abusive or harmful behavior
+      stop
 
   if $result.violations.get("abusive_or_harmful.hate_speech", 0) > 0.6
-    bot inform cannot engage in abusive or harmful behavior
-    stop
+    if $config.allow_exceptions
+      create event ActiveFenceHateSpeechException(message="ActiveFence moderation triggered. The hate speech risk score exceeded the threshold.")
+    else
+      bot inform cannot engage in abusive or harmful behavior
+      stop
 
   if $result.violations.get("abusive_or_harmful.child_grooming", 0) > 0.4
-    bot inform cannot engage in abusive or harmful behavior
-    stop
+    if $config.allow_exceptions
+      create event ActiveFenceChildGroomingException(message="ActiveFence moderation triggered. The child grooming risk score exceeded the threshold.")
+    else
+      bot inform cannot engage in abusive or harmful behavior
+      stop
 
   if $result.violations.get("abusive_or_harmful.general_violence", 0) > 0.7
-    bot inform cannot engage in abusive or harmful behavior
-    stop
+    if $config.allow_exceptions
+      create event ActiveFenceGeneralViolenceException(message="ActiveFence moderation triggered. The general violence risk score exceeded the threshold.")
+    else
+      bot inform cannot engage in abusive or harmful behavior
+      stop
 
   if $result.violations.get("self_harm.general", 0) > 0.8
-    bot inform cannot engage in self harm behavior
-    stop
+    if $config.allow_exceptions
+      create event ActiveFenceSelfHarmException(message="ActiveFence moderation triggered. The self harm risk score exceeded the threshold.")
+    else
+      bot inform cannot engage in self harm behavior
+      stop
 
   if $result.violations.get("adult_content.general", 0) > 0.3
-    bot inform cannot engage with inappropriate content
-    stop
+    if $config.allow_exceptions
+      create event ActiveFenceAdultContentException(message="ActiveFence moderation triggered. The adult content risk score exceeded the threshold.")
+    else
+      bot inform cannot engage with inappropriate content
+      stop
 
   if $result.violations.get("privacy_violation.pii", 0) > 0.8
-    bot inform cannot engage with sensitive content
-    stop
-
+    if $config.allow_exceptions
+      create event ActiveFencePrivacyViolationException(message="ActiveFence moderation triggered. The privacy violation risk score exceeded the threshold.")
+    else
+      bot inform cannot engage with sensitive content
+      stop
 
 define bot inform cannot engage in abusive or harmful behavior
   "I will not engage in any abusive or harmful behavior."

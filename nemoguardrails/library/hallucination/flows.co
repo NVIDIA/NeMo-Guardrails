@@ -15,7 +15,6 @@ define bot inform answer prone to hallucination
   "The previous answer is prone to hallucination and may not be accurate. Please double check the answer using additional sources."
   "The above response may have been hallucinated, and should be independently verified."
 
-
 define subflow check hallucination
   """Output rail for checking hallucinations."""
   if $check_hallucination == True
@@ -23,5 +22,8 @@ define subflow check hallucination
     $check_hallucination = False
 
     if $is_hallucination
-      bot inform answer unknown
-      stop
+      if $config.allow_exceptions
+        create event CheckHallucinationException(message="Hallucination detected. The previous answer may not be accurate")
+      else
+        bot inform answer unknown
+        stop
