@@ -585,28 +585,67 @@ This processing ensures that only relevant LLM responses undergo fact-checking
 and responses like greetings ('Hi', 'Hello' etc.) do not go through fact-checking
 process.
 
+Note that the verify_response is set to False by default as it requires additional
+computation, and we encourage users to determine which LLM responses should go through
+AutoAlign fact checking whenever possible.
+
 
 Following is the format of the colang file, which is present in the library:
 ```colang
-define flow autoalign factcheck input
-  execute autoalign_retrieve_relevant_chunks_input
-  $input_result = execute autoalign_factcheck_input_api
-
-define flow autoalign factcheck output
-  execute retrieve_relevant_chunks
-  $output_result = execute autoalign_factcheck_output_api
-  if $input_result < 0.5
-    bot inform autoalign factcheck input violation
-  if $output_result < 0.5
-    bot inform autoalign factcheck output violation
+define subflow autoalign check input
+  $input_result = execute autoalign_input_api(show_autoalign_message=True)
+  if $input_result["guardrails_triggered"]
+    $autoalign_input_response = $input_result['combined_response']
+    bot refuse to respond
     stop
 
-define bot inform autoalign factcheck input violation
-  "Factcheck input violation has been detected by AutoAlign."
+define subflow autoalign check output
+  $output_result = execute autoalign_output_api(show_autoalign_message=True)
+  if $output_result["guardrails_triggered"]
+    bot refuse to respond
+    stop
+  else
+    $pii_message_output = $output_result["pii_fast"]["response"]
+    if $output_result["pii_fast"]["guarded"]
+      $bot_message = $pii_message_output
+
+define subflow autoalign factcheck output
+  if $check_facts == True
+    $check_facts = False
+    $output_result = execute autoalign_factcheck_output_api
+    if $output_result < 0.5
+      bot inform autoalign factcheck output violation
+      stop
 
 define bot inform autoalign factcheck output violation
-  "$bot_message Factcheck output violation has been detected by AutoAlign."
+  "Factcheck violation in llm response has been detected by AutoAlign."
+
+define bot refuse to respond
+  "I'm sorry, I can't respond to that."
 ```
+
+To use this flow you need to have colang file of the following format:
+
+```colang
+define user ask about pluto
+  "What is pluto?"
+  "How many moons does pluto have?"
+  "Is pluto a planet?"
+
+define flow answer report question
+  user ask about pluto
+  # For report questions, we activate the fact checking.
+  $check_facts = True
+  bot provide report answer
+```
+
+The above example is of a flow related to a case where the
+knowledge base is about pluto. You need to define the flow
+for use case by following the above example, this ensures that
+the fact-check takes place only for particular topics and not
+for ideal chit-chat.
+
+
 
 The output of the factcheck endpoint provides you with a factcheck score against which we can add a threshold which determines whether the given output is factually correct or not.
 

@@ -16,10 +16,12 @@ define subflow autoalign check output
       $bot_message = $pii_message_output
 
 define subflow autoalign factcheck output
-  $output_result = execute autoalign_factcheck_output_api
-  if $output_result < 0.5
-    bot inform autoalign factcheck output violation
-    stop
+  if $check_facts == True
+    $check_facts = False
+    $output_result = execute autoalign_factcheck_output_api
+    if $output_result < 0.5
+      bot inform autoalign factcheck output violation
+      stop
 
 define bot inform autoalign factcheck output violation
   "Factcheck violation in llm response has been detected by AutoAlign."
