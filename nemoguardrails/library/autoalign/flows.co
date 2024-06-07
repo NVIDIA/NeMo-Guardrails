@@ -20,8 +20,8 @@ define subflow autoalign factcheck output
     $check_facts = False
     $output_result = execute autoalign_factcheck_output_api
     if $output_result < 0.5
-      bot inform autoalign factcheck output violation
-      stop
+      $bot_message = $bot_message + "\nFactcheck violation in llm response has been detected by AutoAlign."
+
 
 define bot inform autoalign factcheck output violation
   "Factcheck violation in llm response has been detected by AutoAlign."
