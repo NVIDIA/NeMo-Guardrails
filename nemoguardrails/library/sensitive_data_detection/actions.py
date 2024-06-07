@@ -34,6 +34,13 @@ from nemoguardrails.rails.llm.config import (
 
 log = logging.getLogger(__name__)
 
+try:
+    import spacy
+except ImportError:
+    log.warning(
+        "The spacy module is not installed. Please install it using pip: pip install spacy"
+    )
+
 
 @lru_cache
 def _get_analyzer():
