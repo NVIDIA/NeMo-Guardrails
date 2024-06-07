@@ -16,8 +16,6 @@
 import logging
 from functools import lru_cache
 
-import spacy
-
 try:
     from presidio_analyzer import PatternRecognizer
     from presidio_analyzer.nlp_engine import NlpEngineProvider
@@ -35,6 +33,13 @@ from nemoguardrails.rails.llm.config import (
 )
 
 log = logging.getLogger(__name__)
+
+try:
+    import spacy
+except ImportError:
+    log.warning(
+        "The spacy module is not installed. Please install it using pip: pip install spacy"
+    )
 
 
 @lru_cache
