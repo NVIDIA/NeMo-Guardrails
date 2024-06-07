@@ -77,7 +77,7 @@ DEFAULT_CONFIG = {
     "intellectual_property": {"mode": "OFF"},
 }
 
-default_factcheck_config = {"factcheck": {"verify_response": True}}
+default_factcheck_config = {"factcheck": {"verify_response": False}}
 
 
 def process_autoalign_output(responses: List[Any], show_toxic_phrases: bool = False):
