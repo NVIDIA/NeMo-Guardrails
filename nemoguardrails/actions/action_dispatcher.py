@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module for the calling proper action endpoints based on events received at action server endpoint """
+"""Module for the calling proper action endpoints based on events received at action server endpoint"""
 
 import importlib.util
 import inspect
@@ -257,31 +257,38 @@ class ActionDispatcher:
         action_objects = {}
         filename = os.path.basename(filepath)
 
+        if not os.path.isfile(filepath):
+            log.error(f"{filepath} does not exist or is not a file.")
+            log.error(f"Failed to load actions from {filename}.")
+            return action_objects
+
         try:
             log.debug(f"Analyzing file {filename}")
             # Import the module from the file
 
             spec = importlib.util.spec_from_file_location(filename, filepath)
+            if spec is None:
+                log.error(f"Failed to create a module spec from {filepath}.")
+                return action_objects
+
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
             # Loop through all members in the module and check for the `@action` decorator
             # If class has action decorator is_action class member is true
             for name, obj in inspect.getmembers(module):
-                if inspect.isfunction(obj) and hasattr(obj, "action_meta"):
-                    log.info(f"Adding {obj.__name__} to actions")
-                    action_objects[obj.action_meta["name"]] = obj
-
-                if inspect.isclass(obj) and hasattr(obj, "action_meta"):
+                if (inspect.isfunction(obj) or inspect.isclass(obj)) and hasattr(
+                    obj, "action_meta"
+                ):
                     try:
                         action_objects[obj.action_meta["name"]] = obj
                         log.info(f"Added {obj.action_meta['name']} to actions")
                     except Exception as e:
-                        log.debug(
+                        log.error(
                             f"Failed to register {obj.action_meta['name']} in action dispatcher due to exception {e}"
                         )
         except Exception as e:
-            log.debug(
+            log.error(
                 f"Failed to register {filename} in action dispatcher due to exception {e}"
             )
 
@@ -301,6 +308,7 @@ class ActionDispatcher:
         action_objects = {}
 
         if not os.path.exists(directory):
+            log.debug(f"_find_actions: {directory} does not exist.")
             return action_objects
 
         # Loop through all files in the directory and its subdirectories
@@ -311,5 +319,8 @@ class ActionDispatcher:
                     action_objects.update(
                         ActionDispatcher._load_actions_from_module(filepath)
                     )
+        if not action_objects:
+            log.debug(f"No actions found in {directory}")
+            log.exception(f"No actions found in the directory {directory}.")
 
         return action_objects
