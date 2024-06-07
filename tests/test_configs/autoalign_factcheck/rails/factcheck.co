@@ -3,7 +3,7 @@ define user ask about pluto
   "How many moons does pluto have?"
   "Is pluto a planet?"
 
-define flow answer report question
+define flow answer pluto question
   user ask about pluto
   $check_facts = True
   bot provide pluto answer
