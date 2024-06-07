@@ -5,6 +5,5 @@ define user ask about pluto
 
 define flow answer report question
   user ask about pluto
-  # For report questions, we activate the fact checking.
   $check_facts = True
   bot provide pluto answer
