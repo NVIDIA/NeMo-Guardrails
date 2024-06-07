@@ -449,33 +449,35 @@ For text toxicity detection, the matching score has to be following format:
 Can extract toxic phrases by changing the colang file a bit:
 
 ```colang
-define flow call autoalign input
+define subflow autoalign check input
   $input_result = execute autoalign_input_api(show_autoalign_message=True, show_toxic_phrases=True)
-
   if $input_result["guardrails_triggered"]
     $autoalign_input_response = $input_result['combined_response']
     bot refuse to respond
     stop
 
-define flow call autoalign output
+define subflow autoalign check output
   $output_result = execute autoalign_output_api(show_autoalign_message=True, show_toxic_phrases=True)
-
   if $output_result["guardrails_triggered"]
     bot refuse to respond
     stop
   else
     $pii_message_output = $output_result["pii_fast"]["response"]
     if $output_result["pii_fast"]["guarded"]
-      bot respond pii output
-      stop
+      $bot_message = $pii_message_output
 
+define subflow autoalign factcheck output
+  execute retrieve_relevant_chunks
+  $output_result = execute autoalign_factcheck_output_api
+  if $output_result < 0.5
+    bot inform autoalign factcheck output violation
+    stop
 
-define bot respond pii output
-  "$pii_message_output"
-
+define bot inform autoalign factcheck output violation
+  "Factcheck violation in llm response has been detected by AutoAlign."
 
 define bot refuse to respond
-  "I'm sorry I can't respond."
+  "I'm sorry, I can't respond to that."
 ```
 
 
@@ -561,6 +563,12 @@ To use AutoAlign's factcheck module, you have to modify the `config.yml` in the 
 rails:
   config:
     autoalign:
+      guardrails_config:
+        {
+          "factcheck":{
+            "verify_response": false
+          }
+        }
       parameters:
         fact_check_endpoint: "https://<AUTOALIGN_ENDPOINT>/factcheck"
   output:
@@ -570,6 +578,13 @@ rails:
 
 Specify the factcheck endpoint the parameters section of autoalign's config.
 Then, you have to call the corresponding subflows for factcheck guardrails.
+
+In the guardrails config for factcheck you can toggle "verify_response" flag
+which will enable(true) / disable (false) additional processing of LLM Response.
+This processing ensures that only relevant LLM responses undergo fact-checking
+and responses like greetings ('Hi', 'Hello' etc.) do not go through fact-checking
+process.
+
 
 Following is the format of the colang file, which is present in the library:
 ```colang
