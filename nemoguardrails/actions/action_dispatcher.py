@@ -15,10 +15,12 @@
 
 """Module for the calling proper action endpoints based on events received at action server endpoint"""
 
+import ast
 import importlib.util
 import inspect
 import logging
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain.chains.base import Chain
@@ -53,34 +55,37 @@ class ActionDispatcher:
 
         if load_all_actions:
             # TODO: check for better way to find actions dir path or use constants.py
+            current_file_path = Path(__file__).resolve()
+            parent_directory_path = current_file_path.parents[1]
 
             # First, we load all actions from the actions folder
-            self.load_actions_from_path(os.path.join(os.path.dirname(__file__), ".."))
+            self.load_actions_from_path(parent_directory_path)
+            # self.load_actions_from_path(os.path.join(os.path.dirname(__file__), ".."))
 
             # Next, we load all actions from the library folder
-            library_path = os.path.join(os.path.dirname(__file__), "../library")
+            library_path = parent_directory_path / "library"
 
             for root, dirs, files in os.walk(library_path):
                 # We only load the actions if there is an `actions` sub-folder or
                 # an `actions.py` file.
                 if "actions" in dirs or "actions.py" in files:
-                    self.load_actions_from_path(root)
+                    self.load_actions_from_path(Path(root))
 
             # Next, we load all actions from the current working directory
             # TODO: add support for an explicit ACTIONS_PATH
-            self.load_actions_from_path(os.getcwd())
+            self.load_actions_from_path(Path.cwd())
 
             # Last, but not least, if there was a config path, we try to load actions
             # from there as well.
             if config_path:
                 config_path = config_path.split(",")
                 for path in config_path:
-                    self.load_actions_from_path(path)
+                    self.load_actions_from_path(Path(path.strip()))
 
             # If there are any imported paths, we load the actions from there as well.
             if import_paths:
                 for import_path in import_paths:
-                    self.load_actions_from_path(import_path)
+                    self.load_actions_from_path(Path(import_path.strip()))
 
         log.info(f"Registered Actions: {self._registered_actions}")
         log.info("Action dispatcher initialized")
@@ -94,7 +99,7 @@ class ActionDispatcher:
         """
         return self._registered_actions
 
-    def load_actions_from_path(self, path: str):
+    def load_actions_from_path(self, path: Path):
         """Loads all actions from the specified path.
 
         This method loads all actions from the `actions.py` file if it exists and
@@ -102,8 +107,9 @@ class ActionDispatcher:
 
         Args:
             path (str): A string representing the path from which to load actions.
+
         """
-        actions_path = os.path.join(path, "actions")
+        actions_path = path / "actions"
         if os.path.exists(actions_path):
             self._registered_actions.update(self._find_actions(actions_path))
 
@@ -288,14 +294,14 @@ class ActionDispatcher:
                             f"Failed to register {obj.action_meta['name']} in action dispatcher due to exception {e}"
                         )
         except Exception as e:
+            relative_filepath = Path(module.__file__).relative_to(Path.cwd())
             log.error(
-                f"Failed to register {filename} in action dispatcher due to exception {e}"
+                f"Failed to register {filename} from {relative_filepath} in action dispatcher due to exception: {e}"
             )
 
         return action_objects
 
-    @staticmethod
-    def _find_actions(directory) -> Dict:
+    def _find_actions(self, directory) -> Dict:
         """Loop through all the subdirectories and check for the class with @action
         decorator and add in action_classes dict.
 
@@ -316,11 +322,27 @@ class ActionDispatcher:
             for filename in files:
                 if filename.endswith(".py"):
                     filepath = os.path.join(root, filename)
-                    action_objects.update(
-                        ActionDispatcher._load_actions_from_module(filepath)
-                    )
+                    if is_action_file(filepath):
+                        action_objects.update(
+                            ActionDispatcher._load_actions_from_module(filepath)
+                        )
         if not action_objects:
             log.debug(f"No actions found in {directory}")
             log.exception(f"No actions found in the directory {directory}.")
 
         return action_objects
+
+
+def is_action_file(filepath):
+    with open(filepath, "r") as source:
+        tree = ast.parse(source.read())
+
+    for node in ast.walk(tree):
+        decorator_name = None
+        if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
+            for decorator in node.decorator_list:
+                if isinstance(decorator, ast.Call):
+                    if isinstance(decorator.func, ast.Name):
+                        decorator_name = decorator.func.id
+                        if decorator_name:
+                            return True
