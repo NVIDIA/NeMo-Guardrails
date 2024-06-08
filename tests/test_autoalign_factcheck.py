@@ -55,6 +55,7 @@ async def test_fact_checking_correct(httpx_mock):
         config,
         llm_completions=[
             "user ask about pluto",
+            "bot provide pluto answer",
             "That's correct! Pluto's orbit is indeed eccentric, meaning it is not a perfect circle. This causes Pluto "
             "to come closer to the Sun than Neptune at times. However, despite this, the two planets do not collide "
             "due to a stable orbital resonance. Orbital resonance is when two objects orbiting a common point exert a "
@@ -112,6 +113,7 @@ async def test_fact_checking_wrong(httpx_mock):
         config,
         llm_completions=[
             "user ask about pluto",
+            "bot provide pluto answer",
             "Actually, Pluto does have moons! In addition to Charon, which is the largest moon of Pluto and has a "
             "diameter greater than Pluto's, there are four other known moons: Styx, Nix, Kerberos, and Hydra. Styx "
             "and Nix were discovered in 2005, while Kerberos and Hydra were discovered in 2011 and 2012, "
