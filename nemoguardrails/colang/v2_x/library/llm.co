@@ -101,21 +101,22 @@ flow continuation on unhandled user utterance
     send UserIntentLog(flow_id=$user_intent, parameter=None)
     # If the user intent was not handled
 
-    if $bot_intent is not None
-      $exists = await CheckValidFlowExistsAction(flow_id=$bot_intent)
-      $flow_info = await CreateFlowAction(name=$bot_intent, body=$bot_action)
+    # Create and start new flow or an existing on with same name as bot intent
+    $flow_exists = False
+    if $bot_intent is None
+      $bot_intent = "bot custom action"
     else
-      $exists = False
-      $flow_info = await CreateFlowAction(name="bot action", body=$bot_action)
+      $flow_exists = await CheckValidFlowExistsAction(flow_id=$bot_intent)
 
-    if $exists == False
+    if $flow_exists == False and $bot_action is not None
+      $flow_info = await CreateFlowAction(name=$bot_intent, body=$bot_action)
       $flows = await AddFlowsAction(config=$flow_info.body)
       if len($flows) == 0
         print "Failed parsing created bot action flow!"
         return
-      else
-        await await_flow_by_name $flow_info.name
-        await RemoveFlowsAction(flow_ids=[$flow_info.name])
+      # Start
+      await await_flow_by_name $flow_info.name
+      await RemoveFlowsAction(flow_ids=[$flow_info.name])
 
 
 flow unhandled user intent -> $intent
