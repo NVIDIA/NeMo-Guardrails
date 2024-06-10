@@ -156,6 +156,7 @@ def eval_expression(expr: str, context: dict) -> Any:
                 "greater_than": _greater_than_operator,
                 "equal_greater_than": _equal_or_greater_than_operator,
                 "not_equal_to": _not_equal_to_operator,
+                "list": list,
             }
         )
         if "_state" in context:
