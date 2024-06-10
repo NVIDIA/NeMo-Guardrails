@@ -6,7 +6,7 @@ rails:
     config:
         autoalign:
             parameters:
-                fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
+                fact_check_endpoint: "https://<AUTOALIGN_ENDPOINT>/factcheck"
             output:
                 guardrails_config:
                   {
