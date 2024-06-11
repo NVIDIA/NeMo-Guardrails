@@ -34,13 +34,6 @@ from nemoguardrails.rails.llm.config import (
 
 log = logging.getLogger(__name__)
 
-try:
-    import spacy
-except ImportError:
-    log.warning(
-        "The spacy module is not installed. Please install it using pip: pip install spacy"
-    )
-
 
 @lru_cache
 def _get_analyzer():
@@ -51,6 +44,13 @@ def _get_analyzer():
         raise ImportError(
             "Could not import presidio, please install it with "
             "`pip install presidio-analyzer presidio-anonymizer`."
+        )
+
+    try:
+        import spacy
+    except ImportError:
+        raise RuntimeError(
+            "The spacy module is not installed. Please install it using pip: pip install spacy."
         )
 
     if not spacy.util.is_package("en_core_web_lg"):
