@@ -586,7 +586,6 @@ def run_chat(
         config_id (Optional[str]): The configuration ID. Defaults to None.
     """
     rails_config = RailsConfig.from_path(config_path)
-    rails_app = LLMRails(rails_config, verbose=verbose)
 
     if verbose and verbose_llm_calls:
         console.print(
@@ -607,6 +606,7 @@ def run_chat(
             )
         )
     elif rails_config.colang_version == "2.x":
+        rails_app = LLMRails(rails_config, verbose=verbose)
         asyncio.run(_run_chat_v2_x(rails_app))
     else:
         raise Exception(f"Invalid colang version: {rails_config.colang_version}")
