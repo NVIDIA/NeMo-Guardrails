@@ -15,7 +15,6 @@
 
 """Module for the calling proper action endpoints based on events received at action server endpoint"""
 
-import ast
 import importlib.util
 import inspect
 import logging
@@ -87,7 +86,7 @@ class ActionDispatcher:
                 for import_path in import_paths:
                     self.load_actions_from_path(Path(import_path.strip()))
 
-        log.info(f"Registered Actions: {self._registered_actions}")
+        log.info(f"Registered Actions :: {sorted(self._registered_actions.keys())}")
         log.info("Action dispatcher initialized")
 
     @property
@@ -334,15 +333,11 @@ class ActionDispatcher:
 
 
 def is_action_file(filepath):
-    with open(filepath, "r") as source:
-        tree = ast.parse(source.read())
+    """Heuristics for determining if a Python file can have actions or not.
 
-    for node in ast.walk(tree):
-        decorator_name = None
-        if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
-            for decorator in node.decorator_list:
-                if isinstance(decorator, ast.Call):
-                    if isinstance(decorator.func, ast.Name):
-                        decorator_name = decorator.func.id
-                        if decorator_name:
-                            return True
+    Currently, it only excludes the `__init__.py files.
+    """
+    if "__init__.py" in filepath:
+        return False
+
+    return True
