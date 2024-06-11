@@ -175,7 +175,7 @@ flow tracking user talking state
   $user_talking_state = True
   await user said something as $user_said_flow
   $user_talking_state = False
-  $last_user_transcript = $$user_said_flow.transcript
+  $last_user_transcript = $user_said_flow.transcript
 
 
 # -----------------------------------
