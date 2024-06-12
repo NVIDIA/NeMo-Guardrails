@@ -173,15 +173,11 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
                 flow_config = state.flow_configs.get(flow_id, None)
                 element_flow_state_instance = state.flow_id_states[flow_id]
-                if (
-                    isinstance(flow_id, str)
-                    and flow_config is not None
-                    and (
-                        flow_config.has_meta_tag("user_intent")
-                        or (
-                            element_flow_state_instance
-                            and "_user_intent" in element_flow_state_instance[0].context
-                        )
+                if flow_config is not None and (
+                    flow_config.has_meta_tag("user_intent")
+                    or (
+                        element_flow_state_instance
+                        and "_user_intent" in element_flow_state_instance[0].context
                     )
                 ):
                     if flow_config.elements[1]["_type"] == "doc_string_stmt":
