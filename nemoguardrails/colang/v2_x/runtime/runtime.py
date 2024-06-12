@@ -41,6 +41,7 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     initialize_state,
     run_to_completion,
 )
+from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
 
@@ -444,9 +445,27 @@ class RuntimeV2_x(Runtime):
         assert state.main_flow_state is not None
         main_flow_uid = state.main_flow_state.uid
         if state.main_flow_state.status == FlowStatus.WAITING:
+            log.info("Start of story!")
+
+            # Start the main flow
             input_event = InternalEvent(name="StartFlow", arguments={"flow_id": "main"})
             input_events.insert(0, input_event)
-            log.info("Start of story!")
+
+            # Start all module level flows at beginning of main flow
+            for flow_config in state.flow_configs.values():
+                if "init" in flow_config.decorators:
+                    input_event = InternalEvent(
+                        name="StartFlow",
+                        arguments={
+                            "flow_id": flow_config.id,
+                            "source_flow_instance_uid": state.flow_id_states["main"][
+                                -1
+                            ].uid,
+                            "flow_instance_uid": new_readable_uid(flow_config.id),
+                            "activated": True,
+                        },
+                    )
+                    input_events.insert(1, input_event)
 
         # Check if we have new finished async local action events to add
         (
