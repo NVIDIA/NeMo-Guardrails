@@ -450,22 +450,27 @@ class RuntimeV2_x(Runtime):
             # Start the main flow
             input_event = InternalEvent(name="StartFlow", arguments={"flow_id": "main"})
             input_events.insert(0, input_event)
+            main_flow_state = state.flow_id_states["main"][-1]
 
             # Start all module level flows at beginning of main flow
-            for flow_config in state.flow_configs.values():
-                if "init" in flow_config.decorators:
+            idx = 0
+            for flow_config in reversed(state.flow_configs.values()):
+                if "activated" in flow_config.decorators:
                     input_event = InternalEvent(
                         name="StartFlow",
                         arguments={
                             "flow_id": flow_config.id,
-                            "source_flow_instance_uid": state.flow_id_states["main"][
-                                -1
-                            ].uid,
+                            "source_flow_instance_uid": main_flow_state.uid,
                             "flow_instance_uid": new_readable_uid(flow_config.id),
+                            "flow_hierarchy_position": f"0.0.{idx}",
+                            "source_head_uid": list(main_flow_state.heads.values())[
+                                0
+                            ].uid,
                             "activated": True,
                         },
                     )
                     input_events.insert(1, input_event)
+                    idx += 1
 
         # Check if we have new finished async local action events to add
         (
