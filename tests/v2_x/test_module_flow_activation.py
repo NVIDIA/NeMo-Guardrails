@@ -33,12 +33,12 @@ def test_1():
     """Test use of expression as statements."""
     config = RailsConfig.from_content(
         colang_content="""
-        @activated
+        @active
         flow a
           match UtteranceUserActionFinished(final_transcript="A")
           await UtteranceBotAction(script="A")
 
-        @activated
+        @active
         flow b
           match UtteranceUserActionFinished(final_transcript="B")
           await UtteranceBotAction(script="B")

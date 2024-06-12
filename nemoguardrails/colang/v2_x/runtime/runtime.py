@@ -455,7 +455,7 @@ class RuntimeV2_x(Runtime):
             # Start all module level flows at beginning of main flow
             idx = 0
             for flow_config in reversed(state.flow_configs.values()):
-                if "activated" in flow_config.decorators:
+                if "active" in flow_config.decorators:
                     input_event = InternalEvent(
                         name="StartFlow",
                         arguments={
