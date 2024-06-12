@@ -22,7 +22,6 @@ flow warning of undefined flow start
   log $info
   print $info
 
-@active
 @loop("undefined_user_utterance")
 flow warning of unexpected user utterance $bot_message = "I don't know how to respond to that!"
   """Print and log warning about an unhandled user utterance."""
