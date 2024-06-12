@@ -452,7 +452,7 @@ class RuntimeV2_x(Runtime):
             input_events.insert(0, input_event)
             main_flow_state = state.flow_id_states["main"][-1]
 
-            # Start all module level flows at beginning of main flow
+            # Start all module level flows before main flow
             idx = 0
             for flow_config in reversed(state.flow_configs.values()):
                 if "active" in flow_config.decorators:
@@ -469,7 +469,7 @@ class RuntimeV2_x(Runtime):
                             "activated": True,
                         },
                     )
-                    input_events.insert(1, input_event)
+                    input_events.insert(0, input_event)
                     idx += 1
 
         # Check if we have new finished async local action events to add
