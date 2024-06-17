@@ -362,9 +362,9 @@ class RailsConfigData(BaseModel):
         description="Configuration data for the fact-checking rail.",
     )
 
-    autoguard: AutoGuardRailConfig = Field(
-        default_factory=AutoGuardRailConfig,
-        description="Configuration data for the Autoguard API.",
+    autoalign: AutoAlignRailConfig = Field(
+        default_factory=AutoAlignRailConfig,
+        description="Configuration data for the AutoAlign guardrails API.",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
