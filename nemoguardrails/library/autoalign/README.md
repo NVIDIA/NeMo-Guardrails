@@ -455,6 +455,8 @@ define subflow autoalign check input
     $autoalign_input_response = $input_result['combined_response']
     bot refuse to respond
     stop
+  else if $input_result["pii_fast"] and $input_result["pii_fast"]["guarded"]:
+    $user_message = $input_result["pii_fast"]["response"]
 
 define subflow autoalign check output
   $output_result = execute autoalign_output_api(show_autoalign_message=True, show_toxic_phrases=True)
@@ -467,14 +469,11 @@ define subflow autoalign check output
       $bot_message = $pii_message_output
 
 define subflow autoalign factcheck output
-  execute retrieve_relevant_chunks
-  $output_result = execute autoalign_factcheck_output_api
-  if $output_result < 0.5
-    bot inform autoalign factcheck output violation
-    stop
-
-define bot inform autoalign factcheck output violation
-  "Factcheck violation in llm response has been detected by AutoAlign."
+  if $check_facts == True
+    $check_facts = False
+    $threshold = 0.5
+    $output_result = execute autoalign_factcheck_output_api(factcheck_threshold=$threshold, show_autoalign_message=True)
+    bot provide response
 
 define bot refuse to respond
   "I'm sorry, I can't respond to that."
