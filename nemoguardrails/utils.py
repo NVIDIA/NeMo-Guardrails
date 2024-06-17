@@ -110,11 +110,14 @@ _action_to_modality_info: Dict[str, Tuple[str, str]] = {
     "UtteranceBotAction": ("bot_speech", "replace"),
     "UtteranceUserAction": ("user_speech", "replace"),
     "TimerBotAction": ("time", "parallel"),
+    "FacialGestureBotAction": ("bot_gesture", "override"),
     "GestureBotAction": ("bot_gesture", "override"),
     "PostureBotAction": ("bot_posture", "override"),
     "VisualChoiceSceneAction": ("information", "override"),
     "VisualInformationSceneAction": ("information", "override"),
     "VisualFormSceneAction": ("information", "override"),
+    "MotionEffectCameraAction": ("camera_motion_effect", "override"),
+    "ShotCameraAction": ("camera_shot", "override"),
 }
 
 
@@ -123,8 +126,9 @@ def _add_modality_info(event_dict: Dict[str, Any]) -> None:
     for action_name, modality_info in _action_to_modality_info.items():
         modality_name, modality_policy = modality_info
         if action_name in event_dict["type"]:
-            event_dict["action_info_modality"] = modality_name
-            event_dict["action_info_modality_policy"] = modality_policy
+            event_dict.setdefault("action_info_modality", modality_name)
+            event_dict.setdefault("action_info_modality_policy", modality_policy)
+            return
 
 
 def _update_action_properties(event_dict: Dict[str, Any]) -> None:
