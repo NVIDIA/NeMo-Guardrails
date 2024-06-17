@@ -578,6 +578,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         events: List[dict],
         name: str,
         body: str,
+        decorators: Optional[str] = None,
     ) -> dict:
         """Create a new flow during runtime."""
 
@@ -587,10 +588,14 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         flow_name = f"_dynamic_{uuid} {name}"
         # TODO: parse potential parameters from flow name with a regex
 
+        body = f"flow {flow_name}\n  " + body
+        if decorators:
+            body = decorators + "\n" + body
+
         return {
             "name": flow_name,
             "parameters": [],
-            "body": f"flow {flow_name}\n  " + body,
+            "body": body,
         }
 
     @action(name="GenerateValueAction", is_system_action=True, execute_async=True)
