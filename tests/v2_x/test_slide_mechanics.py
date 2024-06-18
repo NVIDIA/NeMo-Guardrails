@@ -258,6 +258,30 @@ def test_expressions_in_strings():
     )
 
 
+def test_multiline_string():
+    """Test string expression evaluation."""
+
+    content = '''
+    flow main
+      $var = "Test"
+      $string = """This is a multiline
+      string! '{$var}' "hi" """
+      start UtteranceBotAction(script=$string)
+    '''
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "This is a multiline\n      string! 'Test' \"hi\" ",
+            }
+        ],
+    )
+
+
 def test_flow_return_values():
     """Test flow return value handling."""
 
@@ -953,4 +977,4 @@ def test_expression_evaluation():
 
 
 if __name__ == "__main__":
-    test_expressions_in_strings()
+    test_multiline_string()
