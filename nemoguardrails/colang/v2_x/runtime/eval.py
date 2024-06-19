@@ -26,7 +26,10 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import Element
 from nemoguardrails.colang.v2_x.runtime import system_functions
 from nemoguardrails.colang.v2_x.runtime.errors import ColangValueError
 from nemoguardrails.colang.v2_x.runtime.flows import FlowState, State
-from nemoguardrails.colang.v2_x.runtime.utils import AttributeDict
+from nemoguardrails.colang.v2_x.runtime.utils import (
+    AttributeDict,
+    escape_special_string_characters,
+)
 from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
 from nemoguardrails.utils import new_uid
 
@@ -90,20 +93,10 @@ def eval_expression(expr: str, context: dict) -> Any:
                             f"Error evaluating inner expression: '{inner_expression}'"
                         ) from ex
 
-                    # Escape quotation characters
-                    value = str(value).replace("'", "\\'").replace('"', '\\"')
+                    value = str(value)
 
-                    # Escape escaped characters
-                    escaped_characters_map = {
-                        "\n": "\\n",
-                        "\t": "\\t",
-                        "\r": "\\r",
-                        "\b": "\\b",
-                        "\f": "\\f",
-                        "\v": "\\v",
-                    }
-                    for c, s in escaped_characters_map.items():
-                        value = str(value).replace(c, s)
+                    # Escape special characters
+                    value = escape_special_string_characters(value)
 
                     inner_expression_values.append(value)
                 string_expression = re.sub(
