@@ -67,14 +67,14 @@ def eval_expression(expr: str, context: dict) -> Any:
 
     # We search for all expressions in strings within curly brackets and evaluate them first
     # Find first all strings
-    string_pattern = r'("(?:\\"|[^"])*?")|(\'(?:\\\'|[^\'])*?\')'
+    string_pattern = r'("""|\'\'\'|"|\')((?:\\\1|(?!\1)[\s\S])*?)\1'
     string_expressions_matches = re.findall(string_pattern, expr)
     string_expression_values = []
     for string_expression_match in string_expressions_matches:
         string_expression = (
             string_expression_match[0]
-            if string_expression_match[0]
-            else string_expression_match[1]
+            + string_expression_match[1]
+            + string_expression_match[0]
         )
         if string_expression:
             # Find expressions within curly brackets, ignoring double curly brackets
@@ -89,7 +89,22 @@ def eval_expression(expr: str, context: dict) -> Any:
                         raise ColangValueError(
                             f"Error evaluating inner expression: '{inner_expression}'"
                         ) from ex
-                    value = str(value).replace('"', '\\"').replace("'", "\\'")
+
+                    # Escape quotation characters
+                    value = str(value).replace("'", "\\'").replace('"', '\\"')
+
+                    # Escape escaped characters
+                    escaped_characters_map = {
+                        "\n": "\\n",
+                        "\t": "\\t",
+                        "\r": "\\r",
+                        "\b": "\\b",
+                        "\f": "\\f",
+                        "\v": "\\v",
+                    }
+                    for c, s in escaped_characters_map.items():
+                        value = str(value).replace(c, s)
+
                     inner_expression_values.append(value)
                 string_expression = re.sub(
                     expression_pattern,
