@@ -111,6 +111,7 @@ _action_to_modality_info: Dict[str, Tuple[str, str]] = {
     "UtteranceUserAction": ("user_speech", "replace"),
     "TimerBotAction": ("time", "parallel"),
     "GestureBotAction": ("bot_gesture", "override"),
+    "FacialGestureBotAction": ("bot_face", "replace"),
     "PostureBotAction": ("bot_posture", "override"),
     "VisualChoiceSceneAction": ("information", "override"),
     "VisualInformationSceneAction": ("information", "override"),
