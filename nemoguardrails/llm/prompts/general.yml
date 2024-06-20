@@ -17,15 +17,16 @@ prompts:
           """
 
           # This is how a conversation between a user and the bot can go:
-          {{ sample_conversation }}
+          {{ sample_conversation | verbose_v1 }}
 
           # This is how the user talks:
-          {{ examples }}
+          {{ examples | verbose_v1 }}
 
           # This is the current conversation between the user and the bot:
           # Choose intent from this list: {{ potential_user_intents }}
-          {{ sample_conversation | first_turns(2) }}
-          {{ history | colang }}
+          {{ sample_conversation | first_turns(2) | verbose_v1 }}
+          {{ history | colang | verbose_v1 }}
+      output_parser: "verbose_v1"
 
     # Prompt for generating the next steps.
     - task: generate_next_steps
@@ -35,14 +36,15 @@ prompts:
           """
 
           # This is how a conversation between a user and the bot can go:
-          {{ sample_conversation | remove_text_messages }}
+          {{ sample_conversation | remove_text_messages | verbose_v1 }}
 
           # This is how the bot thinks:
-          {{ examples | remove_text_messages}}
+          {{ examples | remove_text_messages | verbose_v1 }}
 
           # This is the current conversation between the user and the bot:
-          {{ sample_conversation | first_turns(2) | remove_text_messages}}
-          {{ history | colang | remove_text_messages}}
+          {{ sample_conversation | first_turns(2) | remove_text_messages | verbose_v1 }}
+          {{ history | colang | remove_text_messages | verbose_v1 }}
+      output_parser: "verbose_v1"
 
     # Prompt for generating the bot message from a canonical form.
     - task: generate_bot_message
@@ -52,7 +54,7 @@ prompts:
           """
 
           # This is how a conversation between a user and the bot can go:
-          {{ sample_conversation }}
+          {{ sample_conversation | verbose_v1 }}
 
           {% if relevant_chunks %}
           # This is some additional context:
@@ -62,11 +64,13 @@ prompts:
           {% endif %}
 
           # This is how the bot talks:
-          {{ examples }}
+          {{ examples | verbose_v1 }}
 
           # This is the current conversation between the user and the bot:
-          {{ sample_conversation | first_turns(2) }}
-          {{ history | colang }}
+          {{ sample_conversation | first_turns(2) | verbose_v1 }}
+          {{ history | colang | verbose_v1 }}
+
+      output_parser: "verbose_v1"
 
     # Prompt for generating the user intent, next steps and bot message in a single call.
     - task: generate_intent_steps_message
@@ -94,16 +98,17 @@ prompts:
           """
 
           # This is how a conversation between a user and the bot can go:
-          {{ sample_conversation }}
+          {{ sample_conversation | verbose_v1 }}
 
           # This is how the bot thinks:
-          {{ examples }}
+          {{ examples | verbose_v1 }}
 
           # This is the current conversation between the user and the bot:
-          {{ sample_conversation | first_turns(2) }}
-          {{ history | colang }}
+          {{ sample_conversation | first_turns(2) | verbose_v1 }}
+          {{ history | colang | verbose_v1 }}
           # {{ instructions }}
           ${{ var_name }} =
+      output_parser: "verbose_v1"
 
     - task: fact_checking
       content: |-
