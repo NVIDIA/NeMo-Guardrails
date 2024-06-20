@@ -738,7 +738,7 @@ class RailsConfig(BaseModel):
     # will be used for those tasks. Models like dolly don't allow for a temperature of 0.0,
     # for example, in which case a custom one can be set.
     lowest_temperature: Optional[float] = Field(
-        default=0.0,
+        default=0.001,
         description="The lowest temperature that should be used for the LLM.",
     )
 
