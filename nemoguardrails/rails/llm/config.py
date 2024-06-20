@@ -459,7 +459,7 @@ def _join_config(dest_config: dict, additional_config: dict):
     ]
 
     for field in additional_fields:
-        if additional_config.get(field):
+        if field in additional_config:
             dest_config[field] = additional_config[field]
 
     # TODO: Rethink the best way to parse and load yaml config files
