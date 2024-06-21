@@ -1,0 +1,17 @@
+"""
+https://cleanlab.ai/tlm/
+
+https://help.cleanlab.ai/tutorials/tlm/#how-does-the-tlm-trustworthiness-score-work
+
+"""
+
+define subflow cleanlab trustworthiness
+  """Guardrail based on the trustworthiness score."""
+  $result = execute call cleanlab api
+
+  if $result.trustworthiness_score < 0.7
+    bot response untrustworthy
+    stop
+
+define bot response untrustworthy
+  "Don't place much confidence in this response"
