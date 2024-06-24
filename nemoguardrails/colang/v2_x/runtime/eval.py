@@ -70,14 +70,17 @@ def eval_expression(expr: str, context: dict) -> Any:
 
     # We search for all expressions in strings within curly brackets and evaluate them first
     # Find first all strings
-    string_pattern = r'("""|\'\'\'|"|\')((?:\\\1|(?!\1)[\s\S])*?)\1'
+    string_pattern = (
+        r'("""|\'\'\')((?:\\\1|(?!\1)[\s\S])*?)\1|("|\')((?:\\\3|(?!\3).)*?)\3'
+    )
     string_expressions_matches = re.findall(string_pattern, expr)
     string_expression_values = []
     for string_expression_match in string_expressions_matches:
+        character = string_expression_match[0] or string_expression_match[2]
         string_expression = (
-            string_expression_match[0]
-            + string_expression_match[1]
-            + string_expression_match[0]
+            character
+            + (string_expression_match[1] or string_expression_match[3])
+            + character
         )
         if string_expression:
             # Find expressions within curly brackets, ignoring double curly brackets

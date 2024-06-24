@@ -656,12 +656,12 @@ def _expand_assignment_stmt_element(element: Assignment) -> List[ElementType]:
     new_elements: List[ElementType] = []
 
     # Check if the expression is an NLD instruction
-    nld_instruction_pattern = r'\.\.\.("""|\'\'\'|"|\')((?:\\\1|(?!\1)[\s\S])*?)\1'
+    nld_instruction_pattern = r'\.\.\.("""|\'\'\')((?:\\\1|(?!\1)[\s\S])*?)\1|\.\.\.("|\')((?:\\\3|(?!\3).)*?)\3'
     match = re.search(nld_instruction_pattern, element.expression)
 
     if match:
         # Replace the assignment with the GenerateValueAction system action
-        instruction = escape_special_string_characters(match.group(2))
+        instruction = escape_special_string_characters(match.group(2) or match.group(4))
         new_elements.append(
             SpecOp(
                 op="await",
