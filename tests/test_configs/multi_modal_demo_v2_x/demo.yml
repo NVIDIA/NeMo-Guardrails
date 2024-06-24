@@ -3,7 +3,7 @@ colang_version: "2.x"
 models:
     - type: main
       engine: openai
-      model: gpt-3.5-turbo-instruct
+      model: gpt-4o
 
 instructions:
     - type: "general"
@@ -30,19 +30,6 @@ instructions:
           Important:
           - The bot uses the 'bot gesture' action as much as possible
           - The bot must not repeat itself if the user was silent
-
-          user actions:
-          user said "text"
-
-          bot actions:
-          bot say "text"
-          bot inform "text"
-          bot ask "text"
-          bot express "text"
-          bot respond "text"
-          bot clarify "text"
-          bot suggest "text"
-          bot gesture "gesture"
 
 sample_conversation: |
     user action: user said "Hello there!"
