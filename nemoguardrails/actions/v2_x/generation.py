@@ -227,7 +227,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         user_intent = get_first_nonempty_line(result)
-        # GTP-4o add often 'user intent: ' in front
+        # GTP-4o often adds 'user intent: ' in front
         if user_intent:
             temp_user_intent = get_first_user_intent([user_intent])
         if temp_user_intent:
@@ -321,7 +321,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         user_intent = get_first_nonempty_line(result)
-        # GTP-4o add often 'user intent: ' in front
+        # GTP-4o often adds 'user intent: ' in front
         if user_intent:
             temp_user_intent = get_first_user_intent([user_intent])
         if temp_user_intent:
