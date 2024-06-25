@@ -2,19 +2,18 @@
 FROM python:3.10-slim
 
 # Install git
-RUN apt-get update && apt-get install -y git && apt-get install gcc -y && apt-get install g++ -y && apt-get install python3-dev -y && apt-get clean
-
-# Upgrade pip
- RUN pip install --upgrade pip
-
-# Copy the source code
-COPY . /app
+RUN apt-get update && apt-get install -y git gcc g++ python3-dev && apt-get clean
 
 # Set working directory
 WORKDIR /app
 
-# Install the minimal set of requirements for jailbreak detection Server
-RUN pip install -r requirements.txt
+# Copy only requirements.txt
+COPY requirements.txt .
+
+# Upgrade pip and install the minimal set of requirements for jailbreak detection Server
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+
+COPY . .
 
 # Set the device on which the model should load e.g., "cpu", "cuda:0", etc.
 ENV JAILBREAK_CHECK_DEVICE=cpu

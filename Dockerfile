@@ -25,10 +25,7 @@ RUN apt-get install -y gcc g++
 # Copy and install NeMo Guardrails
 WORKDIR /nemoguardrails
 COPY . /nemoguardrails
-RUN pip install -e .[all]
-
-# Remove the PIP cache
-RUN rm -rf /root/.cache/pip
+RUN pip install --no-cache-dir -e .[all]
 
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
