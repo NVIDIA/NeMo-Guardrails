@@ -53,6 +53,7 @@ GET /v1/rails/configs
 ```
 
 Sample response:
+
 ```json
 [
   {"id":"abc"},
@@ -64,9 +65,11 @@ Sample response:
 #### /v1/chat/completions
 
 To get the completion for a chat session, use the `/v1/chat/completions` endpoint:
+
 ```
 POST /v1/chat/completions
 ```
+
 ```json
 {
     "config_id": "benefits_co",
@@ -91,6 +94,7 @@ The completion endpoint also supports combining multiple configurations in a sin
 ```
 POST /v1/chat/completions
 ```
+
 ```json
 {
     "config_ids": ["config_1", "config_2"],
@@ -101,7 +105,7 @@ POST /v1/chat/completions
 }
 ```
 
-The configurations will be combined in the order they are specified in the `config_ids` list. If there are any conflicts between the configurations, the last configuration in the list will take precedence. The rails will be combined in the order they are specified in the `config_ids` list. The model type and engine across the configurations must be the same.
+The configurations will be combined in the order they are specified in the `config_ids` list. If there are any conflicts between the configurations, the last configuration in the list will take precedence. The rails will be combined in the order they are specified in the `config_ids` list. The model type and engine across the configurations must be the same. If neither `config_id` nor `config_ids` is supplied, the default value of `config` will be used.
 
 ### Threads
 
@@ -120,6 +124,7 @@ Next, when making a call to the `/v1/chat/completions` endpoint, you must also i
 ```
 POST /v1/chat/completions
 ```
+
 ```json
 {
     "config_id": "config_1",
@@ -134,7 +139,6 @@ POST /v1/chat/completions
 > NOTE: for security reasons, the `thread_id` must have a minimum length of 16 characters.
 
 As an example, check out this [configuration](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/threads/README.md).
-
 
 #### Limitations
 
@@ -173,6 +177,7 @@ GET /v1/actions/list
 ```
 
 Sample response:
+
 ```json
 ["apify","bing_search","google_search","google_serper","openweather_query","searx_search","serp_api_query","wikipedia_query","wolframalpha_query","zapier_nla_query"]
 ```
@@ -180,9 +185,11 @@ Sample response:
 #### `/v1/actions/run`
 
 To execute an action with a set of parameters, use the `/v1/actions/run` endpoint:
+
 ```
 POST /v1/actions/run
 ```
+
 ```json
 {
     "action_name": "wolfram_alpha_request",
