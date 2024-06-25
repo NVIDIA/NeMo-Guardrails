@@ -59,9 +59,6 @@ class ColangParser:
 
         Currently, only the "..." is expanded.
         """
-        # Replace ..."NLD" with i"NLD"
-        content = re.sub(r"\.\.\.(['\"])(.*?)\1", r'i"\2"', content)
-
         # We make sure to capture the correct indentation level and use that.
         content = re.sub(
             r"\n( +)\.\.\.",

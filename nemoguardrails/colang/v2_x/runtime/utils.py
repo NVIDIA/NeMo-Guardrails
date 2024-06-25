@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import uuid
 
 
@@ -40,3 +41,23 @@ def new_readable_uid(name: str) -> str:
 def new_var_uid() -> str:
     """Creates a new uuid that is compatible with variable names."""
     return str(uuid.uuid4()).replace("-", "_")
+
+
+def escape_special_string_characters(string: str) -> str:
+    """Escapes all occurrences of special characters."""
+    # Replace " or ' with \\" or \\' if not already escaped
+    string = re.sub(r"(^|[^\\])('|\")", r"\1\\\2", string)
+    # Replace other special characters
+    escaped_characters_map = {
+        "\n": "\\n",
+        "\t": "\\t",
+        "\r": "\\r",
+        "\b": "\\b",
+        "\f": "\\f",
+        "\v": "\\v",
+    }
+
+    for c, s in escaped_characters_map.items():
+        string = str(string).replace(c, s)
+
+    return string

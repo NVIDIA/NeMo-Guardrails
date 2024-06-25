@@ -10,7 +10,7 @@ flow main
         when unhandled user intent
             llm continue interaction
         or when user was silent 12.0
-            $response = i"A random fun fact"
+            $response = ..."A random fun fact"
             bot say $response
         or when user expressed greeting
             bot say "Hi there!"
