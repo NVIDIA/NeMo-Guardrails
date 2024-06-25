@@ -49,6 +49,8 @@ class VerboseHandler(logging.StreamHandler):
             # We remove the title for completion messages and stop the blinking cursor.
             if title == "Completion":
                 if verbose_llm_calls:
+                    console.print(f"[cyan]LLM {title}[/]")
+                    console.print("")
                     for line in body.split("\n"):
                         text = Text(line, style="black on #006600", end="\n")
                         text.pad_right(console.width)
@@ -59,7 +61,7 @@ class VerboseHandler(logging.StreamHandler):
             # For prompts, we also start the blinking cursor.
             elif title == "Prompt":
                 if verbose_llm_calls:
-                    console.print(f"[cyan]{title}[/]")
+                    console.print(f"[cyan]LLM {title}[/]")
                     console.print("")
                     for line in body.split("\n"):
                         text = Text(line, style="black on #909090", end="\n")
@@ -69,13 +71,13 @@ class VerboseHandler(logging.StreamHandler):
             elif title == "Event":
                 # For events, we also color differently the type of event.
                 event_name, body = body.split(" ", 1)
-                msg = f"[blue]{title}[/] [bold]{event_name}[/] {body}"
-
-                console.print(msg, highlight=False)
+                title = f"[blue]{title}[/] [bold]{event_name}[/]"
+            elif title == "Colang Log":
+                title = f"[green]{title}[/]"
             else:
                 skip_print = False
 
-                if title == "Processing event":
+                if title == "Processing event" and body.startswith("{"):
                     try:
                         event_dict = literal_eval(body)
                         event_type = event_dict["type"]
@@ -95,39 +97,26 @@ class VerboseHandler(logging.StreamHandler):
                             if event_type.startswith("Start") and event_type.endswith(
                                 "Action"
                             ):
-                                console.print(
-                                    f"[magenta][bold]Start[/]{event_type[5:]}[/]"
-                                )
+                                title = f"[magenta][bold]Start[/]{event_type[5:]}[/]"
                             elif event_type.startswith("Stop") and event_type.endswith(
                                 "Action"
                             ):
-                                console.print(
-                                    f"[magenta][bold]Stop[/]{event_type[4:]}[/]"
-                                )
+                                title = f"[magenta][bold]Stop[/]{event_type[4:]}[/]"
                             elif event_type.endswith("ActionUpdated"):
-                                console.print(
-                                    f"[magenta]{event_type[:-7]}[bold]Updated[/][/]"
-                                )
+                                title = f"[magenta]{event_type[:-7]}[bold]Updated[/][/]"
                             elif event_type.endswith("ActionFinished"):
                                 if event_type == "UtteranceUserActionFinished":
-                                    console.print(
-                                        f"\n[magenta]{event_type[:-8]}[bold]Finished[/][/]"
-                                    )
+                                    title = f"[magenta]{event_type[:-8]}[bold]Finished[/][/]"
                                 else:
-                                    console.print(
-                                        f"[magenta]{event_type[:-8]}[bold]Finished[/][/]"
-                                    )
+                                    title = f"[magenta]{event_type[:-8]}[bold]Finished[/][/]"
                             elif event_type.endswith("ActionFailed"):
-                                console.print(
-                                    f"[magenta{event_type[:-6]}][bold]Failed[/][/]"
-                                )
+                                title = f"[magenta]{event_type[:-6]}[bold]Failed[/][/]"
                             else:
-                                console.print(f"[magenta]{event_type}[/]")
-                            msg = f"{body}"
+                                title = event_type
                         else:
                             skip_print = True
                     except Exception:
-                        msg = f"[red]{title}[/] {body}"
+                        title = f"[red bold]{title}[/]"
                 elif title == "Running action":
                     skip_print = True
                 elif title == "Matching head":
@@ -142,12 +131,15 @@ class VerboseHandler(logging.StreamHandler):
                     #     skip_print = True
                 else:
                     if title == "---":
-                        msg = f"[#555555]{body}[/]"
+                        title = f"--- [#555555]{body}[/]"
+                        body = ""
                     else:
-                        msg = f"[#707070]{title}[/] [#555555]{body}[/]"
+                        title = f"[#707070]{title}[/] [#555555]{body}[/]"
+                        body = ""
 
                 if not skip_print:
-                    console.print(msg, highlight=False)
+                    console.print(f"{title:<60} ", end="")
+                    console.print(f"{body}", highlight=False)
 
 
 def set_verbose(
@@ -190,7 +182,7 @@ def set_verbose(
         # In debug mode we add the RichHandler, otherwise we add the VerboseHandler.
         if debug:
             root_logger = logging.getLogger()
-            rich_handler = RichHandler(markup=True)
+            rich_handler = RichHandler(markup=True, rich_tracebacks=True)
 
             # If needed, simplify further the verbose output
             if simplify:
@@ -211,4 +203,4 @@ def set_verbose(
         verbose_mode_enabled = True
         verbose_llm_calls = llm_calls
         debug_mode_enabled = debug
-        print("Entered verbose mode.")
+        console.print("Entered verbose mode.")

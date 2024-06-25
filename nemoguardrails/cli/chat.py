@@ -130,7 +130,8 @@ async def _run_chat_v2_x(rails_app: LLMRails):
     output_state = None
 
     session: PromptSession = PromptSession()
-    status = console.status("[bold green]Working ...[/]")
+    # console.status interferes with concurrent logging printing overwriting parts of the output
+    # status = console.status("[bold green]Working ...[/]")
 
     # Start an asynchronous timer
     async def _start_timer(timer_name: str, delay_seconds: float, action_uid: str):
@@ -425,7 +426,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 # If there are no pending actions, we stop
                 check_task.cancel()
                 check_task = None
-                status.stop()
+                # status.stop()
                 enable_input.set()
                 return
 
@@ -470,7 +471,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                     ),
                 )
                 enable_input.clear()
-                status.start()
+                # status.start()
                 waiting_user_input = False
                 if user_message == "":
                     input_events = [new_event_dict("CheckLocalAsync")]
