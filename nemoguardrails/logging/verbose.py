@@ -46,6 +46,8 @@ class VerboseHandler(logging.StreamHandler):
             title, body = msg.split(" :: ", 1)
             title = title.strip()
 
+            skip_print = False
+
             # We remove the title for completion messages and stop the blinking cursor.
             if title == "Completion":
                 if verbose_llm_calls:
@@ -68,15 +70,16 @@ class VerboseHandler(logging.StreamHandler):
                         text.pad_right(console.width)
                         console.print(text)
 
+            elif title == "Colang Log":
+                title = f"[green]{title}[/]: {body}"
+                body = ""
+
             elif title == "Event":
                 # For events, we also color differently the type of event.
                 event_name, body = body.split(" ", 1)
                 title = f"[blue]{title}[/] [bold]{event_name}[/]"
-            elif title == "Colang Log":
-                title = f"[green]{title}[/]"
-            else:
-                skip_print = False
 
+            else:
                 if title == "Processing event" and body.startswith("{"):
                     try:
                         event_dict = literal_eval(body)
@@ -137,9 +140,9 @@ class VerboseHandler(logging.StreamHandler):
                         title = f"[#707070]{title}[/] [#555555]{body}[/]"
                         body = ""
 
-                if not skip_print:
-                    console.print(f"{title:<60} ", end="")
-                    console.print(f"{body}", highlight=False)
+            if not skip_print:
+                console.print(f"{title:<60} ", end="")
+                console.print(body, highlight=False)
 
 
 def set_verbose(
