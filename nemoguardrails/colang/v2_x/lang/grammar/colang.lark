@@ -101,13 +101,13 @@ simple_arguments: simple_argvalue+
 
 // Compound statements
 ?compound_stmt: if_stmt | while_stmt | when_stmt
-while_stmt: "while" test suite
-if_stmt: _IF test suite elifs ["else" suite]
+while_stmt: "while" test [":"] suite
+if_stmt: _IF test [":"] suite elifs ["else" [":"] suite]
 elifs: elif_*
-elif_: _ELSE_IF test suite
-when_stmt: "when" spec_expr suite orwhens ["else" suite]
+elif_: _ELSE_IF test [":"] suite
+when_stmt: "when" spec_expr [":"] suite orwhens ["else" [":"] suite]
 orwhens: orwhen_*
-orwhen_: _OR_WHEN spec_expr suite
+orwhen_: _OR_WHEN spec_expr [":"] suite
 
 // --------------------------------
 
