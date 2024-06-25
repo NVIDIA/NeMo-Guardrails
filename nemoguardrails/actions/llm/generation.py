@@ -44,6 +44,7 @@ from nemoguardrails.actions.llm.utils import (
 )
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow, Spec, SpecOp
+from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
 from nemoguardrails.context import (
     generation_options_var,
     llm_call_info_var,
@@ -150,8 +151,9 @@ class LLMGenerationActions:
                     return
 
                 # Extract the message and remove the double quotes
-                message = spec.arguments["final_transcript"][1:-1]
-                self.user_messages[flow.name] = [message]
+                message = eval_expression(spec.arguments["final_transcript"], {})
+                if isinstance(message, str):
+                    self.user_messages[flow.name] = [message]
 
             elif el.op == "await":
                 spec = cast(SpecOp, el).spec
@@ -169,11 +171,11 @@ class LLMGenerationActions:
                     ):
                         continue
 
-                    message = spec.arguments["$0"][1:-1]
-                    if flow.name not in self.user_messages:
-                        self.user_messages[flow.name] = []
-
-                    self.user_messages[flow.name].append(message)
+                    message = eval_expression(spec.arguments["$0"], {})
+                    if isinstance(message, str):
+                        if flow.name not in self.user_messages:
+                            self.user_messages[flow.name] = []
+                        self.user_messages[flow.name].append(message)
 
     def _extract_bot_message_example(self, flow: Flow):
         # Quick heuristic to identify the user utterance examples
