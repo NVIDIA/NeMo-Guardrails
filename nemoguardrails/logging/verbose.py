@@ -15,6 +15,7 @@
 import json
 import logging
 from ast import literal_eval
+from datetime import datetime
 
 from rich.logging import RichHandler
 from rich.text import Text
@@ -50,29 +51,30 @@ class VerboseHandler(logging.StreamHandler):
 
             # We remove the title for completion messages and stop the blinking cursor.
             if title == "Completion":
+                skip_print = True
                 if verbose_llm_calls:
-                    console.print(f"[cyan]LLM {title}[/]")
                     console.print("")
+                    console.print(f"[cyan]LLM {title}[/]")
                     for line in body.split("\n"):
                         text = Text(line, style="black on #006600", end="\n")
                         text.pad_right(console.width)
                         console.print(text)
-
                     console.print("")
 
             # For prompts, we also start the blinking cursor.
             elif title == "Prompt":
+                skip_print = True
                 if verbose_llm_calls:
-                    console.print(f"[cyan]LLM {title}[/]")
                     console.print("")
+                    console.print(f"[cyan]LLM {title}[/]")
                     for line in body.split("\n"):
                         text = Text(line, style="black on #909090", end="\n")
                         text.pad_right(console.width)
                         console.print(text)
+                    console.print("")
 
-            elif title == "Colang Log":
-                title = f"[green]{title}[/]: {body}"
-                body = ""
+            elif title.startswith("Colang Log ("):
+                title = title = f"[green]{title[11:]}[/]"
 
             elif title == "Event":
                 # For events, we also color differently the type of event.
@@ -134,15 +136,22 @@ class VerboseHandler(logging.StreamHandler):
                     #     skip_print = True
                 else:
                     if title == "---":
-                        title = f"--- [#555555]{body}[/]"
+                        title = f"[#555555]{body}[/]"
                         body = ""
                     else:
                         title = f"[#707070]{title}[/] [#555555]{body}[/]"
                         body = ""
 
             if not skip_print:
-                console.print(f"{title:<60} ", end="")
-                console.print(body, highlight=False)
+                current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                console.print(f"[dim]{current_time}[/] | ", end="", highlight=False)
+                if body:
+                    console.print(f"[dim]{title}[/] | ", end="")
+                    console.print(f"[dim]{body}[/]", highlight=False, no_wrap=True)
+                else:
+                    console.print(f"[dim]{title}[/]")
+                # console.print(f"{title:<60} ", end="")
+                # console.print(body, highlight=False)
 
 
 def set_verbose(
