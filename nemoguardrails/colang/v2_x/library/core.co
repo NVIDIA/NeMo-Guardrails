@@ -157,12 +157,14 @@ flow bot suggested something -> $text
 flow tracking bot talking state
   """tracking bot talking state in global variable $bot_talking_state."""
   global $bot_talking_state
+  global $last_bot_message
   if $bot_talking_state == None
     $bot_talking_state = False
   await bot started saying something
   $bot_talking_state = True
-  await bot said something
+  await bot said something as $bot_said_flow
   $bot_talking_state = False
+  $last_bot_script = $bot_said_flow.text
 
 @loop("state_tracking")
 flow tracking user talking state
@@ -173,9 +175,9 @@ flow tracking user talking state
     $user_talking_state = False
   await user started saying something
   $user_talking_state = True
-  await user said something
+  await user said something as $user_said_flow
   $user_talking_state = False
-  $last_user_transcript = $event.final_transcript
+  $last_user_transcript = $user_said_flow.transcript
 
 
 # -----------------------------------
