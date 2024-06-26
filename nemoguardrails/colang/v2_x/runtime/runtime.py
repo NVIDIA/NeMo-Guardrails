@@ -85,7 +85,6 @@ class RuntimeV2_x(Runtime):
         except Exception as e:
             warning = f"Failed parsing a generated flow\n{flow_content}\n{e}"
             log.warning(warning)
-            print(warning)
             return []
             # Alternatively, we could through an exceptions
             # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
@@ -95,7 +94,6 @@ class RuntimeV2_x(Runtime):
             if flow.name in state.flow_configs:
                 warning = "Flow '{flow.name}' already exists! Not loaded!"
                 log.warning(warning)
-                print(warning)
                 break
 
             flow_config = FlowConfig(
