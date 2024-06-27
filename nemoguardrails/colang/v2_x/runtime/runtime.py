@@ -577,7 +577,7 @@ class RuntimeV2_x(Runtime):
 
             # If we have outgoing events we are also processing them as input events
             if state.outgoing_events:
-                input_events = state.outgoing_events
+                input_events.extend(state.outgoing_events)
                 continue
 
             input_events.extend(local_action_finished_events)
