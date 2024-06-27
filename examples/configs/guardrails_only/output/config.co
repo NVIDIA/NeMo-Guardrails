@@ -12,11 +12,17 @@ define bot deny
   "DENY"
 
 define subflow dummy output rail
-  """A dummy input rail which checks if the word "dummy" is included in the text."""
+  """A dummy output rail which checks if the word "dummy" is included in the text."""
   if "dummy" in $bot_message
-    bot deny
-    stop
+    if $config.allow_exceptions
+      create event DummyOutputException(message="Dummy output detected. The bot's message contains the word 'dummy'.")
+    else
+      bot deny
+      stop
 
 define subflow allow output
-  bot allow
-  stop
+  if $config.allow_exceptions
+    create event AllowOutputException(message="Allow output triggered. The bot will respond with 'ALLOW'. To see it in action you must disable the `allow_exceptions` configuration setting.")
+  else
+    bot allow
+    stop

@@ -33,3 +33,5 @@ rails:
   dialog:
     single_call:
       enabled: False
+
+allow_exceptions: True
