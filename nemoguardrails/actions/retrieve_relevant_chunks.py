@@ -67,6 +67,8 @@ async def retrieve_relevant_chunks(
 
         context_updates["relevant_chunks"] = "\n".join(chunks)
         context_updates["relevant_chunks_sep"] = chunks
+        context_updates["embedding_model"] = kb.index.embedding_model
+        context_updates["embedding_engine"] = kb.index.embedding_engine
 
     else:
         # No KB is set up, we keep the existing relevant_chunks if we have them.
