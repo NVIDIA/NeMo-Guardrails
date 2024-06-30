@@ -17,7 +17,7 @@
 import logging
 import re
 from ast import literal_eval
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 from langchain.llms import BaseLLM
 
@@ -140,6 +140,60 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         if self.instruction_flows_index is None:
             self.instruction_flows_index = self.flows_index
 
+    async def _collect_user_intent_and_examples(
+        self, state: State, user_action: str, max_example_flows: int
+    ) -> Tuple[List[str], str]:
+        # We search for the most relevant similar user intents
+        examples = ""
+        potential_user_intents = []
+
+        if self.user_message_index:
+            results = await self.user_message_index.search(
+                text=user_action, max_results=max_example_flows
+            )
+
+            # We add these in reverse order so the most relevant is towards the end.
+            for result in reversed(results):
+                examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
+                potential_user_intents.append(result.meta["intent"])
+
+        # We add all currently active user intents (heads on match statements)
+        heads = find_all_active_event_matchers(state)
+        for head in heads:
+            element = get_element_from_head(state, head)
+            flow_state = state.flow_states[head.flow_state_uid]
+            event = get_event_from_element(state, flow_state, element)
+            if (
+                event.name == InternalEvents.FLOW_FINISHED
+                and "flow_id" in event.arguments
+            ):
+                flow_id = event.arguments["flow_id"]
+                if not isinstance(flow_id, str):
+                    continue
+
+                flow_config = state.flow_configs.get(flow_id, None)
+                element_flow_state_instance = state.flow_id_states[flow_id]
+                if flow_config is not None and (
+                    flow_config.has_meta_tag("user_intent")
+                    or (
+                        element_flow_state_instance
+                        and "_user_intent" in element_flow_state_instance[0].context
+                    )
+                ):
+                    if flow_config.elements[1]["_type"] == "doc_string_stmt":
+                        examples += "user action: <" + (
+                            flow_config.elements[1]["elements"][0]["elements"][0][
+                                "elements"
+                            ][0][3:-3]
+                            + ">\n"
+                        )
+                        examples += f"user intent: {flow_id}\n\n"
+                    elif flow_id not in potential_user_intents:
+                        examples += f"user intent: {flow_id}\n\n"
+                        potential_user_intents.append(flow_id)
+        examples = examples.strip("\n")
+        return (potential_user_intents, examples)
+
     @action(name="GetLastUserMessageAction", is_system_action=True)
     async def get_last_user_message(
         self, events: List[dict], llm: Optional[BaseLLM] = None
@@ -163,44 +217,12 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         llm = llm or self.llm
 
         log.info("Phase 1 :: Generating user intent")
-
-        # We search for the most relevant similar user intents
-        examples = ""
-        potential_user_intents = []
-
-        if self.user_message_index:
-            results = await self.user_message_index.search(
-                text=user_action, max_results=max_example_flows
-            )
-
-            # We add these in reverse order so the most relevant is towards the end.
-            for result in reversed(results):
-                examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
-                potential_user_intents.append(result.meta["intent"])
-
-        # We add all currently active user intents (heads on match statements)
-        heads = find_all_active_event_matchers(state)
-        for head in heads:
-            element = get_element_from_head(state, head)
-            event = get_event_from_element(
-                state, state.flow_states[head.flow_state_uid], element
-            )
-            if (
-                event.name == InternalEvents.FLOW_FINISHED
-                and "flow_id" in event.arguments
-            ):
-                flow_id = event.arguments["flow_id"]
-                flow_config = state.flow_configs.get(flow_id, None)
-                if isinstance(flow_id, str) and (
-                    flow_config is None
-                    or (
-                        flow_config.has_meta_tag("user_intent")
-                        and flow_id not in potential_user_intents
-                    )
-                ):
-                    examples += f"user intent: {flow_id}\n\n"
-                    potential_user_intents.append(flow_id)
-        examples = examples.strip("\n")
+        (
+            potential_user_intents,
+            examples,
+        ) = await self._collect_user_intent_and_examples(
+            state, user_action, max_example_flows
+        )
 
         prompt = self.llm_task_manager.render_task_prompt(
             task=Task.GENERATE_USER_INTENT_FROM_USER_ACTION,
@@ -257,43 +279,12 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         log.info("Phase 1 :: Generating user intent and bot action")
 
-        # We search for the most relevant similar user intents
-        examples = ""
-        potential_user_intents = []
-
-        if self.user_message_index:
-            results = await self.user_message_index.search(
-                text=user_action, max_results=max_example_flows
-            )
-
-            # We add these in reverse order so the most relevant is towards the end.
-            for result in reversed(results):
-                examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
-                potential_user_intents.append(result.meta["intent"])
-
-        # We add all currently active user intents (heads on match statements)
-        heads = find_all_active_event_matchers(state)
-        for head in heads:
-            element = get_element_from_head(state, head)
-            event = get_event_from_element(
-                state, state.flow_states[head.flow_state_uid], element
-            )
-            if (
-                event.name == InternalEvents.FLOW_FINISHED
-                and "flow_id" in event.arguments
-            ):
-                flow_id = event.arguments["flow_id"]
-                flow_config = state.flow_configs.get(flow_id, None)
-                if isinstance(flow_id, str) and (
-                    flow_config is None
-                    or (
-                        flow_config.has_meta_tag("user_intent")
-                        and flow_id not in potential_user_intents
-                    )
-                ):
-                    examples += f"user intent: {flow_id}\n\n"
-                    potential_user_intents.append(flow_id)
-        examples = examples.strip("\n")
+        (
+            potential_user_intents,
+            examples,
+        ) = await self._collect_user_intent_and_examples(
+            state, user_action, max_example_flows
+        )
 
         prompt = self.llm_task_manager.render_task_prompt(
             task=Task.GENERATE_USER_INTENT_FROM_USER_ACTION,
@@ -578,6 +569,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         events: List[dict],
         name: str,
         body: str,
+        decorators: Optional[str] = None,
     ) -> dict:
         """Create a new flow during runtime."""
 
@@ -587,10 +579,14 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         flow_name = f"_dynamic_{uuid} {name}"
         # TODO: parse potential parameters from flow name with a regex
 
+        body = f"flow {flow_name}\n  " + body
+        if decorators:
+            body = decorators + "\n" + body
+
         return {
             "name": flow_name,
             "parameters": [],
-            "body": f"flow {flow_name}\n  " + body,
+            "body": body,
         }
 
     @action(name="GenerateValueAction", is_system_action=True, execute_async=True)
