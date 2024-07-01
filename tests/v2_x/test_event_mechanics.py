@@ -1452,5 +1452,86 @@ def test_event_number_parameter_comparison():
     )
 
 
+def test_runtime_exception_handling_1():
+    """Test to match events based on numeric parameters."""
+
+    content = """
+    flow a
+      $var = "test" + 3
+      match WaitEvent()
+
+    flow main
+      match StartEvent()
+      when a
+        pass
+      else
+        start UtteranceBotAction(script="success")
+      match Event()
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "StartEvent",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "success",
+            },
+        ],
+    )
+
+
+def test_runtime_exception_handling_2():
+    """Test to match events based on numeric parameters."""
+
+    content = """
+    flow a
+      start UtteranceBotAction(script="test")
+      match StartEvent()
+      $var = "test" + 3
+
+    flow main
+      activate a
+      match Event()
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "test",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "StartEvent",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "test",
+            },
+        ],
+    )
+
+
 if __name__ == "__main__":
-    test_custom_regex_event_parameter_match()
+    test_runtime_exception_handling_2()
