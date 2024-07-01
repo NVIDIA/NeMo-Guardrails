@@ -39,7 +39,17 @@ def action(
         Args:
             fn_or_cls: The function or class being decorated.
         """
-        fn_or_cls.action_meta = {
+
+        # Detect the decorator being applied to staticmethod or classmethod.
+        # Will annotate the the inner function in that case as otherwise
+        # metaclass will be giving us the unannotated enclosed function on
+        # attribute lookup.
+        if hasattr(fn_or_cls, "__func__"):
+            fn_or_cls_target = fn_or_cls.__func__
+        else:
+            fn_or_cls_target = fn_or_cls
+
+        fn_or_cls_target.action_meta = {
             "name": name or fn_or_cls.__name__,
             "is_system_action": is_system_action,
             "execute_async": execute_async,
