@@ -44,7 +44,7 @@ async def call_cleanlab_api(context: Optional[dict] = None):
     cleanlab_tlm = studio.TLM()
 
     if bot_response:
-        trustworthiness_score = cleanlab_tlm.get_trustworthiness_score_async(
+        trustworthiness_score = await cleanlab_tlm.get_trustworthiness_score_async(
             user_input, response=bot_response
         )
     else:
