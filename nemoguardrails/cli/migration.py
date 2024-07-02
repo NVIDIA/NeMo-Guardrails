@@ -16,7 +16,6 @@
 import logging
 import os
 import re
-import uuid
 from pathlib import Path
 
 import yaml
@@ -421,6 +420,11 @@ def _write_rails_flows_to_file(file_path, rails_flows):
         return False
 
 
+def _remove_rails_flows_from_config(raw_config):
+    del raw_config["rails"]
+    return raw_config
+
+
 def migrate(
     path,
     include_main_flow=False,
@@ -477,7 +481,6 @@ def migrate(
             if include_main_flow:
                 new_lines = generate_main_flow(new_lines)
             if validate:
-                print("\n".join(new_lines))
                 try:
                     parse_colang_file(
                         filename=file_path, content="\n".join(new_lines), version="2.x"
@@ -498,13 +501,22 @@ def migrate(
     for file_path in config_files_to_process:
         logging.info(f"Converting config files in path: {file_path}")
         raw_config = get_raw_config(file_path)
+
         rails_flows = generate_rails_flows(get_rails_flows(raw_config))
+
         if rails_flows:
             # at same level as config file we generate a _rails.co file
             # _rails.co file is the file that contains the rails flows
             _rails_co_file_path = Path(file_path).parent / "_rails.co"
+
             if _write_rails_flows_to_file(_rails_co_file_path, rails_flows):
                 total__config_files_changed += 1
+
+            raw_config = _remove_rails_flows_from_config(raw_config)
+
+            # NOTE: we are overwriting the original config file. It ruins the order of the keys in the yaml file.
+            with open(file_path, "w") as f:
+                yaml.dump(raw_config, f)
 
     logging.info(
         f"Finished migration for path: {path}. Total files changed: {total_files_changed}"
