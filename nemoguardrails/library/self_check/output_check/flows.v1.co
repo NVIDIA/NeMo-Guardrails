@@ -1,0 +1,10 @@
+define bot refuse to respond
+  "I'm sorry, I can't respond to that."
+
+
+define flow self check output
+  $allowed = execute self_check_output
+
+  if not $allowed
+    bot refuse to respond
+    stop
