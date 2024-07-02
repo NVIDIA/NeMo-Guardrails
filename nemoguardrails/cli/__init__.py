@@ -24,6 +24,7 @@ from fastapi import FastAPI
 from nemoguardrails import __version__
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
+from nemoguardrails.cli.migration import migrate
 from nemoguardrails.eval.cli import evaluate
 from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
 from nemoguardrails.logging.verbose import set_verbose
@@ -155,6 +156,43 @@ def server(
         server_app = api.app
 
     uvicorn.run(server_app, port=port, log_level="info", host="0.0.0.0")
+
+
+@app.command()
+def convert(
+    path: str = typer.Argument(
+        ..., help="The path to the file or directory to migrate."
+    ),
+    verbose: bool = typer.Option(
+        default=False,
+        help="If the migration should be verbose and output detailed logs.",
+    ),
+    validate: bool = typer.Option(
+        default=False,
+        help="If the migration should validate the output using Colang Parser.",
+    ),
+    include_main_flow: bool = typer.Option(
+        default=False,
+        help="If the migration should add a main flow to the output.",
+    ),
+    apply_active_decorator: bool = typer.Option(
+        default=False,
+        help="If the migration should use the active decorator.",
+    ),
+):
+    """Convert a colang 1.0 directory to colang 2.0."""
+
+    if verbose:
+        logging.getLogger().setLevel(logging.INFO)
+
+    absolute_path = os.path.abspath(path)
+
+    migrate(
+        path=absolute_path,
+        include_main_flow=include_main_flow,
+        apply_active_decorator=apply_active_decorator,
+        validate=validate,
+    )
 
 
 @app.command("actions-server")
