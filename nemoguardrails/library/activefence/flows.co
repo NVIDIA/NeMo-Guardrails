@@ -58,7 +58,7 @@ define subflow activefence moderation detailed
     stop
 
 
-define bot inform cannot engage in abusive or harmful behavior
+define bot inform cannot engage in abusive _or_ harmful behavior
   "I will not engage in any abusive or harmful behavior."
 
 define bot inform cannot engage in self harm behavior
