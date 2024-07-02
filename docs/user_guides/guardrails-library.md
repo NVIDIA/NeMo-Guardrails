@@ -720,7 +720,7 @@ define flow
 
 ### Cleanlab
 
-NeMo Guardrails supports using the [Cleanlab Trustworthiness Score API](https://docs.activefence.com/index.html) as an output rail (you need to have the `CLEANLAB_API_KEY` environment variable set).
+NeMo Guardrails supports using the [Cleanlab Trustworthiness Score API](https://cleanlab.ai/blog/trustworthy-language-model/) as an output rail (you need to have the `CLEANLAB_API_KEY` environment variable set).
 
 ```yaml
 rails:
