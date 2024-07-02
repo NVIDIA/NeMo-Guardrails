@@ -1,10 +1,7 @@
-define bot refuse to respond
-  "I'm sorry, I can't respond to that."
 
+flow self check output
+    $allowed = await SelfCheckOutputAction
 
-define flow self check output
-  $allowed = execute self_check_output
-
-  if not $allowed
-    bot refuse to respond
-    stop
+    if not $allowed
+        bot refuse to respond
+        abort
