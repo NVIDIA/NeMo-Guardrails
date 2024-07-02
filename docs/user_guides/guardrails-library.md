@@ -18,6 +18,7 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
 3. Third-Party APIs
    - [ActiveFence Moderation](#activefence)
    - [Got It AI RAG TruthChecker](#got-it-ai)
+   - [Cleanlab Trustworthiness Score](#cleanlab)
    - OpenAI Moderation API - *[COMING SOON]*
 
 4. Other
@@ -788,6 +789,36 @@ define flow
   bot provide report answer
 ```
 
+### Cleanlab
+
+NeMo Guardrails supports using the [Cleanlab Trustworthiness Score API](https://docs.activefence.com/index.html) as an output rail (you need to have the `CLEANLAB_API_KEY` environment variable set).
+
+```yaml
+rails:
+  output:
+    flows:
+      - cleanlab trustworthiness
+```
+
+The `cleanlab trustworthiness` flow uses trustworthiness score with an 0.5 threshold to decide if the output should be allowed or not (i.e., if the trustworthiness score is below the threshold, it is considered a ’bad’ response).<br />
+In question-answering applications, a ’good’ response would correspond to whether the answer is correct or not. In general open-ended applications, ‘good’ corresponds to whether the response is helpful/informative and clearly better than alternative hypothetical responses. For extremely open-ended requests, trustworthiness scores may not be as useful as for requests that are questions seeking a correct answer.
+
+This score is calculated using a number of mathematical operations which is explained on [Cleanlab's tutorial](https://help.cleanlab.ai/tutorials/tlm/#how-does-the-tlm-trustworthiness-score-work).
+
+To customize the threshold of trustworthiness score, you have to overwrite the [default flows](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/cleanlab/flows.co) in your config. For example, to change the threshold for `cleanlab trustworthiness` to 0.7, you can add the following flow to your config:
+
+```colang
+define subflow cleanlab trustworthiness
+  """Guardrail based on trustworthiness score."""
+  $result = execute call cleanlab api
+
+  if $result.trustworthiness_score < 0.7
+    bot response untrustworthy
+    stop
+
+define bot response untrustworthy
+  "Don't place much confidence in this response"
+```
 
 ### AutoAlign
 
