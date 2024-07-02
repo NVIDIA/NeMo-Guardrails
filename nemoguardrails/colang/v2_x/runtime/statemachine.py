@@ -49,6 +49,7 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
 from nemoguardrails.colang.v2_x.lang.expansion import expand_elements
 from nemoguardrails.colang.v2_x.runtime.errors import (
     ColangRuntimeError,
+    ColangSyntaxError,
     ColangValueError,
 )
 from nemoguardrails.colang.v2_x.runtime.eval import (
@@ -89,9 +90,15 @@ def initialize_state(state: State) -> None:
 
     state.flow_states = dict()
 
-    # TODO: Think about where to put this
-    for flow_config in state.flow_configs.values():
-        initialize_flow(state, flow_config)
+    try:
+        # TODO: Think about where to put this
+        for flow_config in state.flow_configs.values():
+            initialize_flow(state, flow_config)
+    except Exception as e:
+        if e.args[0]:
+            raise ColangSyntaxError(e.args[0] + f" (flow `{flow_config.id}`)")
+        else:
+            raise ColangSyntaxError() from e
 
     # Create main flow state first
     main_flow_config = state.flow_configs["main"]
