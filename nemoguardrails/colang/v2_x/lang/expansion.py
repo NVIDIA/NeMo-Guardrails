@@ -312,36 +312,39 @@ def _expand_match_element(
         # Single match element
         if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
-            element_ref = element.spec.ref
-            if element_ref is None:
-                element_ref = _create_ref_ast_dict_helper(
-                    f"_flow_event_ref_{new_var_uid()}"
-                )
-            assert isinstance(element_ref, dict)
-
-            arguments = {"flow_id": f"'{element.spec.name}'"}
-            for arg in element.spec.arguments:
-                arguments.update({arg: element.spec.arguments[arg]})
-
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        name=InternalEvents.FLOW_FINISHED,
-                        arguments=arguments,
-                        ref=element_ref,
-                        spec_type=SpecType.EVENT,
-                    ),
-                    return_var_name=element.return_var_name,
-                )
+            raise ColangSyntaxError(
+                f"Keyword `match` cannot be used with flows (flow `{element.spec.name}`)"
             )
-            if element.return_var_name is not None:
-                new_elements.append(
-                    Assignment(
-                        key=element.return_var_name,
-                        expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
-                    )
-                )
+            # element_ref = element.spec.ref
+            # if element_ref is None:
+            #     element_ref = _create_ref_ast_dict_helper(
+            #         f"_flow_event_ref_{new_var_uid()}"
+            #     )
+            # assert isinstance(element_ref, dict)
+
+            # arguments = {"flow_id": f"'{element.spec.name}'"}
+            # for arg in element.spec.arguments:
+            #     arguments.update({arg: element.spec.arguments[arg]})k
+
+            # new_elements.append(
+            #     SpecOp(
+            #         op="match",
+            #         spec=Spec(
+            #             name=InternalEvents.FLOW_FINISHED,
+            #             arguments=arguments,
+            #             ref=element_ref,
+            #             spec_type=SpecType.EVENT,
+            #         ),
+            #         return_var_name=element.return_var_name,
+            #     )
+            # )
+            # if element.return_var_name is not None:
+            #     new_elements.append(
+            #         Assignment(
+            #             key=element.return_var_name,
+            #             expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
+            #         )
+            #     )
         elif (
             element.spec.spec_type == SpecType.EVENT or element.spec.members is not None
         ):
