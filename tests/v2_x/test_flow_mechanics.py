@@ -482,11 +482,11 @@ def test_flow_started_matching():
       await UtteranceBotAction(script=$script)
 
     flow a
-      match user said $transcript="Hi"
+      match (user said $transcript="Hi").Finished()
       bot say 'Check1'
 
     flow b
-      match user said $transcript="Hello"
+      match (user said $transcript="Hello").Finished()
       bot say 'Check2'
 
     flow main
@@ -779,7 +779,7 @@ def test_finish_flow_event():
       await UtteranceBotAction(script="Hi")
 
     flow b
-      match a
+      match a.Finished()
       await UtteranceBotAction(script="Yes")
 
     flow main
@@ -2204,4 +2204,4 @@ def test_single_flow_activation_3():
 
 
 if __name__ == "__main__":
-    test_single_flow_activation_3()
+    test_flow_started_matching()

@@ -2256,7 +2256,8 @@ def get_event_from_element(
             flow_config = state.flow_configs[element_spec.name]
             temp_flow_state = create_flow_instance(flow_config, "", "", {})
             flow_event_name = element_spec.members[0]["name"]
-            flow_event_arguments = element_spec.members[0]["arguments"]
+            flow_event_arguments = element_spec.arguments
+            flow_event_arguments.update(element_spec.members[0]["arguments"])
             flow_event_arguments = _evaluate_arguments(
                 flow_event_arguments, _get_eval_context(state, flow_state)
             )
