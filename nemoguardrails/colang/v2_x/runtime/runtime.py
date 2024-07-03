@@ -506,7 +506,7 @@ class RuntimeV2_x(Runtime):
                         run_to_completion(state, new_event)
                         new_event = None
                     except Exception as e:
-                        log.warning("Colang error!", exc_info=True)
+                        log.warning("Colang runtime error!", exc_info=True)
                         new_event = Event(
                             name="ColangError",
                             arguments={

@@ -939,6 +939,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
                 source_line,
                 flow_config.source_file,
                 e,
+                exc_info=True,
             )
             colang_error_event = Event(
                 name="ColangError",
