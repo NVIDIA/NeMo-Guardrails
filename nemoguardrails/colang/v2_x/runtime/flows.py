@@ -372,6 +372,9 @@ class FlowConfig:
     # The actual source code, if available
     source_code: Optional[str] = None
 
+    # The name of the source code file
+    source_file: Optional[str] = None
+
     @property
     def loop_id(self) -> Optional[str]:
         """Return the interaction loop id if set."""

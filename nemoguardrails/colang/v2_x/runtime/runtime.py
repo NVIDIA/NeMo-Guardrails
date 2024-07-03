@@ -27,6 +27,7 @@ from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v2_x.lang.colang_ast import Decorator, Flow
+from nemoguardrails.colang.v2_x.lang.utils import format_colang_parsing_error_message
 from nemoguardrails.colang.v2_x.runtime.errors import (
     ColangRuntimeError,
     ColangSyntaxError,
@@ -114,7 +115,11 @@ class RuntimeV2_x(Runtime):
             return added_flows
 
         except Exception as e:
-            log.warning("Failed parsing a generated flow\n%s\n%s", flow_content, e)
+            log.warning(
+                "Failed parsing a generated flow\n%s\n%s",
+                flow_content,
+                format_colang_parsing_error_message(e, flow_content),
+            )
             return []
 
     async def _remove_flows_action(self, state: "State", **args: dict) -> None:
@@ -710,6 +715,7 @@ def create_flow_configs_from_flow_list(flows: List[Flow]) -> Dict[str, FlowConfi
             parameters=flow.parameters,
             return_members=flow.return_members,
             source_code=flow.source_code,
+            source_file=flow.file_info["name"],
         )
 
         if config.is_override:

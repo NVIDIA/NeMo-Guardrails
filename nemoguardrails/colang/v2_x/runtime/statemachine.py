@@ -929,10 +929,16 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
                     actionable_heads.append(head)
         except Exception as e:
             # In case there were any runtime error the flow will be aborted (fail)
+            source_line = "unknown"
+            element = flow_config.elements[head.position]
+            if hasattr(element, "_source") and element._source:
+                source_line = str(element._source.line)
             log.warning(
-                "Colang error: Flow '%s' failed due to runtime exception!",
+                "Flow '%s' failed on line %s (%s) due to Colang runtime exception: %s",
                 flow_state.flow_id,
-                exc_info=True,
+                source_line,
+                flow_config.source_file,
+                e,
             )
             colang_error_event = Event(
                 name="ColangError",
