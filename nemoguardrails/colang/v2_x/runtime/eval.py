@@ -28,7 +28,7 @@ from nemoguardrails.colang.v2_x.runtime.errors import ColangValueError
 from nemoguardrails.colang.v2_x.runtime.flows import FlowState, State
 from nemoguardrails.colang.v2_x.runtime.utils import AttributeDict
 from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
-from nemoguardrails.utils import new_uid
+from nemoguardrails.utils import new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -143,7 +143,7 @@ def eval_expression(expr: str, context: dict) -> Any:
                 "regex": _create_regex,
                 "search": _regex_search,
                 "find_all": _regex_findall,
-                "uid": new_uid,
+                "uid": new_uuid,
                 "pretty_str": _pretty_str,
                 "escape": _escape_string,
                 "is_int": _is_int,

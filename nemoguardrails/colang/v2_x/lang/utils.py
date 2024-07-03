@@ -13,17 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import uuid
 from dataclasses import asdict, is_dataclass
 from typing import Any
-
-
-def new_uuid() -> str:
-    """Helper to generate new UUID v4.
-
-    In testing mode, it will generate a predictable set of UUIDs to help debugging.
-    """
-    return str(uuid.uuid4())
 
 
 def dataclass_to_dict(obj: Any) -> Any:
