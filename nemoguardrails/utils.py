@@ -17,11 +17,12 @@ import dataclasses
 import importlib.resources as pkg_resources
 import json
 import os
+import random
 import uuid
 from collections import namedtuple
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, Tuple
 
 import yaml
 from rich.console import Console
@@ -29,11 +30,24 @@ from rich.console import Console
 # Global console object to be used throughout the code base.
 console = Console()
 
+secure_random = random.SystemRandom()
 
-def new_uid() -> str:
-    """Helper to create a new UID."""
 
-    return str(uuid.uuid4())
+def init_random_seed(seed: int) -> None:
+    """Init random generator with seed."""
+    global secure_random
+    random.seed(seed)
+    secure_random = random
+
+
+def new_uuid() -> str:
+    """Helper to generate new UUID v4.
+
+    In testing mode, it will generate a predictable set of UUIDs to help debugging if random seed was set dependent on
+    the environment variable DEBUG_MODE.
+    """
+    random_bits = secure_random.getrandbits(128)
+    return str(uuid.UUID(int=random_bits, version=4))
 
 
 # Very basic event validation - will be replaced by validation based on pydantic models
@@ -134,7 +148,7 @@ def _update_action_properties(event_dict: Dict[str, Any]) -> None:
         event_dict["action_started_at"] = datetime.now(timezone.utc).isoformat()
     elif "Start" in event_dict["type"]:
         if "action_uid" not in event_dict:
-            event_dict["action_uid"] = new_uid()
+            event_dict["action_uid"] = new_uuid()
     elif "Updated" in event_dict["type"]:
         event_dict["action_updated_at"] = datetime.now(timezone.utc).isoformat()
     elif "Finished" in event_dict["type"]:
@@ -166,7 +180,7 @@ def new_event_dict(event_type: str, **payload) -> Dict[str, Any]:
 
     event: Dict[str, Any] = {
         "type": event_type,
-        "uid": new_uid(),
+        "uid": new_uuid(),
         "event_created_at": datetime.now(timezone.utc).isoformat(),
         "source_uid": "NeMoGuardrails",
     }

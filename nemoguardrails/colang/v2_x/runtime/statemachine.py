@@ -71,11 +71,9 @@ from nemoguardrails.colang.v2_x.runtime.flows import (
     State,
 )
 from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
-from nemoguardrails.utils import console, new_event_dict, new_uid
+from nemoguardrails.utils import console, new_event_dict, new_uuid
 
 log = logging.getLogger(__name__)
-
-random_seed = int(time.time())
 
 
 def initialize_state(state: State) -> None:
@@ -126,13 +124,13 @@ def create_flow_instance(
     """Create a new flow instance that can be added."""
     loop_uid: Optional[str] = None
     if flow_config.loop_type == InteractionLoopType.NEW:
-        loop_uid = new_uid()
+        loop_uid = new_uuid()
     elif flow_config.loop_type == InteractionLoopType.NAMED:
         assert flow_config.loop_id is not None
         loop_uid = flow_config.loop_id
     # For type InteractionLoopType.PARENT we keep it None to infer loop_id at run_time from parent
 
-    head_uid = new_uid()
+    head_uid = new_uuid()
     flow_state = FlowState(
         uid=flow_instance_uid,
         flow_id=flow_config.id,
@@ -1068,7 +1066,7 @@ def slide(
             flow_state.head_fork_uids[element.fork_uid] = head.uid
             # We create the new child heads
             for _idx, label in enumerate(element.labels):
-                parent_fork_head_uid = new_uid()
+                parent_fork_head_uid = new_uuid()
                 pos = flow_config.element_labels[label]
                 new_head = FlowHead(
                     uid=parent_fork_head_uid,
@@ -1354,7 +1352,7 @@ def _start_flow(state: State, flow_state: FlowState, event_arguments: dict) -> N
         loop_id = state.flow_configs[flow_state.flow_id].loop_id
         if loop_id is not None:
             if loop_id == "NEW":
-                flow_state.loop_id = new_uid()
+                flow_state.loop_id = new_uuid()
             else:
                 flow_state.loop_id = loop_id
         else:
@@ -1543,7 +1541,7 @@ def _finish_flow(
     # TODO: Refactor this to use event based mechanics (START_FLOW)
     if flow_state.flow_id == "main":
         # Find an active head
-        head_uid = new_uid()
+        head_uid = new_uuid()
         new_head = FlowHead(
             uid=head_uid,
             flow_state_uid=flow_state.uid,

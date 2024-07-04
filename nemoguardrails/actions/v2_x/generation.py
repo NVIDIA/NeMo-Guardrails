@@ -34,7 +34,6 @@ from nemoguardrails.actions.llm.utils import (
     remove_action_intent_identifiers,
 )
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
-from nemoguardrails.colang.v2_x.lang.utils import new_uuid
 from nemoguardrails.colang.v2_x.runtime.errors import LlmResponseError
 from nemoguardrails.colang.v2_x.runtime.flows import ActionEvent, InternalEvent
 from nemoguardrails.colang.v2_x.runtime.statemachine import (
@@ -49,6 +48,7 @@ from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.filters import colang
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.types import Task
+from nemoguardrails.utils import new_uuid
 
 log = logging.getLogger(__name__)
 
