@@ -32,7 +32,6 @@ from nemoguardrails.actions.v2_x.generation import LLMGenerationActionsV2dotx
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.flows import compute_context
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
-from nemoguardrails.colang.v2_x.lang.utils import new_uuid
 from nemoguardrails.colang.v2_x.runtime.flows import Action, State
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.colang.v2_x.runtime.serialization import (
@@ -62,7 +61,7 @@ from nemoguardrails.rails.llm.options import (
 )
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import get_or_create_event_loop, new_event_dict
+from nemoguardrails.utils import get_or_create_event_loop, new_event_dict, new_uuid
 
 log = logging.getLogger(__name__)
 
