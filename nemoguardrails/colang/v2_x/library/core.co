@@ -73,7 +73,10 @@ flow user said something unexpected -> $event, $transcript
 
 flow _bot_say $text -> $action
   """The internal flow for all semantic level bot utterance flows."""
-  await UtteranceBotAction(script=$text) as $action
+  if is_str($text)
+    await UtteranceBotAction(script=$text) as $action
+  else
+    log "UtteranceBotAction expected parameter `script` of type `string` but got `{type($text)}`: {$text}"
 
 @meta(bot_action=True)
 flow bot say $text
