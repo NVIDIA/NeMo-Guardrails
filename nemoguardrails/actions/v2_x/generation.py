@@ -653,7 +653,10 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         log.info("Generated value for $%s: %s", var_name, value)
 
-        return literal_eval(value)
+        try:
+            return literal_eval(value)
+        except Exception:
+            raise Exception(f"Invalid LLM response: `{value}`")
 
     @action(name="GenerateFlowAction", is_system_action=True, execute_async=True)
     async def generate_flow(

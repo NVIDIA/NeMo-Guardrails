@@ -183,7 +183,7 @@ def eval_expression(expr: str, context: dict) -> Any:
 
         return result
     except Exception as e:
-        raise ColangValueError(f"Error evaluating '{expr}'") from e
+        raise ColangValueError(f"Error evaluating '{expr}', {e}")
 
 
 def _create_regex(pattern: str) -> re.Pattern:

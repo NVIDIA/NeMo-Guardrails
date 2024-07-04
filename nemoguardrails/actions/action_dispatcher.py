@@ -236,7 +236,17 @@ class ActionDispatcher:
                     raise e
 
                 except Exception as e:
-                    log.warning(f"Error while execution {action_name}: {e}")
+                    filtered_params = {
+                        k: v
+                        for k, v in params.items()
+                        if k not in ["state", "events", "llm"]
+                    }
+                    log.warning(
+                        "Error while execution '%s' with parameters '%s': %s",
+                        action_name,
+                        filtered_params,
+                        e,
+                    )
                     log.exception(e)
 
         return None, "failed"

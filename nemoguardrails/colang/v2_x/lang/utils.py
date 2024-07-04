@@ -26,3 +26,10 @@ def dataclass_to_dict(obj: Any) -> Any:
         return {k: dataclass_to_dict(v) for k, v in obj.items()}
     else:
         return obj
+
+
+def format_colang_parsing_error_message(exception, colang_content):
+    """Improves readability of Colang error messages."""
+    line = colang_content.splitlines()[exception.line - 1]
+    marker = " " * (exception.column - 1) + "^"
+    return f"{exception}:\n{line}\n{marker}"

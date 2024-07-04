@@ -55,49 +55,69 @@ def expand_elements(
         elements_changed = False
         new_elements: List[ElementType] = []
         for element in elements:
-            expanded_elements: List[ElementType] = []
-            if isinstance(element, SpecOp):
-                if element.op == "send":
-                    expanded_elements = _expand_send_element(element)
-                elif element.op == "match":
-                    expanded_elements = _expand_match_element(element)
-                elif element.op == "start":
-                    expanded_elements = _expand_start_element(element)
-                elif element.op == "stop":
-                    expanded_elements = _expand_stop_element(element)
-                elif element.op == "activate":
-                    expanded_elements = _expand_activate_element(element)
-                elif element.op == "await":
-                    expanded_elements = _expand_await_element(element)
-            elif isinstance(element, Assignment):
-                expanded_elements = _expand_assignment_stmt_element(element)
-            elif isinstance(element, While):
-                expanded_elements = _expand_while_stmt_element(element, flow_configs)
-            elif isinstance(element, If):
-                expanded_elements = _expand_if_element(element, flow_configs)
-                elements_changed = True  # Makes sure to update continue/break elements
-            elif isinstance(element, When):
-                expanded_elements = _expand_when_stmt_element(element, flow_configs)
-                elements_changed = True  # Makes sure to update continue/break elements
-            elif isinstance(element, Continue):
-                if element.label is None and continue_break_labels is not None:
-                    element.label = continue_break_labels[0]
-            elif isinstance(element, Break):
-                if element.label is None and continue_break_labels is not None:
-                    element.label = continue_break_labels[1]
+            try:
+                expanded_elements: List[ElementType] = []
+                if isinstance(element, SpecOp):
+                    if element.op == "send":
+                        expanded_elements = _expand_send_element(element)
+                    elif element.op == "match":
+                        expanded_elements = _expand_match_element(element)
+                    elif element.op == "start":
+                        expanded_elements = _expand_start_element(element)
+                    elif element.op == "stop":
+                        expanded_elements = _expand_stop_element(element)
+                    elif element.op == "activate":
+                        expanded_elements = _expand_activate_element(element)
+                    elif element.op == "await":
+                        expanded_elements = _expand_await_element(element)
+                elif isinstance(element, Assignment):
+                    expanded_elements = _expand_assignment_stmt_element(element)
+                elif isinstance(element, While):
+                    expanded_elements = _expand_while_stmt_element(
+                        element, flow_configs
+                    )
+                elif isinstance(element, If):
+                    expanded_elements = _expand_if_element(element, flow_configs)
+                    elements_changed = (
+                        True  # Makes sure to update continue/break elements
+                    )
+                elif isinstance(element, When):
+                    expanded_elements = _expand_when_stmt_element(element, flow_configs)
+                    elements_changed = (
+                        True  # Makes sure to update continue/break elements
+                    )
+                elif isinstance(element, Continue):
+                    if element.label is None and continue_break_labels is not None:
+                        element.label = continue_break_labels[0]
+                elif isinstance(element, Break):
+                    if element.label is None and continue_break_labels is not None:
+                        element.label = continue_break_labels[1]
 
-            if len(expanded_elements) > 0:
-                # Map new elements to source
-                for expanded_element in expanded_elements:
-                    if isinstance(expanded_element, Element) and isinstance(
-                        element, Element
-                    ):
-                        expanded_element._source = element._source
-                # Add new elements
-                new_elements.extend(expanded_elements)
-                elements_changed = True
-            else:
-                new_elements.extend([element])
+                if len(expanded_elements) > 0:
+                    # Map new elements to source
+                    for expanded_element in expanded_elements:
+                        if isinstance(expanded_element, Element) and isinstance(
+                            element, Element
+                        ):
+                            expanded_element._source = element._source
+                    # Add new elements
+                    new_elements.extend(expanded_elements)
+                    elements_changed = True
+                else:
+                    new_elements.extend([element])
+
+            except Exception as e:
+                error = "Error"
+                if e.args[0]:
+                    error = e.args[0]
+
+                if hasattr(element, "_source") and element._source:
+                    # TODO: Resolve source line to Colang file level
+                    raise ColangSyntaxError(
+                        error + f" on source line {element._source.line}"
+                    )
+                else:
+                    raise ColangSyntaxError(error)
 
         elements = new_elements
     return elements
@@ -476,7 +496,7 @@ def _expand_await_element(
             )
         else:
             raise ColangSyntaxError(
-                f"Unsupported spec type '{type(element.spec)}', element '{element.spec.name}' on line {element._source.line}"
+                f"Unsupported spec type '{type(element.spec)}', element '{element.spec.name}'"
             )
     else:
         # Element group
@@ -631,7 +651,7 @@ def _expand_activate_element(
         else:
             # It's an UMIM event
             raise ColangSyntaxError(
-                f"Only flows can be activated but not '{element.spec.spec_type}', element '{element.spec.name}' on line {element._source.line}!"
+                f"Only flows can be activated but not '{element.spec.spec_type}', element '{element.spec.name}'"
             )
     elif isinstance(element.spec, dict):
         # Multiple match elements
