@@ -3,10 +3,17 @@ models:
     engine: nemollm
     model: gpt-43b-002
 rails:
-  config:
-    autoalign:
-      parameters:
-        fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
-  output:
-    flows:
-      - autoalign factcheck output
+    config:
+        autoalign:
+            parameters:
+                fact_check_endpoint: "https://nvidia.autoalign.ai/factcheck"
+            output:
+                guardrails_config:
+                  {
+                      "factcheck": {
+                          "verify_response": false
+                      },
+                  }
+    output:
+        flows:
+            - autoalign factcheck output

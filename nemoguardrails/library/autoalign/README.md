@@ -316,7 +316,7 @@ define bot refuse to respond
 The actions `autoalign_input_api` and `autoalign_output_api` takes in two arguments `show_autoalign_message` and
 `show_toxic_phrases`. Both the arguments expect boolean value being passed to them. The default value of
 `show_autoalign_message` is `True` and for `show_toxic_phrases` is False. The `show_autoalign_message` controls whether
-we will any output from autoalign or not. The response from AutoAlign would be presented as a subtext, when
+we will show any output from autoalign or not. The response from AutoAlign would be presented as a subtext, when
 `show_autoalign_message` is kept `True`. Details regarding the second argument can be found in `text_toxicity_extraction`
 section.
 
@@ -449,33 +449,34 @@ For text toxicity detection, the matching score has to be following format:
 Can extract toxic phrases by changing the colang file a bit:
 
 ```colang
-define flow call autoalign input
+define subflow autoalign check input
   $input_result = execute autoalign_input_api(show_autoalign_message=True, show_toxic_phrases=True)
-
   if $input_result["guardrails_triggered"]
     $autoalign_input_response = $input_result['combined_response']
     bot refuse to respond
     stop
+  else if $input_result["pii_fast"] and $input_result["pii_fast"]["guarded"]:
+    $user_message = $input_result["pii_fast"]["response"]
 
-define flow call autoalign output
+define subflow autoalign check output
   $output_result = execute autoalign_output_api(show_autoalign_message=True, show_toxic_phrases=True)
-
   if $output_result["guardrails_triggered"]
     bot refuse to respond
     stop
   else
     $pii_message_output = $output_result["pii_fast"]["response"]
     if $output_result["pii_fast"]["guarded"]
-      bot respond pii output
-      stop
+      $bot_message = $pii_message_output
 
-
-define bot respond pii output
-  "$pii_message_output"
-
+define subflow autoalign factcheck output
+  if $check_facts == True
+    $check_facts = False
+    $threshold = 0.5
+    $output_result = execute autoalign_factcheck_output_api(factcheck_threshold=$threshold, show_autoalign_message=True)
+    bot provide response
 
 define bot refuse to respond
-  "I'm sorry I can't respond."
+  "I'm sorry, I can't respond to that."
 ```
 
 
@@ -561,6 +562,12 @@ To use AutoAlign's factcheck module, you have to modify the `config.yml` in the 
 rails:
   config:
     autoalign:
+      guardrails_config:
+        {
+          "factcheck":{
+            "verify_response": false
+          }
+        }
       parameters:
         fact_check_endpoint: "https://<AUTOALIGN_ENDPOINT>/factcheck"
   output:
@@ -571,27 +578,54 @@ rails:
 Specify the factcheck endpoint the parameters section of autoalign's config.
 Then, you have to call the corresponding subflows for factcheck guardrails.
 
+In the guardrails config for factcheck you can toggle "verify_response" flag
+which will enable(true) / disable (false) additional processing of LLM Response.
+This processing ensures that only relevant LLM responses undergo fact-checking
+and responses like greetings ('Hi', 'Hello' etc.) do not go through fact-checking
+process.
+
+Note that the verify_response is set to False by default as it requires additional
+computation, and we encourage users to determine which LLM responses should go through
+AutoAlign fact checking whenever possible.
+
+
 Following is the format of the colang file, which is present in the library:
 ```colang
-define flow autoalign factcheck input
-  execute autoalign_retrieve_relevant_chunks_input
-  $input_result = execute autoalign_factcheck_input_api
-
-define flow autoalign factcheck output
-  execute retrieve_relevant_chunks
-  $output_result = execute autoalign_factcheck_output_api
-  if $input_result < 0.5
-    bot inform autoalign factcheck input violation
-  if $output_result < 0.5
-    bot inform autoalign factcheck output violation
-    stop
-
-define bot inform autoalign factcheck input violation
-  "Factcheck input violation has been detected by AutoAlign."
-
-define bot inform autoalign factcheck output violation
-  "$bot_message Factcheck output violation has been detected by AutoAlign."
+define subflow autoalign factcheck output
+  if $check_facts == True
+    $check_facts = False
+    $threshold = 0.5
+    $output_result = execute autoalign_factcheck_output_api(factcheck_threshold=$threshold)
 ```
+
+The `threshold` can be changed depending upon the use-case, the `output_result`
+variable stores the factcheck score which can be used for further processing.
+The `show_autoalign_message` controls whether we will show any output from autoalign
+or not. The response from AutoAlign would be presented as a subtext, when
+`show_autoalign_message` is kept `True`.
+
+To use this flow you need to have colang file of the following format:
+
+```colang
+define user ask about pluto
+  "What is pluto?"
+  "How many moons does pluto have?"
+  "Is pluto a planet?"
+
+define flow answer report question
+  user ask about pluto
+  # For pluto questions, we activate the fact checking.
+  $check_facts = True
+  bot provide report answer
+```
+
+The above example is of a flow related to a case where the
+knowledge base is about pluto. You need to define the flow
+for use case by following the above example, this ensures that
+the fact-check takes place only for particular topics and not
+for ideal chit-chat.
+
+
 
 The output of the factcheck endpoint provides you with a factcheck score against which we can add a threshold which determines whether the given output is factually correct or not.
 

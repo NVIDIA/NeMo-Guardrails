@@ -516,14 +516,23 @@ def get_first_bot_intent(strings: List[str]) -> Optional[str]:
 
 def get_first_bot_action(strings: List[str]) -> Optional[str]:
     """Returns first bot action."""
-    action: Optional[str] = None
+    action_started = False
+    action: str = ""
     for string in strings:
         if string.startswith("bot action: "):
-            if action:
-                return action
-            action = string.replace("bot action: ", "")
-        elif action and (string.startswith("  and") or string.startswith("  or")):
+            if action != "":
+                action += "\n"
+            action += string.replace("bot action: ", "")
+            action_started = True
+        elif (
+            string.startswith("  and") or string.startswith("  or")
+        ) and action_started:
             action = action + string
+        elif string == "":
+            action_started = False
+            continue
+        elif action != "":
+            return action
     return action
 
 
