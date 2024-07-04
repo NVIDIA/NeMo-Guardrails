@@ -951,11 +951,9 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
 
         if flow_finished:
             _finish_flow(state, flow_state, head.matching_scores)
-            flow_finished = True
             log.debug("Flow finished: %s with last element", head.flow_state_uid)
         elif flow_aborted:
             _abort_flow(state, flow_state, head.matching_scores)
-            flow_aborted = True
             log.debug("Flow aborted: %s by 'abort' statement", head.flow_state_uid)
 
     # Make sure that all actionable heads still exist in flows, otherwise remove them
