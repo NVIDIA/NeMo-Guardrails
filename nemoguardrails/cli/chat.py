@@ -26,7 +26,7 @@ from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
 from nemoguardrails.logging import verbose
 from nemoguardrails.logging.verbose import console
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import new_event_dict, new_uid
+from nemoguardrails.utils import new_event_dict, new_uuid
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -490,7 +490,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         new_event_dict(
                             "UtteranceUserActionFinished",
                             final_transcript=user_message,
-                            action_uid=new_uid(),
+                            action_uid=new_uuid(),
                             is_success=True,
                         )
                     ]

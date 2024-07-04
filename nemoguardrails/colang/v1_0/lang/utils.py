@@ -382,14 +382,6 @@ def parse_package_name(text):
     return package_name
 
 
-def new_uuid() -> str:
-    """Helper to generate new UUID v4.
-
-    In testing mode, it will generate a predictable set of UUIDs to help debugging.
-    """
-    return str(uuid.uuid4())
-
-
 def string_hash(s):
     """A simple string hash with an equivalent implementation in javascript.
 

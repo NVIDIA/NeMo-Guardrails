@@ -28,6 +28,7 @@ from nemoguardrails.eval.cli import evaluate
 from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
+from nemoguardrails.utils import init_random_seed
 
 app = typer.Typer()
 app.add_typer(evaluate.app, name="evaluate", short_help="Run an evaluation task.")
@@ -82,6 +83,9 @@ def chat(
     # If the `--verbose-no-llm` mode is used, we activate the verbose mode as well.
     # This means that the user doesn't have to use both options at the same time.
     verbose = verbose or verbose_no_llm or len(debug_level) > 0
+
+    if len(debug_level) > 0 or os.environ.get("DEBUG_MODE"):
+        init_random_seed(0)
 
     if verbose:
         set_verbose(

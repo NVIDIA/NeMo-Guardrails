@@ -34,7 +34,6 @@ from nemoguardrails.actions.llm.utils import (
     remove_action_intent_identifiers,
 )
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
-from nemoguardrails.colang.v2_x.lang.utils import new_uuid
 from nemoguardrails.colang.v2_x.runtime.errors import LlmResponseError
 from nemoguardrails.colang.v2_x.runtime.flows import ActionEvent, InternalEvent
 from nemoguardrails.colang.v2_x.runtime.statemachine import (
@@ -49,6 +48,7 @@ from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.filters import colang
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.types import Task
+from nemoguardrails.utils import new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -653,7 +653,10 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         log.info("Generated value for $%s: %s", var_name, value)
 
-        return literal_eval(value)
+        try:
+            return literal_eval(value)
+        except Exception:
+            raise Exception(f"Invalid LLM response: `{value}`")
 
     @action(name="GenerateFlowAction", is_system_action=True, execute_async=True)
     async def generate_flow(
