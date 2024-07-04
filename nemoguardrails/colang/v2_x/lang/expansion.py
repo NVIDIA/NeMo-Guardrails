@@ -41,7 +41,10 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
 )
 from nemoguardrails.colang.v2_x.runtime.errors import ColangSyntaxError
 from nemoguardrails.colang.v2_x.runtime.flows import FlowConfig, InternalEvents
-from nemoguardrails.colang.v2_x.runtime.utils import new_var_uid
+from nemoguardrails.colang.v2_x.runtime.utils import (
+    escape_special_string_characters,
+    new_var_uid,
+)
 
 
 def expand_elements(
@@ -676,11 +679,12 @@ def _expand_assignment_stmt_element(element: Assignment) -> List[ElementType]:
     new_elements: List[ElementType] = []
 
     # Check if the expression is an NLD instruction
-    nld_instruction_pattern = r"^\s*i\"(.*)\"|^\s*i'(.*)'"
+    nld_instruction_pattern = r'\.\.\.\s*("""|\'\'\')((?:\\\1|(?!\1)[\s\S])*?)\1|\.\.\.\s*("|\')((?:\\\3|(?!\3).)*?)\3'
     match = re.search(nld_instruction_pattern, element.expression)
 
     if match:
         # Replace the assignment with the GenerateValueAction system action
+        instruction = escape_special_string_characters(match.group(2) or match.group(4))
         new_elements.append(
             SpecOp(
                 op="await",
@@ -689,7 +693,7 @@ def _expand_assignment_stmt_element(element: Assignment) -> List[ElementType]:
                     spec_type=SpecType.ACTION,
                     arguments={
                         "var_name": f'"{element.key}"',
-                        "instructions": f'"{match.group(1) or match.group(2)}"',
+                        "instructions": f'"{instruction}"',
                     },
                 ),
                 return_var_name=element.key,

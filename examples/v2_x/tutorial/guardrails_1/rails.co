@@ -24,6 +24,6 @@ flow input rails $input_text
     abort
 
 flow check user utterance $input_text -> $input_safe
-  $is_safe = i"Consider the following user utterance: '{$input_text}'. Assign 'True' if appropriate, 'False' if inappropriate."
+  $is_safe = ..."Consider the following user utterance: '{$input_text}'. Assign 'True' if appropriate, 'False' if inappropriate."
   print $is_safe
   return $is_safe
