@@ -77,6 +77,8 @@ DEFAULT_CONFIG = {
     "intellectual_property": {"mode": "OFF"},
 }
 
+default_factcheck_config = {"factcheck": {"verify_response": False}}
+
 
 def process_autoalign_output(responses: List[Any], show_toxic_phrases: bool = False):
     """Processes the output provided AutoAlign API"""
@@ -174,16 +176,17 @@ async def autoalign_factcheck_infer(
     request_url: str,
     text: str,
     documents: List[str],
+    guardrails_config: Optional[Dict[Any, Any]] = None,
 ):
     """Checks the facts for the text using the given documents and provides a fact-checking score"""
+    factcheck_config = default_factcheck_config.copy()
     api_key = os.environ.get("AUTOALIGN_API_KEY")
     if api_key is None:
         raise ValueError("AUTOALIGN_API_KEY environment variable not set.")
     headers = {"x-api-key": api_key}
-    request_body = {
-        "prompt": text,
-        "documents": documents,
-    }
+    if guardrails_config:
+        factcheck_config.update(guardrails_config)
+    request_body = {"prompt": text, "documents": documents, "config": factcheck_config}
     async with aiohttp.ClientSession() as session:
         async with session.post(
             url=request_url,
@@ -198,7 +201,8 @@ async def autoalign_factcheck_infer(
             async for line in response.content:
                 resp = json.loads(line)
                 if resp["task"] == "factcheck":
-                    return float(resp["response"][17:])
+                    if resp["response"].startswith("Factcheck Score: "):
+                        return float(resp["response"][17:])
     return 1.0
 
 
@@ -267,25 +271,33 @@ async def autoalign_output_api(
 
 @action(name="autoalign_factcheck_output_api")
 async def autoalign_factcheck_output_api(
-    llm_task_manager: LLMTaskManager, context: Optional[dict] = None
+    llm_task_manager: LLMTaskManager,
+    context: Optional[dict] = None,
+    factcheck_threshold: float = 0.0,
+    show_autoalign_message: bool = True,
 ):
     """Calls AutoAlign factcheck API and checks whether the bot message is factually correct according to given
     documents"""
 
     bot_message = context.get("bot_message")
-    documents = context.get("relevant_chunks", [])
+    documents = context.get("relevant_chunks_sep", [])
+
     autoalign_config = llm_task_manager.config.rails.config.autoalign
     autoalign_fact_check_api_url = autoalign_config.parameters.get(
         "fact_check_endpoint"
     )
+    guardrails_config = getattr(autoalign_config.output, "guardrails_config", None)
     if not autoalign_fact_check_api_url:
         raise ValueError("Provide the autoalign factcheck endpoint in the config")
-    if isinstance(documents, str):
-        documents = documents.split("\n")
-    prompt = bot_message
-    if isinstance(documents, list) and len(documents) > 0:
-        return await autoalign_factcheck_infer(
-            autoalign_fact_check_api_url, prompt, documents
+    text = bot_message
+    score = await autoalign_factcheck_infer(
+        request_url=autoalign_fact_check_api_url,
+        text=text,
+        documents=documents,
+        guardrails_config=guardrails_config,
+    )
+    if score < factcheck_threshold and show_autoalign_message:
+        log.warning(
+            f"Factcheck violation in llm response has been detected by AutoAlign with fact check score {score}"
         )
-    else:
-        raise ValueError("Provide relevant documents in proper format")
+    return score
