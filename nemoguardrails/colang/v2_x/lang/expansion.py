@@ -656,7 +656,7 @@ def _expand_assignment_stmt_element(element: Assignment) -> List[ElementType]:
     new_elements: List[ElementType] = []
 
     # Check if the expression is an NLD instruction
-    nld_instruction_pattern = r'\.\.\.("""|\'\'\')((?:\\\1|(?!\1)[\s\S])*?)\1|\.\.\.("|\')((?:\\\3|(?!\3).)*?)\3'
+    nld_instruction_pattern = r'\.\.\.\s*("""|\'\'\')((?:\\\1|(?!\1)[\s\S])*?)\1|\.\.\.\s*("|\')((?:\\\3|(?!\3).)*?)\3'
     match = re.search(nld_instruction_pattern, element.expression)
 
     if match:

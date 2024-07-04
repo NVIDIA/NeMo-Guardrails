@@ -36,9 +36,9 @@ def test_1():
         flow main
           match UtteranceUserActionFinished()
           $v1 = ..."Generate the company' name\\" from users input"
-          $v2 = ...'Generate the company\\' name" from users input'
+          $v2 = ... 'Generate the company\\' name" from users input'
           $v3 = ...'''Generate the company' name" from users input'''
-          $v4 = ...'''Generate the company'
+          $v4 = ...  '''Generate the company'
                     name" from users input'''
 
           await UtteranceBotAction(script="{$v1}{$v2}{$v3}{$v4}")
