@@ -135,9 +135,12 @@ flow continuation on unhandled user utterance
         return
 
     log "start bot action flow: `{$flow_info.name}`"
-    await await_flow_by_name $flow_info.name
-    await RemoveFlowsAction(flow_ids=[$flow_info.name])
-    log "bot action flow finished: `{$flow_info.name}`"
+    when await_flow_by_name $flow_info.name
+      log "bot action flow finished: `{$flow_info.name}`"
+      await RemoveFlowsAction(flow_ids=[$flow_info.name])
+    else
+      log "bot action flow failed: `{$flow_info.name}`"
+      await RemoveFlowsAction(flow_ids=[$flow_info.name])
 
 
 flow unhandled user intent -> $intent
@@ -154,9 +157,12 @@ flow continuation on unhandled user intent
 
   if $flow_name
     log "start bot action flow: `{$flow_name}`"
-    await await_flow_by_name $flow_name
-    await RemoveFlowsAction(flow_ids=[$flow_name])
-    log "bot action flow finished: `{$flow_name}`"
+    when await_flow_by_name $flow_name
+      log "bot action flow finished: `{$flow_name}`"
+      await RemoveFlowsAction(flow_ids=[$flow_name])
+    else
+      log "bot action flow failed: `{$flow_name}`"
+      await RemoveFlowsAction(flow_ids=[$flow_name])
 
 
 flow continuation on undefined flow
@@ -186,9 +192,12 @@ flow continuation on undefined flow
 
     # Start and wait for it to finish
     log "start flow: `{$event.flow_id}`"
-    await await_flow_by_name $event.flow_id
-    await RemoveFlowsAction(flow_ids=[$event.flow_id])
-    log "flow finished: `{$event.flow_id}`"
+    when await_flow_by_name $event.flow_id
+      log "flow finished: `{$event.flow_id}`"
+      await RemoveFlowsAction(flow_ids=[$event.flow_id])
+    else
+      log "flow failed: `{$event.flow_id}`"
+      await RemoveFlowsAction(flow_ids=[$event.flow_id])
 
 
 flow llm generate interaction continuation flow -> $flow_name
@@ -220,9 +229,12 @@ flow llm continue interaction
 
   if $flow_name
     log "start flow: `{$flow_name}`"
-    await await_flow_by_name $flow_name
-    await RemoveFlowsAction(flow_ids=[$flow_name])
-    log "flow finished: `{$flow_name}`"
+    when await_flow_by_name $flow_name
+      log "flow finished: `{$flow_name}`"
+      await RemoveFlowsAction(flow_ids=[$flow_name])
+    else
+      log "flow failed: `{$flow_name}`"
+      await RemoveFlowsAction(flow_ids=[$flow_name])
 
 # -----------------------------------
 # Interaction History Logging
