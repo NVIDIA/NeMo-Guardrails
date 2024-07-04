@@ -48,49 +48,60 @@ def convert_co_file_syntax(file_path):
 
     for i, line in enumerate(lines):
         stats["lines"] += 1
-        # stripped_line = line.strip()
-        stripped_line = line
         original_line = line
-        stripped_line = _globalize_variable_assignment(stripped_line)
+
+        line = _globalize_variable_assignment(line)
 
         # Get the next line if it exists
         next_line = lines[i + 1] if i + 1 < len(lines) else None
 
         # Reset prev_line if a new block is reached
-        if stripped_line.lstrip().startswith("define "):
+        if line.lstrip().startswith("define "):
             prev_line = None
         # We convert "define flow" to "flow"
-        stripped_line = re.sub(r"define flow", "flow", stripped_line)
+        line = re.sub(r"define flow", "flow", line)
 
         # We convert "define subflow" to "flow"
-        stripped_line = re.sub(r"define subflow", "flow", stripped_line)
+        line = re.sub(r"define subflow", "flow", line)
 
-        if _is_anonymous_flow(stripped_line):
+        if _is_anonymous_flow(line):
             logging.info(
                 "Using of anonymous flow is deprecated in colang v2.0. We add a unique name to the anonymous flow., but for better readability, please provide a name to the flow."
             )
-            stripped_line = _revise_anonymous_flow(stripped_line, next_line) + "\n"
+            line = _revise_anonymous_flow(line, next_line) + "\n"
 
         # We convert "define bot" to "flow bot" and set the flag
-        if "define bot" in stripped_line:
-            stripped_line = re.sub(r"define bot", "flow bot", stripped_line)
+        if "define bot" in line:
+            line = re.sub(r"define bot", "flow bot", line)
             prev_line = "bot"
 
         # we conver "define user" to "flow user" and set the flag
-        elif "define user" in stripped_line:
-            stripped_line = re.sub(r"define user", "flow user", stripped_line)
+        elif "define user" in line:
+            line = re.sub(r"define user", "flow user", line)
             prev_line = "user"
+
+        # Convert "bot ..." to "match UtteranceBotActionFinished()"
+        if line.lstrip().startswith("bot ..."):
+            line = re.sub(
+                r"(\s*)bot \.\.\.", r"\1match UtteranceBotActionFinished()", line
+            )
+
+        # Convert "user ..." to "match UtteranceUserActionFinished()"
+        elif line.lstrip().startswith("user ..."):
+            line = re.sub(
+                r"(\s*)user \.\.\.", r"\1match UtteranceBotActionFinished()", line
+            )
 
         # if _is_flow(stripped_line):
         #     stripped_line = re.sub(r"[-+*/]", "", stripped_line)
         #
         # Replace "when/or when" with "when/else when"
-        stripped_line = re.sub(r"else when", "or when", stripped_line)
+        line = re.sub(r"else when", "or when", line)
         # converting "execute" to "await"
-        stripped_line = re.sub(r"execute", "await", stripped_line)
+        line = re.sub(r"execute", "await", line)
 
         # convert snake_case after "await" to CamelCase only if it's a single word, i.e., it is an action not a flow.
-        match = re.search(r"await (.*)", stripped_line)
+        match = re.search(r"await (.*)", line)
         if match:
             action_name = match.group(1)
 
@@ -99,35 +110,35 @@ def convert_co_file_syntax(file_path):
                 camel_case = utils.snake_to_camelcase(snake_case)
                 if not camel_case.endswith("Action"):
                     camel_case += "Action"
-                stripped_line = stripped_line.replace(action_name, camel_case)
+                line = line.replace(action_name, camel_case)
 
             elif " " in action_name:
                 snake_case = action_name.replace(" ", "_")
                 camel_case = utils.snake_to_camelcase(snake_case)
                 if not camel_case.endswith("Action"):
                     camel_case += "Action"
-                stripped_line = stripped_line.replace(action_name, camel_case)
+                line = line.replace(action_name, camel_case)
 
         # Convert "stop" to "abort"
-        stripped_line = re.sub(r"stop", "abort", stripped_line)
+        line = re.sub(r"stop", "abort", line)
 
         # Convert quoted strings after "bot" to "bot say" or "or bot say" based on the flag
-        if prev_line == "bot" and re.search(r"\"(.+?)\"", stripped_line):
-            stripped_line = re.sub(r"\"(.+?)\"", r'bot say "\1"', stripped_line)
+        if prev_line == "bot" and re.search(r"\"(.+?)\"", line):
+            line = re.sub(r"\"(.+?)\"", r'bot say "\1"', line)
             prev_line = "bot say"
-        elif prev_line == "bot say" and re.search(r"\"(.+?)\"", stripped_line):
-            stripped_line = re.sub(r"\"(.+?)\"", r'or bot say "\1"', stripped_line)
+        elif prev_line == "bot say" and re.search(r"\"(.+?)\"", line):
+            line = re.sub(r"\"(.+?)\"", r'or bot say "\1"', line)
 
         # Convert quoted strings after "user" to "user said" or "or user said" based on the flag
-        if prev_line == "user" and re.search(r"\"(.+?)\"", stripped_line):
-            stripped_line = re.sub(r"\"(.+?)\"", r'user said "\1"', stripped_line)
+        if prev_line == "user" and re.search(r"\"(.+?)\"", line):
+            line = re.sub(r"\"(.+?)\"", r'user said "\1"', line)
             prev_line = "user said"
-        elif prev_line == "user said" and re.search(r"\"(.+?)\"", stripped_line):
-            stripped_line = re.sub(r"\"(.+?)\"", r'or user said "\1"', stripped_line)
+        elif prev_line == "user said" and re.search(r"\"(.+?)\"", line):
+            line = re.sub(r"\"(.+?)\"", r'or user said "\1"', line)
 
-        new_lines.append(stripped_line)
+        new_lines.append(line)
 
-        if original_line != stripped_line:
+        if original_line != line:
             stats["changes"] += 1
 
     return new_lines
@@ -206,9 +217,7 @@ def _globalize_variable_assignment(line):
         indentation = len(line) - len(line.lstrip())
 
         # Prepend the "global" keyword with the original indentation
-        return (
-            " " * indentation + "global " + tokens[0] + "\n" + " " * indentation + line
-        )
+        return " " * indentation + "global " + tokens[0] + "\n" + line
     else:
         # If not a variable assignment, return the line as is
         return line
