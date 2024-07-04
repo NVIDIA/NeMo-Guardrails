@@ -140,9 +140,9 @@ flow bot started a posture -> $posture
 
 flow bot started an action -> $action
   """Wait for the bot to start with any action."""
-  match bot started saying something as $action
-    or bot started a gesture as $action
-    or bot started a posture as $action
+  match (bot started saying something).Finished() as $action
+    or (bot started a gesture).Finished() as $action
+    or (bot started a posture).Finished() as $action
 
 # ----------------------------------
 # State Tracking Flows
