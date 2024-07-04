@@ -41,6 +41,9 @@ class Task(Enum):
     SELF_CHECK_OUTPUT = "self_check_output"
     LLAMA_GUARD_CHECK_INPUT = "llama_guard_check_input"
     LLAMA_GUARD_CHECK_OUTPUT = "llama_guard_check_output"
+    PATRONUS_LYNX_CHECK_OUTPUT_HALLUCINATION = (
+        "patronus_lynx_check_output_hallucination"
+    )
 
     SELF_CHECK_FACTS = "fact_checking"
     CHECK_HALLUCINATION = "check_hallucination"

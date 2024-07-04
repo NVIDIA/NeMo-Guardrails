@@ -818,6 +818,13 @@ class RailsConfig(BaseModel):
             raise ValueError(
                 "You must provide a `llama_guard_check_output` prompt template."
             )
+        if (
+            "patronus lynx check output hallucination" in enabled_output_rails
+            and "patronus_lynx_check_output_hallucination" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `patronus_lynx_check_output_hallucination` prompt template."
+            )
 
         if (
             "self check facts" in enabled_output_rails
