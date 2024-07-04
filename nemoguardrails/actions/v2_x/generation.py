@@ -250,12 +250,14 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         user_intent = get_first_nonempty_line(result)
         # GTP-4o often adds 'user intent: ' in front
-        if user_intent:
+        if user_intent and ":" in user_intent:
             temp_user_intent = get_first_user_intent([user_intent])
-        if temp_user_intent:
-            user_intent = temp_user_intent
+            if temp_user_intent:
+                user_intent = temp_user_intent
+            else:
+                user_intent = None
         if user_intent is None:
-            raise LlmResponseError(f"Issue with LLM response: {result}")
+            user_intent = "user was unclear"
 
         user_intent = escape_flow_name(user_intent.strip(" "))
 
@@ -316,15 +318,21 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         user_intent = get_first_nonempty_line(result)
+
         # GTP-4o often adds 'user intent: ' in front
-        if user_intent:
+        if user_intent and ":" in user_intent:
             temp_user_intent = get_first_user_intent([user_intent])
-        if temp_user_intent:
-            user_intent = temp_user_intent
+            if temp_user_intent:
+                user_intent = temp_user_intent
+            else:
+                user_intent = None
+        if user_intent is None:
+            user_intent = "user was unclear"
+
         bot_intent = get_first_bot_intent(result.splitlines())
         bot_action = get_first_bot_action(result.splitlines())
 
-        if user_intent is None or bot_action is None:
+        if bot_action is None:
             raise LlmResponseError(f"Issue with LLM response: {result}")
 
         user_intent = escape_flow_name(user_intent.strip(" "))
