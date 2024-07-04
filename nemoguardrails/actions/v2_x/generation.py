@@ -239,7 +239,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             Task.GENERATE_USER_INTENT_FROM_USER_ACTION
         )
 
-        # We make this call with temperature 0 to have it as deterministic as possible.
+        # We make this call with lowest temperature to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
             result = await llm_call(llm, prompt, stop=stop)
 
@@ -293,7 +293,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         prompt = self.llm_task_manager.render_task_prompt(
-            task=Task.GENERATE_USER_INTENT_FROM_USER_ACTION,
+            task=Task.GENERATE_USER_INTENT_AND_BOT_ACTION_FROM_USER_ACTION,
             events=events,
             context={
                 "examples": examples,
@@ -302,14 +302,17 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 "context": state.context,
             },
         )
+        stop = self.llm_task_manager.get_stop_tokens(
+            Task.GENERATE_USER_INTENT_AND_BOT_ACTION_FROM_USER_ACTION
+        )
 
-        # We make this call with temperature 0 to have it as deterministic as possible.
+        # We make this call with lowest temperature to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
-            result = await llm_call(llm, prompt, stop=["\nuser intent:"])
+            result = await llm_call(llm, prompt, stop=stop)
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(
-            Task.GENERATE_USER_INTENT_FROM_USER_ACTION, output=result
+            Task.GENERATE_USER_INTENT_AND_BOT_ACTION_FROM_USER_ACTION, output=result
         )
 
         user_intent = get_first_nonempty_line(result)
