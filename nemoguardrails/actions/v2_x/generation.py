@@ -299,6 +299,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 "examples": examples,
                 "potential_user_intents": ", ".join(potential_user_intents),
                 "user_action": user_action,
+                "context": state.context,
             },
         )
 
