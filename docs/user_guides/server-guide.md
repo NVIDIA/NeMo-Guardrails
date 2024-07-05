@@ -105,7 +105,8 @@ The configurations will be combined in the order they are specified in the `conf
 
 #### Default Configuration
 
-Guardrails server supports a default configuration which can be set using the --default-config flag. This configuration will be used when no config_id is provided in the request. Then the request will be processed using the default configuration.
+The NeMo Guardrails server supports having a default guardrail configuration which can be set using the `--default-config-id` flag.
+This configuration is used when no `config_id` is provided in the request.
 
 ```
 POST /v1/chat/completions

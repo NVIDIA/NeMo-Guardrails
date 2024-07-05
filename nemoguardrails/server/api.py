@@ -23,20 +23,9 @@ import warnings
 from typing import Any, List, Optional
 
 from fastapi import FastAPI, Request
-
-# from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import (
-    BaseModel,
-    Field,
-    ValidationInfo,
-    field_validator,
-    model_validator,
-    validator,
-)
-
-# from starlette import status
-from starlette.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
+from starlette.responses import StreamingResponse
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig
@@ -307,9 +296,8 @@ async def chat_completion(body: RequestBody, request: Request):
         config_ids = [app.default_config_id]
     elif not config_ids and not app.default_config_id:
         raise GuardrailsConfigurationError(
-            "No 'config_id' provided and no default 'config_id' is set. "
-            "To proceed, you must either pass a 'config_id' in your request or set a default 'config_id' in the application settings. "
-            "If you intend to use the default configuration, ensure that the default 'config_id' is correctly configured."
+            "No 'config_id' provided and no default configuration is set for the server. "
+            "You must set a 'config_id' in your request or set use --default-config-id when . "
         )
     try:
         llm_rails = _get_rails(config_ids)
