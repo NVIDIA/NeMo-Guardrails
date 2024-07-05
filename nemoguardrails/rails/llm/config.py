@@ -774,13 +774,13 @@ class RailsConfig(BaseModel):
         description="Whether this configuration should use streaming mode or not.",
     )
 
-    allow_exceptions: bool = Field(
+    enable_rails_exceptions: bool = Field(
         default=False,
         description="If true, allows the rails to throw/pass exceptions to the user.",
     )
 
     passthrough: bool = Field(
-        default=False,
+        default=None,
         description="Weather the original prompt should pass through the guardrails configuration as is. "
         "This means it will not be altered in any way. ",
     )
