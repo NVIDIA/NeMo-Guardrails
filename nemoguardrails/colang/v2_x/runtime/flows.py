@@ -579,8 +579,8 @@ class FlowState:
     # The datetime of the last status change of the flow
     status_updated: datetime = datetime.now()
 
-    # An activated flow will restart immediately when finished
-    activated: bool = False
+    # An activated flow will restart immediately when finished. The integer counts the activations.
+    activated: int = 0
 
     # True if a new instance was started either by restarting or
     # an early 'start_new_flow_instance' label

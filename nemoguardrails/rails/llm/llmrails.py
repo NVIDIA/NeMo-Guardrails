@@ -43,6 +43,7 @@ from nemoguardrails.context import (
     explain_info_var,
     generation_options_var,
     llm_stats_var,
+    raw_llm_request,
     streaming_handler_var,
 )
 from nemoguardrails.embeddings.index import EmbeddingsIndex
@@ -596,6 +597,9 @@ class LLMRails:
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
             messages = [{"role": "user", "content": prompt}]
+            raw_llm_request.set(prompt)
+        else:
+            raw_llm_request.set(messages)
 
         # If we have generation options, we also add them to the context
         if options:

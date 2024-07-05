@@ -96,9 +96,7 @@ def eval_expression(expr: str, context: dict) -> Any:
                     lambda x: inner_expression_values.pop(0),
                     string_expression,
                 )
-                string_expression = string_expression.replace("{{", "{").replace(
-                    "}}", "}"
-                )
+            string_expression = string_expression.replace("{{", "{").replace("}}", "}")
             string_expression_values.append(string_expression)
     if string_expression_values:
         expr = re.sub(

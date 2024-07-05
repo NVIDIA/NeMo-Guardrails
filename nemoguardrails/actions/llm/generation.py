@@ -44,9 +44,11 @@ from nemoguardrails.actions.llm.utils import (
 )
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow, Spec, SpecOp
+from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
 from nemoguardrails.context import (
     generation_options_var,
     llm_call_info_var,
+    raw_llm_request,
     streaming_handler_var,
 )
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
@@ -149,8 +151,9 @@ class LLMGenerationActions:
                     return
 
                 # Extract the message and remove the double quotes
-                message = spec.arguments["final_transcript"][1:-1]
-                self.user_messages[flow.name] = [message]
+                message = eval_expression(spec.arguments["final_transcript"], {})
+                if isinstance(message, str):
+                    self.user_messages[flow.name] = [message]
 
             elif el.op == "await":
                 spec = cast(SpecOp, el).spec
@@ -168,11 +171,11 @@ class LLMGenerationActions:
                     ):
                         continue
 
-                    message = spec.arguments["$0"][1:-1]
-                    if flow.name not in self.user_messages:
-                        self.user_messages[flow.name] = []
-
-                    self.user_messages[flow.name].append(message)
+                    message = eval_expression(spec.arguments["$0"], {})
+                    if isinstance(message, str):
+                        if flow.name not in self.user_messages:
+                            self.user_messages[flow.name] = []
+                        self.user_messages[flow.name].append(message)
 
     def _extract_bot_message_example(self, flow: Flow):
         # Quick heuristic to identify the user utterance examples
@@ -430,9 +433,28 @@ class LLMGenerationActions:
 
             # If we are in passthrough mode, we just use the input for prompting
             if self.config.passthrough:
-                # We use the potentially updated $user_message. This means that even
-                # in passthrough mode, input rails can still alter the input.
-                prompt = event["text"]
+                # We check if we have a raw request. If the guardrails API is using
+                # the `generate_events` API, this will not be set.
+                raw_prompt = raw_llm_request.get()
+
+                if raw_prompt is None:
+                    prompt = event["text"]
+                else:
+                    if isinstance(raw_prompt, str):
+                        # If we're in completion mode, we use directly the last $user_message
+                        # as it may have been altered by the input rails.
+                        prompt = event["text"]
+                    elif isinstance(raw_prompt, list):
+                        prompt = raw_prompt.copy()
+
+                        # In this case, if the last message is from the user, we replace the text
+                        # just in case the input rails may have altered it.
+                        if prompt[-1]["role"] == "user":
+                            raw_prompt[-1]["content"] = event["text"]
+                    else:
+                        raise ValueError(
+                            f"Unsupported type for raw prompt: {type(raw_prompt)}"
+                        )
 
                 if self.passthrough_fn:
                     raw_output = await self.passthrough_fn(

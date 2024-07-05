@@ -331,12 +331,40 @@ class JailbreakDetectionConfig(BaseModel):
     )
 
 
+class AutoAlignOptions(BaseModel):
+    """List of guardrails that are activated"""
+
+    guardrails_config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="The guardrails configuration that is passed to the AutoAlign endpoint",
+    )
+
+
+class AutoAlignRailConfig(BaseModel):
+    """Configuration data for the AutoAlign API"""
+
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    input: AutoAlignOptions = Field(
+        default_factory=AutoAlignOptions,
+        description="Input configuration for AutoAlign guardrails",
+    )
+    output: AutoAlignOptions = Field(
+        default_factory=AutoAlignOptions,
+        description="Output configuration for AutoAlign guardrails",
+    )
+
+
 class RailsConfigData(BaseModel):
     """Configuration data for specific rails that are supported out-of-the-box."""
 
     fact_checking: FactCheckingRailConfig = Field(
         default_factory=FactCheckingRailConfig,
         description="Configuration data for the fact-checking rail.",
+    )
+
+    autoalign: AutoAlignRailConfig = Field(
+        default_factory=AutoAlignRailConfig,
+        description="Configuration data for the AutoAlign guardrails API.",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
@@ -744,8 +772,8 @@ class RailsConfig(BaseModel):
         description="Whether this configuration should use streaming mode or not.",
     )
 
-    passthrough: bool = Field(
-        default=False,
+    passthrough: Optional[bool] = Field(
+        default=None,
         description="Weather the original prompt should pass through the guardrails configuration as is. "
         "This means it will not be altered in any way. ",
     )
@@ -818,8 +846,9 @@ class RailsConfig(BaseModel):
         description="The name of the action that would execute the original raw LLM call. ",
     )
 
-    @staticmethod
+    @classmethod
     def from_path(
+        cls,
         config_path: str,
     ):
         """Loads a configuration from a given path.
@@ -853,10 +882,11 @@ class RailsConfig(BaseModel):
 
         raw_config["config_path"] = config_path
 
-        return RailsConfig.parse_object(raw_config)
+        return cls.parse_object(raw_config)
 
-    @staticmethod
+    @classmethod
     def from_content(
+        cls,
         colang_content: Optional[str] = None,
         yaml_content: Optional[str] = None,
         config: Optional[dict] = None,
@@ -907,7 +937,7 @@ class RailsConfig(BaseModel):
         if len(raw_config.get("instructions", [])) == 0:
             raw_config["instructions"] = _default_config["instructions"]
 
-        return RailsConfig.parse_object(raw_config)
+        return cls.parse_object(raw_config)
 
     @classmethod
     def parse_object(cls, obj):
@@ -923,7 +953,7 @@ class RailsConfig(BaseModel):
                 ):
                     flow_data["elements"] = parse_flow_elements(flow_data["elements"])
 
-        return RailsConfig.parse_obj(obj)
+        return cls.parse_obj(obj)
 
     @property
     def streaming_supported(self):

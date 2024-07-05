@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_va
 from starlette.responses import StreamingResponse
 from starlette.staticfiles import StaticFiles
 
-from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails import LLMRails, RailsConfig, utils
 from nemoguardrails.rails.llm.options import (
     GenerationLog,
     GenerationOptions,
@@ -80,11 +80,10 @@ if ENABLE_CORS:
         allow_headers=["*"],
     )
 
-# By default, we use the rails in the examples folder
 app.default_config_id = None
-app.rails_config_path = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "examples", "bots")
-)
+
+# By default, we use the rails in the examples folder
+app.rails_config_path = utils.get_examples_data_path("bots")
 
 # Weather the chat UI is enabled or not.
 app.disable_chat_ui = False
@@ -249,17 +248,20 @@ def _get_rails(config_ids: List[str]) -> LLMRails:
         config_ids = [""]
 
     full_llm_rails_config = None
+
     for config_id in config_ids:
-        full_path = os.path.normpath(os.path.join(app.rails_config_path, config_id))
-        if not full_path.startswith(app.rails_config_path):
-            raise Exception("Not allowed.")
+        base_path = os.path.abspath(app.rails_config_path)
+        full_path = os.path.normpath(os.path.join(base_path, config_id))
+
+        if not full_path.startswith(base_path + os.sep):
+            raise ValueError("Access to the specified path is not allowed.")
 
         rails_config = RailsConfig.from_path(full_path)
 
         if not full_llm_rails_config:
             full_llm_rails_config = rails_config
         else:
-            full_llm_rails_config = full_llm_rails_config + rails_config
+            full_llm_rails_config += rails_config
 
     llm_rails = LLMRails(config=full_llm_rails_config, verbose=True)
     llm_rails_instances[configs_cache_key] = llm_rails
@@ -462,9 +464,7 @@ async def startup_event():
     # Finally, we register the static frontend UI serving
 
     if not app.disable_chat_ui:
-        FRONTEND_DIR = os.path.join(
-            os.path.dirname(__file__), "..", "..", "chat-ui", "frontend"
-        )
+        FRONTEND_DIR = utils.get_chat_ui_data_path("frontend")
 
         app.mount(
             "/",

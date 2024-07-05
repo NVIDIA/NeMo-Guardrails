@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import re
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackManager
@@ -27,6 +27,18 @@ from nemoguardrails.colang.v2_x.runtime.flows import InternalEvent, InternalEven
 from nemoguardrails.context import llm_call_info_var
 from nemoguardrails.logging.callbacks import logging_callbacks
 from nemoguardrails.logging.explain import LLMCallInfo
+
+
+class LLMCallException(Exception):
+    """A wrapper around the LLM call invocation exception.
+
+    This is used to propagate the exception out of the `generate_async` call (the default behavior is to
+    catch it and return an "Internal server error." message.
+    """
+
+    def __init__(self, inner_exception: Any):
+        super().__init__(f"LLM Call Exception: {str(inner_exception)}")
+        self.inner_exception = inner_exception
 
 
 async def llm_call(
@@ -53,9 +65,12 @@ async def llm_call(
 
     if isinstance(prompt, str):
         # stop sinks here
-        result = await llm.agenerate_prompt(
-            [StringPromptValue(text=prompt)], callbacks=all_callbacks, stop=stop
-        )
+        try:
+            result = await llm.agenerate_prompt(
+                [StringPromptValue(text=prompt)], callbacks=all_callbacks, stop=stop
+            )
+        except Exception as e:
+            raise LLMCallException(e)
         llm_call_info.raw_response = result.llm_output
 
         # TODO: error handling
@@ -64,17 +79,24 @@ async def llm_call(
         # We first need to translate the array of messages into LangChain message format
         messages = []
         for _msg in prompt:
-            if _msg["type"] == "user":
+            msg_type = _msg["type"] if "type" in _msg else _msg["role"]
+            if msg_type == "user":
                 messages.append(HumanMessage(content=_msg["content"]))
-            elif _msg["type"] in ["bot", "assistant"]:
+            elif msg_type in ["bot", "assistant"]:
                 messages.append(AIMessage(content=_msg["content"]))
-            elif _msg["type"] == "system":
+            elif msg_type == "system":
                 messages.append(SystemMessage(content=_msg["content"]))
             else:
-                raise ValueError(f"Unknown message type {_msg['type']}")
-        result = await llm.agenerate_prompt(
-            [ChatPromptValue(messages=messages)], callbacks=all_callbacks, stop=stop
-        )
+                # TODO: add support for tool-related messages
+                raise ValueError(f"Unknown message type {msg_type}")
+
+        try:
+            result = await llm.agenerate_prompt(
+                [ChatPromptValue(messages=messages)], callbacks=all_callbacks, stop=stop
+            )
+        except Exception as e:
+            raise LLMCallException(e)
+
         llm_call_info.raw_response = result.llm_output
 
         return result.generations[0][0].text
@@ -474,6 +496,36 @@ def get_initial_actions(strings: List[str]) -> List[str]:
             break
         previous_strings.append(string)
     return previous_strings
+
+
+def get_first_bot_intent(strings: List[str]) -> Optional[str]:
+    """Returns first bot intent."""
+    for string in strings:
+        if string.startswith("bot intent: "):
+            return string.replace("bot intent: ", "")
+    return None
+
+
+def get_first_bot_action(strings: List[str]) -> Optional[str]:
+    """Returns first bot action."""
+    action_started = False
+    action: str = ""
+    for string in strings:
+        if string.startswith("bot action: "):
+            if action != "":
+                action += "\n"
+            action += string.replace("bot action: ", "")
+            action_started = True
+        elif (
+            string.startswith("  and") or string.startswith("  or")
+        ) and action_started:
+            action = action + string
+        elif string == "":
+            action_started = False
+            continue
+        elif action != "":
+            return action
+    return action
 
 
 def escape_flow_name(name: str) -> str:

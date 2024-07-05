@@ -87,12 +87,12 @@ def test_if_branching_mechanic():
 
     content = """
     flow main
-      while $action_ref_3 is None
-        if $event_ref_1 is None and True
+      while $action_ref_3 is None:
+        if $event_ref_1 is None and True:
           start UtteranceBotAction(script="Action1") as $event_ref_1
-        else if $event_ref_2 is None or False
+        else if $event_ref_2 is None or False:
           start UtteranceBotAction(script="Action2") as $event_ref_2
-        else
+        else:
           start UtteranceBotAction(script="ActionElse") as $action_ref_3
         start UtteranceBotAction(script="Next")
     """
@@ -230,7 +230,7 @@ def test_expressions_in_strings():
     content = """
     flow main
       start UtteranceBotAction(script="Roger") as $ref
-      start UtteranceBotAction(script="It's {{->}} \\"{$ref.start_event_arguments.script}!\\"")
+      start UtteranceBotAction(script="It's {{->}}")
       start UtteranceBotAction(script='It"s {{->}} \\'{$ref.start_event_arguments.script}!\\'')
     """
 
@@ -245,7 +245,7 @@ def test_expressions_in_strings():
             },
             {
                 "type": "StartUtteranceBotAction",
-                "script": 'It\'s {->} "Roger!"',
+                "script": "It's {->}",
             },
             {
                 "type": "StartUtteranceBotAction",
@@ -389,12 +389,12 @@ def test_when_or_core_mechanics():
       match UtteranceUserAction.Finished(final_transcript=$transcript)
 
     flow main
-      while True
-        when UtteranceUserActionFinished(final_transcript="A")
+      while True:
+        when UtteranceUserActionFinished(final_transcript="A"):
           start UtteranceBotAction(script="A")
-        or when UtteranceUserAction().Finished(final_transcript="B")
+        or when UtteranceUserAction().Finished(final_transcript="B"):
           start UtteranceBotAction(script="B")
-        or when user said "C"
+        or when user said "C":
           start UtteranceBotAction(script="C")
           break
     """

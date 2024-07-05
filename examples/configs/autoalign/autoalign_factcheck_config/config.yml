@@ -1,0 +1,19 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo-instruct
+rails:
+    config:
+        autoalign:
+            parameters:
+                fact_check_endpoint: "https://<AUTOALIGN_ENDPOINT>/factcheck"
+            output:
+                guardrails_config:
+                  {
+                      "factcheck": {
+                          "verify_response": false
+                      },
+                  }
+    output:
+        flows:
+            - autoalign factcheck output

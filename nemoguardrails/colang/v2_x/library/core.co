@@ -14,8 +14,11 @@ flow _user_said $text -> $event
 flow _user_saying $text -> $event
   """The internal flow for all semantic 'user saying' flows."""
   if $text
-    # This matches to a transcript where after some initial characters it finds $text followed optionally by up to two words
-    match UtteranceUserAction.TranscriptUpdated(interim_transcript=regex("(?i).*({$text})((\s*\w+\s*){0,2})\W*$")) as $event
+    if is_regex($text)
+      match UtteranceUserAction.TranscriptUpdated(interim_transcript=$text) as $event
+    else
+      # This matches to a transcript where after some initial characters it finds $text followed optionally by up to two words
+      match UtteranceUserAction.TranscriptUpdated(interim_transcript=regex("(?i).*({$text})((\s*\w+\s*){{0,2}})\W*$")) as $event
   else
     match UtteranceUserAction.TranscriptUpdated() as $event
 

@@ -41,6 +41,7 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     initialize_state,
     run_to_completion,
 )
+from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict
 
@@ -82,9 +83,7 @@ class RuntimeV2_x(Runtime):
                 include_source_mapping=True,
             )
         except Exception as e:
-            warning = f"Failed parsing a generated flow\n{flow_content}\n{e}"
-            log.warning(warning)
-            print(warning)
+            log.warning("Failed parsing a generated flow\n%s\n%s", flow_content, e)
             return []
             # Alternatively, we could through an exceptions
             # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
@@ -92,9 +91,7 @@ class RuntimeV2_x(Runtime):
         added_flows: List[str] = []
         for flow in parsed_flow["flows"]:
             if flow.name in state.flow_configs:
-                warning = "Flow '{flow.name}' already exists! Not loaded!"
-                log.warning(warning)
-                print(warning)
+                log.warning("Flow '%s' already exists! Not loaded!", flow.name)
                 break
 
             flow_config = FlowConfig(
@@ -444,9 +441,32 @@ class RuntimeV2_x(Runtime):
         assert state.main_flow_state is not None
         main_flow_uid = state.main_flow_state.uid
         if state.main_flow_state.status == FlowStatus.WAITING:
+            log.info("Start of story!")
+
+            # Start the main flow
             input_event = InternalEvent(name="StartFlow", arguments={"flow_id": "main"})
             input_events.insert(0, input_event)
-            log.info("Start of story!")
+            main_flow_state = state.flow_id_states["main"][-1]
+
+            # Start all module level flows before main flow
+            idx = 0
+            for flow_config in reversed(state.flow_configs.values()):
+                if "active" in flow_config.decorators:
+                    input_event = InternalEvent(
+                        name="StartFlow",
+                        arguments={
+                            "flow_id": flow_config.id,
+                            "source_flow_instance_uid": main_flow_state.uid,
+                            "flow_instance_uid": new_readable_uid(flow_config.id),
+                            "flow_hierarchy_position": f"0.0.{idx}",
+                            "source_head_uid": list(main_flow_state.heads.values())[
+                                0
+                            ].uid,
+                            "activated": True,
+                        },
+                    )
+                    input_events.insert(0, input_event)
+                    idx += 1
 
         # Check if we have new finished async local action events to add
         (
