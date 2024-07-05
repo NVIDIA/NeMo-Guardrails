@@ -498,6 +498,14 @@ def get_initial_actions(strings: List[str]) -> List[str]:
     return previous_strings
 
 
+def get_first_user_intent(strings: List[str]) -> Optional[str]:
+    """Returns first user intent."""
+    for string in strings:
+        if string.startswith("user intent: "):
+            return string.replace("user intent: ", "")
+    return None
+
+
 def get_first_bot_intent(strings: List[str]) -> Optional[str]:
     """Returns first bot intent."""
     for string in strings:

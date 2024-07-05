@@ -28,6 +28,7 @@ from nemoguardrails.actions.llm.utils import (
     get_first_bot_action,
     get_first_bot_intent,
     get_first_nonempty_line,
+    get_first_user_intent,
     get_initial_actions,
     get_last_user_utterance_event_v2_x,
     llm_call,
@@ -238,7 +239,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             Task.GENERATE_USER_INTENT_FROM_USER_ACTION
         )
 
-        # We make this call with temperature 0 to have it as deterministic as possible.
+        # We make this call with lowest temperature to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
             result = await llm_call(llm, prompt, stop=stop)
 
@@ -248,8 +249,15 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         user_intent = get_first_nonempty_line(result)
+        # GTP-4o often adds 'user intent: ' in front
+        if user_intent and ":" in user_intent:
+            temp_user_intent = get_first_user_intent([user_intent])
+            if temp_user_intent:
+                user_intent = temp_user_intent
+            else:
+                user_intent = None
         if user_intent is None:
-            raise LlmResponseError(f"Issue with LLM response: {result}")
+            user_intent = "user was unclear"
 
         user_intent = escape_flow_name(user_intent.strip(" "))
 
@@ -287,29 +295,44 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         prompt = self.llm_task_manager.render_task_prompt(
-            task=Task.GENERATE_USER_INTENT_FROM_USER_ACTION,
+            task=Task.GENERATE_USER_INTENT_AND_BOT_ACTION_FROM_USER_ACTION,
             events=events,
             context={
                 "examples": examples,
                 "potential_user_intents": ", ".join(potential_user_intents),
                 "user_action": user_action,
+                "context": state.context,
             },
         )
+        stop = self.llm_task_manager.get_stop_tokens(
+            Task.GENERATE_USER_INTENT_AND_BOT_ACTION_FROM_USER_ACTION
+        )
 
-        # We make this call with temperature 0 to have it as deterministic as possible.
+        # We make this call with lowest temperature to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
-            result = await llm_call(llm, prompt, stop="user intent:")
+            result = await llm_call(llm, prompt, stop=stop)
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(
-            Task.GENERATE_USER_INTENT_FROM_USER_ACTION, output=result
+            Task.GENERATE_USER_INTENT_AND_BOT_ACTION_FROM_USER_ACTION, output=result
         )
 
         user_intent = get_first_nonempty_line(result)
+
+        # GTP-4o often adds 'user intent: ' in front
+        if user_intent and ":" in user_intent:
+            temp_user_intent = get_first_user_intent([user_intent])
+            if temp_user_intent:
+                user_intent = temp_user_intent
+            else:
+                user_intent = None
+        if user_intent is None:
+            user_intent = "user was unclear"
+
         bot_intent = get_first_bot_intent(result.splitlines())
         bot_action = get_first_bot_action(result.splitlines())
 
-        if user_intent is None or bot_action is None:
+        if bot_action is None:
             raise LlmResponseError(f"Issue with LLM response: {result}")
 
         user_intent = escape_flow_name(user_intent.strip(" "))
@@ -634,8 +657,12 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             },
         )
 
-        with llm_params(llm, temperature=0.5):
-            result = await llm_call(llm, prompt)
+        stop = self.llm_task_manager.get_stop_tokens(
+            Task.GENERATE_USER_INTENT_FROM_USER_ACTION
+        )
+
+        with llm_params(llm, temperature=0.1):
+            result = await llm_call(llm, prompt, stop)
 
         # Parse the output using the associated parser
         result = self.llm_task_manager.parse_task_output(
@@ -650,6 +677,11 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         # a ";" at the end of the line. We remove that
         if value.endswith(";"):
             value = value[:-1]
+
+        # Remove variable name from the left if it appears in the result (GTP-4o):
+        if isinstance(prompt, str):
+            last_prompt_line = prompt.strip().split("\n")[-1]
+            value = value.replace(last_prompt_line, "").strip()
 
         log.info("Generated value for $%s: %s", var_name, value)
 
