@@ -406,10 +406,12 @@ async def _run_chat_v2_x(rails_app: LLMRails):
             if len(input_events) == 0:
                 input_events = [new_event_dict("CheckLocalAsync")]
 
-            output_events, output_state = await rails_app.process_events_async(
-                input_events, state
-            )
+            # We need to copy input events to prevent race condition
+            input_events_copy = input_events.copy()
             input_events = []
+            output_events, output_state = await rails_app.process_events_async(
+                input_events_copy, state
+            )
 
             # Process output_events and potentially generate new input_events
             _process_output()
@@ -433,10 +435,12 @@ async def _run_chat_v2_x(rails_app: LLMRails):
     async def _process_input_events():
         nonlocal first_time, output_events, output_state, input_events, check_task
         while input_events or first_time:
-            output_events, output_state = await rails_app.process_events_async(
-                input_events, state
-            )
+            # We need to copy input events to prevent race condition
+            input_events_copy = input_events.copy()
             input_events = []
+            output_events, output_state = await rails_app.process_events_async(
+                input_events_copy, state
+            )
             _process_output()
             # If we don't have a check task, we start it
             if check_task is None:

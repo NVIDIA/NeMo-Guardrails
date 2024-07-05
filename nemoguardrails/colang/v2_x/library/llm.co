@@ -250,7 +250,7 @@ flow automating intent detection
 @loop(id="intent_log")
 flow marking user intent flows
   """Marking user intent flows using only naming convention."""
-  match FlowStarted(flow_id=regex("^user (?!said$|saying|started)")) as $event
+  match FlowStarted(flow_id=regex("^user (?!said$|saying|started|say)")) as $event
   $info = flows_info($event.flow.uid)
   if "user_intent" not in $info.meta_tags and "user_action" not in $info.meta_tags
     ($event.flow.context.update({"_user_intent": $event.flow.flow_id}))
@@ -259,7 +259,7 @@ flow marking user intent flows
 @loop(id="intent_log")
 flow logging marked user intent flows
   """Generate user intent logging for marked flows that finish by themselves."""
-  $pattern = "^user (?!said$|saying|started)"
+  $pattern = "^user (?!said$|saying|started|say)"
   match FlowFinished(flow_id=regex($pattern)) as $event
   $info = flows_info($event.flow.uid)
   if $event.source_flow_instance_uid == $event.flow_instance_uid and "_user_intent" in $event.flow.context and "user_intent" not in $info.meta_tags and "user_action" not in $info.meta_tags
@@ -270,7 +270,7 @@ flow logging marked user intent flows
 @loop(id="intent_log")
 flow marking bot intent flows
   """Marking bot intent flows using only naming convention."""
-  match FlowStarted(flow_id=regex("^bot (?!say$|said|inform$|informed|ask$|asked|express$|expressed|respond$|responded|clarify$|clarified|suggest$|suggested|gesture$|gestured|started)")) as $event
+  match FlowStarted(flow_id=regex("^bot (?!say$|said|inform$|informed|ask$|asked|express$|expressed|respond$|responded|clarify$|clarified|suggest$|suggested|gesture$|gestured|started|bot expected to generate)")) as $event
   $info = flows_info($event.flow.uid)
   if "bot_intent" not in $info.meta_tags and "bot_action" not in $info.meta_tags
     ($event.flow.context.update({"_bot_intent": $event.flow.flow_id}))
@@ -279,7 +279,7 @@ flow marking bot intent flows
 @loop(id="intent_log")
 flow logging marked bot intent flows
   """Generate user intent logging for marked flows that finish by themselves."""
-  match FlowFinished(flow_id=regex("^bot (?!say$|said|inform$|informed|ask$|asked|express$|expressed|respond$|responded|clarify$|clarified|suggest$|suggested|gesture$|gestured|started)")) as $event
+  match FlowFinished(flow_id=regex("^bot (?!say$|said|inform$|informed|ask$|asked|express$|expressed|respond$|responded|clarify$|clarified|suggest$|suggested|gesture$|gestured|started|bot expected to generate)")) as $event
   $info = flows_info($event.flow.uid)
   if $event.source_flow_instance_uid == $event.flow_instance_uid and "_bot_intent" in $event.flow.context and "user_intent" not in $info.meta_tags and "user_action" not in $info.meta_tags
     $intent = $event.flow.context["_bot_intent"]
