@@ -218,7 +218,13 @@ def _pretty_str(data: Any) -> str:
 
 def _escape_string(string: str) -> str:
     """Escape a string and inner expressions."""
-    return string.replace("\\", "\\\\").replace("{{", "\\{").replace("}}", "\\}")
+    return (
+        string.replace("\\", "\\\\")
+        .replace("{{", "\\{")
+        .replace("}}", "\\}")
+        .replace("'", "\\'")
+        .replace('"', '\\"')
+    )
 
 
 def _is_int(val: Any) -> bool:

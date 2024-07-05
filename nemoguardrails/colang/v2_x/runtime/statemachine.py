@@ -1228,7 +1228,6 @@ def slide(
             if element.key in flow_state.__dict__:
                 warning = f"Reserved flow attribute name '{element.key}' cannot be used as variable!"
                 log.warning(warning)
-                print(warning)
             else:
                 # We need to first evaluate the expression
                 expr_val = eval_expression(
@@ -1266,7 +1265,8 @@ def slide(
 
         elif isinstance(element, Log):
             log.info(
-                "Colang debug info: %s",
+                "Colang Log %s :: %s",
+                flow_state.uid,
                 eval_expression(element.info, _get_eval_context(state, flow_state)),
             )
             head.position += 1

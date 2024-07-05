@@ -31,5 +31,6 @@ def dataclass_to_dict(obj: Any) -> Any:
 def format_colang_parsing_error_message(exception, colang_content):
     """Improves readability of Colang error messages."""
     line = colang_content.splitlines()[exception.line - 1]
-    marker = " " * (exception.column - 1) + "^"
+    # NOTE: for Colang 1.0 parsing exceptions, there is no "column" attribute.
+    marker = " " * (getattr(exception, "column", 1) - 1) + "^"
     return f"{exception}:\n{line}\n{marker}"
