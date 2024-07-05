@@ -24,8 +24,8 @@ define subflow check facts
 
     $accuracy = execute check_facts
     if $accuracy < 0.4
-      if $config.allow_exceptions
-        create event FactCheckLowAccuracyException(message="Fact check triggered. The accuracy of the response is below 0.4.")
+      if $config.enable_rails_exceptions
+        create event FactCheckLowAccuracyRailException(message="Fact check triggered. The accuracy of the response is below 0.4.")
       else
         bot inform answer unknown
         stop
@@ -41,8 +41,8 @@ define flow flag potentially inaccurate response
 
   if $bot_message_potentially_inaccurate
     $bot_message_potentially_inaccurate = False
-    if $config.allow_exceptions
-      create event PotentiallyInaccurateResponseException(message="Potentially inaccurate response detected. The bot's response may be inaccurate.")
+    if $config.enable_rails_exceptions
+      create event PotentiallyInaccurateResponseRailException(message="Potentially inaccurate response detected. The bot's response may be inaccurate.")
     else
       bot inform answer potentially inaccurate
       stop

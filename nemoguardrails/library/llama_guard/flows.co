@@ -8,8 +8,8 @@ define flow llama guard check input
   $llama_guard_policy_violations = $llama_guard_response["policy_violations"]
 
   if not $allowed
-    if $config.allow_exceptions
-      create event LlamaGuardInputException(message="Input not allowed. The input was blocked by the 'llama guard check input' flow. Please ensure your input meets the required criteria.")
+    if $config.enable_rails_exceptions
+      create event LlamaGuardInputRailException(message="Input not allowed. The input was blocked by the 'llama guard check input' flow. Please ensure your input meets the required criteria.")
     else
       bot refuse to respond
       stop
@@ -20,8 +20,8 @@ define flow llama guard check output
   $llama_guard_policy_violations = $llama_guard_response["policy_violations"]
 
   if not $allowed
-    if $config.allow_exceptions
-      create event LlamaGuardOutputException(message="Output not allowed. The output was blocked by the 'llama guard check output' flow. Please ensure your output meets the required criteria.")
+    if $config.enable_rails_exceptions
+      create event LlamaGuardOutputRailException(message="Output not allowed. The output was blocked by the 'llama guard check output' flow. Please ensure your output meets the required criteria.")
     else
       bot refuse to respond
       stop

@@ -5,7 +5,7 @@ define flow self check input
   $allowed = execute self_check_input
 
   if not $allowed
-    if $config.allow_exceptions
+    if $config.enable_rails_exceptions
       create event InputRailException(message="Input not allowed. The input was blocked by the 'self check input' flow.")
     else
       bot refuse to respond
