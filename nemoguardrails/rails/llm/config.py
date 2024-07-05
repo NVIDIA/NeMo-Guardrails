@@ -485,7 +485,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "streaming",
         "passthrough",
         "raw_llm_call_action",
-        "allow_exceptions",
+        "enable_rails_exceptions",
     ]
 
     for field in additional_fields:

@@ -34,4 +34,4 @@ rails:
     single_call:
       enabled: False
 
-allow_exceptions: True
+enable_rails_exceptions: True
