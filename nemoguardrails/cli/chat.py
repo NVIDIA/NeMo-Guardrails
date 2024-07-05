@@ -155,9 +155,6 @@ async def _run_chat_v2_x(rails_app: LLMRails):
         # We detect any "StartUtteranceBotAction" events, show the message, and
         # generate the corresponding Finished events as new input events.
         for event in output_events:
-            # Add all output events also to input events
-            input_events.append(event)
-
             if event["type"] == "StartUtteranceBotAction":
                 # We print bot messages in green.
                 if not verbose.verbose_mode_enabled:

@@ -950,7 +950,10 @@ class LLMRails:
         return loop.run_until_complete(self.generate_events_async(events=events))
 
     async def process_events_async(
-        self, events: List[dict], state: Optional[dict] = None
+        self,
+        events: List[dict],
+        state: Optional[dict] = None,
+        blocking: bool = False,
     ) -> Tuple[List[dict], dict]:
         """Process a sequence of events in a given state.
 
@@ -974,7 +977,7 @@ class LLMRails:
         # TODO (cschueller): Why is this?
         async with process_events_semaphore:
             output_events, output_state = await self.runtime.process_events(
-                events, state
+                events, state, blocking
             )
 
         took = time.time() - t0
@@ -986,7 +989,10 @@ class LLMRails:
         return output_events, output_state
 
     def process_events(
-        self, events: List[dict], state: Optional[dict] = None
+        self,
+        events: List[dict],
+        state: Optional[dict] = None,
+        blocking: bool = False,
     ) -> Tuple[List[dict], dict]:
         """Synchronous version of `LLMRails.process_events_async`."""
 
@@ -997,7 +1003,9 @@ class LLMRails:
             )
 
         loop = get_or_create_event_loop()
-        return loop.run_until_complete(self.process_events_async(events, state))
+        return loop.run_until_complete(
+            self.process_events_async(events, state, blocking)
+        )
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""

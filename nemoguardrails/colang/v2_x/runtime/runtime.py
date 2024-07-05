@@ -534,7 +534,7 @@ class RuntimeV2_x(Runtime):
 
                         # If it's an instant action, we finish it right away.
                         if instant_actions and action_name in instant_actions:
-                            finished_event_data = {
+                            finished_event_data: dict = {
                                 "action_name": action_name,
                                 "start_action_event": out_event,
                                 "return_value": None,
@@ -588,9 +588,6 @@ class RuntimeV2_x(Runtime):
                                 if main_flow_uid not in self.async_actions:
                                     self.async_actions[main_flow_uid] = []
                                 self.async_actions[main_flow_uid].append(local_action)
-
-                            # We need to feedback the start events of the local actions
-                            input_events.append(out_event)
                         else:
                             output_events.append(out_event)
                     else:
@@ -603,8 +600,12 @@ class RuntimeV2_x(Runtime):
                 ) = await self._get_async_actions_finished_events(main_flow_uid)
                 local_action_finished_events.extend(new_local_action_finished_events)
 
-            # We clear the input events
-            input_events = []
+            input_events.clear()
+
+            # If we have outgoing events we are also processing them as input events
+            if state.outgoing_events:
+                input_events.extend(state.outgoing_events)
+                continue
 
             input_events.extend(local_action_finished_events)
             local_action_finished_events = []
