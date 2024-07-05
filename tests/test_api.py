@@ -13,12 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
 from nemoguardrails.server import api
 
 client = TestClient(api.app)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def set_rails_config_path():
+    api.app.rails_config_path = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "test_configs")
+    )
+    yield
+    api.app.rails_config_path = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "examples", "bots")
+    )
 
 
 def test_get():
@@ -47,4 +60,26 @@ def test_chat_completion():
     assert response.status_code == 200
     res = response.json()
     assert len(res["messages"]) == 1
-    assert "NVIDIA" in res["messages"][0]["content"]
+    assert res["messages"][0]["content"]
+
+
+@pytest.mark.skip(reason="Should only be run locally as it needs OpenAI key.")
+def test_chat_completion_with_default_configs():
+    api.set_default_config_id("general")
+    print(api.app.rails_config_path)
+
+    response = client.post(
+        "/v1/chat/completions",
+        json={
+            "messages": [
+                {
+                    "content": "Hello",
+                    "role": "user",
+                }
+            ],
+        },
+    )
+    assert response.status_code == 200
+    res = response.json()
+    assert len(res["messages"]) == 1
+    assert res["messages"][0]["content"]

@@ -116,6 +116,10 @@ def server(
         exists=True,
         help="Path to a directory containing multiple configuration sub-folders.",
     ),
+    default_config_id: Optional[str] = typer.Option(
+        default=None,
+        help="The default configuration to use when no config is specified.",
+    ),
     verbose: bool = typer.Option(
         default=False,
         help="If the server should be verbose and output detailed logs including prompts.",
@@ -157,6 +161,9 @@ def server(
         server_app.mount(prefix, api.app)
     else:
         server_app = api.app
+
+    if default_config_id:
+        api.set_default_config_id(default_config_id)  # Call function
 
     uvicorn.run(server_app, port=port, log_level="info", host="0.0.0.0")
 
