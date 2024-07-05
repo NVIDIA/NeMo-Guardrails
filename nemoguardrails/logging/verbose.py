@@ -74,7 +74,7 @@ class VerboseHandler(logging.StreamHandler):
                     console.print("")
 
             elif title.startswith("Colang Log ("):
-                title = title = f"[green]{title[11:]}[/]"
+                title = f"[green]{title[11:]}[/]"
 
             elif title == "Event":
                 # For events, we also color differently the type of event.
@@ -144,14 +144,15 @@ class VerboseHandler(logging.StreamHandler):
 
             if not skip_print:
                 current_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-                console.print(f"[dim]{current_time}[/] | ", end="", highlight=False)
+                msg = f"[dim]{current_time}[/] | "
+
                 if body:
-                    console.print(f"[dim]{title}[/] | ", end="")
-                    console.print(f"[dim]{body}[/]", highlight=False, no_wrap=True)
+                    msg += f"[dim]{title}[/] | "
+                    msg += f"[dim]{body}[/]"
                 else:
-                    console.print(f"[dim]{title}[/]")
-                # console.print(f"{title:<60} ", end="")
-                # console.print(body, highlight=False)
+                    msg += f"[dim]{title}[/]"
+
+                console.print(msg, highlight=False, no_wrap=True)
 
 
 def set_verbose(
