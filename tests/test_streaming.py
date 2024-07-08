@@ -120,7 +120,10 @@ async def test_streaming_dynamic_bot_message():
     )
     chat = TestChat(
         config,
-        llm_completions=["  express greeting", '  "Hello there! How are you today?"'],
+        llm_completions=[
+            "User intent: express greeting",
+            'Bot message: "Hello there! How are you today?"',
+        ],
         streaming=True,
     )
 
@@ -230,8 +233,8 @@ async def test_streaming_single_llm_call_with_next_step_override_and_dynamic_mes
     chat = TestChat(
         config,
         llm_completions=[
-            '  express greeting\nbot express greeting\n  "Hi, how are you doing?"',
-            '  "This is a funny joke."',
+            'User intent: express greeting\nBot intent: express greeting\nBot message: "Hi, how are you doing?"',
+            'Bot message: "This is a funny joke."',
         ],
         streaming=True,
     )

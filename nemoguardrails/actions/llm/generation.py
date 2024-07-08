@@ -1220,11 +1220,15 @@ class LLMGenerationActions:
             if user_intent:
                 if user_intent.startswith("user "):
                     user_intent = user_intent[5:]
+                elif user_intent.startswith("User intent: "):
+                    user_intent = user_intent[13:]
             else:
                 user_intent = "unknown message"
 
             if bot_intent and bot_intent.startswith("bot "):
                 bot_intent = bot_intent[4:]
+            if bot_intent and bot_intent.startswith("Bot intent: "):
+                bot_intent = bot_intent[12:]
             else:
                 bot_intent = "general response"
 
