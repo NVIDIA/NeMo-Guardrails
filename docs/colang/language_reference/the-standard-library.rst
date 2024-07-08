@@ -13,7 +13,7 @@ Colang Standard Library (CSL)
 Introduction
 ----------------------------------------
 
-The Colang Standard Library (CSL) provide an abstraction from the underlying event and action layer and offer a semantic interface to design interaction patterns between the bot and the user. Currently, there are the following library files available under ``nemoguardrails/colang/v2_x/library/`` (`Github link <https://github.com/NVIDIA/NeMo-Guardrails/tree/main/nemoguardrails/colang/v2_x/library>`_):
+The Colang Standard Library (CSL) provide an abstraction from the underlying event and action layer and offer a semantic interface to design interaction patterns between the bot and the user. Currently, there are the following library files available under ``nemoguardrails/colang/v2_x/library/`` (`Github link <../../../nemoguardrails/colang/v2_x/library>`_):
 
 - ``core.co``: Fundamental core flows
 - ``timing.co``: Timer dependent flows
@@ -30,7 +30,7 @@ To use the flows defined in these libraries you have two options:
 Note that the ``import <library>`` statement will import all available flows of the corresponding library.
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Fundamental Core Flows (`core.co <https://github.com/NVIDIA/NeMo-Guardrails/tree/main/nemoguardrails/colang/v2_x/library/core.co>`_)
+Fundamental Core Flows (`core.co <../../../nemoguardrails/colang/v2_x/library/core.co>`_)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 The core library that contains all relevant flows related to user and bot utterance events and actions.
@@ -143,7 +143,7 @@ These are flows that track bot and user states in global variables.
 
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Timing Flows (`timing.co <https://github.com/NVIDIA/NeMo-Guardrails/tree/main/nemoguardrails/colang/v2_x/library/timing.co>`_)
+Timing Flows (`timing.co <../../../nemoguardrails/colang/v2_x/library/timing.co>`_)
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -172,7 +172,7 @@ Timing Flows (`timing.co <https://github.com/NVIDIA/NeMo-Guardrails/tree/main/ne
 
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Interactive Avatar Modality Flows (`avatars.co <https://github.com/NVIDIA/NeMo-Guardrails/tree/main/nemoguardrails/colang/v2_x/library/avatars.co>`_)
+Interactive Avatar Modality Flows (`avatars.co <../../../nemoguardrails/colang/v2_x/library/avatars.co>`_)
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 **User Event Flows**
@@ -283,7 +283,7 @@ These are some useful helper and utility flows:
     flow managing idle posture
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
-LLM Flows (`llm.co <https://github.com/NVIDIA/NeMo-Guardrails/tree/main/nemoguardrails/colang/v2_x/library/llm.co>`_)
+LLM Flows (`llm.co <../../../nemoguardrails/colang/v2_x/library/llm.co>`_)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 **LLM Enabled Bot Actions**
@@ -358,7 +358,7 @@ These are flows that track bot and user states in global variables.
     flow tracking unhandled user intent state
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Guardrail Flows (`guardrails.co <https://github.com/NVIDIA/NeMo-Guardrails/tree/main/nemoguardrails/colang/v2_x/library/guardrails.co>`_)
+Guardrail Flows (`guardrails.co <../../../nemoguardrails/colang/v2_x/library/guardrails.co>`_)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Flows to guardrail user inputs and LLM responses.
@@ -372,7 +372,7 @@ Flows to guardrail user inputs and LLM responses.
     flow run output rails $output_text
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Utility Flows (`utils.co <https://github.com/NVIDIA/NeMo-Guardrails/tree/main/nemoguardrails/colang/v2_x/library/utils.co>`_)
+Utility Flows (`utils.co <../../../nemoguardrails/colang/v2_x/library/utils.co>`_)
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Some useful common helper and utility flows.

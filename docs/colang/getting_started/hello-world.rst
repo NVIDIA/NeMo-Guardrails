@@ -24,7 +24,7 @@ The entry point for a Colang script is the ``main`` flow. In the example below, 
     bot say "Hello World!"
 
 .. note::
-  You can find the full example from this guide `here <https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/v2_x/tutorial/hello_world_1>`_.
+  You can find the full example from this guide `here <../../../examples/v2_x/tutorial/hello_world_1>`_.
 
 The achieve this, the ``main`` flow uses two pre-defined flows:
 

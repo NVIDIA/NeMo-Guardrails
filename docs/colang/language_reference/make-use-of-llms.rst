@@ -21,7 +21,7 @@ To enable the LLM backend you first have to configure the LLM access in the `con
 
 Make sure to also define the required API access key, e.g. for OpenAI you will have to set the ``OPENAI_API_KEY`` environment variable.
 
-Every LLM prompt contains a default context that can be modified if needed to adapt to the use case. See this `example configuration <https://github.com/NVIDIA/NeMo-Guardrails/blob/main/tests/test_configs/multi_modal_demo_v2_x/demo.yml>`_ to get started. This will heavily influence all the LLM invocations.
+Every LLM prompt contains a default context that can be modified if needed to adapt to the use case. See this `example configuration <../../../tests/test_configs/multi_modal_demo_v2_x/demo.yml>`_ to get started. This will heavily influence all the LLM invocations.
 
 ----------------------------------------
 Natural Language Description (NLD)
@@ -78,7 +78,7 @@ See the example in :ref:`colang_2_getting_started_llm_flows` for more details on
 ..     flow handle payment process
 ..         i"handle user payment process"
 
-.. In order to work with the configured LLM we need to activate the standard library flow ``polling llm request response`` from the llm module (`Github link <https://github.com/NVIDIA/NeMo-Guardrails/blob/main/nemoguardrails/colang/v2_x/library/llm.co>`__). This will activate a system timer to actively poll the LLM request response such that the interaction can progress without another system event:
+.. In order to work with the configured LLM we need to activate the standard library flow ``polling llm request response`` from the llm module (`Github link <../../../nemoguardrails/colang/v2_x/library/llm.co>`__). This will activate a system timer to actively poll the LLM request response such that the interaction can progress without another system event:
 
 .. .. code-block:: colang
 ..     :caption: llm/nld_example/main.co
@@ -102,7 +102,7 @@ Note that there is no explicit control over the NLD response format and sometime
 User Intent Matching
 ----------------------------------------
 
-In section :ref:`Defining Flows<action-like-and-intent-like-flows>` we have already seen how we can define user intent flows. The limitation was that they did not generalize to variations of the given user intent examples. With the help of an LLM we can overcome this issue and use its reasoning power by importing the `llm` standard library module and activate the flows ``automating intent detection`` and ``generating user intent for unhandled user utterance`` (`Github link <https://github.com/NVIDIA/NeMo-Guardrails/blob/main/nemoguardrails/colang/v2_x/library/llm.co>`__) to match unexpected user utterances to currently active user intent flows.
+In section :ref:`Defining Flows<action-like-and-intent-like-flows>` we have already seen how we can define user intent flows. The limitation was that they did not generalize to variations of the given user intent examples. With the help of an LLM we can overcome this issue and use its reasoning power by importing the `llm` standard library module and activate the flows ``automating intent detection`` and ``generating user intent for unhandled user utterance`` (`Github link <../../../nemoguardrails/colang/v2_x/library/llm.co>`__) to match unexpected user utterances to currently active user intent flows.
 
 .. code-block:: colang
     :caption: llm/user_intent_match_example/main.co
