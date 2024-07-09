@@ -10,7 +10,7 @@ Colang (|VERSION|)
 .. toctree::
    :maxdepth: 2
 
-   ./overview.rst
-   ./whats-changed.rst
-   ./getting_started/index.rst
-   ./language_reference/index.rst
+   overview
+   whats-changed
+   getting_started/index
+   language_reference/index
