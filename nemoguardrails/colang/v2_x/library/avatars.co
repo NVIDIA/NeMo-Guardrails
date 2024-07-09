@@ -56,24 +56,18 @@ flow user interrupted bot talking $sentence_length=15
   activate tracking bot talking state
   global $bot_talking_state
   while True
-    if $bot_talking_state
-      log "Bot is talking..."
-    else
+    if not $bot_talking_state
       bot started saying something
-      log "Bot started talking..."
     while True
       when user saying something as $user_saying_ref
         $transcript = $user_saying_ref.transcript
-        log "User saying something: {$transcript}"
       or when user said something as $user_said_ref
         $transcript = $user_said_ref.transcript
-        log "User said something: {$transcript}"
       or when bot said something
-        log "Bot finished talking without interruption"
         break
 
       if len($transcript) > $sentence_length
-        log "Bot interrupted by user with: {$transcript}"
+        log 'bot interrupted by user with: "{$transcript}"'
         return
 
 # ----------------------------------
@@ -140,9 +134,9 @@ flow bot started a posture -> $posture
 
 flow bot started an action -> $action
   """Wait for the bot to start with any action."""
-  match bot started saying something as $action
-    or bot started a gesture as $action
-    or bot started a posture as $action
+  match (bot started saying something).Finished() as $action
+    or (bot started a gesture).Finished() as $action
+    or (bot started a posture).Finished() as $action
 
 # ----------------------------------
 # State Tracking Flows
@@ -188,7 +182,7 @@ flow handling bot talking interruption $mode="inform"
     start VisualInformationSceneAction(title="Please wait with talking!", support_prompts=["You should only talk after the avatar."], content=[])
     wait 3.0
   elif $mode == "ignore"
-    log "Bot ignored user interruption"
+    log "bot ignored user interruption"
 
 
 # --------------------------------------
@@ -226,9 +220,7 @@ flow managing thinking posture
   global $bot_talking_state
 
   match UtteranceUserAction.Finished()
-  if $bot_talking_state
-    log "Do not switch to thinking posture because bot is talking"
-  else
+  if not $bot_talking_state
     start bot posture "thinking"
     bot started saying something
 

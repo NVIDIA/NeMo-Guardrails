@@ -199,7 +199,6 @@ flow showcase selector
   global $bot_talking_state
 
   while True
-    log "while loop restarted"
     if $showcase_selection_ui == None
       activate continuation on unhandled user utterance
       activate handling bot talking interruption "inform"
@@ -219,7 +218,7 @@ flow showcase selector
 
     or when user picked number guessing game showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
+      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the number guessing game!"
@@ -227,7 +226,7 @@ flow showcase selector
 
     or when user picked multimodality showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
+      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the multimodality showcase!"
@@ -235,7 +234,7 @@ flow showcase selector
 
     or when user picked backchanneling showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
+      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the backchanneling example!"
@@ -243,7 +242,7 @@ flow showcase selector
 
     or when user picked posture showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
+      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the posture showcase!"
@@ -251,7 +250,7 @@ flow showcase selector
 
     or when user picked proactive showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="generating user intent for unhandled user utterance", deactivate=True)
+      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
       send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
       $showcase_selection_ui = None
       bot inform "Great! You picked the proactive turn-taking example!"
@@ -300,15 +299,13 @@ flow ignored_utterance_action_bugfix
   if $number_of_failed_utterance_actions == None
     $number_of_failed_utterance_actions = 0
   match StartUtteranceBotAction() as $event
-  log "Event StartUtteranceBotAction {$event.action_uid}"
   start_new_flow_instance:
   start wait 3.0 as $timer_ref
   when $timer_ref.Finished()
     # After 3 consecutive fails we will no longer send a Finished event to let the process become idle and terminated
     if $number_of_failed_utterance_actions < 3
       send UtteranceBotActionFinished(action_uid=$event.action_uid, final_script="", is_success=False, failure_reason="ActionStarted event timeout")
+      log "ignored_utterance_action_bugfix triggered for action: {$event.action_uid}"
     $number_of_failed_utterance_actions = $number_of_failed_utterance_actions + 1
-    log "action_started_timer triggered {$event.action_uid}"
   or when UtteranceBotActionStarted(action_uid=$event.action_uid)
     $number_of_failed_utterance_actions = 0
-    log "Event UtteranceBotActionStarted {$event.action_uid}"

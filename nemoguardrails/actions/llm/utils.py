@@ -498,6 +498,14 @@ def get_initial_actions(strings: List[str]) -> List[str]:
     return previous_strings
 
 
+def get_first_user_intent(strings: List[str]) -> Optional[str]:
+    """Returns first user intent."""
+    for string in strings:
+        if string.startswith("user intent: "):
+            return string.replace("user intent: ", "")
+    return None
+
+
 def get_first_bot_intent(strings: List[str]) -> Optional[str]:
     """Returns first bot intent."""
     for string in strings:
@@ -508,12 +516,23 @@ def get_first_bot_intent(strings: List[str]) -> Optional[str]:
 
 def get_first_bot_action(strings: List[str]) -> Optional[str]:
     """Returns first bot action."""
-    action: Optional[str] = None
+    action_started = False
+    action: str = ""
     for string in strings:
         if string.startswith("bot action: "):
-            action = string.replace("bot action: ", "")
-        elif action and (string.startswith("  and") or string.startswith("  or")):
+            if action != "":
+                action += "\n"
+            action += string.replace("bot action: ", "")
+            action_started = True
+        elif (
+            string.startswith("  and") or string.startswith("  or")
+        ) and action_started:
             action = action + string
+        elif string == "":
+            action_started = False
+            continue
+        elif action != "":
+            return action
     return action
 
 
@@ -524,9 +543,6 @@ def escape_flow_name(name: str) -> str:
         name.replace(" and ", "_and_")
         .replace(" or ", "_or_")
         .replace(" as ", "_as_")
-        .replace(" not ", "_not_")
-        .replace(" is ", "_is_")
-        .replace(" in ", "_in_")
         .replace("(", "")
         .replace(")", "")
         .replace("'", "")

@@ -14,7 +14,7 @@ Module for the configuration of rails.
 ## <kbd>class</kbd> `Model`
 Configuration of a model used by the rails engine.
 
-Typically, the main model is configured e.g.: {  "type": "main",  "engine": "openai",  "model": "text-davinci-003" }
+Typically, the main model is configured e.g.: {  "type": "main",  "engine": "openai",  "model": "gpt-3.5-turbo-instruct" }
 
 
 

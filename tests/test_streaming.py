@@ -120,7 +120,10 @@ async def test_streaming_dynamic_bot_message():
     )
     chat = TestChat(
         config,
-        llm_completions=["  express greeting", '  "Hello there! How are you today?"'],
+        llm_completions=[
+            "express greeting",
+            '  "Hello there! How are you today?"',
+        ],
         streaming=True,
     )
 

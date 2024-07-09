@@ -87,12 +87,12 @@ def test_if_branching_mechanic():
 
     content = """
     flow main
-      while $action_ref_3 is None
-        if $event_ref_1 is None and True
+      while $action_ref_3 is None:
+        if $event_ref_1 is None and True:
           start UtteranceBotAction(script="Action1") as $event_ref_1
-        else if $event_ref_2 is None or False
+        else if $event_ref_2 is None or False:
           start UtteranceBotAction(script="Action2") as $event_ref_2
-        else
+        else:
           start UtteranceBotAction(script="ActionElse") as $action_ref_3
         start UtteranceBotAction(script="Next")
     """
@@ -229,9 +229,12 @@ def test_expressions_in_strings():
 
     content = """
     flow main
-      start UtteranceBotAction(script="Roger") as $ref
+      $xyz = 'x\\'y\\'z\\n'
+      $test = '''Roger's
+                test:\n {$xyz}'''
+      start UtteranceBotAction(script=$test) as $ref
       start UtteranceBotAction(script="It's {{->}}")
-      start UtteranceBotAction(script='It"s {{->}} \\'{$ref.start_event_arguments.script}!\\'')
+      await UtteranceBotAction(script='It"s {{->}} \\'{$ref.start_event_arguments.script}!\\'')
     """
 
     config = _init_state(content)
@@ -241,7 +244,7 @@ def test_expressions_in_strings():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "Roger",
+                "script": "Roger's\n                test:\n x'y'z\n",
             },
             {
                 "type": "StartUtteranceBotAction",
@@ -249,8 +252,32 @@ def test_expressions_in_strings():
             },
             {
                 "type": "StartUtteranceBotAction",
-                "script": "It\"s {->} 'Roger!'",
+                "script": "It\"s {->} 'Roger's\n                test:\n x'y'z\n!'",
             },
+        ],
+    )
+
+
+def test_multiline_string():
+    """Test string expression evaluation."""
+
+    content = '''
+    flow main
+      $var = "Test"
+      $string = """This is a multiline
+      string! '{$var}' "hi" """
+      start UtteranceBotAction(script=$string)
+    '''
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "This is a multiline\n      string! 'Test' \"hi\" ",
+            }
         ],
     )
 
@@ -389,12 +416,12 @@ def test_when_or_core_mechanics():
       match UtteranceUserAction.Finished(final_transcript=$transcript)
 
     flow main
-      while True
-        when UtteranceUserActionFinished(final_transcript="A")
+      while True:
+        when UtteranceUserActionFinished(final_transcript="A"):
           start UtteranceBotAction(script="A")
-        or when UtteranceUserAction().Finished(final_transcript="B")
+        or when UtteranceUserAction().Finished(final_transcript="B"):
           start UtteranceBotAction(script="B")
-        or when user said "C"
+        or when user said "C":
           start UtteranceBotAction(script="C")
           break
     """
@@ -950,4 +977,4 @@ def test_expression_evaluation():
 
 
 if __name__ == "__main__":
-    test_expression_evaluation()
+    test_multiline_string()

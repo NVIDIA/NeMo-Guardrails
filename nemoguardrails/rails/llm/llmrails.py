@@ -32,7 +32,6 @@ from nemoguardrails.actions.v2_x.generation import LLMGenerationActionsV2dotx
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.flows import compute_context
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
-from nemoguardrails.colang.v2_x.lang.utils import new_uuid
 from nemoguardrails.colang.v2_x.runtime.flows import Action, State
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.colang.v2_x.runtime.serialization import (
@@ -62,7 +61,7 @@ from nemoguardrails.rails.llm.options import (
 )
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import get_or_create_event_loop, new_event_dict
+from nemoguardrails.utils import get_or_create_event_loop, new_event_dict, new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -951,7 +950,10 @@ class LLMRails:
         return loop.run_until_complete(self.generate_events_async(events=events))
 
     async def process_events_async(
-        self, events: List[dict], state: Optional[dict] = None
+        self,
+        events: List[dict],
+        state: Optional[dict] = None,
+        blocking: bool = False,
     ) -> Tuple[List[dict], dict]:
         """Process a sequence of events in a given state.
 
@@ -975,7 +977,7 @@ class LLMRails:
         # TODO (cschueller): Why is this?
         async with process_events_semaphore:
             output_events, output_state = await self.runtime.process_events(
-                events, state
+                events, state, blocking
             )
 
         took = time.time() - t0
@@ -987,7 +989,10 @@ class LLMRails:
         return output_events, output_state
 
     def process_events(
-        self, events: List[dict], state: Optional[dict] = None
+        self,
+        events: List[dict],
+        state: Optional[dict] = None,
+        blocking: bool = False,
     ) -> Tuple[List[dict], dict]:
         """Synchronous version of `LLMRails.process_events_async`."""
 
@@ -998,7 +1003,9 @@ class LLMRails:
             )
 
         loop = get_or_create_event_loop()
-        return loop.run_until_complete(self.process_events_async(events, state))
+        return loop.run_until_complete(
+            self.process_events_async(events, state, blocking)
+        )
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""

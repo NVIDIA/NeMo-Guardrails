@@ -24,6 +24,7 @@ from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
+from nemoguardrails.colang.v2_x.lang.utils import format_colang_parsing_error_message
 from nemoguardrails.colang.v2_x.runtime.errors import ColangParsingError
 
 log = logging.getLogger(__name__)
@@ -331,12 +332,40 @@ class JailbreakDetectionConfig(BaseModel):
     )
 
 
+class AutoAlignOptions(BaseModel):
+    """List of guardrails that are activated"""
+
+    guardrails_config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="The guardrails configuration that is passed to the AutoAlign endpoint",
+    )
+
+
+class AutoAlignRailConfig(BaseModel):
+    """Configuration data for the AutoAlign API"""
+
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    input: AutoAlignOptions = Field(
+        default_factory=AutoAlignOptions,
+        description="Input configuration for AutoAlign guardrails",
+    )
+    output: AutoAlignOptions = Field(
+        default_factory=AutoAlignOptions,
+        description="Output configuration for AutoAlign guardrails",
+    )
+
+
 class RailsConfigData(BaseModel):
     """Configuration data for specific rails that are supported out-of-the-box."""
 
     fact_checking: FactCheckingRailConfig = Field(
         default_factory=FactCheckingRailConfig,
         description="Configuration data for the fact-checking rail.",
+    )
+
+    autoalign: AutoAlignRailConfig = Field(
+        default_factory=AutoAlignRailConfig,
+        description="Configuration data for the AutoAlign guardrails API.",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
@@ -608,12 +637,14 @@ def _parse_colang_files_recursively(
 
         with open(current_path, "r", encoding="utf-8") as f:
             try:
+                content = f.read()
                 _parsed_config = parse_colang_file(
-                    current_file, content=f.read(), version=colang_version
+                    current_file, content=content, version=colang_version
                 )
             except Exception as e:
                 raise ColangParsingError(
-                    f"Error while parsing Colang file: {current_path}"
+                    f"Error while parsing Colang file: {current_path}\n"
+                    + format_colang_parsing_error_message(e, content)
                 ) from e
 
             # We join only the "import_paths" field in the config for now
