@@ -46,6 +46,8 @@ from nemoguardrails.context import (
     streaming_handler_var,
 )
 from nemoguardrails.embeddings.index import EmbeddingsIndex
+from nemoguardrails.embeddings.providers import register_embedding_provider
+from nemoguardrails.embeddings.providers.base import EmbeddingModel
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.explain import ExplainInfo
@@ -1042,6 +1044,21 @@ class LLMRails:
         """
 
         self.embedding_search_providers[name] = cls
+
+    def register_embedding_provider(
+        self, cls: Type[EmbeddingModel], name: Optional[str] = None
+    ) -> None:
+        """Register a custom embedding provider.
+
+        Args:
+            model (Type[EmbeddingModel]): The embedding model class.
+            name (str): The name of the embedding engine. If available in the model, it will be used.
+
+        Raises:
+            ValueError: If the engine name is not provided and the model does not have an engine name.
+            ValueError: If the model does not have 'encode' or 'encode_async' methods.
+        """
+        register_embedding_provider(engine_name=name, model=cls)
 
     def explain(self) -> ExplainInfo:
         """Helper function to return the latest ExplainInfo object."""

@@ -14,19 +14,14 @@
 # limitations under the License.
 import asyncio
 from contextvars import ContextVar
-from typing import List, Optional
+from typing import List
 
-import openai
-from openai import AsyncOpenAI, OpenAI
-
-from . import EmbeddingModel
+from .base import EmbeddingModel
 
 # We set the OpenAI async client in an asyncio context variable because we need it
 # to be scoped at the asyncio loop level. The client caches it somewhere, and if the loop
 # is changed, it will fail.
-async_client_var: ContextVar[Optional[AsyncOpenAI]] = ContextVar(
-    "async_client", default=None
-)
+async_client_var: ContextVar = ContextVar("async_client", default=None)
 
 
 class OpenAIEmbeddingModel(EmbeddingModel):
@@ -43,10 +38,20 @@ class OpenAIEmbeddingModel(EmbeddingModel):
         encode: Encode a list of documents into embeddings.
     """
 
+    engine_name = "openai"
+
     def __init__(
         self,
         embedding_model: str,
     ):
+        try:
+            import openai
+            from openai import AsyncOpenAI, OpenAI
+        except ImportError:
+            raise ImportError(
+                "Could not import openai, please install it with "
+                "`pip install openai`."
+            )
         if openai.__version__ < "1.0.0":
             raise RuntimeError(
                 "`openai<1.0.0` is no longer supported. "

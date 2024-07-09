@@ -193,7 +193,7 @@ models:
 
 ### The Embeddings Model
 
-To configure the embeddings model that is used for the various steps in the [guardrails process](../architecture/README.md) (e.g., canonical form generation, next step generation), you can add a model configuration in the `models` key as shown below:
+To configure the embedding model used for the various steps in the [guardrails process](../architecture/README.md) (e.g., canonical form generation, next step generation), you can add a model configuration in the `models` key as shown below:
 
 ```yaml
 models:
@@ -211,6 +211,80 @@ models:
   - type: embeddings
     engine: openai
     model: text-embedding-ada-002
+```
+
+#### Supported Embedding Providers
+
+The complete list of supported embedding providers is the following:
+
+| Provider Name        | `engine_name`          | `model`                            |
+|----------------------|------------------------|------------------------------------|
+| FastEmbed (default)  | `FastEmbed`            | `all-MiniLM-L6-v2` (default), etc. |
+| OpenAI               | `openai`               | `text-embedding-ada-002`, etc.     |
+| SentenceTransformers | `SentenceTransformers` | `all-MiniLM-L6-v2`, etc.           |
+
+```{note}
+For any of the supported embedding providers you can use any of the supported models.
+The previous table includes an example of a model that can be used.
+```
+
+#### Custom Embedding Provider
+
+You can also register a custom embedding provider by using the `LLMRails.register_embedding_provider` function.
+
+To register a custom LLM provider,
+you need to create a class that inherits from `EmbeddingModel` and register it in your `config.py`.
+
+```python
+from typing import List
+from nemoguardrails.embeddings.providers.base import EmbeddingModel
+from nemoguardrails import LLMRails
+
+
+class CustomEmbeddingModel(EmbeddingModel):
+    """An implementation of a custom embedding provider."""
+    engine_name = "CustomEmbeddingModel"
+
+    def __init__(self, embedding_model: str):
+        # Initialize the model
+        ...
+
+    async def encode_async(self, documents: List[str]) -> List[List[float]]:
+        """Encode the provided documents into embeddings.
+
+        Args:
+            documents (List[str]): The list of documents for which embeddings should be created.
+
+        Returns:
+            List[List[float]]: The list of embeddings corresponding to the input documents.
+        """
+        ...
+
+    def encode(self, documents: List[str]) -> List[List[float]]:
+        """Encode the provided documents into embeddings.
+
+        Args:
+            documents (List[str]): The list of documents for which embeddings should be created.
+
+        Returns:
+            List[List[float]]: The list of embeddings corresponding to the input documents.
+        """
+        ...
+
+
+def init(app: LLMRails):
+    """Initialization function in your config.py."""
+    app.register_embedding_provider(CustomEmbeddingModel, "CustomEmbeddingModel")
+```
+
+You can then use the custom embedding provider in your configuration:
+
+```yaml
+models:
+  # ...
+  - type: embeddings
+    engine: SomeCustomName
+    model: SomeModelName      # supported by the provider.
 ```
 
 ### Embedding Search Provider

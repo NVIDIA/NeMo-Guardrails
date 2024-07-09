@@ -19,11 +19,8 @@ from typing import Any, Dict, List, Optional, Union
 from annoy import AnnoyIndex
 
 from nemoguardrails.embeddings.cache import cache_embeddings
-from nemoguardrails.embeddings.embedding_providers import (
-    EmbeddingModel,
-    init_embedding_model,
-)
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
+from nemoguardrails.embeddings.providers import EmbeddingModel, init_embedding_model
 from nemoguardrails.rails.llm.config import EmbeddingsCacheConfig
 
 

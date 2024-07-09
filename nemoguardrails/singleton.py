@@ -13,23 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
+"""The singleton metaclass for ensuring only one instance of a class."""
 
-from nemoguardrails.embeddings.providers.fastembed import FastEmbedEmbeddingModel
-
-
-def test_sync_embeddings():
-    model = FastEmbedEmbeddingModel("all-MiniLM-L6-v2")
-
-    result = model.encode(["test"])
-
-    assert len(result[0]) == 384
+import abc
 
 
-@pytest.mark.asyncio
-async def test_async_embeddings():
-    model = FastEmbedEmbeddingModel("all-MiniLM-L6-v2")
+class Singleton(abc.ABCMeta, type):
+    """
+    Singleton metaclass for ensuring only one instance of a class.
+    """
 
-    result = await model.encode_async(["test"])
+    _instances = {}
 
-    assert len(result[0]) == 384
+    def __call__(cls, *args, **kwargs):
+        """Call method for the singleton metaclass."""
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]

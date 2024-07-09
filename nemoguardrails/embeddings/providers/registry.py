@@ -13,23 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 
-from nemoguardrails.embeddings.providers.fastembed import FastEmbedEmbeddingModel
+from typing import Any
 
-
-def test_sync_embeddings():
-    model = FastEmbedEmbeddingModel("all-MiniLM-L6-v2")
-
-    result = model.encode(["test"])
-
-    assert len(result[0]) == 384
+from nemoguardrails.registry import Registry
 
 
-@pytest.mark.asyncio
-async def test_async_embeddings():
-    model = FastEmbedEmbeddingModel("all-MiniLM-L6-v2")
+class EmbeddingProviderRegistry(Registry):
+    def validate(self, name: str, item: Any) -> None:
+        """Validate the item to be registered.
 
-    result = await model.encode_async(["test"])
+        Raises:
+            TypeError: If an item is not an instance of EmbeddingModel.
+            ValueError: If an item does not have 'encode' or 'encode_async' methods.
+        """
+        if not callable(getattr(item, "encode", None)):
+            raise ValueError(f"{name} does not have an 'encode' method")
 
-    assert len(result[0]) == 384
+        if not callable(getattr(item, "encode_async", None)):
+            raise ValueError(f"{name} does not have an 'encode_async' method")
