@@ -75,24 +75,26 @@ def test_1():
     assert res["messages"][0]["content"] == "Hello again!"
 
 
-def test_invalid_thread_id():
+@pytest.mark.parametrize(
+    "thread_id, status_code",
+    [
+        (None, 200),  # thread_id is None
+        ("a" * 16, 200),  # thread_id is a valid string
+        ("abcd", 422),  # thread_id is too short
+        ("a" * 256, 422),  # thread_id is too long
+        (123, 422),  # thread_id is not a string
+    ],
+)
+def test_thread_id(thread_id, status_code):
     response = client.post(
         "/v1/chat/completions",
         json={
             "config_id": "config_1",
-            "thread_id": "abcd",
-            "messages": [
-                {
-                    "content": "hi",
-                    "role": "user",
-                }
-            ],
+            "thread_id": thread_id,
+            "messages": [{"content": "hi", "role": "user"}],
         },
     )
-    assert response.status_code == 200
-    res = response.json()
-    assert len(res["messages"]) == 1
-    assert "minimum length of 16" in res["messages"][0]["content"]
+    assert response.status_code == status_code
 
 
 @pytest.mark.skip(reason="Should only be run locally when Redis is available.")

@@ -51,11 +51,15 @@ flow run input rails $input_text
   """Check user utterances before they get further processed."""
   $input_rails_exist = await CheckFlowDefinedAction(flow_id="input rails")
   if $input_rails_exist
+    log "found input rails, checking..."
     await input rails $input_text
+    log "input rails passed"
 
 
 flow run output rails $output_text
   """Check llm responses before they get further processed."""
   $output_rails_exist = await CheckFlowDefinedAction(flow_id="output rails")
   if $output_rails_exist
+    log "found output rails, checking..."
     await output rails $output_text
+    log "output rails passed"

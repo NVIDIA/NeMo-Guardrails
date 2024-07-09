@@ -20,7 +20,7 @@ from typing import Optional
 import aiohttp
 
 from nemoguardrails.actions import action
-from nemoguardrails.colang.v1_0.lang.utils import new_uuid
+from nemoguardrails.utils import new_uuid
 
 log = logging.getLogger(__name__)
 

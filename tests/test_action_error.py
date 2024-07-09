@@ -70,3 +70,28 @@ def test_action_internal_error():
 
     chat >> "hello there!"
     chat << "I'm sorry, an internal error has occurred."
+
+
+def test_action_not_registered():
+    """Test that an error is raised when an action is not registered."""
+    config = RailsConfig.from_content(
+        """
+        define user express greeting
+            "hello"
+
+        define flow
+            user express greeting
+            execute unregistered_action
+            bot express greeting
+        """
+    )
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "  express greeting",
+            '  "Hello John!"',
+        ],
+    )
+
+    chat >> "hello there!"
+    chat << "Action 'unregistered_action' not found."

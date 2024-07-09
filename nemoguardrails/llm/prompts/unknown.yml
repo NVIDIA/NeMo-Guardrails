@@ -1,15 +1,10 @@
-# Using OpenAI
-models:
-  - type: main
-    engine: openai
-    model: gpt-3.5-turbo-instruct
-#    model: gpt-3.5-turbo
-
-# We enable the multi-step generation
-enable_multi_step_generation: True
-
+# Collection of all the prompts
 prompts:
+    # GENERAL PROMPTS
+
     - task: general
+      models:
+        - unknown
       content: |-
           {{ general_instructions }}
 
@@ -18,6 +13,8 @@ prompts:
 
     # Prompt for detecting the user message canonical form.
     - task: generate_user_intent
+      models:
+        - unknown
       content: |-
           """
           {{ general_instructions }}
@@ -36,6 +33,8 @@ prompts:
 
     # Prompt for generating the next steps.
     - task: generate_next_steps
+      models:
+        - unknown
       content: |-
           """
           {{ general_instructions }}
@@ -53,6 +52,8 @@ prompts:
 
     # Prompt for generating the bot message from a canonical form.
     - task: generate_bot_message
+      models:
+        - unknown
       content: |-
           """
           {{ general_instructions }}
@@ -77,6 +78,8 @@ prompts:
 
     # Prompt for generating the user intent, next steps and bot message in a single call.
     - task: generate_intent_steps_message
+      models:
+        - unknown
       content: |-
           """
           {{ general_instructions }}
@@ -95,6 +98,8 @@ prompts:
 
     # Prompt for generating the value of a context variable.
     - task: generate_value
+      models:
+        - unknown
       content: |-
           """
           {{ general_instructions }}

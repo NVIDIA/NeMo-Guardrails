@@ -1,0 +1,10 @@
+define user ask about pluto
+  "What is pluto?"
+  "How many moons does pluto have?"
+  "Is pluto a planet?"
+
+define flow answer pluto question
+  user ask about pluto
+  # For pluto questions, we activate the fact checking.
+  $check_facts = True
+  bot provide pluto answer

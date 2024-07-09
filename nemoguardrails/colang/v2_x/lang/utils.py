@@ -13,17 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import uuid
 from dataclasses import asdict, is_dataclass
 from typing import Any
-
-
-def new_uuid() -> str:
-    """Helper to generate new UUID v4.
-
-    In testing mode, it will generate a predictable set of UUIDs to help debugging.
-    """
-    return str(uuid.uuid4())
 
 
 def dataclass_to_dict(obj: Any) -> Any:
@@ -35,3 +26,11 @@ def dataclass_to_dict(obj: Any) -> Any:
         return {k: dataclass_to_dict(v) for k, v in obj.items()}
     else:
         return obj
+
+
+def format_colang_parsing_error_message(exception, colang_content):
+    """Improves readability of Colang error messages."""
+    line = colang_content.splitlines()[exception.line - 1]
+    # NOTE: for Colang 1.0 parsing exceptions, there is no "column" attribute.
+    marker = " " * (getattr(exception, "column", 1) - 1) + "^"
+    return f"{exception}:\n{line}\n{marker}"

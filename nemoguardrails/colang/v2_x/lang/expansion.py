@@ -41,7 +41,10 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
 )
 from nemoguardrails.colang.v2_x.runtime.errors import ColangSyntaxError
 from nemoguardrails.colang.v2_x.runtime.flows import FlowConfig, InternalEvents
-from nemoguardrails.colang.v2_x.runtime.utils import new_var_uid
+from nemoguardrails.colang.v2_x.runtime.utils import (
+    escape_special_string_characters,
+    new_var_uid,
+)
 
 
 def expand_elements(
@@ -55,49 +58,69 @@ def expand_elements(
         elements_changed = False
         new_elements: List[ElementType] = []
         for element in elements:
-            expanded_elements: List[ElementType] = []
-            if isinstance(element, SpecOp):
-                if element.op == "send":
-                    expanded_elements = _expand_send_element(element)
-                elif element.op == "match":
-                    expanded_elements = _expand_match_element(element)
-                elif element.op == "start":
-                    expanded_elements = _expand_start_element(element)
-                elif element.op == "stop":
-                    expanded_elements = _expand_stop_element(element)
-                elif element.op == "activate":
-                    expanded_elements = _expand_activate_element(element)
-                elif element.op == "await":
-                    expanded_elements = _expand_await_element(element)
-            elif isinstance(element, Assignment):
-                expanded_elements = _expand_assignment_stmt_element(element)
-            elif isinstance(element, While):
-                expanded_elements = _expand_while_stmt_element(element, flow_configs)
-            elif isinstance(element, If):
-                expanded_elements = _expand_if_element(element, flow_configs)
-                elements_changed = True  # Makes sure to update continue/break elements
-            elif isinstance(element, When):
-                expanded_elements = _expand_when_stmt_element(element, flow_configs)
-                elements_changed = True  # Makes sure to update continue/break elements
-            elif isinstance(element, Continue):
-                if element.label is None and continue_break_labels is not None:
-                    element.label = continue_break_labels[0]
-            elif isinstance(element, Break):
-                if element.label is None and continue_break_labels is not None:
-                    element.label = continue_break_labels[1]
+            try:
+                expanded_elements: List[ElementType] = []
+                if isinstance(element, SpecOp):
+                    if element.op == "send":
+                        expanded_elements = _expand_send_element(element)
+                    elif element.op == "match":
+                        expanded_elements = _expand_match_element(element)
+                    elif element.op == "start":
+                        expanded_elements = _expand_start_element(element)
+                    elif element.op == "stop":
+                        expanded_elements = _expand_stop_element(element)
+                    elif element.op == "activate":
+                        expanded_elements = _expand_activate_element(element)
+                    elif element.op == "await":
+                        expanded_elements = _expand_await_element(element)
+                elif isinstance(element, Assignment):
+                    expanded_elements = _expand_assignment_stmt_element(element)
+                elif isinstance(element, While):
+                    expanded_elements = _expand_while_stmt_element(
+                        element, flow_configs
+                    )
+                elif isinstance(element, If):
+                    expanded_elements = _expand_if_element(element, flow_configs)
+                    elements_changed = (
+                        True  # Makes sure to update continue/break elements
+                    )
+                elif isinstance(element, When):
+                    expanded_elements = _expand_when_stmt_element(element, flow_configs)
+                    elements_changed = (
+                        True  # Makes sure to update continue/break elements
+                    )
+                elif isinstance(element, Continue):
+                    if element.label is None and continue_break_labels is not None:
+                        element.label = continue_break_labels[0]
+                elif isinstance(element, Break):
+                    if element.label is None and continue_break_labels is not None:
+                        element.label = continue_break_labels[1]
 
-            if len(expanded_elements) > 0:
-                # Map new elements to source
-                for expanded_element in expanded_elements:
-                    if isinstance(expanded_element, Element) and isinstance(
-                        element, Element
-                    ):
-                        expanded_element._source = element._source
-                # Add new elements
-                new_elements.extend(expanded_elements)
-                elements_changed = True
-            else:
-                new_elements.extend([element])
+                if len(expanded_elements) > 0:
+                    # Map new elements to source
+                    for expanded_element in expanded_elements:
+                        if isinstance(expanded_element, Element) and isinstance(
+                            element, Element
+                        ):
+                            expanded_element._source = element._source
+                    # Add new elements
+                    new_elements.extend(expanded_elements)
+                    elements_changed = True
+                else:
+                    new_elements.extend([element])
+
+            except Exception as e:
+                error = "Error"
+                if e.args[0]:
+                    error = e.args[0]
+
+                if hasattr(element, "_source") and element._source:
+                    # TODO: Resolve source line to Colang file level
+                    raise ColangSyntaxError(
+                        error + f" on source line {element._source.line}"
+                    )
+                else:
+                    raise ColangSyntaxError(error)
 
         elements = new_elements
     return elements
@@ -312,36 +335,39 @@ def _expand_match_element(
         # Single match element
         if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
             # It's a flow
-            element_ref = element.spec.ref
-            if element_ref is None:
-                element_ref = _create_ref_ast_dict_helper(
-                    f"_flow_event_ref_{new_var_uid()}"
-                )
-            assert isinstance(element_ref, dict)
-
-            arguments = {"flow_id": f"'{element.spec.name}'"}
-            for arg in element.spec.arguments:
-                arguments.update({arg: element.spec.arguments[arg]})
-
-            new_elements.append(
-                SpecOp(
-                    op="match",
-                    spec=Spec(
-                        name=InternalEvents.FLOW_FINISHED,
-                        arguments=arguments,
-                        ref=element_ref,
-                        spec_type=SpecType.EVENT,
-                    ),
-                    return_var_name=element.return_var_name,
-                )
+            raise ColangSyntaxError(
+                f"Keyword `match` cannot be used with flows (flow `{element.spec.name}`)"
             )
-            if element.return_var_name is not None:
-                new_elements.append(
-                    Assignment(
-                        key=element.return_var_name,
-                        expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
-                    )
-                )
+            # element_ref = element.spec.ref
+            # if element_ref is None:
+            #     element_ref = _create_ref_ast_dict_helper(
+            #         f"_flow_event_ref_{new_var_uid()}"
+            #     )
+            # assert isinstance(element_ref, dict)
+
+            # arguments = {"flow_id": f"'{element.spec.name}'"}
+            # for arg in element.spec.arguments:
+            #     arguments.update({arg: element.spec.arguments[arg]})k
+
+            # new_elements.append(
+            #     SpecOp(
+            #         op="match",
+            #         spec=Spec(
+            #             name=InternalEvents.FLOW_FINISHED,
+            #             arguments=arguments,
+            #             ref=element_ref,
+            #             spec_type=SpecType.EVENT,
+            #         ),
+            #         return_var_name=element.return_var_name,
+            #     )
+            # )
+            # if element.return_var_name is not None:
+            #     new_elements.append(
+            #         Assignment(
+            #             key=element.return_var_name,
+            #             expression=f"${element_ref['elements'][0]['elements'][0]}.arguments.return_value",
+            #         )
+            #     )
         elif (
             element.spec.spec_type == SpecType.EVENT or element.spec.members is not None
         ):
@@ -476,7 +502,7 @@ def _expand_await_element(
             )
         else:
             raise ColangSyntaxError(
-                f"Unsupported spec type '{type(element.spec)}', element '{element.spec.name}' on line {element._source.line}"
+                f"Unsupported spec type '{type(element.spec)}', element '{element.spec.name}'"
             )
     else:
         # Element group
@@ -631,7 +657,7 @@ def _expand_activate_element(
         else:
             # It's an UMIM event
             raise ColangSyntaxError(
-                f"Only flows can be activated but not '{element.spec.spec_type}', element '{element.spec.name}' on line {element._source.line}!"
+                f"Only flows can be activated but not '{element.spec.spec_type}', element '{element.spec.name}'"
             )
     elif isinstance(element.spec, dict):
         # Multiple match elements
@@ -653,11 +679,12 @@ def _expand_assignment_stmt_element(element: Assignment) -> List[ElementType]:
     new_elements: List[ElementType] = []
 
     # Check if the expression is an NLD instruction
-    nld_instruction_pattern = r"^\s*i\"(.*)\"|^\s*i'(.*)'"
+    nld_instruction_pattern = r'\.\.\.\s*("""|\'\'\')((?:\\\1|(?!\1)[\s\S])*?)\1|\.\.\.\s*("|\')((?:\\\3|(?!\3).)*?)\3'
     match = re.search(nld_instruction_pattern, element.expression)
 
     if match:
         # Replace the assignment with the GenerateValueAction system action
+        instruction = escape_special_string_characters(match.group(2) or match.group(4))
         new_elements.append(
             SpecOp(
                 op="await",
@@ -666,7 +693,7 @@ def _expand_assignment_stmt_element(element: Assignment) -> List[ElementType]:
                     spec_type=SpecType.ACTION,
                     arguments={
                         "var_name": f'"{element.key}"',
-                        "instructions": f'"{match.group(1) or match.group(2)}"',
+                        "instructions": f'"{instruction}"',
                     },
                 ),
                 return_var_name=element.key,

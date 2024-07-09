@@ -14,6 +14,8 @@
 # limitations under the License.
 
 """This module wraps LangChain tools as actions."""
+import os
+
 from nemoguardrails.actions import action
 from nemoguardrails.actions.langchain.safetools import (
     ApifyWrapperSafe,
@@ -28,13 +30,15 @@ from nemoguardrails.actions.langchain.safetools import (
     ZapierNLAWrapperSafe,
 )
 
-apify = action(name="apify")(ApifyWrapperSafe)
-bing_search = action(name="bing_search")(BingSearchAPIWrapperSafe)
-google_search = action(name="google_search")(GoogleSearchAPIWrapperSafe)
-searx_search = action(name="searx_search")(SearxSearchWrapperSafe)
-google_serper = action(name="google_serper")(GoogleSerperAPIWrapperSafe)
-openweather_query = action(name="openweather_query")(OpenWeatherMapAPIWrapperSafe)
-serp_api_query = action(name="serp_api_query")(SerpAPIWrapperSafe)
-wikipedia_query = action(name="wikipedia_query")(WikipediaAPIWrapperSafe)
-wolframalpha_query = action(name="wolframalpha_query")(WolframAlphaAPIWrapperSafe)
-zapier_nla_query = action(name="zapier_nla_query")(ZapierNLAWrapperSafe)
+# TODO: Document this env variable.
+if os.environ.get("NEMO_GUARDRAILS_DEMO_ACTIONS"):
+    apify = action(name="apify")(ApifyWrapperSafe)
+    bing_search = action(name="bing_search")(BingSearchAPIWrapperSafe)
+    google_search = action(name="google_search")(GoogleSearchAPIWrapperSafe)
+    searx_search = action(name="searx_search")(SearxSearchWrapperSafe)
+    google_serper = action(name="google_serper")(GoogleSerperAPIWrapperSafe)
+    openweather_query = action(name="openweather_query")(OpenWeatherMapAPIWrapperSafe)
+    serp_api_query = action(name="serp_api_query")(SerpAPIWrapperSafe)
+    wikipedia_query = action(name="wikipedia_query")(WikipediaAPIWrapperSafe)
+    wolframalpha_query = action(name="wolframalpha_query")(WolframAlphaAPIWrapperSafe)
+    zapier_nla_query = action(name="zapier_nla_query")(ZapierNLAWrapperSafe)

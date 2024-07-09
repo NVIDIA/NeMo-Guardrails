@@ -19,14 +19,13 @@ import json
 import logging
 import os.path
 import time
-from typing import List, Optional
+import warnings
+from typing import Any, List, Optional
 
 from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
-from starlette import status
-from starlette.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
+from starlette.responses import StreamingResponse
 from starlette.staticfiles import StaticFiles
 
 from nemoguardrails import LLMRails, RailsConfig, utils
@@ -56,6 +55,7 @@ api_request_headers = contextvars.ContextVar("headers")
 #  and get rid of all the global attributes.
 datastore: Optional[DataStore] = None
 
+
 app = FastAPI(
     title="Guardrails Server API",
     description=api_description,
@@ -80,8 +80,9 @@ if ENABLE_CORS:
         allow_headers=["*"],
     )
 
-# By default, we use the rails in the examples folder
+app.default_config_id = None
 
+# By default, we use the rails in the examples folder
 app.rails_config_path = utils.get_examples_data_path("bots")
 
 # Weather the chat UI is enabled or not.
@@ -100,15 +101,20 @@ app.single_config_id = None
 
 class RequestBody(BaseModel):
     config_id: Optional[str] = Field(
-        default=None, description="The id of the configuration to be used."
+        default=os.getenv("DEFAULT_CONFIG_ID", None),
+        description="The id of the configuration to be used. If not set, the default configuration will be used.",
     )
     config_ids: Optional[List[str]] = Field(
         default=None,
         description="The list of configuration ids to be used. "
         "If set, the configurations will be combined.",
+        # alias="guardrails",
+        validate_default=True,
     )
     thread_id: Optional[str] = Field(
         default=None,
+        min_length=16,
+        max_length=255,
         description="The id of an existing thread to which the messages should be added.",
     )
     messages: List[dict] = Field(
@@ -124,20 +130,41 @@ class RequestBody(BaseModel):
         "Tokens will be sent as data-only server-sent events as they become "
         "available, with the stream terminated by a data: [DONE] message.",
     )
-    options: Optional[GenerationOptions] = Field(
-        default=None, description="Additional options for controlling the generation."
+    options: GenerationOptions = Field(
+        default_factory=GenerationOptions,
+        description="Additional options for controlling the generation.",
     )
     state: Optional[dict] = Field(
         default=None,
         description="A state object that should be used to continue the interaction.",
     )
 
-    @validator("config_ids", always=True)
-    def check_if_set(cls, v, values, **kwargs):
-        if v is not None and values.get("config_id") is not None:
-            raise ValueError("Only one of config_id or config_ids should be specified")
-        if v is None and values.get("config_id") is None:
-            raise ValueError("Either config_id or config_ids must be specified")
+    @model_validator(mode="before")
+    @classmethod
+    def ensure_config_id(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if data.get("config_id") is not None and data.get("config_ids") is not None:
+                raise ValueError(
+                    "Only one of config_id or config_ids should be specified"
+                )
+            if data.get("config_id") is None and data.get("config_ids") is not None:
+                data["config_id"] = None
+            if data.get("config_id") is None and data.get("config_ids") is None:
+                warnings.warn(
+                    "No config_id or config_ids provided, using default config_id"
+                )
+        return data
+
+    @field_validator("config_ids", mode="after")
+    @classmethod
+    def ensure_config_ids(cls, v, info: ValidationInfo):
+        if (
+            v is None
+            and info.data.get("config_id")
+            and info.data.get("config_ids") is None
+        ):
+            # Populate config_ids with config_id if only config_id is provided
+            return [info.data["config_id"]]
         return v
 
 
@@ -257,8 +284,6 @@ async def chat_completion(body: RequestBody, request: Request):
 
     TODO: add support for explicit state object.
     """
-    if not body.config_ids:
-        body.config_ids = [body.config_id]
     log.info("Got request for config %s", body.config_id)
     for logger in registered_loggers:
         asyncio.get_event_loop().create_task(
@@ -269,6 +294,13 @@ async def chat_completion(body: RequestBody, request: Request):
     api_request_headers.set(request.headers)
 
     config_ids = body.config_ids
+    if not config_ids and app.default_config_id:
+        config_ids = [app.default_config_id]
+    elif not config_ids and not app.default_config_id:
+        raise GuardrailsConfigurationError(
+            "No 'config_id' provided and no default configuration is set for the server. "
+            "You must set a 'config_id' in your request or set use --default-config-id when . "
+        )
     try:
         llm_rails = _get_rails(config_ids)
     except ValueError as ex:
@@ -530,6 +562,16 @@ def start_auto_reload_monitoring():
         )
         # Force close everything.
         os._exit(-1)
+
+
+def set_default_config_id(config_id: str):
+    app.default_config_id = config_id
+
+
+class GuardrailsConfigurationError(Exception):
+    """Exception raised for errors in the configuration."""
+
+    pass
 
 
 # # Register a nicer error message for 422 error
