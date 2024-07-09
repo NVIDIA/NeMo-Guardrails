@@ -15,16 +15,17 @@
 import json
 import logging
 import os
-from typing import Optional
+from typing import Dict, Optional, Union
 
 from nemoguardrails.actions import action
-from nemoguardrails.colang.v1_0.lang.utils import new_uuid
 
 log = logging.getLogger(__name__)
 
 
 @action(name="call cleanlab api", is_system_action=True)
-async def call_cleanlab_api(context: Optional[dict] = None):
+async def call_cleanlab_api(
+    context: Optional[dict] = None,
+) -> Union[ValueError, ImportError, Dict]:
     api_key = os.environ.get("CLEANLAB_API_KEY")
 
     if api_key is None:
