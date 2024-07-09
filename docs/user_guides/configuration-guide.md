@@ -85,9 +85,73 @@ The meaning of the attributes is as follows:
 
 You can use any LLM provider that is supported by LangChain, e.g., `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `cohere`, `huggingface_endpoint`, `huggingface_hub`, `openai`, `self_hosted`, `self_hosted_hugging_face`. Check out the LangChain official documentation for the full list.
 
-**NOTE**: to use any of the providers, you will need to install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instruct you on what packages should be installed.
+```{note}
+To use any of the providers, you will need to install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instruct you on what packages should be installed.
+```
 
-**IMPORTANT**: while from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g., `openai`, `nemollm`). For others, you can optimize the prompts yourself (see the [LLM Prompts](#llm-prompts) section).
+```{important}
+While from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g., `openai`, `nemollm`). For others, you can optimize the prompts yourself (see the [LLM Prompts](#llm-prompts) section).
+```
+#### NIM for LLMs
+
+[NVIDIA NIM](https://docs.nvidia.com/nim/index.html) is a set of easy-to-use microservices designed to accelerate the deployment of generative AI models across the cloud, data center, and workstations.
+[NVIDIA NIM for LLMs](https://docs.nvidia.com/nim/large-language-models/latest/introduction.html) brings the power of state-of-the-art LLMs to enterprise applications, providing unmatched natural language processing and understanding capabilities. [Learn more about NIMs](https://developer.nvidia.com/blog/nvidia-nim-offers-optimized-inference-microservices-for-deploying-ai-models-at-scale/).
+
+NeMo Guardrails supports connecting to a NIM as follows:
+
+```yaml
+models:
+  - type: main
+    engine: nim
+    model: <MODEL_NAME>
+    parameters:
+      base_url: <NIM_ENDPOINT_URL>
+```
+
+For example, to connect to a locally deployed `meta/llama3-8b-instruct` model, on port 8000, use the following model configuration:
+
+```yaml
+models:
+  - type: main
+    engine: nim
+    model: meta/llama3-8b-instruct
+    parameters:
+      base_url: http://localhost:8000/v1
+```
+
+```{important}
+To use the `nim` LLM provider, you must install the `langchain-nvidia-ai-endpoints` package (`pip install langchain-nvidia-ai-endpoints`).
+```
+
+
+#### NVIDIA AI Endpoints
+
+[NVIDIA AI Endpoints](https://www.nvidia.com/en-us/ai-data-science/foundation-models/) give users easy access to NVIDIA hosted API endpoints for NVIDIA AI Foundation Models like Llama 3, Mixtral 8x7B, Stable Diffusion, etc.
+These models, hosted on the [NVIDIA API catalog](https://build.nvidia.com/), are optimized, tested, and hosted on the NVIDIA AI platform, making them fast and easy to evaluate, further customize, and seamlessly run at peak performance on any accelerated stack.
+
+To use an LLM model through the NVIDIA AI Endpoints, use the following model configuration:
+
+```yaml
+models:
+  - type: main
+    engine: nvidia_ai_endpoints
+    model: <MODEL_NAME>
+```
+
+For example, to use the `llama3-8b-instruct` model, use the following model configuration:
+
+```yaml
+models:
+  - type: main
+    engine: nvidia_ai_endpoints
+    model: meta/llama3-8b-instruct
+```
+
+```{important}
+To use the `nvidia_ai_endpoints` LLM provider, you must install the `langchain-nvidia-ai-endpoints` package (`pip install langchain-nvidia-ai-endpoints`) and configure a valid `NVIDIA_API_KEY`.
+```
+
+For more details, check out this [user guide](./llm/nvidia_ai_endpoints/README.md).
 
 Here's an example configuration for using `llama3` model with [Ollama](https://ollama.com/):
 
