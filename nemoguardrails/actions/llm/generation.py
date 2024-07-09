@@ -1227,7 +1227,7 @@ class LLMGenerationActions:
 
             if bot_intent and bot_intent.startswith("bot "):
                 bot_intent = bot_intent[4:]
-            if bot_intent and bot_intent.startswith("Bot intent: "):
+            elif bot_intent and bot_intent.startswith("Bot intent: "):
                 bot_intent = bot_intent[12:]
             else:
                 bot_intent = "general response"
