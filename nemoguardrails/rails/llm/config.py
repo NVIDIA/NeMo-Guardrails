@@ -488,7 +488,7 @@ def _join_config(dest_config: dict, additional_config: dict):
     ]
 
     for field in additional_fields:
-        if additional_config.get(field):
+        if field in additional_config:
             dest_config[field] = additional_config[field]
 
     # TODO: Rethink the best way to parse and load yaml config files
@@ -738,7 +738,7 @@ class RailsConfig(BaseModel):
     # will be used for those tasks. Models like dolly don't allow for a temperature of 0.0,
     # for example, in which case a custom one can be set.
     lowest_temperature: Optional[float] = Field(
-        default=0.0,
+        default=0.001,
         description="The lowest temperature that should be used for the LLM.",
     )
 
