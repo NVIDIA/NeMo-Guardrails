@@ -64,6 +64,7 @@ class VerboseHandler(logging.StreamHandler):
             # For prompts, we also start the blinking cursor.
             elif title in ["Prompt", "Prompt Messages"]:
                 if verbose_llm_calls:
+                    skip_print = True
                     console.print("")
 
                     if title == "Prompt Messages":
