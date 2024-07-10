@@ -286,6 +286,7 @@ The complete list of supported embedding providers is the following:
 | FastEmbed (default)  | `FastEmbed`            | `all-MiniLM-L6-v2` (default), etc. |
 | OpenAI               | `openai`               | `text-embedding-ada-002`, etc.     |
 | SentenceTransformers | `SentenceTransformers` | `all-MiniLM-L6-v2`, etc.           |
+| NVIDIA AI Endpoints  | `nvidia_ai_endpoints`  | `nv-embed-v1`, etc.                |
 
 ```{note}
 For any of the supported embedding providers you can use any of the supported models.
