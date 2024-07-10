@@ -59,23 +59,42 @@ class ColangParser:
 
         Currently, only the "..." is expanded.
         """
-        # We make sure to capture the correct indentation level and use that.
-        content = re.sub(
-            r"\n( +)\.\.\.",
-            textwrap.dedent(
-                r"""
-                \1$flow_info = await GenerateFlowAction()
-                \1await AddFlowsAction(config=$flow_info['body'])
-                \1$instance_uid = uid()
-                \1send StartFlow(flow_id=$flow_info['name'], flow_instance_uid=$instance_uid, context=$self.context)
-                \1match FlowStarted(flow_instance_uid=$instance_uid)
-                \1match FlowFinished(flow_instance_uid=$instance_uid)
-                """
-            ),
-            content,
-        )
+        lines = content.split("\n")
 
-        return content
+        in_docstring = False
+        for i in range(len(lines)):
+            line = lines[i]
+            if (
+                not in_docstring
+                and line.strip().startswith('"""')
+                and line.strip().endswith('"""')
+                and line.strip() != '"""'
+            ):
+                pass
+            elif not in_docstring and line.strip().startswith('"""'):
+                in_docstring = True
+            elif in_docstring and line.strip().endswith('"""'):
+                in_docstring = False
+            elif in_docstring:
+                pass
+            else:
+                # We make sure to capture the correct indentation level and use that.
+                lines[i] = re.sub(
+                    r"^( +)\.\.\.",
+                    textwrap.dedent(
+                        r"""
+                        \1$flow_info = await GenerateFlowAction()
+                        \1await AddFlowsAction(config=$flow_info['body'])
+                        \1$instance_uid = uid()
+                        \1send StartFlow(flow_id=$flow_info['name'], flow_instance_uid=$instance_uid, context=$self.context)
+                        \1match FlowStarted(flow_instance_uid=$instance_uid)
+                        \1match FlowFinished(flow_instance_uid=$instance_uid)
+                        """
+                    ),
+                    line,
+                )
+
+        return "\n".join(lines)
 
     def parse_content(
         self, content: str, print_tokens: bool = False, print_parsing_tree: bool = False

@@ -62,12 +62,18 @@ class VerboseHandler(logging.StreamHandler):
                     console.print("")
 
             # For prompts, we also start the blinking cursor.
-            elif title == "Prompt":
-                skip_print = True
+            elif title in ["Prompt", "Prompt Messages"]:
                 if verbose_llm_calls:
+                    skip_print = True
                     console.print("")
-                    console.print(f"[cyan]LLM {title}[/]")
+
+                    if title == "Prompt Messages":
+                        body = body.split("\n", 3)[3]
+
                     for line in body.split("\n"):
+                        if line.strip() == "[/]":
+                            continue
+
                         text = Text(line, style="black on #909090", end="\n")
                         text.pad_right(console.width)
                         console.print(text)
