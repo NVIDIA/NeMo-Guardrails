@@ -1,0 +1,6 @@
+import core
+import llm
+
+flow main
+    user said something
+    llm continue interaction

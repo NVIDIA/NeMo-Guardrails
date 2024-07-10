@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import json
 import os
 import time
@@ -23,6 +24,7 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 
 from nemoguardrails import LLMRails
+from nemoguardrails.actions.llm.utils import llm_call
 from nemoguardrails.eval.utils import load_dataset
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task
@@ -141,10 +143,14 @@ class FactCheckEvaluation:
 
             start_time = time.time()
             fact_check_prompt = self.llm_task_manager.render_task_prompt(
-                Task.SELF_CHECK_FACTS, {"evidence": evidence, "response": answer}
+                Task.SELF_CHECK_FACTS,
+                {"evidence": evidence, "response": answer},
+                force_string_to_message=True,
             )
             stop = self.llm_task_manager.get_stop_tokens(Task.SELF_CHECK_FACTS)
-            fact_check = self.llm(fact_check_prompt, stop=stop)
+            fact_check = asyncio.run(
+                llm_call(prompt=fact_check_prompt, llm=self.llm, stop=stop)
+            )
             end_time = time.time()
             time.sleep(0.5)  # avoid rate-limits
             fact_check = fact_check.lower().strip()

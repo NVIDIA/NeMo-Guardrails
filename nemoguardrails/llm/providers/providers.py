@@ -30,9 +30,9 @@ from langchain.callbacks.manager import (
     CallbackManagerForLLMRun,
 )
 from langchain.llms.base import LLM
-from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain.schema.output import GenerationChunk
 from langchain_community import llms
+from langchain_community.llms import HuggingFacePipeline
 
 from nemoguardrails.rails.llm.config import Model
 
@@ -47,6 +47,7 @@ _providers: Dict[str, Type[BaseLanguageModel]] = {
     "nemollm": NeMoLLM,
     "trt_llm": TRTLLM,
     "nvidia_ai_endpoints": None,
+    "nim": None,
 }
 
 
@@ -237,7 +238,7 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
                 "Could not import langchain_openai, please install it with "
                 "`pip install langchain-openai`."
             )
-    elif model_config.engine == "nvidia_ai_endpoints":
+    elif model_config.engine == "nvidia_ai_endpoints" or model_config.engine == "nim":
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
 

@@ -134,27 +134,20 @@ class ColangParser:
 
 
 def parse_colang_file(
-    _filename: str, content: str, include_source_mapping: bool = True
+    filename: str, content: str, include_source_mapping: bool = True
 ) -> dict:
     """Parse the content of a .co."""
 
     colang_parser = ColangParser(include_source_mapping=include_source_mapping)
     result = colang_parser.parse_content(content, print_tokens=False)
 
-    # flows = []
-    # for flow_data in result["flows"]:
-    #     # elements = parse_flow_elements(items)
-    #     # TODO: extract the source code here
-    #     source_code = ""
-    #     flows.append(
-    #         {
-    #             "id": flow_data["name"],
-    #             "elements": flow_data["elements"],
-    #             "source_code": source_code,
-    #         }
-    #     )
+    for flow in result["flows"]:
+        flow["file_info"]["name"] = filename
 
-    data = {"flows": result["flows"], "import_paths": result.get("import_paths", [])}
+    data = {
+        "flows": result["flows"],
+        "import_paths": result.get("import_paths", []),
+    }
 
     return data
 

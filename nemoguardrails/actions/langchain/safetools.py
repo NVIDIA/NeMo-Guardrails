@@ -18,20 +18,30 @@
 The same validation logic can be applied to others as well.
 """
 
-from langchain.utilities.zapier import ZapierNLAWrapper
-from langchain_community.utilities import (
-    ApifyWrapper,
-    BingSearchAPIWrapper,
-    GoogleSearchAPIWrapper,
-    GoogleSerperAPIWrapper,
-    OpenWeatherMapAPIWrapper,
-    SearxSearchWrapper,
-    SerpAPIWrapper,
-    WikipediaAPIWrapper,
-    WolframAlphaAPIWrapper,
-)
+import logging
 
 from nemoguardrails.actions.validation import validate_input, validate_response
+
+log = logging.getLogger(__name__)
+
+try:
+    from langchain_community.utilities import (
+        ApifyWrapper,
+        BingSearchAPIWrapper,
+        GoogleSearchAPIWrapper,
+        GoogleSerperAPIWrapper,
+        OpenWeatherMapAPIWrapper,
+        SearxSearchWrapper,
+        SerpAPIWrapper,
+        WikipediaAPIWrapper,
+        WolframAlphaAPIWrapper,
+        ZapierNLAWrapper,
+    )
+except ImportError:
+    log.warning(
+        "The langchain_community module is not installed. Please install it using pip: pip install langchain_community"
+    )
+
 
 MAX_QUERY_LEN = 50
 MAX_LOCATION_LEN = 50

@@ -1,0 +1,73 @@
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo
+    parameters:
+      temperature: 0.0
+rails:
+    config:
+        autoalign:
+            parameters:
+                endpoint: "https://<AUTOALIGN_ENDPOINT>/guardrail"
+            input:
+                guardrails_config:
+                    {
+                      "pii_fast": {
+                          "enabled_types": [
+                              "[BANK ACCOUNT NUMBER]",
+                              "[CREDIT CARD NUMBER]",
+                              "[DATE OF BIRTH]",
+                              "[DRIVER LICENSE NUMBER]",
+                              "[EMAIL ADDRESS]",
+                              "[IP ADDRESS]",
+                              "[ORGANIZATION]",
+                              "[PASSPORT NUMBER]",
+                              "[PASSWORD]",
+                              "[PERSON NAME]",
+                              "[PHONE NUMBER]",
+                              "[SOCIAL SECURITY NUMBER]",
+                              "[SECRET_KEY]",
+                              "[TRANSACTION_ID]"
+                          ],
+                        },
+                        "gender_bias_detection": {},
+                        "harm_detection": {},
+                        "text_toxicity_extraction": {},
+                        "racial_bias_detection": {},
+                        "jailbreak_detection": {},
+                        "intellectual_property": {}
+                    }
+            output:
+                guardrails_config:
+                  {
+                      "pii_fast": {
+                          "enabled_types": [
+                              "[BANK ACCOUNT NUMBER]",
+                              "[CREDIT CARD NUMBER]",
+                              "[DATE OF BIRTH]",
+                              "[DRIVER LICENSE NUMBER]",
+                              "[EMAIL ADDRESS]",
+                              "[IP ADDRESS]",
+                              "[ORGANIZATION]",
+                              "[PASSPORT NUMBER]",
+                              "[PASSWORD]",
+                              "[PERSON NAME]",
+                              "[PHONE NUMBER]",
+                              "[SOCIAL SECURITY NUMBER]",
+                              "[SECRET_KEY]",
+                              "[TRANSACTION_ID]"
+                          ],
+                      },
+                      "gender_bias_detection": {},
+                      "harm_detection": {},
+                      "text_toxicity_extraction": {},
+                      "racial_bias_detection": {},
+                      "jailbreak_detection": {},
+                      "intellectual_property": {}
+                  }
+    input:
+        flows:
+            - autoalign check input
+    output:
+        flows:
+            - autoalign check output

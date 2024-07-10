@@ -5,12 +5,13 @@ import timing
 import utils
 
 flow showcase proactive turn taking
+  activate polling llm request response
   activate reaction bot question repetition for user silence 5 1000
 
   bot inform "I am going to ask you questions and if you don't respond within 5 seconds I will repeat them."
 
   while True
-    $question = i"Ask a random question that can be answered with just yes or no."
+    $question = ..."Ask a random question that can be answered with just yes or no."
     if not is_str($question)
       $question = "Do you like Avatars?"
     bot ask $question

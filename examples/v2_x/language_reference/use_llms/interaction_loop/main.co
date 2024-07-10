@@ -1,0 +1,27 @@
+import core
+import timing
+import llm
+
+flow main
+    activate automating intent detection
+    activate generating user intent for unhandled user utterance
+
+    while True
+        when unhandled user intent
+            llm continue interaction
+        or when user was silent 12.0
+            $response = ..."A random fun fact"
+            bot say $response
+        or when user expressed greeting
+            bot say "Hi there!"
+        or when user expressed goodbye
+            bot inform "That was fun. Goodbye"
+
+flow user expressed greeting
+    user said "hi"
+        or user said "hello"
+
+flow user expressed goodbye
+    user said "goodbye"
+        or user said "I am done"
+        or user said "I have to go"

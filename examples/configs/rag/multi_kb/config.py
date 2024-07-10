@@ -28,7 +28,6 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
-from examples.configs.rag.multi_kb.tabular_llm import TabularLLM
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
@@ -37,6 +36,8 @@ from nemoguardrails.llm.providers import (
     HuggingFacePipelineCompatible,
     register_llm_provider,
 )
+
+from .tabular_llm import TabularLLM
 
 
 def _get_model_config(config: RailsConfig, type: str):

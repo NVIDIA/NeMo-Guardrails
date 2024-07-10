@@ -1,0 +1,9 @@
+import core
+
+flow main
+    activate management of user greeting
+    # No additional match statement need to keep this flow activated without repeating
+
+flow management of user greeting
+    user said "Hi"
+    bot say "Hello again"

@@ -1,0 +1,8 @@
+flow main
+    await user said something as $ref
+    await UtteranceBotAction(script=$ref.transcript)
+    match AnEvent()
+
+flow user said something -> $transcript
+    match UtteranceUserAction.Finished() as $event_ref
+    $transcript = $event_ref.final_transcript

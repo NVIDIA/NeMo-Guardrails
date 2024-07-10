@@ -102,7 +102,7 @@ def test_1():
             "parameters": [],
             "return_members": [],
             "source_code": None,
-            "file_info": {"exclude_from_llm": False},
+            "file_info": {"exclude_from_llm": False, "name": ""},
         }
     ]
 
@@ -207,7 +207,7 @@ def test_2():
             "parameters": [],
             "return_members": [],
             "source_code": None,
-            "file_info": {"exclude_from_llm": False},
+            "file_info": {"exclude_from_llm": False, "name": ""},
         }
     ]
 
@@ -332,7 +332,7 @@ def test_3():
             "parameters": [],
             "return_members": [],
             "source_code": None,
-            "file_info": {"exclude_from_llm": False},
+            "file_info": {"exclude_from_llm": False, "name": ""},
         }
     ]
 
@@ -357,7 +357,7 @@ def test_4():
             "parameters": [],
             "return_members": [],
             "source_code": None,
-            "file_info": {"exclude_from_llm": False},
+            "file_info": {"exclude_from_llm": False, "name": ""},
             "elements": [
                 {
                     "_type": "spec_op",
@@ -918,7 +918,7 @@ def test_flow_return_values():
                 {"_type": "pass_stmt", "elements": []},
             ],
             "source_code": None,
-            "file_info": {"exclude_from_llm": False},
+            "file_info": {"exclude_from_llm": False, "name": ""},
         },
         {
             "_type": "flow",
@@ -948,7 +948,7 @@ def test_flow_return_values():
                 {"_type": "pass_stmt", "elements": []},
             ],
             "source_code": None,
-            "file_info": {"exclude_from_llm": False},
+            "file_info": {"exclude_from_llm": False, "name": ""},
         },
         {
             "_type": "flow",
@@ -981,7 +981,7 @@ def test_flow_return_values():
                 {"_type": "pass_stmt", "elements": []},
             ],
             "source_code": None,
-            "file_info": {"exclude_from_llm": False},
+            "file_info": {"exclude_from_llm": False, "name": ""},
         },
         {
             "_type": "flow",
@@ -1014,6 +1014,6 @@ def test_flow_return_values():
                 {"_type": "pass_stmt", "elements": []},
             ],
             "source_code": None,
-            "file_info": {"exclude_from_llm": False},
+            "file_info": {"exclude_from_llm": False, "name": ""},
         },
     ]

@@ -13,21 +13,18 @@ instructions:
           bot actions:
           bot say "text"
 
-
 sample_conversation: |
     user action: user said "Hello there!"
     user intent: user expressed greeting
 
     bot intent: bot express greeting
     bot action: bot say "Hello! How can I assist you today?"
-      and bot gesture "Smile"
 
     user action: user said "What can you do for me?"
     user intent: user asked about capabilities
 
     bot intent: bot respond about capabilities
     bot action: bot say "I am here to walk you through different showcases that demonstrate the new capabilities of Colang 2.0. But we can also just have a chat about something."
-      and bot gesture "open both hands making an inviting move"
 
     user action: user said "ddsf poenwrfbjvhjhd sfd dfs"
     user intent: user said something unclear

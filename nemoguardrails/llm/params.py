@@ -18,6 +18,7 @@ Module for providing a context manager to temporarily adjust parameters of a lan
 
 Also allows registration of custom parameter managers for different language model types.
 """
+
 import logging
 from typing import Dict, Type
 
@@ -41,11 +42,21 @@ class LLMParams:
             if hasattr(self.llm, param):
                 self.original_params[param] = getattr(self.llm, param)
                 setattr(self.llm, param, value)
-            # TODO: Fix the cases where self.llm.model_kwargs is not iterable
-            #  https://github.com/NVIDIA/NeMo-Guardrails/issues/92.
-            # elif param in getattr(self.llm, "model_kwargs", {}):
-            #     self.original_params[param] = self.llm.model_kwargs[param]
-            #     self.llm.model_kwargs[param] = value
+
+            elif hasattr(self.llm, "model_kwargs"):
+                if param not in self.llm.model_kwargs:
+                    log.warning(
+                        "Parameter %s does not exist for %s. Passing to model_kwargs",
+                        param,
+                        self.llm.__class__.__name__,
+                    )
+
+                    self.original_params[param] = None
+                else:
+                    self.original_params[param] = self.llm.model_kwargs[param]
+
+                self.llm.model_kwargs[param] = value
+
             else:
                 log.warning(
                     "Parameter %s does not exist for %s",
@@ -58,10 +69,11 @@ class LLMParams:
         for param, value in self.original_params.items():
             if hasattr(self.llm, param):
                 setattr(self.llm, param, value)
-            elif hasattr(self.llm, "model_kwargs") and param in getattr(
-                self.llm, "model_kwargs", {}
-            ):
-                self.llm.model_kwargs[param] = value
+            elif hasattr(self.llm, "model_kwargs"):
+                model_kwargs = getattr(self.llm, "model_kwargs", {})
+                if param in model_kwargs:
+                    model_kwargs[param] = value
+                    setattr(self.llm, "model_kwargs", model_kwargs)
 
 
 # The list of registered param managers. This will allow us to override the param manager
@@ -76,6 +88,7 @@ def register_param_manager(llm_type: Type[BaseLanguageModel], manager: Type[LLMP
 
 def llm_params(llm: BaseLanguageModel, **kwargs):
     """Returns a parameter manager for the given language model."""
+
     _llm_params = _param_managers.get(llm.__class__, LLMParams)
 
     return _llm_params(llm, **kwargs)

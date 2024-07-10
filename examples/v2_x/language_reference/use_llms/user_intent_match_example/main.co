@@ -1,0 +1,20 @@
+import core
+import llm
+
+flow main
+    activate automating intent detection
+    activate generating user intent for unhandled user utterance
+
+    while True
+        when user greeted
+            bot say "Hi there!"
+        or when user said goodbye
+            bot say "Goodbye!"
+        or when unhandled user intent # For any user utterance that does not match
+            bot say "Thanks for sharing!"
+
+flow user greeted
+    user said "Hi" or user said "Hello"
+
+flow user said goodbye
+    user said "Bye" or user said "See you"

@@ -19,7 +19,6 @@ from typing import Optional
 from langchain.chains import LLMChain
 from langchain.llms.base import BaseLLM
 from langchain.prompts import PromptTemplate
-from langchain_openai import OpenAI
 
 from nemoguardrails import RailsConfig
 from nemoguardrails.actions import action
@@ -36,6 +35,13 @@ from nemoguardrails.logging.callbacks import logging_callback_manager_for_chain
 from nemoguardrails.logging.explain import LLMCallInfo
 
 log = logging.getLogger(__name__)
+
+try:
+    from langchain_openai import OpenAI
+except ImportError:
+    log.warning(
+        "The langchain_openai module is not installed. Please install it using pip: pip install langchain_openai"
+    )
 
 HALLUCINATION_NUM_EXTRA_RESPONSES = 2
 
