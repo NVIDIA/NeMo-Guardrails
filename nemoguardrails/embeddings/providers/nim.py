@@ -15,7 +15,7 @@
 
 from typing import List
 
-from nemoguardrails.embeddings.providers import EmbeddingModel
+from .base import EmbeddingModel
 
 
 class NIMEmbeddingModel(EmbeddingModel):
