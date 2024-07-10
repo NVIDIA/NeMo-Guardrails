@@ -419,6 +419,7 @@ prompts:
     models:
       - openai/gpt-3.5-turbo
     max_length: 3000
+    output_parser: user_intent
     content: |-
       <<This is a placeholder for a custom prompt for generating the user intent>>
 ```
