@@ -80,7 +80,7 @@ class ColangParser:
             else:
                 # We make sure to capture the correct indentation level and use that.
                 lines[i] = re.sub(
-                    r"( +)\.\.\.",
+                    r"^( +)\.\.\.",
                     textwrap.dedent(
                         r"""
                         \1$flow_info = await GenerateFlowAction()
