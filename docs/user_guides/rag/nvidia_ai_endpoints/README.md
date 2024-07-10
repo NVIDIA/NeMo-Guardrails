@@ -1,6 +1,6 @@
-# Using Embeddings Models hosted on NVIDIA AI Playground
+# Using Embeddings Models hosted on NVIDIA API Catalog
 
-This is a guide on using embedding models hosted on the NVIDIA AI Playground for the retrieval step in retrieval-augmented generation. It starts with the [ABC Bot configuration](../../../../examples/bots/abc) and modifies it to use the NVIDIA `nvolveqa-40k` model to retrieve embeddings.
+This is a guide on using embedding models hosted on the NVIDIA API Catalog for the retrieval step in retrieval-augmented generation. It starts with the [ABC Bot configuration](../../../../examples/bots/abc) and modifies it to use the NVIDIA `nvidia/nv-embed-v1` model to retrieve embeddings.
 
 ## Prerequisites
 
@@ -10,15 +10,20 @@ This is a guide on using embedding models hosted on the NVIDIA AI Playground for
 pip install -U --quiet langchain-nvidia-ai-endpoints
 ```
 
+```
+
+[notice] A new release of pip is available: 23.3.2 -> 24.1.2
+[notice] To update, run: pip install --upgrade pip
+```
+
 2. An NVIDIA NGC account to access AI Foundation Models. To create a free account go to [NVIDIA NGC website](https://ngc.nvidia.com/).
 
 3. An API key from NVIDIA AI Catalog:
-    - Generate an API key by navigating to the AI Foundation Models section on the NVIDIA NGC website, selecting a model with an API endpoint, and generating an API key.
-    - Export the NVIDIA API key as an environment variable:
+    -  Generate an API key by navigating to the AI Foundation Models section on the NVIDIA NGC website, selecting a model with an API endpoint, and generating an API key.
+    -  Export the NVIDIA API key as an environment variable:
 
-```python
-import os
-os.environ["NVIDIA_API_KEY"] = "<nvapi-your-key>"
+```bash
+export NVIDIA_API_KEY=$NVIDIA_API_KEY # Replace with your own key
 ```
 
 4. If you're running this inside a notebook, patch the AsyncIO loop.
@@ -37,17 +42,17 @@ To get started, copy the ABC bot configuration into a subdirectory called `confi
 cp -r ../../../../examples/bots/abc config
 ```
 
-Update the `models` section of the `config.yml` as follows. Here we update the model used for generation (with `type: main` to `ai-mixtral-8x7b-instruct`) and
+Update the `models` section of the `config.yml` as follows. Here we update the model used for generation (with `type: main` to `meta/llama3-70b-instruct`) and
 
 ```yaml
 ...
 models:
   - type: main
     engine: nvidia_ai_endpoints
-    model: ai-mixtral-8x7b-instruct
+    model: meta/llama3-70b-instruct
   - type: embeddings
     engine: nvidia_ai_endpoints
-    model: nvolveqa_40k
+    model: nvidia/nv-embed-v1
 ...
 ```
 
@@ -66,102 +71,75 @@ Test response generation:
 
 ```python
 response = rails.generate(
-    messages=[{"role": "user", "content": "What holidays do I have this year?"}]
+    messages=[{"role": "user", "content": "How many personal days off do I have?"}]
 )
 print(response["content"])
 ```
 
 ```
-The ABC Company observes the following paid holidays each year: New Year'
+In addition to vacation and sick leave, employees also have two personal days per year. Please refer to the employee handbook for more information.
 ```
-
-To verify the model and engine used for creating embeddings for retrieval, log internal events when generating a response:
 
 ```python
-response = rails.generate(
-    messages=[{"role": "user", "content": "What holidays do I have this year?"}],
-    options={
-        "log": {
-            "llm_calls": True,
-            "internal_events": True,
-        }
-    }
-)
-print("Response: ", response.response[0]["content"])
-print("Retrieval event info: ")
-retrieval_events = [e for e in response.log.internal_events if "data" in e and "relevant_chunks" in e["data"]]
-from pprint import pprint
-pprint(retrieval_events)
+print(rails.explain_info.llm_calls[3].prompt)
 ```
 
 ```
-Response:  The ABC Company observes the following paid holidays each year: New Year'
-Retrieval event info:
-[{'data': {'embedding_engine': 'nvidia_ai_endpoints',
-           'embedding_model': 'nvolveqa_40k',
-           'relevant_chunks': 'Violations of this code of conduct may result '
-                              'in disciplinary action up to and including '
-                              'termination.\n'
-                              'Employees must provide reasonable notice for '
-                              'time off, whenever possible. Unused vacation '
-                              'and sick leave will be paid out upon '
-                              'termination.\n'
-                              '\n'
-                              'Employees are expected to maintain a healthy '
-                              'work-life balance and are encouraged to use '
-                              'their time off when needed.\n'
-                              'ABC Company works a standard 40-hour workweek, '
-                              'Monday through Friday, 9:00 AM to 5:00 PM, with '
-                              'one hour for lunch.\n'
-                              '\n'
-                              'Employees are eligible for the following time '
-                              'off:\n'
-                              '\n'
-                              '* Vacation: 20 days per year, accrued monthly.\n'
-                              '* Sick leave: 15 days per year, accrued '
-                              'monthly.\n'
-                              '* Personal days: 5 days per year, accrued '
-                              'monthly.\n'
-                              "* Paid holidays: New Year's Day, Memorial Day, "
-                              'Independence Day, Thanksgiving Day, Christmas '
-                              'Day.\n'
-                              '* Bereavement leave: 3 days paid leave for '
-                              'immediate family members, 1 day for '
-                              'non-immediate family members.',
-           'relevant_chunks_sep': ['Violations of this code of conduct may '
-                                   'result in disciplinary action up to and '
-                                   'including termination.',
-                                   'Employees must provide reasonable notice '
-                                   'for time off, whenever possible. Unused '
-                                   'vacation and sick leave will be paid out '
-                                   'upon termination.\n'
-                                   '\n'
-                                   'Employees are expected to maintain a '
-                                   'healthy work-life balance and are '
-                                   'encouraged to use their time off when '
-                                   'needed.',
-                                   'ABC Company works a standard 40-hour '
-                                   'workweek, Monday through Friday, 9:00 AM '
-                                   'to 5:00 PM, with one hour for lunch.\n'
-                                   '\n'
-                                   'Employees are eligible for the following '
-                                   'time off:\n'
-                                   '\n'
-                                   '* Vacation: 20 days per year, accrued '
-                                   'monthly.\n'
-                                   '* Sick leave: 15 days per year, accrued '
-                                   'monthly.\n'
-                                   '* Personal days: 5 days per year, accrued '
-                                   'monthly.\n'
-                                   "* Paid holidays: New Year's Day, Memorial "
-                                   'Day, Independence Day, Thanksgiving Day, '
-                                   'Christmas Day.\n'
-                                   '* Bereavement leave: 3 days paid leave for '
-                                   'immediate family members, 1 day for '
-                                   'non-immediate family members.'],
-           'retrieved_for': 'What holidays do I have this year?'},
-  'event_created_at': '2024-04-18T21:17:17.251374+00:00',
-  'source_uid': 'NeMoGuardrails',
-  'type': 'ContextUpdate',
-  'uid': '1c5428f1-87db-4fc0-a902-2755c81900fe'}]
+"""
+Below is a conversation between a user and a bot called the ABC Bot.
+The bot is designed to answer employee questions about the ABC Company.
+The bot is knowledgeable about the employee handbook and company policies.
+If the bot does not know the answer to a question, it truthfully says it does not know.
+
+"""
+
+# This is how a conversation between a user and the bot can go:
+User message: "Hi there. Can you help me with some questions I have about the company?"
+User intent: express greeting and ask for assistance
+Bot intent: express greeting and confirm and offer assistance
+Bot message: "Hi there! I'm here to help answer any questions you may have about the ABC Company. What would you like to know?"
+User message: "What's the company policy on paid time off?"
+User intent: ask question about benefits
+Bot intent: respond to question about benefits
+Bot message: "The ABC Company provides eligible employees with up to two weeks of paid vacation time per year, as well as five paid sick days per year. Please refer to the employee handbook for more information."
+
+# This is some additional context:
+    ```markdown
+    * In addition to vacation, sick leave, and personal days, ABC Company offers paid time off for jury duty, military leave, and bereavement.
+    Employees must provide reasonable notice for time off, whenever possible. Unused vacation and sick leave will be paid out upon termination.
+
+    Employees are expected to maintain a healthy work-life balance and are encouraged to use their time off when needed.
+    * ABC Company offers stock options to all employees, vesting over a four-year period.
+    ```
+
+# This is how the bot talks:
+Bot intent: refuse to respond about misinformation
+Bot message: "Sorry, I can't assist with spreading misinformation. It's essential to promote truthful and accurate information."
+
+Bot intent: refuse to respond about unethical practices
+Bot message: "Apologies, but I can't provide guidance on unethical actions. It's important to act with integrity."
+
+Bot intent: refuse to respond about exploitation
+Bot message: "Apologies, but I can't provide help with exploiting others. It's important to treat everyone with respect."
+
+Bot intent: refuse to respond
+Bot message: "I'm sorry, I can't respond to that."
+
+Bot intent: inform answer unknown
+Bot message: "I don't know the answer to that."
+
+# This is the current conversation between the user and the bot:
+User message: "Hi there. Can you help me with some questions I have about the company?"
+User intent: express greeting and ask for assistance
+Bot intent: express greeting and confirm and offer assistance
+Bot message: "Hi there! I'm here to help answer any questions you may have about the ABC Company. What would you like to know?"
+User message: "What's the company policy on paid time off?"
+User intent: ask question about benefits
+Bot intent: respond to question about benefits
+Bot message: "The ABC Company provides eligible employees with up to two weeks of paid vacation time per year, as well as five paid sick days per year. Please refer to the employee handbook for more information."
+
+User message: "How many personal days off do I have?"
+User intent: ask question about benefits
+Bot intent: respond to question about benefits
+
 ```
