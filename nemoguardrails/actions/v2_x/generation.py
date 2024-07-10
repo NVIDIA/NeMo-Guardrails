@@ -52,8 +52,7 @@ from nemoguardrails.llm.filters import colang
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.types import Task
 from nemoguardrails.logging import verbose
-from nemoguardrails.utils import console
-from nemoguardrails.utils import new_uuid
+from nemoguardrails.utils import console, new_uuid
 
 log = logging.getLogger(__name__)
 
