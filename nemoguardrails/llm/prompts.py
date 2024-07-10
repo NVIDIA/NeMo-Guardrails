@@ -121,13 +121,13 @@ def get_prompt(config: RailsConfig, task: Union[str, Task]) -> TaskPrompt:
     task_model = "unknown"
     if config.models:
         _models = [model for model in config.models if model.type == task_name]
-        if not _models: 
+        if not _models:
             _models = [model for model in config.models if model.type == "main"]
 
-        task_model = _models[0].engine 
+        task_model = _models[0].engine
         if _models[0].model:
             task_model += "/" + _models[0].model
-            
+
     task_prompting_mode = "standard"
     if config.prompting_mode:
         # if exists in config, overwrite, else, default to "standard"
