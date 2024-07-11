@@ -42,5 +42,6 @@ class Task(Enum):
     LLAMA_GUARD_CHECK_INPUT = "llama_guard_check_input"
     LLAMA_GUARD_CHECK_OUTPUT = "llama_guard_check_output"
 
-    SELF_CHECK_FACTS = "fact_checking"
+    SELF_CHECK_FACTS = "self_check_facts"
+    FACT_CHECKING = "fact_checking"
     CHECK_HALLUCINATION = "check_hallucination"
