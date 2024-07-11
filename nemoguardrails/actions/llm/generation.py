@@ -374,6 +374,9 @@ class LLMGenerationActions:
                 # If the option to use only the embeddings is activated, we take the first
                 # canonical form.
                 if results and config.rails.dialog.user_messages.embeddings_only:
+                    # TODO: propagate the similarity thresholds here
+                    #   depending on whether a `embeddings_only_fallback_intent` is set or not,
+                    #   it should return the provided intent or let this continue normally.
                     return ActionResult(
                         events=[
                             new_event_dict(
