@@ -105,7 +105,7 @@ def convert_co_file_syntax(file_path):
         # Convert "user ..." to "match UtteranceUserActionFinished()"
         elif line.lstrip().startswith("user ..."):
             line = re.sub(
-                r"(\s*)user \.\.\.", r"\1match UtteranceBotActionFinished()", line
+                r"(\s*)user \.\.\.", r"\1match UtteranceUserActionFinished()", line
             )
 
         # if _is_flow(stripped_line):
@@ -455,7 +455,11 @@ def _write_rails_flows_to_file(file_path, rails_flows):
 
 
 def _remove_rails_flows_from_config(raw_config):
-    del raw_config["rails"]
+    rails_config = raw_config.get("rails", {})
+    rails_config.pop("input", None)
+    rails_config.pop("output", None)
+    raw_config["rails"] = rails_config
+
     return raw_config
 
 
@@ -546,6 +550,7 @@ def migrate(
             if _write_rails_flows_to_file(_rails_co_file_path, rails_flows):
                 total__config_files_changed += 1
 
+            raw_config = get_raw_config(file_path)
             raw_config = _remove_rails_flows_from_config(raw_config)
 
             # NOTE: we are overwriting the original config file. It ruins the order of the keys in the yaml file.
