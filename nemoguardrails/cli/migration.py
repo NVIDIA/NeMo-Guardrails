@@ -50,7 +50,23 @@ def convert_co_file_syntax(file_path):
         stats["lines"] += 1
         original_line = line
 
-        line = _globalize_variable_assignment(line)
+        # Check if the line matches the pattern $variable = ...
+        # use of ellipsis in colang 1.0
+        # Based on https://github.com/NVIDIA/NeMo-Guardrails/blob/ff17a88efe70ed61580a36aaae5739f5aac6dccc/nemoguardrails/colang/v1_0/lang/coyml_parser.py#L610C1-L617C84
+
+        if i > 0 and re.match(r"\s*\$\s*.*\s*=\s*\.\.\.", line):
+            # Extract the variable name
+            variable_match = re.search(r"\s*\$\s*(.*?)\s*=", line)
+            comment_match = re.search(r"# (.*)", lines[i - 1])
+            if variable_match and comment_match:
+                variable = variable_match.group(1)
+                comment = comment_match.group(1)
+                # Extract the leading whitespace
+                leading_whitespace = re.match(r"(\s*)", line).group(1)
+                # Replace the line, preserving the leading whitespace
+                line = f'{leading_whitespace}${variable} = generate_value("{comment}")'
+
+        # line = _globalize_variable_assignment(line)
 
         # Get the next line if it exists
         next_line = lines[i + 1] if i + 1 < len(lines) else None
@@ -101,23 +117,22 @@ def convert_co_file_syntax(file_path):
         line = re.sub(r"execute", "await", line)
 
         # convert snake_case after "await" to CamelCase only if it's a single word, i.e., it is an action not a flow.
-        match = re.search(r"await (.*)", line)
+        match = re.search(r"await (\w+)", line)
         if match:
             action_name = match.group(1)
+            print(action_name)
 
             if "_" in action_name:
                 snake_case = action_name
-                camel_case = utils.snake_to_camelcase(snake_case)
-                if not camel_case.endswith("Action"):
-                    camel_case += "Action"
-                line = line.replace(action_name, camel_case)
-
             elif " " in action_name:
                 snake_case = action_name.replace(" ", "_")
-                camel_case = utils.snake_to_camelcase(snake_case)
-                if not camel_case.endswith("Action"):
-                    camel_case += "Action"
-                line = line.replace(action_name, camel_case)
+            else:
+                snake_case = action_name
+
+            camel_case = utils.snake_to_camelcase(snake_case)
+            if not camel_case.endswith("Action"):
+                camel_case += "Action"
+            line = line.replace(action_name, camel_case)
 
         # Convert "stop" to "abort"
         line = re.sub(r"stop", "abort", line)
