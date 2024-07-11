@@ -18,6 +18,7 @@ import importlib.util
 import json
 import logging
 import os.path
+import re
 import time
 import warnings
 from typing import Any, List, Optional
@@ -252,6 +253,13 @@ def _get_rails(config_ids: List[str]) -> LLMRails:
     for config_id in config_ids:
         base_path = os.path.abspath(app.rails_config_path)
         full_path = os.path.normpath(os.path.join(base_path, config_id))
+
+        # @NOTE: (Rdinu) Reject config_ids that contain dangerous characters or sequences
+        if re.search(r"[\\/]|(\.\.)", config_id):
+            raise ValueError("Invalid config_id.")
+
+        if os.path.commonprefix([full_path, base_path]) != base_path:
+            raise ValueError("Access to the specified path is not allowed.")
 
         rails_config = RailsConfig.from_path(full_path)
 
