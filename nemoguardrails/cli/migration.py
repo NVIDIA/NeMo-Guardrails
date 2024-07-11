@@ -37,6 +37,8 @@ def migrate(
     Args:
         path (str): The path to the directory containing the files to migrate.
         include_main_flow (bool): Whether to add main flow to the files.
+        use_active_decorator (bool): Whether to use the active decorator.
+        from_version(str): The version of the colang files to convert from. Any of "1.0" or "2.0-alpha".
         validate (bool): Whether to validate the files.
     """
     logging.info(
@@ -90,9 +92,7 @@ def _convert_co_file_inter_v2(file_path) -> list:
         stats["lines"] += 1
         original_line = line
 
-        # Apply the given logic
         line = re.sub(r"orwhen", "or when", line)
-        # line = re.sub(r'"""(.*)"""', r'..."\1"', line)
         line = re.sub(r"flow_start_uid", "flow_instance_uid", line)
         line = re.sub(r'r"(.*)"', r'regex("\1")', line)
         line = re.sub(r'"\{\{(.*)\}\}"', r'"{\1}"', line)
