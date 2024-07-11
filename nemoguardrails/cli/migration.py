@@ -125,12 +125,9 @@ def convert_co_file_syntax(file_path):
         elif prev_line == "user said" and re.search(r"\"(.+?)\"", stripped_line):
             stripped_line = re.sub(r"\"(.+?)\"", r'or user said "\1"', stripped_line)
 
-        # keep original indentation
-        indentation = len(line) - len(line.lstrip())
-        new_line = " " * indentation + stripped_line
-        new_lines.append(new_line)
+        new_lines.append(stripped_line)
 
-        if original_line != new_line:
+        if original_line != stripped_line:
             stats["changes"] += 1
 
     return new_lines
