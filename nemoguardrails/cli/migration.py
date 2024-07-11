@@ -73,23 +73,19 @@ def migrate(
     )
 
 
-def convert_colang_2alpha_syntax(file_path) -> list:
+def convert_colang_2alpha_syntax(lines: List[str]) -> List[str]:
     """Convert a co file form v2-alpha to v2-beta
 
     Args:
-        file_path (str): The path to the file to convert.
+        lines (List[str]): The lines of the file to convert
     Returns:
-        list: The new lines of the file after successful migration.
+        List (str): The new lines of the file after successful migration.
     """
-
-    logging.info(f"Converting file: {file_path}")
 
     new_lines = []
     flow_line_index = None
     meta_decorators = []
     stats = {"lines": 0, "changes": 0}
-
-    lines = _read_file_lines(file_path)
 
     for line in lines:
         stats["lines"] += 1
@@ -184,22 +180,18 @@ def convert_colang_2alpha_syntax(file_path) -> list:
     return new_lines
 
 
-def convert_colang_1_file_syntax(file_path) -> list:
+def convert_colang_1_syntax(lines: List[str]) -> List[str]:
     """Converts a co file from v1 format to v2.
 
     Args:
-        file_path (str): The path to the file to convert.
+        lines (List[str]): The lines of the file to convert.
     Returns:
-        list: The new lines of the file after successful migration.
+        List: The new lines of the file after successful migration.
     """
-
-    logging.info(f"Converting file: {file_path}")
 
     new_lines = []
     prev_line = None
     stats = {"lines": 0, "changes": 0}
-
-    lines = _read_file_lines(file_path)
 
     for i, line in enumerate(lines):
         stats["lines"] += 1
@@ -752,14 +744,16 @@ def _process_co_files(
     checked_directories = set()
 
     converter = {
-        "1.0": convert_colang_1_file_syntax,
+        "1.0": convert_colang_1_syntax,
         "2.0-alpha": convert_colang_2alpha_syntax,
     }
 
     for file_path in co_files_to_process:
         logging.info(f"Converting colang files in path: {file_path}")
 
-        new_lines = converter[from_version](file_path)
+        lines = _read_file_lines(file_path)
+
+        new_lines = converter[from_version](lines)
 
         if validate:
             _validate_file(file_path, new_lines)
@@ -769,6 +763,7 @@ def _process_co_files(
                 new_lines = _generate_main_flow(new_lines)
             if use_active_decorator:
                 new_lines = _add_active_decorator(new_lines)
+
         if new_lines and from_version == "2.0-alpha":
             directory = os.path.dirname(file_path)
             if directory not in checked_directories:
@@ -776,13 +771,8 @@ def _process_co_files(
                 _add_main_co_file(main_file_path)
                 checked_directories.add(directory)
             _remove_files_from_path(directory, _FILES_TO_EXCLUDE_ALPHA)
-        if (
-            file_path not in _FILES_TO_EXCLUDE_ALPHA
-            and _write_transformed_content_and_rename_original(
-                file_path,
-                new_lines,
-                co_extension=f".v{from_version}.co".replace(".0", ""),
-            )
+        if file_path not in _FILES_TO_EXCLUDE_ALPHA and _write_to_file(
+            file_path, new_lines
         ):
             total_files_changed += 1
 
