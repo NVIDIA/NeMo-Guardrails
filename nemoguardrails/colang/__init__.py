@@ -90,7 +90,7 @@ def _is_colang_v2(content):
     content = re.sub(r"#.*$", "", content, flags=re.MULTILINE)
     # Check for v1 keyword at the beginning of a line
     lines = content.split("\n")
-    if any(re.match(r"^define", line) for line in lines):
+    if any(re.match(r"^\s*define", line) for line in lines):
         return False
     # Check for v2 keyword
     if "import" in content:
