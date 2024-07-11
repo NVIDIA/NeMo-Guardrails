@@ -220,7 +220,7 @@ NeMo Guardrails comes with a set of [built-in guardrails](https://docs.nvidia.co
 
 > **NOTE**: The built-in guardrails are only intended to enable you to get started quickly with NeMo Guardrails. For production use cases, further development and testing of the rails are needed.
 
-Currently, the guardrails library includes guardrails for: [jailbreak detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#jailbreak-detection-heuristics), [output moderation](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#self-check-output), [fact-checking](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#fact-checking), [sensitive data detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#presidio-based-sensitive-data-detection), [hallucination detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#hallucination-detection) and [input moderation using ActiveFence](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#activefence) and [hallucination detection for RAG applications using Got It AI's TruthChecker API](docs/user_guides/guardrails-library.md#got-it-ai).
+Currently, the guardrails library includes guardrails for: [jailbreak detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#jailbreak-detection-heuristics), [output moderation](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#self-check-output), [fact-checking](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#fact-checking), [sensitive data detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#presidio-based-sensitive-data-detection), [hallucination detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#hallucination-detection), [input moderation using ActiveFence](<<https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#activefence>), [hallucination detection for RAG applications using Got It AI's TruthChecker API](docs/user_guides/guardrails-library.md#got-it-ai), and [RAG hallucination detection using Patronus Lynx](docs/user_guides/guardrails-library.md#patronus-lynx-based-rag-hallucination-detection).
 
 ## CLI
 
@@ -283,7 +283,7 @@ Evaluating the safety of a LLM-based conversational application is a complex tas
 
 ## How is this different?
 
-There are many ways guardrails can be added to an LLM-based conversational application. For example: explicit moderation endpoints (e.g., OpenAI, ActiveFence), critique chains (e.g. constitutional chain), parsing the output (e.g. guardrails.ai), individual guardrails (e.g., LLM-Guard), hallucination detection for RAG applications (e.g., Got It AI).
+There are many ways guardrails can be added to an LLM-based conversational application. For example: explicit moderation endpoints (e.g., OpenAI, ActiveFence), critique chains (e.g. constitutional chain), parsing the output (e.g. guardrails.ai), individual guardrails (e.g., LLM-Guard), hallucination detection for RAG applications (e.g., Got It AI, Patronus Lynx).
 
 NeMo Guardrails aims to provide a flexible toolkit that can integrate all these complementary approaches into a cohesive LLM guardrails layer. For example, the toolkit provides out-of-the-box integration with ActiveFence, AlignScore and LangChain chains.
 
