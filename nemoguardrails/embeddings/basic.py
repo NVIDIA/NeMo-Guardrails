@@ -297,5 +297,5 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
             return [
                 index
                 for index, distance in zip(indices, distances)
-                if distance <= threshold
+                if (1 - distance / 2) >= threshold
             ]
