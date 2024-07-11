@@ -463,6 +463,47 @@ def _remove_rails_flows_from_config(raw_config):
     return raw_config
 
 
+def _comment_rails_flows_in_config(file_path):
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+
+    input_section = False
+    output_section = False
+    section_indent = None
+    highest_indent = None
+    section_indent = 0
+    hit_rails_section = False
+    for i, line in enumerate(lines):
+        while not hit_rails_section:
+            if "rails:" in line:
+                hit_rails_section = True
+                break
+            i += 1
+            line = lines[i]
+
+        stripped_line = line.lstrip()
+        indent = len(line) - len(stripped_line)
+        if highest_indent is None and indent > 0:
+            highest_indent = indent
+        if "input:" in stripped_line and indent == highest_indent:
+            input_section = True
+            section_indent = indent
+        if "output:" in stripped_line and indent == highest_indent:
+            output_section = True
+            section_indent = indent
+        if (input_section or output_section) and indent >= section_indent:
+            lines[i] = line[: line.index(stripped_line[0])] + "#" + stripped_line
+        if indent < section_indent:
+            input_section = False
+            output_section = False
+
+    with open(file_path, "w") as file:
+        file.writelines(lines)
+
+    with open(file_path, "w") as file:
+        file.writelines(lines)
+
+
 def migrate(
     path,
     include_main_flow=False,
@@ -544,18 +585,14 @@ def migrate(
 
         if rails_flows:
             # at same level as config file we generate a _rails.co file
-            # _rails.co file is the file that contains the rails flows
+            # config_rails.co file is the file that contains the rails flows
+
             _rails_co_file_path = Path(file_path).parent / "_rails.co"
 
             if _write_rails_flows_to_file(_rails_co_file_path, rails_flows):
                 total__config_files_changed += 1
 
-            raw_config = get_raw_config(file_path)
-            raw_config = _remove_rails_flows_from_config(raw_config)
-
-            # NOTE: we are overwriting the original config file. It ruins the order of the keys in the yaml file.
-            with open(file_path, "w") as f:
-                yaml.dump(raw_config, f)
+            _comment_rails_flows_in_config(file_path)
 
     logging.info(
         f"Finished migration for path: {path}. Total files changed: {total_files_changed}"
