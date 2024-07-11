@@ -59,7 +59,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embedding_engine=None,
         index=None,
         cache_config: Union[EmbeddingsCacheConfig, Dict[str, Any]] = None,
-        search_threshold: Optional[float] = None,
+        search_threshold: float = float("inf"),
         use_batching: bool = False,
         max_batch_size: int = 10,
         max_batch_hold: float = 0.01,
@@ -291,8 +291,11 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     def _filter_results(
         indices: List[int], distances: List[float], threshold: float
     ) -> List[int]:
-        return [
-            index
-            for index, distance in zip(indices, distances)
-            if distance <= threshold
-        ]
+        if threshold == float("inf"):
+            return indices
+        else:
+            return [
+                index
+                for index, distance in zip(indices, distances)
+                if distance <= threshold
+            ]
