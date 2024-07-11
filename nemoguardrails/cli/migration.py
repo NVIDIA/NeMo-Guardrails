@@ -38,7 +38,7 @@ def migrate(
         path (str): The path to the directory containing the files to migrate.
         include_main_flow (bool): Whether to add main flow to the files.
         use_active_decorator (bool): Whether to use the active decorator.
-        from_version(str): The version of the colang files to convert from. Any of "1.0" or "2.0-alpha".
+        from_version(str): The version of the colang files to convert from. Any of '1.0' or '2.0-alpha'.
         validate (bool): Whether to validate the files.
     """
     logging.info(
@@ -70,7 +70,7 @@ def migrate(
     )
 
 
-def _convert_co_file_inter_v2(file_path) -> list:
+def convert_colang_2alpha_syntax(file_path) -> list:
     """Convert a co file form v2-alpha to v2-beta
 
     Args:
@@ -172,7 +172,7 @@ def _convert_co_file_inter_v2(file_path) -> list:
     return new_lines
 
 
-def convert_co_file_syntax(file_path) -> list:
+def convert_colang_1_file_syntax(file_path) -> list:
     """Converts a co file from v1 format to v2.
 
     Args:
@@ -719,8 +719,8 @@ def _process_co_files(
 
     total_files_changed = 0
     converter = {
-        "1.0": convert_co_file_syntax,
-        "2.0-alpha": _convert_co_file_inter_v2,
+        "1.0": convert_colang_1_file_syntax,
+        "2.0-alpha": convert_colang_2alpha_syntax,
     }
 
     for file_path in co_files_to_process:
