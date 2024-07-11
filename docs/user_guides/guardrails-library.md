@@ -729,12 +729,12 @@ rails:
       - cleanlab trustworthiness
 ```
 
-The `cleanlab trustworthiness` flow uses trustworthiness score with an 0.5 threshold to decide if the output should be allowed or not (i.e., if the trustworthiness score is below the threshold, it is considered a ’bad’ response).<br />
-In question-answering applications, a ’good’ response would correspond to whether the answer is correct or not. In general open-ended applications, ‘good’ corresponds to whether the response is helpful/informative and clearly better than alternative hypothetical responses. For extremely open-ended requests, trustworthiness scores may not be as useful as for requests that are questions seeking a correct answer.
+The `cleanlab trustworthiness` flow uses trustworthiness score with a default threshold of 0.5 to determine if the output should be allowed or not (i.e., if the trustworthiness score is below the threshold, it is considered a "untrustowrthy" response).<br />
+A high trustworthiness score generally correlates with high-quality responses. In a question-answering application, high trustworthiness is indicative of correct responses, while in general open-ended applications, a high score corresponds to the response being helpful and informative. Trustworthiness scores are less useful for creative or open-ended requests
 
-This score is calculated using a number of mathematical operations which is explained on [Cleanlab's tutorial](https://help.cleanlab.ai/tutorials/tlm/#how-does-the-tlm-trustworthiness-score-work).
+The mathematical derivation of the score is explained in [Cleanlab's documentation](https://help.cleanlab.ai/tutorials/tlm/#how-does-the-tlm-trustworthiness-score-work), and you can also access [trustworthiness score benchmarks](https://cleanlab.ai/blog/trustworthy-language-model/).
 
-To customize the threshold of trustworthiness score, you have to overwrite the [default flows](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/cleanlab/flows.co) in your config. For example, to change the threshold for `cleanlab trustworthiness` to 0.7, you can add the following flow to your config:
+You can easily change the cutoff value for the trustworthiness score by adjusting the threshold in the [config](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/cleanlab/flows.co). For example, to change the threshold to 0.7, you can add the following flow to your config:
 
 ```colang
 define subflow cleanlab trustworthiness
