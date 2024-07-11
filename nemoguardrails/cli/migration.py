@@ -90,14 +90,23 @@ def convert_co_file_syntax(file_path):
         stripped_line = re.sub(r"execute", "await", stripped_line)
 
         # convert snake_case after "await" to CamelCase only if it's a single word, i.e., it is an action not a flow.
-        match = re.search(r"await (\w+)", stripped_line)
+        match = re.search(r"await (.*)", stripped_line)
         if match:
-            snake_case = match.group(1)
-            if "_" in snake_case:
+            action_name = match.group(1)
+
+            if "_" in action_name:
+                snake_case = action_name
                 camel_case = utils.snake_to_camelcase(snake_case)
                 if not camel_case.endswith("Action"):
                     camel_case += "Action"
-                stripped_line = stripped_line.replace(snake_case, camel_case)
+                stripped_line = stripped_line.replace(action_name, camel_case)
+
+            elif " " in action_name:
+                snake_case = action_name.replace(" ", "_")
+                camel_case = utils.snake_to_camelcase(snake_case)
+                if not camel_case.endswith("Action"):
+                    camel_case += "Action"
+                stripped_line = stripped_line.replace(action_name, camel_case)
 
         # Convert "stop" to "abort"
         stripped_line = re.sub(r"stop", "abort", stripped_line)
