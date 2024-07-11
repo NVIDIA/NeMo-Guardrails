@@ -140,6 +140,8 @@ class LLMRails:
                             content = parse_colang_file(
                                 file, content=f.read(), version=config.colang_version
                             )
+                            if not content:
+                                continue
 
                         # We mark all the flows coming from the guardrails library as system flows.
                         for flow_config in content["flows"]:
@@ -257,7 +259,11 @@ class LLMRails:
 
     def _validate_config(self):
         """Runs additional validation checks on the config."""
-        existing_flows_names = set([flow.get("id") for flow in self.config.flows])
+
+        if self.config.colang_version == "1.0":
+            existing_flows_names = set([flow.get("id") for flow in self.config.flows])
+        else:
+            existing_flows_names = set([flow.get("name") for flow in self.config.flows])
 
         for flow_name in self.config.rails.input.flows:
             if flow_name not in existing_flows_names:

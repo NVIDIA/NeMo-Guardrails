@@ -18,6 +18,7 @@ import importlib.resources as pkg_resources
 import json
 import os
 import random
+import re
 import uuid
 from collections import namedtuple
 from datetime import datetime, timezone
@@ -31,6 +32,9 @@ from rich.console import Console
 console = Console()
 
 secure_random = random.SystemRandom()
+
+_FIRST_CAP_PATTERN = re.compile("(.)([A-Z][a-z0-9]+)")
+_ALL_CAP_PATTERN = re.compile("([a-z0-9])([A-Z])")
 
 
 def init_random_seed(seed: int) -> None:
@@ -263,3 +267,28 @@ def get_examples_data_path(file_path: str) -> str:
 def get_chat_ui_data_path(file_path: str) -> str:
     """Helper to get the path to the chat-ui data directory."""
     return get_data_path("nemoguardrails", f"chat-ui/{file_path}")
+
+
+def camelcase_to_snakecase(name: str) -> str:
+    """Converts a CamelCase string to snake_case.
+
+    Args:
+        name (str): The CamelCase string to convert.
+
+    Returns:
+        str: The converted snake_case string.
+    """
+    s1 = _FIRST_CAP_PATTERN.sub(r"\1_\2", name)
+    return _ALL_CAP_PATTERN.sub(r"\1_\2", s1).lower()
+
+
+def snake_to_camelcase(name: str) -> str:
+    """Converts a snake_case string to CamelCase.
+
+    Args:
+        name (str): The snake_case string to convert.
+
+    Returns:
+        str: The converted CamelCase string.
+    """
+    return "".join(n.capitalize() for n in name.split("_"))
