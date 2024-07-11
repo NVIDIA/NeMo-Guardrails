@@ -141,6 +141,8 @@ class LLMRails:
                             content = parse_colang_file(
                                 file, content=f.read(), version=config.colang_version
                             )
+                            if not content:
+                                continue
 
                         # We mark all the flows coming from the guardrails library as system flows.
                         for flow_config in content["flows"]:
