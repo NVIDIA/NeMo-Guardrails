@@ -66,7 +66,7 @@ def convert_co_file_syntax(file_path):
                 # Replace the line, preserving the leading whitespace
                 line = f'{leading_whitespace}${variable} = generate_value("{comment}")'
 
-        # line = _globalize_variable_assignment(line)
+        line = _globalize_variable_assignment(line)
 
         # Get the next line if it exists
         next_line = lines[i + 1] if i + 1 < len(lines) else None
@@ -120,10 +120,14 @@ def convert_co_file_syntax(file_path):
         match = re.search(r"await (\w+)", line)
         if match:
             action_name = match.group(1)
-            print(action_name)
 
             if "_" in action_name:
                 snake_case = action_name
+                camel_case = utils.snake_to_camelcase(snake_case)
+                if not camel_case.endswith("Action"):
+                    camel_case += "Action"
+                line = line.replace(action_name, camel_case)
+
             elif " " in action_name:
                 snake_case = action_name.replace(" ", "_")
             else:
