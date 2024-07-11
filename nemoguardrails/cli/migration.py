@@ -434,7 +434,7 @@ def _remove_rails_flows_from_config(raw_config):
 def migrate(
     path,
     include_main_flow=False,
-    apply_active_decorator: bool = False,
+    use_active_decorator: bool = True,
     validate: bool = True,
 ):
     """Migrates all .co files in a directory from the old format to the new format.
@@ -446,7 +446,7 @@ def migrate(
     """
     logging.info(f"Starting migration for path: {path}")
 
-    if include_main_flow and apply_active_decorator:
+    if include_main_flow and use_active_decorator:
         raise ValueError(
             "Cannot use both main flow and active decorator at the same time."
         )
@@ -496,7 +496,7 @@ def migrate(
                         f"Validation failed for file: {file_path}. Error: {str(e)}"
                     )
                     # continue
-            if apply_active_decorator:
+            if use_active_decorator:
                 new_lines = add_active_decorator(new_lines)
 
             if _write_transformed_content_and_rename_original(file_path, new_lines):
