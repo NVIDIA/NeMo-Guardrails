@@ -17,12 +17,15 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 import yaml
 
 from nemoguardrails import utils
 from nemoguardrails.colang import parse_colang_file
+
+_LIBS_USED = set()
+_FILES_TO_EXCLUDE_ALPHA = ["ccl.co", "core_flo_library.co"]
 
 
 def migrate(
@@ -115,7 +118,10 @@ def convert_colang_2alpha_syntax(file_path) -> list:
         line = line.replace("track bot talking state", "tracking bot talking state")
         line = line.replace("track user talking state", "tracking user talking state")
         line = line.replace("track user utterance state", "tracking user talking state")
-        # elif "llm.co" in file_path:
+
+        # we must import core library
+        _confirm_and_tag_replace(line, original_line, "core")
+
         line = line.replace("poll llm request response", "polling llm request response")
         line = line.replace(
             "trigger user intent for unhandled user utterance",
@@ -130,7 +136,10 @@ def convert_colang_2alpha_syntax(file_path) -> list:
         line = line.replace(
             "respond to unhandled user intent", "continuation on unhandled user intent"
         )
-        # elif "avatars.co" in file_path:
+
+        # we must import llm library
+        _confirm_and_tag_replace(line, original_line, "llm")
+
         line = line.replace(
             "track visual choice selection state", "track visual choice selection state"
         )
@@ -141,6 +150,9 @@ def convert_colang_2alpha_syntax(file_path) -> list:
         line = line.replace("manage talking posture", "managing talking posture")
         line = line.replace("manage thinking posture", "managing thinking posture")
         line = line.replace("manage bot postures", "managing bot postures")
+
+        # we must import avatar library
+        _confirm_and_tag_replace(line, original_line, "avatars")
 
         # Apply decorators to flow definitions
         if line.strip().startswith("flow "):
@@ -306,9 +318,6 @@ def convert_colang_1_file_syntax(file_path) -> list:
     return new_lines
 
 
-# def _remove_
-
-
 def _write_transformed_content_and_rename_original(
     file_path, new_lines, co_extension=".v1.co"
 ):
@@ -411,7 +420,7 @@ def _revise_anonymous_flow(flow_content: str, first_message: str) -> str:
     # return re.sub(r"flow\s*$", f"flow anonymous_{uuid.uuid4().hex}", flow_content)
 
 
-def get_flow_ids(content: str) -> list:
+def _get_flow_ids(content: str) -> list:
     """Returns the flow ids in the content.
 
     Args:
@@ -442,7 +451,7 @@ def get_flow_ids(content: str) -> list:
     return root_flow_pattern.findall(content)
 
 
-def get_flow_ids_from_newlines(new_lines: list) -> list:
+def _get_flow_ids_from_newlines(new_lines: list) -> list:
     """Returns the flow ids in the new lines.
     Args:
         new_lines (list): The new lines to search for flow ids.
@@ -454,10 +463,32 @@ def get_flow_ids_from_newlines(new_lines: list) -> list:
     # ['my_flow is better than', 'another_flow']
     """
     content = "\n".join(new_lines)
-    return get_flow_ids(content)
+    return _get_flow_ids(content)
 
 
-def generate_main_flow(new_lines: list) -> list:
+def _add_imports(new_lines: list, libraries: list[str]) -> list:
+    for library in libraries:
+        new_lines.insert(0, f"import {library}\n")
+    return new_lines
+
+
+def _add_main_co_file(file_path: str, libraries: Optional[list[str]] = None) -> bool:
+    """Add the main co file to the given file path.
+    Args:
+        file_path (str): The path to the file to add the main co file to.
+        libraries (list[str]): The list of libraries to import in the main co file.
+    Returns:
+        bool: True if the main co file was added successfully, False otherwise.
+    """
+    new_lines = _read_file_lines(file_path)
+    if not libraries:
+        libraries = list(_LIBS_USED)
+    new_lines = _add_imports(new_lines, libraries)
+    # Add the main flow at the beginning of the file
+    return _write_to_file(file_path, new_lines)
+
+
+def _generate_main_flow(new_lines: list) -> list:
     """Adds a 'main' flow to the new lines that activates all other flows.
 
     The 'main' flow is added at the beginning of the new lines. It includes an 'activate' command for each flow id found in the new lines.
@@ -479,7 +510,7 @@ def generate_main_flow(new_lines: list) -> list:
     main_flow = ["flow main"]
 
     # Add an 'activate' command for each flow id in the new lines
-    flow_ids = get_flow_ids_from_newlines(new_lines)
+    flow_ids = _get_flow_ids_from_newlines(new_lines)
     # one level indentation
     _INDENT = "  "
 
@@ -496,7 +527,7 @@ def generate_main_flow(new_lines: list) -> list:
     return new_lines
 
 
-def add_active_decorator(new_lines: list) -> list:
+def _add_active_decorator(new_lines: list) -> list:
     """Adds an '@active' decorator above each flow id in the new lines.
 
     Args:
@@ -522,7 +553,7 @@ def add_active_decorator(new_lines: list) -> list:
     return decorated_lines
 
 
-def get_raw_config(config_path: str):
+def _get_raw_config(config_path: str):
     """read the yaml file and get rails key"""
 
     if config_path.endswith(".yaml") or config_path.endswith(".yml"):
@@ -532,7 +563,7 @@ def get_raw_config(config_path: str):
     return raw_config
 
 
-def get_rails_flows(raw_config):
+def _get_rails_flows(raw_config):
     """Extracts the list of flows from the raw_config dictionary.
 
     Args:
@@ -553,7 +584,7 @@ def get_rails_flows(raw_config):
     return flows
 
 
-def generate_rails_flows(flows):
+def _generate_rails_flows(flows):
     """Generates flow definitions from the list of flows.
     Args:
         flows (dict): The dictionary of flows.
@@ -718,6 +749,8 @@ def _process_co_files(
     """
 
     total_files_changed = 0
+    checked_directories = set()
+
     converter = {
         "1.0": convert_colang_1_file_syntax,
         "2.0-alpha": convert_colang_2alpha_syntax,
@@ -733,11 +766,23 @@ def _process_co_files(
 
         if new_lines and from_version == "1.0":
             if include_main_flow:
-                new_lines = generate_main_flow(new_lines)
+                new_lines = _generate_main_flow(new_lines)
             if use_active_decorator:
-                new_lines = add_active_decorator(new_lines)
-        if _write_transformed_content_and_rename_original(
-            file_path, new_lines, co_extension=f".v{from_version}.co".replace(".0", "")
+                new_lines = _add_active_decorator(new_lines)
+        if new_lines and from_version == "2.0-alpha":
+            directory = os.path.dirname(file_path)
+            if directory not in checked_directories:
+                main_file_path = _create_main_co_if_not_exists(file_path)
+                _add_main_co_file(main_file_path)
+                checked_directories.add(directory)
+            _remove_files_from_path(directory, _FILES_TO_EXCLUDE_ALPHA)
+        if (
+            file_path not in _FILES_TO_EXCLUDE_ALPHA
+            and _write_transformed_content_and_rename_original(
+                file_path,
+                new_lines,
+                co_extension=f".v{from_version}.co".replace(".0", ""),
+            )
         ):
             total_files_changed += 1
 
@@ -778,9 +823,9 @@ def _process_config_files(config_files_to_process: List[str]) -> int:
 
     for file_path in config_files_to_process:
         logging.info(f"Converting config files in path: {file_path}")
-        raw_config = get_raw_config(file_path)
+        raw_config = _get_raw_config(file_path)
 
-        rails_flows = generate_rails_flows(get_rails_flows(raw_config))
+        rails_flows = _generate_rails_flows(_get_rails_flows(raw_config))
 
         if rails_flows:
             _rails_co_file_path = Path(file_path).parent / "_rails.co"
@@ -801,3 +846,38 @@ def _read_file_lines(file_path):
         logging.error(f"Failed to read file: {file_path}. Error: {str(e)}")
         return []
     return lines
+
+
+def _confirm_and_tag_replace(line, original_line, name):
+    if original_line != line:
+        _LIBS_USED.add(name)
+
+
+def _create_main_co_if_not_exists(file_path):
+    """Check if the main co file exists in the directory of the file.
+
+    If the main co file does not exist, it creates an empty main co file in the directory of the given file.
+
+    Args:
+        file_path (str): The path to the file to check for the main co file.
+    """
+    directory = os.path.dirname(file_path)
+    main_file_path = os.path.join(directory, "main.co")
+
+    if not os.path.exists(main_file_path):
+        # create an empty file
+        open(main_file_path, "w").close()
+    return main_file_path
+
+
+def _remove_files_from_path(path, filenames: list[str]):
+    """Remove files from the path.
+
+    Args:
+        path (str): The path to the directory to remove files from.
+        filenames (list[str]): The list of filenames to remove.
+    """
+    for filename in filenames:
+        file_path = os.path.join(path, filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
