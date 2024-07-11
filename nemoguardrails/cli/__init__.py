@@ -171,12 +171,8 @@ def convert(
         default=False,
         help="If the migration should validate the output using Colang Parser.",
     ),
-    include_main_flow: bool = typer.Option(
-        default=False,
-        help="If the migration should add a main flow to the output.",
-    ),
-    apply_active_decorator: bool = typer.Option(
-        default=False,
+    use_active_decorator: bool = typer.Option(
+        default=True,
         help="If the migration should use the active decorator.",
     ),
 ):
@@ -189,8 +185,7 @@ def convert(
 
     migrate(
         path=absolute_path,
-        include_main_flow=include_main_flow,
-        apply_active_decorator=apply_active_decorator,
+        use_active_decorator=use_active_decorator,
         validate=validate,
     )
 
@@ -216,6 +211,6 @@ def version_callback(value: bool):
 def cli(
     _: Optional[bool] = typer.Option(
         None, "-v", "--version", callback=version_callback, is_eager=True
-    )
+    ),
 ):
     pass
