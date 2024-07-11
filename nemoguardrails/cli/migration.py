@@ -24,13 +24,13 @@ from nemoguardrails import utils
 from nemoguardrails.colang import parse_colang_file
 
 
-def convert_co_file_syntax(file_path):
+def convert_co_file_syntax(file_path) -> list:
     """Converts a co file from v1 format to v2.
 
     Args:
         file_path (str): The path to the file to convert.
     Returns:
-        bool: True if the file was successfully converted, False otherwise.
+        list: The new lines of the file after successful migration.
     """
 
     logging.info(f"Converting file: {file_path}")
