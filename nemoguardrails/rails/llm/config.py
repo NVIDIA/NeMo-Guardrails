@@ -24,6 +24,7 @@ from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
+from nemoguardrails.colang.v2_x.lang.utils import format_colang_parsing_error_message
 from nemoguardrails.colang.v2_x.runtime.errors import ColangParsingError
 
 log = logging.getLogger(__name__)
@@ -487,7 +488,7 @@ def _join_config(dest_config: dict, additional_config: dict):
     ]
 
     for field in additional_fields:
-        if additional_config.get(field):
+        if field in additional_config:
             dest_config[field] = additional_config[field]
 
     # TODO: Rethink the best way to parse and load yaml config files
@@ -636,12 +637,14 @@ def _parse_colang_files_recursively(
 
         with open(current_path, "r", encoding="utf-8") as f:
             try:
+                content = f.read()
                 _parsed_config = parse_colang_file(
-                    current_file, content=f.read(), version=colang_version
+                    current_file, content=content, version=colang_version
                 )
             except Exception as e:
                 raise ColangParsingError(
-                    f"Error while parsing Colang file: {current_path}"
+                    f"Error while parsing Colang file: {current_path}\n"
+                    + format_colang_parsing_error_message(e, content)
                 ) from e
 
             # We join only the "import_paths" field in the config for now
@@ -735,7 +738,7 @@ class RailsConfig(BaseModel):
     # will be used for those tasks. Models like dolly don't allow for a temperature of 0.0,
     # for example, in which case a custom one can be set.
     lowest_temperature: Optional[float] = Field(
-        default=0.0,
+        default=0.001,
         description="The lowest temperature that should be used for the LLM.",
     )
 
@@ -814,6 +817,13 @@ class RailsConfig(BaseModel):
         ):
             raise ValueError(
                 "You must provide a `llama_guard_check_output` prompt template."
+            )
+        if (
+            "patronus lynx check output hallucination" in enabled_output_rails
+            and "patronus_lynx_check_output_hallucination" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `patronus_lynx_check_output_hallucination` prompt template."
             )
 
         if (

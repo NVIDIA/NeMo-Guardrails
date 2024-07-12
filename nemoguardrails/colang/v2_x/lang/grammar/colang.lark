@@ -85,6 +85,7 @@ capture_ref: "as" var_name
 // A spec includes name, arguments and potentially members access.
 // Example members: .Finished(), .action
 spec: spec_name [classic_arguments | simple_arguments] (spec_member)* [capture_ref]
+    | "(" spec_name [classic_arguments | simple_arguments] ")" (spec_member)* [capture_ref]
     | var_name (spec_member)* [capture_ref]
 spec_member: "." name [classic_arguments]
 
@@ -221,8 +222,8 @@ _NEWLINE: (/\r?\n[\t ]*/)+
 
 // Primitive values
 
-STRING: /i?("(?!"").*?(?<!\\)(\\\\)*?"|i?'(?!'').*?(?<!\\)(\\\\)*?')/i
-LONG_STRING: /(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
+STRING: /(\.\.\.\s*)?("(?!"").*?(?<!\\)(\\\\)*?"|(\.\.\.\s*)?'(?!'').*?(?<!\\)(\\\\)*?')/i
+LONG_STRING: /(\.\.\.\s*)?(""".*?(?<!\\)(\\\\)*?"""|(\.\.\.\s*)?'''.*?(?<!\\)(\\\\)*?''')/is
 
 _SPECIAL_DEC: "0".."9"        ("_"?  "0".."9"                       )*
 DEC_NUMBER:   "1".."9"        ("_"?  "0".."9"                       )*

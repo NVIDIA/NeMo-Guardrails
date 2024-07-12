@@ -27,6 +27,7 @@ from nemoguardrails.actions.actions import ActionResult
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.runtime import Runtime
 from nemoguardrails.colang.v2_x.lang.colang_ast import Decorator, Flow
+from nemoguardrails.colang.v2_x.lang.utils import format_colang_parsing_error_message
 from nemoguardrails.colang.v2_x.runtime.errors import (
     ColangRuntimeError,
     ColangSyntaxError,
@@ -82,38 +83,44 @@ class RuntimeV2_x(Runtime):
                 version="2.x",
                 include_source_mapping=True,
             )
+
+            added_flows: List[str] = []
+            for flow in parsed_flow["flows"]:
+                if flow.name in state.flow_configs:
+                    log.warning("Flow '%s' already exists! Not loaded!", flow.name)
+                    break
+
+                flow_config = FlowConfig(
+                    id=flow.name,
+                    elements=expand_elements(flow.elements, state.flow_configs),
+                    decorators=convert_decorator_list_to_dictionary(flow.decorators),
+                    parameters=flow.parameters,
+                    return_members=flow.return_members,
+                    source_code=flow.source_code,
+                )
+
+                # Alternatively, we could through an exceptions
+                # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
+
+                # Print out expanded flow elements
+                # json.dump(flow_config, sys.stdout, indent=4, cls=EnhancedJsonEncoder)
+
+                initialize_flow(state, flow_config)
+
+                # Add flow config to state.flow_configs
+                state.flow_configs.update({flow.name: flow_config})
+
+                added_flows.append(flow.name)
+
+            return added_flows
+
         except Exception as e:
-            log.warning("Failed parsing a generated flow\n%s\n%s", flow_content, e)
-            return []
-            # Alternatively, we could through an exceptions
-            # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
-
-        added_flows: List[str] = []
-        for flow in parsed_flow["flows"]:
-            if flow.name in state.flow_configs:
-                log.warning("Flow '%s' already exists! Not loaded!", flow.name)
-                break
-
-            flow_config = FlowConfig(
-                id=flow.name,
-                elements=expand_elements(flow.elements, state.flow_configs),
-                decorators=convert_decorator_list_to_dictionary(flow.decorators),
-                parameters=flow.parameters,
-                return_members=flow.return_members,
-                source_code=flow.source_code,
+            log.warning(
+                "Failed parsing a generated flow\n%s\n%s",
+                flow_content,
+                format_colang_parsing_error_message(e, flow_content),
             )
-
-            # Print out expanded flow elements
-            # json.dump(flow_config, sys.stdout, indent=4, cls=EnhancedJsonEncoder)
-
-            initialize_flow(state, flow_config)
-
-            # Add flow config to state.flow_configs
-            state.flow_configs.update({flow.name: flow_config})
-
-            added_flows.append(flow.name)
-
-        return added_flows
+            return []
 
     async def _remove_flows_action(self, state: "State", **args: dict) -> None:
         log.info("Start RemoveFlowsAction! %s", args)
@@ -499,7 +506,7 @@ class RuntimeV2_x(Runtime):
                         run_to_completion(state, new_event)
                         new_event = None
                     except Exception as e:
-                        log.warning("Colang error!", exc_info=True)
+                        log.warning("Colang runtime error!", exc_info=True)
                         new_event = Event(
                             name="ColangError",
                             arguments={
@@ -527,7 +534,7 @@ class RuntimeV2_x(Runtime):
 
                         # If it's an instant action, we finish it right away.
                         if instant_actions and action_name in instant_actions:
-                            finished_event_data = {
+                            finished_event_data: dict = {
                                 "action_name": action_name,
                                 "start_action_event": out_event,
                                 "return_value": None,
@@ -581,9 +588,6 @@ class RuntimeV2_x(Runtime):
                                 if main_flow_uid not in self.async_actions:
                                     self.async_actions[main_flow_uid] = []
                                 self.async_actions[main_flow_uid].append(local_action)
-
-                            # We need to feedback the start events of the local actions
-                            input_events.append(out_event)
                         else:
                             output_events.append(out_event)
                     else:
@@ -596,8 +600,12 @@ class RuntimeV2_x(Runtime):
                 ) = await self._get_async_actions_finished_events(main_flow_uid)
                 local_action_finished_events.extend(new_local_action_finished_events)
 
-            # We clear the input events
-            input_events = []
+            input_events.clear()
+
+            # If we have outgoing events we are also processing them as input events
+            if state.outgoing_events:
+                input_events.extend(state.outgoing_events)
+                continue
 
             input_events.extend(local_action_finished_events)
             local_action_finished_events = []
@@ -708,6 +716,7 @@ def create_flow_configs_from_flow_list(flows: List[Flow]) -> Dict[str, FlowConfi
             parameters=flow.parameters,
             return_members=flow.return_members,
             source_code=flow.source_code,
+            source_file=flow.file_info["name"],
         )
 
         if config.is_override:

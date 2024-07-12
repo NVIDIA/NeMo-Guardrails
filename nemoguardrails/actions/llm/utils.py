@@ -498,6 +498,14 @@ def get_initial_actions(strings: List[str]) -> List[str]:
     return previous_strings
 
 
+def get_first_user_intent(strings: List[str]) -> Optional[str]:
+    """Returns first user intent."""
+    for string in strings:
+        if string.startswith("user intent: "):
+            return string.replace("user intent: ", "")
+    return None
+
+
 def get_first_bot_intent(strings: List[str]) -> Optional[str]:
     """Returns first bot intent."""
     for string in strings:
@@ -535,9 +543,6 @@ def escape_flow_name(name: str) -> str:
         name.replace(" and ", "_and_")
         .replace(" or ", "_or_")
         .replace(" as ", "_as_")
-        .replace(" not ", "_not_")
-        .replace(" is ", "_is_")
-        .replace(" in ", "_in_")
         .replace("(", "")
         .replace(")", "")
         .replace("'", "")
