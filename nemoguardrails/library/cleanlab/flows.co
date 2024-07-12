@@ -9,9 +9,9 @@ define subflow cleanlab trustworthiness
   """Guardrail based on the trustworthiness score."""
   $result = execute call cleanlab api
 
-  if $result.trustworthiness_score < 0.5
+  if $result.trustworthiness_score < 0.9
     bot response untrustworthy
     stop
 
 define bot response untrustworthy
-  "Don't place much confidence in this response"
+  "$bot_message \nCAUTION: THIS ANSWER HAS BEEN FLAGGED AS POTENTIALLY UNTRUSTWORTHY"
