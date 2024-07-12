@@ -225,6 +225,7 @@ class LLMGenerationActions:
         self.user_message_index = self.get_embedding_search_provider_instance(
             self.config.core.embedding_search_provider
         )
+
         await self.user_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -366,25 +367,38 @@ class LLMGenerationActions:
             examples = ""
             potential_user_intents = []
 
-            if self.user_message_index:
+            if self.user_message_index is not None:
+                threshold = None
+
+                if config.rails.dialog.user_messages:
+                    threshold = (
+                        config.rails.dialog.user_messages.embeddings_only_similarity_threshold
+                    )
+
                 results = await self.user_message_index.search(
-                    text=event["text"], max_results=5
+                    text=event["text"], max_results=5, threshold=threshold
                 )
 
                 # If the option to use only the embeddings is activated, we take the first
                 # canonical form.
                 if results and config.rails.dialog.user_messages.embeddings_only:
-                    # TODO: propagate the similarity thresholds here
-                    #   depending on whether a `embeddings_only_fallback_intent` is set or not,
-                    #   it should return the provided intent or let this continue normally.
+                    intent = results[0].meta["intent"]
+
                     return ActionResult(
-                        events=[
-                            new_event_dict(
-                                "UserIntent", intent=results[0].meta["intent"]
-                            )
-                        ]
+                        events=[new_event_dict("UserIntent", intent=intent)]
                     )
 
+                if (
+                    config.rails.dialog.user_messages.embeddings_only
+                    and config.rails.dialog.user_messages.embeddings_only_fallback_intent
+                ):
+                    intent = (
+                        config.rails.dialog.user_messages.embeddings_only_fallback_intent
+                    )
+
+                    return ActionResult(
+                        events=[new_event_dict("UserIntent", intent=intent)]
+                    )
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
                     examples += f"user \"{result.text}\"\n  {result.meta['intent']}\n\n"
