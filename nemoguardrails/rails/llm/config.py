@@ -292,6 +292,16 @@ class UserMessagesConfig(BaseModel):
         default=False,
         description="Whether to use only embeddings for computing the user canonical form messages.",
     )
+    embeddings_only_similarity_threshold: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=1,
+        description="The similarity threshold to use when using only embeddings for computing the user canonical form messages.",
+    )
+    embeddings_only_fallback_intent: Optional[str] = Field(
+        default=None,
+        description="Defines the fallback intent when the similarity is below the threshold. If set to None, the user intent is computed normally using the LLM. If set to a string value, that string is used as the intent.",
+    )
 
 
 class DialogRails(BaseModel):
