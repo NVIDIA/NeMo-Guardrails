@@ -1,6 +1,8 @@
 # Cleanlab
 
-This package implements Cleanlab's [trustworthiness score](https://cleanlab.ai/tlm/) via API. <br />
+This package implements Cleanlab's [trustworthiness score](https://cleanlab.ai/tlm/) via API.
+
+
 Trustworthiness scores help reduce hallucinations and enable reliable deployment of LLMs - learn more in [Overcoming Hallucinations with the Trustworthy Language Model](https://cleanlab.ai/blog/trustworthy-language-model/).
 
 ## Development Setup

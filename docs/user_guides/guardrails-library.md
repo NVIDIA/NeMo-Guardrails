@@ -729,8 +729,10 @@ rails:
       - cleanlab trustworthiness
 ```
 
-The `cleanlab trustworthiness` flow uses trustworthiness score with a default threshold of 0.5 to determine if the output should be allowed or not (i.e., if the trustworthiness score is below the threshold, it is considered a "untrustowrthy" response).<br />
-A high trustworthiness score generally correlates with high-quality responses. In a question-answering application, high trustworthiness is indicative of correct responses, while in general open-ended applications, a high score corresponds to the response being helpful and informative. Trustworthiness scores are less useful for creative or open-ended requests
+The `cleanlab trustworthiness` flow uses trustworthiness score with a default threshold of 0.5 to determine if the output should be allowed or not (i.e., if the trustworthiness score is below the threshold, the response is considered "untrustworthy").
+
+
+A high trustworthiness score generally correlates with high-quality responses. In a question-answering application, high trustworthiness is indicative of correct responses, while in general open-ended applications, a high score corresponds to the response being helpful and informative. Trustworthiness scores are less useful for creative or open-ended requests.
 
 The mathematical derivation of the score is explained in [Cleanlab's documentation](https://help.cleanlab.ai/tutorials/tlm/#how-does-the-tlm-trustworthiness-score-work), and you can also access [trustworthiness score benchmarks](https://cleanlab.ai/blog/trustworthy-language-model/).
 
