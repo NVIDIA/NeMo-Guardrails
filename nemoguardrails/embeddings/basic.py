@@ -59,7 +59,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embedding_engine=None,
         index=None,
         cache_config: Union[EmbeddingsCacheConfig, Dict[str, Any]] = None,
-        search_threshold: float = float("inf"),
+        search_threshold: float = None,
         use_batching: bool = False,
         max_batch_size: int = 10,
         max_batch_hold: float = 0.01,
@@ -255,7 +255,9 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
 
         return result
 
-    async def search(self, text: str, max_results: int = 20) -> List[IndexItem]:
+    async def search(
+        self, text: str, max_results: int = 20, threshold: Optional[float] = None
+    ) -> List[IndexItem]:
         """Search the closest `max_results` items.
 
         Args:
@@ -265,6 +267,9 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         Returns:
             List[IndexItem]: The closest items found.
         """
+        if threshold is None:
+            threshold = self.search_threshold
+
         if self.use_batching:
             _embedding = await self._batch_get_embeddings(text)
         else:
@@ -281,9 +286,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
             include_distances=True,
         )
 
-        filtered_results = self._filter_results(
-            results[0], results[1], self.search_threshold
-        )
+        filtered_results = self._filter_results(results[0], results[1], threshold)
 
         return [self._items[i] for i in filtered_results]
 
