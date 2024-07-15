@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """LLM Rails entry point."""
+
 import asyncio
 import importlib.util
 import logging
@@ -1066,3 +1067,9 @@ class LLMRails:
     def explain(self) -> ExplainInfo:
         """Helper function to return the latest ExplainInfo object."""
         return self.explain_info
+
+    def __getstate__(self):
+        return self.config
+
+    def __setstate__(self, config):
+        self.__init__(config=config)
