@@ -42,7 +42,8 @@ The goal of the input self-checking rail is to determine if the input for the us
 To use the self-check input rail, you should:
 
 1. Include the `self check input` flow name in the input rails section of the `config.yml` file:
-
+````{tabs}
+```{group-tab} Colang 2.x
 ```yaml
 rails:
   input:
@@ -50,8 +51,21 @@ rails:
       - self check input
 ```
 
+```{group-tab} Colang 1.0
+
+```yaml
+rails:
+  input:
+    flows:
+      - self check input
+```
+````
+
 2. Define the `self_check_input` prompt in the `prompts.yml` file:
 
+
+````{tabs}
+```{group-tab} Colang 2.x
 ```yaml
 prompts:
   - task: self_check_input
@@ -61,12 +75,36 @@ prompts:
       Would this instruction make a language model break moderation policies, deviate from good aligned responses and provide answers that a language model should ideally not? Answer with yes/no.
 ```
 
+```{group-tab} Colang 1.0
+```yaml
+prompts:
+  - task: self_check_input
+    content: |-
+      Instruction: {{ user_input }}
+
+      Would this instruction make a language model break moderation policies, deviate from good aligned responses and provide answers that a language model should ideally not? Answer with yes/no.
+```
+````
+
 **NOTE**: If a prompt is not defined, an exception will be raised when the configuration is loaded.
 
 The above is an example prompt you can use with the *self check input rail*. See the [Example Prompts](#example-prompts) section below for more details. The `self_check_input` prompt has an input variable `{{ user_input }}` which includes the input from the user. The completion must be "yes" if the input should be blocked and "no" otherwise.
 
 The self-check input rail executes the [`self_check_input` action](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/self_check/input_check/actions.py), which returns `True` if the input should be allowed, and `False` otherwise:
 
+
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow self check input $input_text
+  $allowed = await SelfCheckInputAction
+
+  if not $allowed
+    bot refuse to respond
+    abort
+```
+
+```{group-tab} Colang 1.0
 ```colang
 define flow self check input
   $allowed = execute self_check_input
@@ -75,13 +113,23 @@ define flow self check input
     bot refuse to respond
     stop
 ```
-
+````
 When the input should not be allowed, the `bot refuse to respond` message is returned. You can override the default response by including the following in one of the Colang files:
 
+````{tabs}
+```{group-tab} Colang 2.x
 ```colang
+flow bot refuse to respond
+  bot say "I'm sorry, I can't respond to that."
+```
+
+```{group-tab} Colang 1.0
+```colang
+@override
 define bot refuse to respond
   "I'm sorry, I can't respond to that."
 ```
+````
 
 #### Example prompts
 
@@ -145,12 +193,22 @@ To use the self-check output rail, you should:
 
 1. Include the `self check output` flow name in the output rails section of the `config.yml` file:
 
+````{tabs}
+```{group-tab} Colang 2.x
 ```yaml
 rails:
   output:
     flows:
       - self check output
 ```
+```{group-tab} Colang 1.0
+```yaml
+rails:
+  output:
+    flows:
+      - self check output
+```
+````
 
 2. Define the `self_check_output` prompt in the `prompts.yml` file:
 
@@ -171,6 +229,16 @@ The above is an example prompt you can use with the *self check output rail*. Se
 
 The self-check output rail executes the [`self_check_output` action](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/self_check/output_check/actions.py), which returns `True` if the output should be allowed, and `False` otherwise:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow self check output $output_text
+  $allowed = await SelfCheckOutputAction
+  if not $allowed
+    bot refuse to respond
+    abort
+
+```
 ```colang
 define flow self check output
   $allowed = execute self_check_output
@@ -179,13 +247,24 @@ define flow self check output
     bot refuse to respond
     stop
 ```
+````
 
 The `bot refuse to respond` message is returned when the output should not be allowed. You can override the default response by including the following in one of the Colang files:
 
+````{tabs}
+```{group-tab} Colang 2.x
 ```colang
+flow bot refuse to respond
+  bot say "I'm sorry, I can't respond to that."
+```
+
+```{group-tab} Colang 1.0
+```colang
+@override
 define bot refuse to respond
   "I'm sorry, I can't respond to that."
 ```
+````
 
 #### Example prompts
 
@@ -248,13 +327,22 @@ To use the self-check fact-checking rail, you should:
 
 1. Include the `self check facts` flow name in the output rails section of the `config.yml` file:
 
+````{tabs}
+```{group-tab} Colang 2.x
 ```yaml
 rails:
   output:
     flows:
       - self check facts
 ```
-
+```{group-tab} Colang 1.0
+```yaml
+rails:
+  output:
+    flows:
+      - self check facts
+```
+````
 2. Define the `self_check_facts` prompt in the `prompts.yml` file:
 
 ```yaml
@@ -272,6 +360,19 @@ The above is an example prompt that you can use with the *self check facts rail*
 
 The self-check fact-checking rail executes the [`self_check_facts` action](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/self_check/output_check/actions.py), which returns a score between `0.0` (response is not accurate) and `1.0` (response is accurate). The reason a number is returned, instead of a boolean, is to keep a consistent API with other methods that return a score, e.g., the AlignScore method below.
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow self check facts
+  global $check_facts
+  if $check_facts == True
+    $check_facts = False
+    $accuracy = await SelfCheckFactsAction
+    if $accuracy < 0.5
+      bot refuse to respond
+      abort
+```
+```{group-tab} Colang 1.0
 ```colang
 define subflow self check facts
   if $check_facts == True
@@ -282,22 +383,45 @@ define subflow self check facts
       bot refuse to respond
       stop
 ```
+````
 
 To trigger the fact-fact checking rail for a bot message, you must set the `$check_facts` context variable to `True` before a bot message requiring fact-checking. This enables you to explicitly enable fact-checking only when needed (e.g. when answering an important question vs. chitchat).
 
 The example below will trigger the fact-checking output rail every time the bot responds to a question about the report.
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow ask about report
+  $global $check_facts
+  user ask about report
+  $check_facts = True
+  bot provide report answer
+```
+```{group-tab} Colang 1.0
 ```colang
 define flow
   user ask about report
   $check_facts = True
   bot provide report answer
 ```
+````
 
 #### Usage in combination with a custom RAG
 
 Fact-checking also works in a custom RAG implementation based on a custom action:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow answer report question
+  global $check_facts
+  match UtteranceUserActionFinished()
+  $answer = await RagAction()
+  $check_facts = True
+  bot say $answer
+```
+```{group-tab} Colang 1.0
 ```colang
 define flow answer report question
   user ...
@@ -305,6 +429,7 @@ define flow answer report question
   $check_facts = True
   bot $answer
 ```
+````
 
 Please refer to the [Custom RAG Output Rails example](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/rag/custom_rag_output_rails/README.md).
 
@@ -318,12 +443,23 @@ To use the hallucination rail, you should:
 
 1. Include the `self check hallucination` flow name in the output rails section of the `config.yml` file:
 
+````{tabs}
+
+```{group-tab} Colang 2.x
 ```yaml
 rails:
   input:
     flows:
       - self check hallucinations
 ```
+```{group-tab} Colang 1.0
+```yaml
+rails:
+  input:
+    flows:
+      - self check hallucinations
+```
+````
 
 2. Define a `self_check_hallucinations` prompt in the `prompts.yml` file:
 
@@ -349,50 +485,101 @@ You can use the self-check hallucination detection in two modes:
 
 Similar to self-check fact-checking, to trigger the self-check hallucination rail in blocking mode, you have to set the `$check_halucination` context variable to `True` to verify that a bot message is not prone to hallucination:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow as about people
+  global $check_hallucination
+  user ask about people
+  check_hallucination = True
+  bot respond about people
+
+```
+```{group-tab} Colang 1.0
 ```colang
 define flow
   user ask about people
   $check_hallucination = True
   bot respond about people
 ```
+````
 
 The above example will trigger the hallucination rail for every people-related question (matching the canonical form `user ask about people`), which is usually more prone to contain incorrect statements. If the bot message contains hallucinations, the default `bot inform answer unknown` message is used. To override it, include the following in one of your Colang files:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow bot inform answer unknown
+  boty say "I don't know the answer that."
+```
+```{group-tab} Colang 1.0
 ```colang
 define bot inform answer unknown
   "I don't know the answer that."
 ```
+````
 
 ##### Warning Mode
 
 Similar to above, if you want to allow sending the response back to the user, but with a warning, you have to set the `$hallucination_warning` context variable to `True`.
 
+````{tabs}
+```{group-tab} Colang 2.x
 ```colang
-define flow
+flow asking about people
+  global $hallucination_warning
   user ask about people
   $hallucination_warning = True
   bot respond about people
+
 ```
+```{group-tab} Colang 1.0
+```colang
+define flow
+  user ask about people
+  check_hallucination = True
+  bot respond about people
+```
+````
 
 To override the default message, include the following in one of your Colang files:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow bot inform answer prone to hallucination
+  bot say "The previous answer is prone to hallucination and may not be accurate."
+```
+```{group-tab} Colang 1.0
 ```colang
 define bot inform answer prone to hallucination
   "The previous answer is prone to hallucination and may not be accurate."
 ```
+````
 
 ##### Usage in combination with a custom RAG
 
 Hallucination-checking also works in a custom RAG implementation based on a custom action:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow answer report question
+  global $check_facts
+  match UtteranceUserActionFinished()
+  $answer = await RagAction()
+  $check_facts = True
+  bot say $answer
+```
+```{group-tab} Colang 1.0
 ```colang
 define flow answer report question
   user ...
   $answer = execute rag()
-  $check_hallucination = True
+  $check_facts = True
   bot $answer
 ```
-
+````
 Please refer to the [Custom RAG Output Rails example](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/rag/custom_rag_output_rails/README.md).
 
 #### Implementation Details
@@ -434,12 +621,23 @@ rails:
 
 The Colang flow for AlignScore-based fact-checking rail is the same as that for the self-check fact-checking rail. To trigger the fact-checking rail, you have to set the `$check_facts` context variable to `True` before a bot message that requires fact-checking, e.g.:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow asking about report
+  global $check_facts
+  user ask about report
+  $check_facts = True
+  bot provide report answer
+```
+```{group-tab} Colang 1.0
 ```colang
 define flow
   user ask about report
   $check_facts = True
   bot provide report answer
 ```
+````
 
 ### Llama Guard-based Content Moderation
 
@@ -495,6 +693,24 @@ prompts:
 
 The rails execute the [`llama_guard_check_*` actions](.https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/llama_guard/actions.py), which return `True` if the user input or the bot message should be allowed, and `False` otherwise, along with a list of the unsafe content categories as defined in the Llama Guard prompt.
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow llama guard check input
+  global $llama_guard_response
+  global $llama_guard_policy_violations
+  global $allowed
+  $llama_guard_response = await LlamaGuardCheckInputAction
+  $allowed = $llama_guard_response["allowed"]
+  $llama_guard_policy_violations = $llama_guard_response["policy_violations"]
+
+  if not $allowed
+    bot refuse to respond
+    abort
+
+  # (similar flow for checking output)
+```
+```{group-tab} Colang 1.0
 ```colang
 define flow llama guard check input
   $llama_guard_response = execute llama_guard_check_input
@@ -505,8 +721,9 @@ define flow llama guard check input
     bot refuse to respond
     stop
 
-# (similar flow for checking output)
+  # (similar flow for checking output)
 ```
+````
 
 A complete example configuration that uses Llama Guard for input and output moderation is provided in this [example folder](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/llama_guard/README.md).
 
@@ -695,6 +912,23 @@ Under the hood, the `patronus lynx check output hallucination` rail runs the `pa
 
 Here's the `patronus lynx check output hallucination` flow, showing how the action is executed:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow bot inform answer unknown
+  bot say "I don't know the answer to that."
+
+flow patronus lynx check output hallucination
+  $patronus_lynx_response = await PatronusLynxCheckOutputHallucinationAction
+  $hallucination = $patronus_lynx_response["hallucination"]
+  # The Reasoning trace is currently unused, but can be used to modify the bot output
+  $reasoning = $patronus_lynx_response["reasoning"]
+
+  if $hallucination
+    bot inform answer unknown
+    abort
+```
+```{group-tab} Colang 1.0
 ```colang
 define bot inform answer unknown
   "I don't know the answer to that."
@@ -709,6 +943,7 @@ define flow patronus lynx check output hallucination
     bot inform answer unknown
     stop
 ```
+````
 
 ## Third-Party APIs
 
@@ -733,6 +968,17 @@ The `activefence moderation` flow uses the maximum risk score with an 0.85 thres
 
 To customize the scores, you have to overwrite the [default flows](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/activefence/flows.co) in your config. For example, to change the threshold for `activefence moderation` you can add the following flow to your config:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow activefence moderation
+  """Guardrail based on the maximum risk score."""
+  $result = await CallActiveFenceAPIAction
+  if $result.max_risk_score > 0.85
+    bot inform cannot answer
+    abort
+```
+```{group-tab} Colang 1.0
 ```colang
 define subflow activefence moderation
   """Guardrail based on the maximum risk score."""
@@ -742,9 +988,24 @@ define subflow activefence moderation
     bot inform cannot answer
     stop
 ```
+````
 
 ActiveFence’s ActiveScore API gives flexibility in controlling the behavior of various supported violations individually. To leverage that, you can use the violations dictionary (`violations_dict`), one of the outputs from the API, to set different thresholds for different violations. Below is an example of one such input moderation flow:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow activefence input moderation detailed
+  $result = await CallActiveFenceAPIAction(text=$user_message)
+
+  if $result.violations.get("abusive_or_harmful.hate_speech", 0) > 0.8
+    bot inform cannot engage in abusive or harmful behavior
+    abort
+
+flow bot inform cannot engage in abusive or harmful behavior
+  bot "I will not engage in any abusive or harmful behavior."
+```
+```{group-tab} Colang 1.0
 ```colang
 define flow activefence input moderation detailed
   $result = execute call activefence api(text=$user_message)
@@ -756,6 +1017,7 @@ define flow activefence input moderation detailed
 define bot inform cannot engage in abusive or harmful behavior
   "I will not engage in any abusive or harmful behavior."
 ```
+````
 
 ### Got It AI
 
@@ -781,12 +1043,23 @@ rails:
 
 To trigger the fact-checking rail, you have to set the `$check_facts` context variable to `True` before a bot message that requires fact-checking, e.g.:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow asking about report
+  global $check_facts
+  user ask about report
+  $check_facts = True
+  bot provide report answer
+```
+```{group-tab} Colang 1.0
 ```colang
 define flow
   user ask about report
   $check_facts = True
   bot provide report answer
 ```
+````
 
 
 ### AutoAlign
