@@ -57,6 +57,19 @@ For reference, the full `rails` section in `config.yml` should look like the fol
 
 The self check output flow is similar to the input one:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+import core
+import guardrails
+
+flow self check output $output_text
+  $allowed = await SelfCheckOutputAction
+  if not $allowed
+    bot refuse to respond
+    abort
+```
+```{group-tab} Colang 1.0
 ```colang
 define subflow self check output
   $allowed = execute self_check_output
@@ -65,6 +78,7 @@ define subflow self check output
     bot refuse to respond
     stop
 ```
+````
 
 ### Add a prompt
 
@@ -193,6 +207,22 @@ The `check_blocked_terms` action fetches the `bot_message` context variable, whi
 
 2. Add a flow that calls the action. Let's create an `config/rails/blocked_terms.co` file:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+import core
+
+flow bot inform cannot about proprietary technology
+  bot say "I cannot talk about proprietary technology."
+
+flow check blocked terms
+  $is_blocked = await CheckBlockedTermsAction
+
+  if $is_blocked:
+    bot inform cannot about proprietary technology
+    abort
+```
+```{group-tab} Colang 1.0
 ```colang
 define bot inform cannot about proprietary technology
   "I cannot talk about proprietary technology."
@@ -204,6 +234,7 @@ define subflow check blocked terms
     bot inform cannot about proprietary technology
     stop
 ```
+````
 
 3. Add the `check blocked terms` to the list of output flows:
 

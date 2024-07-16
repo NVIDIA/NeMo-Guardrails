@@ -96,25 +96,53 @@ The format for the input `messages` array as well as the response follow the [Op
 To control the greeting response, define the user and bot messages, and the flow that connects the two together. See [Core Colang Concepts](../2_core_colang_concepts/README.md) for definitions of *messages* and *flows*.
 
 1. Define the `greeting` user message by creating a *config/rails.co* file with the following content:
-
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow user expressed greeting
+  user said "Hello"
+  or user said "Hi"
+  or user said "Wassup?"
+```
+```{group-tab} Colang 1.0
 ```colang
 define user express greeting
   "Hello"
   "Hi"
   "Wassup?"
 ```
+````
 
 2. Add a greeting flow that instructs the bot to respond back with "Hello World!" and ask how they are doing by adding the following content to the *rails.co* file:
 
-```python
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow greeting
+  user expressed greeting
+  bot express greeting
+  bot ask how are you
+```
+```{group-tab} Colang 1.0
+```colang
 define flow greeting
   user express greeting
   bot express greeting
   bot ask how are you
 ```
+````
 
 3. Define the messages for the response by adding the following content to the *rails.co* file:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```python
+flow bot express greeting
+  bot say "Hello World!"
+flow bot ask how are you
+  bot say "How are you doing?"
+```
+```{group-tab} Colang 1.0
 ```python
 define bot express greeting
   "Hello World!"
@@ -122,6 +150,7 @@ define bot express greeting
 define bot ask how are you
   "How are you doing?"
 ```
+````
 
 4. Reload the config and test it:
 

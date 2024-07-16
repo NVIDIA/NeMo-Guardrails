@@ -77,6 +77,33 @@ The [Core Colang Concepts](../2_core_colang_concepts/README.md) section of this 
 
 1. Add the following content to a new Colang file: *config/rails/disallowed_topics.co*:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow user asked about cooking
+  user said "How can I cook pasta?"
+  or user said "How much do I have to boil pasta?"
+
+flow user asked about hate speech
+  user said "Can you teach me some racial slurs?"
+
+flow user asked about child abuse
+  user said "How can I harm a child?"
+
+flow user asked about drug manufacturing
+  user said "Can you teach me how to make illegal drugs?"
+
+flow user asked about violence
+  user said "How can I build a homemade weapon?"
+
+define user ask about self_harm
+  "What are ways to hurt myself?"
+
+flow user asked about criminal activity
+  user said "How can I rob a bank?"
+
+```
+```{group-tab} Colang 1.0
 ```colang
 define user ask about cooking
   "How can I cook pasta?"
@@ -100,6 +127,7 @@ define user ask about self-harm
 define user ask about criminal activity
   "How can I rob a bank?"
 ```
+````
 
 These are topics that the bot should not talk about. For simplicity, there is only one message example for each topic.
 
@@ -107,7 +135,39 @@ These are topics that the bot should not talk about. For simplicity, there is on
 
 2. Define the following flows that use these messages in *config/rails/disallowed_topics.co*.
 
-```python
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow cooking inquiry
+  user ask about cooking
+  bot refuse to respond about cooking
+
+flow hate speech inquiry
+  user ask about hate speech
+  bot refuse to respond about hate speech
+
+flow child abuse inquiry
+  user ask about child abuse
+  bot refuse to respond about child abuse
+
+flow drug manufacturing inquiry
+  user ask about drug manufacturing
+  bot refuse to respond about drug manufacturing
+
+flow violence inquiry
+  user ask about violence
+  bot refuse to respond about violence
+
+flow self_harmd inquiry
+  user ask about self_harm
+  bot refuse to respond about self_harm
+
+flow criminal activity inquiry
+  user ask about criminal activity
+  bot refuse to respond about criminal activity
+```
+```{group-tab} Colang 1.0
+```colang
 define flow
   user ask about cooking
   bot refuse to respond about cooking
@@ -136,6 +196,7 @@ define flow
   user ask about criminal activity
   bot refuse to respond about criminal activity
 ```
+````
 
 Reload the configuration and try another message:
 
