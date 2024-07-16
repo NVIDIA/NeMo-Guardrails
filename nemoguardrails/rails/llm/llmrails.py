@@ -1069,7 +1069,11 @@ class LLMRails:
         return self.explain_info
 
     def __getstate__(self):
-        return self.config
+        return {"config": self.config}
 
-    def __setstate__(self, config):
-        self.__init__(config=config)
+    def __setstate__(self, state):
+        if state["config"].config_path:
+            config = RailsConfig.from_path(state["config"].config_path)
+        else:
+            config = state["config"]
+        self.__init__(config=config, verbose=False)
