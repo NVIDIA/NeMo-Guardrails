@@ -45,13 +45,17 @@ flow user gestured $gesture -> $final_gesture
   $final_gesture = $event.gesture
 
 @meta(user_action=True)
-flow user became present -> $user_id
+flow user became absent
   """Wait for user to be detected as present (e.g. camera ROI)."""
   match PresenceUserAction.Finished() as $event
-  $user_id = $event.user_id
+
+@meta(user_action=True)
+flow user became present
+  """Wait for user to be detected as present (e.g. camera ROI)."""
+  match PresenceUserAction.Started() as $event
 
 @meta(user_intent=True)
-flow user interrupted bot talking $sentence_length=15
+flow user interrupted bot talking $sentence_length=15 $pattern="stop"
   """Wait for when the user talked while bot is speaking."""
   activate tracking bot talking state
   global $bot_talking_state
@@ -66,7 +70,7 @@ flow user interrupted bot talking $sentence_length=15
       or when bot said something
         break
 
-      if len($transcript) > $sentence_length
+      if len($transcript) > $sentence_length or search($pattern,$transcript)
         log 'bot interrupted by user with: "{$transcript}"'
         return
 
@@ -165,6 +169,12 @@ flow finish all bot actions
   send FinishFlow(flow_id="bot gesture")
   send FinishFlow(flow_id="bot posture")
 
+flow fail all bot actions
+  """Stops all the current bot actions."""
+  send StopFlow(flow_id="_bot_say")
+  send StopFlow(flow_id="bot gesture")
+  send StopFlow(flow_id="bot posture")
+
 flow finish all scene actions
   """Stops all the current scene actions."""
   send FinishFlow(flow_id="scene show choice")
@@ -173,11 +183,13 @@ flow finish all scene actions
   send FinishFlow(flow_id="scene show form")
 
 @loop("bot_interruption")
-flow handling bot talking interruption $mode="inform"
+flow handling bot talking interruption $mode="inform" $stop_pattern="stop|cancel"
   """Handling the bot talking interruption reaction."""
-  user interrupted bot talking
+  user interrupted bot talking $sentence_length=15 $pattern=$stop_pattern
   if $mode == "interrupt"
     finish all bot actions
+  if $mode == "abort"
+    fail all bot actions
   elif $mode == "inform"
     start VisualInformationSceneAction(title="Please wait with talking!", support_prompts=["You should only talk after the avatar."], content=[])
     wait 3.0

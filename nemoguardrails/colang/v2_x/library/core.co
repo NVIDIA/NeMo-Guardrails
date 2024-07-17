@@ -160,7 +160,7 @@ flow bot suggested something -> $text
 flow tracking bot talking state
   """tracking bot talking state in global variable $bot_talking_state."""
   global $bot_talking_state
-  global $last_bot_message
+  global $last_bot_script
   if $bot_talking_state == None
     $bot_talking_state = False
   await bot started saying something
