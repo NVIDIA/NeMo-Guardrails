@@ -710,10 +710,14 @@ def create_flow_configs_from_flow_list(flows: List[Flow]) -> Dict[str, FlowConfi
     for flow in flows:
         assert isinstance(flow, Flow)
 
-        if any(
-            flow.name.startswith(keyword)
-            for keyword in ["send", "match", "start", "stop", "await", "activate"]
-        ):
+        if flow.name.split(" ")[0] in [
+            "send",
+            "match",
+            "start",
+            "stop",
+            "await",
+            "activate",
+        ]:
             raise ColangSyntaxError(f"Flow '{flow.name}' starts with a keyword!")
 
         config = FlowConfig(
