@@ -46,12 +46,12 @@ flow user gestured $gesture -> $final_gesture
 
 @meta(user_action=True)
 flow user became absent
-  """Wait for user to be detected as present (e.g. camera ROI)."""
+  """Wait for user to be detected as absent (e.g. out of camera ROI)."""
   match PresenceUserAction.Finished() as $event
 
 @meta(user_action=True)
 flow user became present
-  """Wait for user to be detected as present (e.g. camera ROI)."""
+  """Wait for user to be detected as present (e.g. inside camera ROI)."""
   match PresenceUserAction.Started() as $event
 
 @meta(user_intent=True)
