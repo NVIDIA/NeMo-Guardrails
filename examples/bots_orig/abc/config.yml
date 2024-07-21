@@ -18,17 +18,8 @@ sample_conversation: |
 
 models:
   - type: main
-    engine: ollama
-    model: phi3:mini
-    parameters:
-      base_url: http://host.docker.internal:11434
-  
-  - type: embeddings
-    engine: Ollama
-    model: nomic-embed-text
-    parameters:
-      base_url: http://host.docker.internal:11434
-
+    engine: openai
+    model: gpt-3.5-turbo-instruct
 
 rails:
   input:

@@ -1,0 +1,28 @@
+define user express greeting
+  "Hello"
+  "Hi"
+
+define user ask capabilities
+  "What can you do?"
+  "What can you help me with?"
+  "tell me what you can do"
+  "tell me about you"
+
+define flow
+  user express greeting
+  bot express greeting
+
+define flow
+  user ask capabilities
+  bot inform capabilities
+
+define bot inform capabilities
+  "I am an AI assistant and I'm here to help."
+
+
+define subflow dummy input rail
+  if "hello" in $user_message
+    $user_message = $user_message + " " + " hello"
+
+define subflow dummy output rail
+  $bot_message = $bot_message + "!!"
