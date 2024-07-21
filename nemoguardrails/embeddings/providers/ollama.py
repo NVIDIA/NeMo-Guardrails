@@ -41,8 +41,6 @@ class OllamaEmbeddingModel(EmbeddingModel):
 
     engine_name = "OllamaEmbed"
 
-    print(f"{}")
-
     def __init__(self,  embedding_model: str, base_url: str):
         try:
             from langchain_community.embeddings import OllamaEmbeddings
