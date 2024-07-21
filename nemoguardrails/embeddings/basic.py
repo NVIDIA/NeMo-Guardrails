@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+©134# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -126,8 +126,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     def _init_model(self):
         """Initialize the model used for computing the embeddings."""
         self._model = init_embedding_model(
-            embedding_model=self.embedding_model, embedding_engine=self.embedding_engine
-        )
+            embedding_model=self.embedding_model, embedding_engine=self.embedding_engine, base_url=self.base_url)
 
     @cache_embeddings
     async def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
