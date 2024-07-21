@@ -33,6 +33,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     Attributes:
         embedding_model (str): The model for computing embeddings.
         embedding_engine (str): The engine for computing embeddings.
+        base_url (str): Base url the model is hosted under.
         index (AnnoyIndex): The current embedding index.
         embedding_size (int): The size of the embeddings.
         cache_config (EmbeddingsCacheConfig): The cache configuration.
@@ -44,6 +45,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
 
     embedding_model: str
     embedding_engine: str
+    base_url: str
     index: AnnoyIndex
     embedding_size: int
     cache_config: EmbeddingsCacheConfig
@@ -56,6 +58,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         self,
         embedding_model=None,
         embedding_engine=None,
+        base_url=None,
         index=None,
         cache_config: Union[EmbeddingsCacheConfig, Dict[str, Any]] = None,
         use_batching: bool = False,
@@ -67,6 +70,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         Args:
             embedding_model (str, optional): The model for computing embeddings. Defaults to None.
             embedding_engine (str, optional): The engine for computing embeddings. Defaults to None.
+            base_url (str, optional): Base url the model is hosted under.
             index (AnnoyIndex, optional): The pre-existing index. Defaults to None.
             cache_config (EmbeddingsCacheConfig | Dict[str, Any], optional): The cache configuration. Defaults to None.
             use_batching: Whether to batch requests when computing the embeddings.
@@ -78,6 +82,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         self._embeddings = []
         self.embedding_model = embedding_model
         self.embedding_engine = embedding_engine
+        self.base_url = base_url
         self._embedding_size = 0
         if isinstance(cache_config, Dict):
             self._cache_config = EmbeddingsCacheConfig(**cache_config)
