@@ -24,7 +24,7 @@ models:
       base_url: http://host.docker.internal:11434
   
   - type: embeddings
-    engine: Ollama
+    engine: OllamaEmbed
     model: nomic-embed-text
     parameters:
       base_url: http://host.docker.internal:11434

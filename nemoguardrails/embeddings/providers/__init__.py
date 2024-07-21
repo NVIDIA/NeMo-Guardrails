@@ -57,7 +57,6 @@ def register_embedding_provider(
     registry = EmbeddingProviderRegistry()
     registry.add(engine_name, model)
 
-
 # The cache for embedding models, to make sure they are singleton.
 _embedding_model_cache = {}
 

@@ -397,7 +397,7 @@ class LLMRails:
                 ),
                 base_url=esp_config.parameters.get(
                     "base_url", self.default_base_url
-                )
+                ),
                 cache_config=esp_config.cache,
                 # We make sure we also pass additional relevant params.
                 **{
