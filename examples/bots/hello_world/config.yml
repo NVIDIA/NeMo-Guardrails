@@ -1,10 +1,4 @@
 models:
   - type: main
-    engine: ollama
-    model: phi3:mini
-    parameters:
-      base_url: http://host.docker.internal:11434
-  
-  - type: embeddings
-    engine: FastEmbed
-    model: all-MiniLM-L6-v2
+    engine: openai
+    model: gpt-3.5-turbo-instruct
