@@ -33,7 +33,7 @@ class TestColang2AlphaSyntaxConversion:
 
     def test_regex_replacement(self):
         input_lines = ['r"(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$"']
-        expected_output = ['regex("(?i).*({{$text}})((\s*\w+\s*){0,2})\W*$")']
+        expected_output = ['regex("((?i).*({{$text}})((\\s*\\w+\\s*){0,2})\\W*$)")']
         assert convert_colang_2alpha_syntax(input_lines) == expected_output
 
     def test_curly_braces_replacement(self):
@@ -88,7 +88,7 @@ class TestColang2AlphaSyntaxConversion:
             "some action",
         ]
         expected_output = [
-            "@loop(123)",
+            '@loop("123")',
             "@meta(example_meta=True)",
             "flow some_flow:",
             "some action",

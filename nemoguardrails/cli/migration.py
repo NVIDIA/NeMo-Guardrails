@@ -93,7 +93,8 @@ def convert_colang_2alpha_syntax(lines: List[str]) -> List[str]:
 
         line = re.sub(r"orwhen", "or when", line)
         line = re.sub(r"flow_start_uid", "flow_instance_uid", line)
-        line = re.sub(r'r"(.*)"', r'regex("\1")', line)
+        # line = re.sub(r'r"(.*)"', r'regex("\1")', line)
+        line = re.sub(r'r"(.*)"', r'regex("(\1)")', line)
         line = re.sub(r'"\{\{(.*)\}\}"', r'"{\1}"', line)
         line = re.sub(r"findall", "find_all", line)
 
@@ -157,7 +158,7 @@ def convert_colang_2alpha_syntax(lines: List[str]) -> List[str]:
         elif line.strip().startswith("# meta"):
             if "loop_id" in line:
                 meta_decorator = re.sub(
-                    r"#\s*meta:\s*loop_id=(.*)", r"@loop(\1)", line.lstrip()
+                    r"#\s*meta:\s*loop_id=(.*)", r'@loop("\1")', line.lstrip()
                 )
             else:
                 meta_decorator = re.sub(
