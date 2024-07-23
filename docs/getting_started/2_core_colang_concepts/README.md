@@ -42,24 +42,44 @@ In Colang, a conversation is modeled as an exchange of messages between a user a
 
 Using Colang, you can define the user messages that are important for your LLM-based application. For example, in the "Hello World" example, the `express greeting` user message is defined as:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow user expressed greeting
+  user said "Hello"
+  or user said "Hi"
+  or user said "Wassup?"
 ```
+```{group-tab} Colang 1.0
+```colang
 define user express greeting
   "Hello"
   "Hi"
   "Wassup?"
 ```
+````
 
 The `express greeting` represents the canonical form and "Hello", "Hi" and "Wassup?" represent example utterances. The role of the example utterances is to teach the bot the meaning of a defined canonical form.
 
 You can also define bot messages, such as how the bot should converse with the user. For example, in the "Hello World" example, the `express greeting` and `ask how are you` bot messages are defined as:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```python
+flow bot express greeting
+  bot say "Hello World!"
+flow bot ask how are you
+  bot say "How are you doing?"
 ```
+```{group-tab} Colang 1.0
+```python
 define bot express greeting
-  "Hey there!"
+  "Hello World!"
 
 define bot ask how are you
   "How are you doing?"
 ```
+````
 
 If more than one utterance is given for a canonical form, the bot uses a random utterance whenever the message is used.
 
@@ -69,12 +89,22 @@ If you are wondering whether *user message canonical forms* are the same as clas
 
 In Colang, *flows* represent patterns of interaction between the user and the bot. In their simplest form, they are sequences of user and bot messages. In the "Hello World" example, the `greeting` flow is defined as:
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+flow greeting
+  user expressed greeting
+  bot express greeting
+  bot ask how are you
+```
+```{group-tab} Colang 1.0
 ```colang
 define flow greeting
   user express greeting
   bot express greeting
   bot ask how are you
 ```
+````
 
 This flow instructs the bot to respond with a greeting and ask how the user is feeling every time the user greets the bot.
 

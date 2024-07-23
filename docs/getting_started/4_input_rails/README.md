@@ -175,6 +175,19 @@ rails:
 
 All the rails in NeMo Guardrails are implemented as flows. For example, you can find the `self_check_input` flow [here](../../../nemoguardrails/library/self_check/input_check/flows.co).
 
+````{tabs}
+```{group-tab} Colang 2.x
+```colang
+import core
+import guardrails
+
+flow self check input $input_text
+  $allowed = await SelfCheckInputAction
+  if not $allowed
+    bot refuse to respond
+    abort
+```
+```{group-tab} Colang 1.0
 ```colang
 define flow self check input
   $allowed = execute self_check_input
@@ -183,6 +196,7 @@ define flow self check input
     bot refuse to respond
     stop
 ```
+````
 
 The flows implementing input rails can call actions, such as `execute self_check_input`, instruct the bot to respond in a certain way, such as `bot refuse to respond`, and even stop any further processing for the current user request.
 
