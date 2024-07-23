@@ -11,13 +11,14 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
 2. Community Models and Libraries
    - [AlignScore-based Fact Checking](#alignscore-based-fact-checking)
    - [LlamaGuard-based Content Moderation](#llama-guard-based-content-moderation)
-   - [Presidio-based Sensitive data detection](#presidio-based-sensitive-data-detection)
    - [Patronus Lynx-based RAG Hallucination Detection](#patronus-lynx-based-rag-hallucination-detection)
+   - [Presidio-based Sensitive data detection](#presidio-based-sensitive-data-detection)
    - BERT-score Hallucination Checking - *[COMING SOON]*
 
 3. Third-Party APIs
    - [ActiveFence Moderation](#activefence)
    - [Got It AI RAG TruthChecker](#got-it-ai)
+   - [AutoAlign](#autoalign)
    - OpenAI Moderation API - *[COMING SOON]*
 
 4. Other
@@ -413,11 +414,7 @@ This category of rails relies on open-source models and libraries.
 
 NeMo Guardrails provides out-of-the-box support for the [AlignScore metric (Zha et al.)](https://aclanthology.org/2023.acl-long.634.pdf), which uses a RoBERTa-based model for scoring factual consistency in model responses with respect to the knowledge base.
 
-In our testing, we observed an average latency of ~220ms on hosting AlignScore as an HTTP service, and ~45ms on direct inference with the model loaded in-memory. This makes it much faster than the self-check method. However, this method requires an on-prem deployment of the publicly available AlignScore model. Please see the [AlignScore Deployment](advanced/align-score-deployment.md) guide for more details.
-
-#### Usage
-
-To use the AlignScore-based fact-checking, you have to set the following configuration options in your `config.yml`:
+Example usage:
 
 ```yaml
 rails:
@@ -432,38 +429,13 @@ rails:
       - alignscore check facts
 ```
 
-The Colang flow for AlignScore-based fact-checking rail is the same as that for the self-check fact-checking rail. To trigger the fact-checking rail, you have to set the `$check_facts` context variable to `True` before a bot message that requires fact-checking, e.g.:
-
-```colang
-define flow
-  user ask about report
-  $check_facts = True
-  bot provide report answer
-```
+For more details, check out the [AlignScore Integration](./community/alignscore.md) page.
 
 ### Llama Guard-based Content Moderation
 
 NeMo Guardrails provides out-of-the-box support for content moderation using Meta's [Llama Guard](https://ai.meta.com/research/publications/llama-guard-llm-based-input-output-safeguard-for-human-ai-conversations/) model.
 
-In our testing, we observe significantly improved input and output content moderation performance compared to the [self-check method](#llm-self-checking). Please see additional documentation for more details on the [recommended deployment method](advanced/llama-guard-deployment.md) and the [performance evaluation](../evaluation/README.md#llamaguard-based-moderation-rails-performance) numbers.
-
-#### Usage
-
-To configure your bot to use Llama Guard for input/output checking, follow the below steps:
-
-1. Add a model of type `llama_guard` to the models section of the `config.yml` file (the example below uses a vLLM setup):
-```yaml
-models:
-  ...
-
-  - type: llama_guard
-    engine: vllm_openai
-    parameters:
-      openai_api_base: "http://localhost:5123/v1"
-      model_name: "meta-llama/LlamaGuard-7b"
-```
-
-2. Include the `llama guard check input` and `llama guard check output` flow names in the rails section of the `config.yml` file:
+Example usage:
 
 ```yaml
 rails:
@@ -475,41 +447,22 @@ rails:
       - llama guard check output
 ```
 
-3. Define the `llama_guard_check_input` and the `llama_guard_check_output` prompts in the `prompts.yml` file:
+For more details, check out the [Llama-Guard Integration](./community/llama-guard.md) page.
+
+### Patronus Lynx-based RAG Hallucination Detection
+
+NeMo Guardrails supports hallucination detection in RAG systems using [Patronus AI](www.patronus.ai)'s Lynx model. The model is hosted on Hugging Face and comes in both a 70B parameters (see [here](https://huggingface.co/PatronusAI/Patronus-Lynx-70B-Instruct)) and 8B parameters (see [here](https://huggingface.co/PatronusAI/Patronus-Lynx-8B-Instruct)) variant.
+
+Example usage:
 
 ```yaml
-prompts:
-  - task: llama_guard_check_input
-    content: |
-      <s>[INST] Task: ...
-      <BEGIN UNSAFE CONTENT CATEGORIES>
-      O1: ...
-      O2: ...
-  - task: llama_guard_check_output
-    content: |
-      <s>[INST] Task: ...
-      <BEGIN UNSAFE CONTENT CATEGORIES>
-      O1: ...
-      O2: ...
+rails:
+  output:
+    flows:
+      - patronus lynx check output hallucination
 ```
 
-The rails execute the [`llama_guard_check_*` actions](.https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/llama_guard/actions.py), which return `True` if the user input or the bot message should be allowed, and `False` otherwise, along with a list of the unsafe content categories as defined in the Llama Guard prompt.
-
-```colang
-define flow llama guard check input
-  $llama_guard_response = execute llama_guard_check_input
-  $allowed = $llama_guard_response["allowed"]
-  $llama_guard_policy_violations = $llama_guard_response["policy_violations"]
-
-  if not $allowed
-    bot refuse to respond
-    stop
-
-# (similar flow for checking output)
-```
-
-A complete example configuration that uses Llama Guard for input and output moderation is provided in this [example folder](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/llama_guard/README.md).
-
+For more details, check out the [Patronus Lynx Integration](./community/patronus-lynx.md) page.
 
 ### Presidio-based Sensitive Data Detection
 
@@ -639,76 +592,6 @@ rails:
 
 If you want to implement a completely different sensitive data detection mechanism, you can override the default actions [`detect_sensitive_data`](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/sensitive_data_detection/actions.py) and [`mask_sensitive_data`](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/sensitive_data_detection/actions.py).
 
-### Patronus Lynx-based RAG Hallucination Detection
-
-NeMo Guardrails supports hallucination detection in RAG systems using [Patronus AI](www.patronus.ai)'s Lynx model. The model is hosted on Hugging Face and comes in both a 70B parameters (see [here](https://huggingface.co/PatronusAI/Patronus-Lynx-70B-Instruct)) and 8B parameters (see [here](https://huggingface.co/PatronusAI/Patronus-Lynx-8B-Instruct)) variant.
-
-There are three components of hallucination that Lynx checks for:
-
-- Information in the `bot_message` is contained in the `relevant_chunks`
-- There is no extra information in the `bot_message` that is not in the `relevant_chunks`
-- The `bot_message` does not contradict any information in the `relevant_chunks`
-
-#### Setup
-
-Since Patronus Lynx is fully open source, you can host it however you like. You can find a guide to host Lynx using vLLM [here](./advanced/patronus-lynx-deployment.md).
-
-#### Usage
-
-Here is how to configure your bot to use Patronus Lynx to check for RAG hallucinations in your bot output:
-
-1. Add a model of type `patronus_lynx` in `config.yml` - the example below uses vLLM to run Lynx:
-
-```yaml
-models:
-  ...
-
-  - type: patronus_lynx
-    engine: vllm_openai
-    parameters:
-      openai_api_base: "http://localhost:5000/v1"
-      model_name: "PatronusAI/Patronus-Lynx-70B-Instruct" # "PatronusAI/Patronus-Lynx-8B-Instruct"
-```
-
-2. Add the guardrail name is `patronus lynx check output hallucination` to your output rails in `config.yml`:
-
-```yaml
-rails:
-  output:
-    flows:
-      - patronus lynx check output hallucination
-```
-
-3. Add a prompt for `patronus_lynx_check_output_hallucination` in the `prompts.yml` file:
-
-```yaml
-prompts:
-  - task: patronus_lynx_check_output_hallucination
-    content: |
-      Given the following QUESTION, DOCUMENT and ANSWER you must analyze ...
-      ...
-```
-
-We recommend you base your Lynx hallucination detection prompt off of the provided example [here](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/examples/configs/patronusai/prompts.yml).
-
-Under the hood, the `patronus lynx check output hallucination` rail runs the `patronus_lynx_check_output_hallucination` action, which you can find [here](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/patronusai/actions.py). It returns whether a hallucination is detected (`True` or `False`) and potentially a reasoning trace explaining the decision. The bot's response will be blocked if hallucination is `True`. Note: If Lynx's outputs are misconfigured or a hallucination decision cannot be found, the action default is to return `True` for hallucination.
-
-Here's the `patronus lynx check output hallucination` flow, showing how the action is executed:
-
-```colang
-define bot inform answer unknown
-  "I don't know the answer to that."
-
-define flow patronus lynx check output hallucination
-  $patronus_lynx_response = execute patronus_lynx_check_output_hallucination
-  $hallucination = $patronus_lynx_response["hallucination"]
-  # The Reasoning trace is currently unused, but can be used to modify the bot output
-  $reasoning = $patronus_lynx_response["reasoning"]
-
-  if $hallucination
-    bot inform answer unknown
-    stop
-```
 
 ## Third-Party APIs
 
@@ -718,50 +601,22 @@ This category of rails relies on 3rd party APIs for various guardrailing tasks.
 
 NeMo Guardrails supports using the [ActiveFence ActiveScore API](https://docs.activefence.com/index.html) as an input rail out-of-the-box (you need to have the `ACTIVEFENCE_API_KEY` environment variable set).
 
+Example usage:
+
 ```yaml
 rails:
   input:
     flows:
-      # The simplified version
       - activefence moderation
-
-      # The detailed version with individual risk scores
-      # - activefence moderation detailed
 ```
 
-The `activefence moderation` flow uses the maximum risk score with an 0.85 threshold to decide if the input should be allowed or not (i.e., if the risk score is above the threshold, it is considered a violation). The `activefence moderation detailed` has individual scores per category of violation.
-
-To customize the scores, you have to overwrite the [default flows](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/activefence/flows.co) in your config. For example, to change the threshold for `activefence moderation` you can add the following flow to your config:
-
-```colang
-define subflow activefence moderation
-  """Guardrail based on the maximum risk score."""
-  $result = execute call activefence api
-
-  if $result.max_risk_score > 0.85
-    bot inform cannot answer
-    stop
-```
-
-ActiveFence’s ActiveScore API gives flexibility in controlling the behavior of various supported violations individually. To leverage that, you can use the violations dictionary (`violations_dict`), one of the outputs from the API, to set different thresholds for different violations. Below is an example of one such input moderation flow:
-
-```colang
-define flow activefence input moderation detailed
-  $result = execute call activefence api(text=$user_message)
-
-  if $result.violations.get("abusive_or_harmful.hate_speech", 0) > 0.8
-    bot inform cannot engage in abusive or harmful behavior
-    stop
-
-define bot inform cannot engage in abusive or harmful behavior
-  "I will not engage in any abusive or harmful behavior."
-```
+For more details, check out the [ActiveFence Integration](./community/active-fence.md) page.
 
 ### Got It AI
 
-NeMo Guardrails integrates with [Got It AI's Hallucination Manager](https://www.app.got-it.ai/hallucination-manager) for hallucination detection in RAG systems. The Hallucination Manager's TruthChecker API is designed to detect and manage hallucinations in AI models, specifically for real-world RAG applications.
+NeMo Guardrails integrates with [Got It AI's Hallucination Manager](https://www.app.got-it.ai/hallucination-manager) for hallucination detection in RAG systems. To integrate the TruthChecker API with NeMo Guardrails, the `GOTITAI_API_KEY` environment variable needs to be set.
 
-To integrate the TruthChecker API with NeMo Guardrails, the `GOTITAI_API_KEY` environment variable needs to be set.
+Example usage:
 
 ```yaml
 rails:
@@ -770,36 +625,25 @@ rails:
       - gotitai rag truthcheck
 ```
 
-To trigger the fact-checking rail, you have to set the `$check_facts` context variable to `True` before a bot message that requires fact-checking, e.g.:
-
-```colang
-define flow
-  user ask about report
-  $check_facts = True
-  bot provide report answer
-```
-
+For more details, check out the [Got It AI Integration](./community/gotitai.md) page.
 
 ### AutoAlign
 
-NeMo Guardrails provides an interface for using the AutoAlign's guardrails
-(you need to have the `AUTOALIGN_API_KEY` environment variable set).
+NeMo Guardrails supports using the AutoAlign's guardrails API (you need to have the `AUTOALIGN_API_KEY` environment variable set).
 
+Example usage:
 
-Following is the list of guardrails that are currently supported:
-1. Gender bias Detection
-2. Harm Detection
-3. Jailbreak Detection
-4. Confidential Detection
-5. Intellectual property detection
-6. Racial bias Detection
-7. Tonal Detection
-8. Toxicity detection
-9. PII
-10. Factcheck
+```yaml
+rails:
+  input:
+    flows:
+      - autoalign check input
+  output:
+    flows:
+      - autoalign check output
+```
 
-More details regarding the configuration and usage of these can be found [here](../../nemoguardrails/library/autoalign/README.md).
-
+For more details, check out the [AutoAlign Integration](./community/auto-align.md) page.
 
 ## Other
 
