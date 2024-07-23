@@ -414,7 +414,7 @@ This category of rails relies on open-source models and libraries.
 
 NeMo Guardrails provides out-of-the-box support for the [AlignScore metric (Zha et al.)](https://aclanthology.org/2023.acl-long.634.pdf), which uses a RoBERTa-based model for scoring factual consistency in model responses with respect to the knowledge base.
 
-Example usage:
+#### Example usage
 
 ```yaml
 rails:
@@ -435,7 +435,7 @@ For more details, check out the [AlignScore Integration](./community/alignscore.
 
 NeMo Guardrails provides out-of-the-box support for content moderation using Meta's [Llama Guard](https://ai.meta.com/research/publications/llama-guard-llm-based-input-output-safeguard-for-human-ai-conversations/) model.
 
-Example usage:
+#### Example usage
 
 ```yaml
 rails:
@@ -453,7 +453,7 @@ For more details, check out the [Llama-Guard Integration](./community/llama-guar
 
 NeMo Guardrails supports hallucination detection in RAG systems using [Patronus AI](www.patronus.ai)'s Lynx model. The model is hosted on Hugging Face and comes in both a 70B parameters (see [here](https://huggingface.co/PatronusAI/Patronus-Lynx-70B-Instruct)) and 8B parameters (see [here](https://huggingface.co/PatronusAI/Patronus-Lynx-8B-Instruct)) variant.
 
-Example usage:
+#### Example usage
 
 ```yaml
 rails:
@@ -468,28 +468,6 @@ For more details, check out the [Patronus Lynx Integration](./community/patronus
 
 NeMo Guardrails supports detecting sensitive data out-of-the-box using [Presidio](https://github.com/Microsoft/presidio), which provides fast identification and anonymization modules for private entities in text such as credit card numbers, names, locations, social security numbers, bitcoin wallets, US phone numbers, financial data and more. You can detect sensitive data on user input, bot output, or the relevant chunks retrieved from the knowledge base.
 
-#### Setup
-
-To use the built-in sensitive data detection rails, you must install Presidio and download the `en_core_web_lg` model for `spacy`.
-
-```bash
-pip install presidio-analyzer presidio-anonymizer spacy
-python -m spacy download en_core_web_lg
-```
-
-As an alternative, you can also use the `sdd` extra.
-
-```bash
-pip install nemoguardrails[sdd]
-python -m spacy download en_core_web_lg
-```
-
-#### Usage
-
-You can activate sensitive data detection in three ways: input rail, output rail, and retrieval rail.
-
-##### Input Rail
-
 To activate a sensitive data detection input rail, you have to configure the entities that you want to detect:
 
 ```yaml
@@ -503,95 +481,22 @@ rails:
           - ...
 ```
 
-For the complete list of supported entities, please refer to [Presidio - Supported Entities](https://microsoft.github.io/presidio/supported_entities/) page.
-
-Also, you have to add the `detect sensitive data on input` or `mask sensitive data on input` flows to the list of input rails:
+#### Example usage
 
 ```yaml
 rails:
   input:
     flows:
-      - ...
-      - mask sensitive data on input     # or 'detect sensitive data on input'
-      - ...
-```
-
-When using `detect sensitive data on input`, if sensitive data is detected, the bot will refuse to respond to the user's input. When using `mask sensitive data on input` the bot will mask the sensitive parts in the user's input and continue the processing.
-
-##### Output Rail
-
-The configuration for the output rail is very similar to the input rail:
-
-```yaml
-rails:
-  config:
-    sensitive_data_detection:
-      output:
-        entities:
-          - PERSON
-          - EMAIL_ADDRESS
-          - ...
-
+      - mask sensitive data on input
   output:
     flows:
-      - ...
-      - mask sensitive data on output     # or 'detect sensitive data on output'
-      - ...
-```
-
-##### Retrieval Rail
-
-The configuration for the retrieval rail is very similar to the input/output rail:
-
-```yaml
-rails:
-  config:
-    sensitive_data_detection:
-      retrieval:
-        entities:
-          - PERSON
-          - EMAIL_ADDRESS
-          - ...
-
+      - mask sensitive data on output
   retrieval:
     flows:
-      - ...
-      - mask sensitive data on retrieval     # or 'detect sensitive data on retrieval'
-      - ...
+      - mask sensitive data on retrieval
 ```
 
-#### Custom Recognizers
-
-If you have custom entities that you want to detect, you can define custom *recognizers*.
-For more details, check out this [tutorial](https://microsoft.github.io/presidio/tutorial/08_no_code/) and this [example](https://github.com/microsoft/presidio/blob/main/presidio-analyzer/conf/example_recognizers.yaml).
-
-Below is an example of configuring a `TITLE` entity and detecting it inside the input rail.
-
-```yaml
-rails:
-  config:
-    sensitive_data_detection:
-      recognizers:
-        - name: "Titles recognizer"
-          supported_language: "en"
-          supported_entity: "TITLE"
-          deny_list:
-            - Mr.
-            - Mrs.
-            - Ms.
-            - Miss
-            - Dr.
-            - Prof.
-      input:
-        entities:
-          - PERSON
-          - TITLE
-```
-
-#### Custom Detection
-
-If you want to implement a completely different sensitive data detection mechanism, you can override the default actions [`detect_sensitive_data`](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/sensitive_data_detection/actions.py) and [`mask_sensitive_data`](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/sensitive_data_detection/actions.py).
-
+For more details, check out the [Presidio Integration](./community/presidio.md) page.
 
 ## Third-Party APIs
 
@@ -601,7 +506,7 @@ This category of rails relies on 3rd party APIs for various guardrailing tasks.
 
 NeMo Guardrails supports using the [ActiveFence ActiveScore API](https://docs.activefence.com/index.html) as an input rail out-of-the-box (you need to have the `ACTIVEFENCE_API_KEY` environment variable set).
 
-Example usage:
+#### Example usage
 
 ```yaml
 rails:
@@ -616,7 +521,7 @@ For more details, check out the [ActiveFence Integration](./community/active-fen
 
 NeMo Guardrails integrates with [Got It AI's Hallucination Manager](https://www.app.got-it.ai/hallucination-manager) for hallucination detection in RAG systems. To integrate the TruthChecker API with NeMo Guardrails, the `GOTITAI_API_KEY` environment variable needs to be set.
 
-Example usage:
+#### Example usage
 
 ```yaml
 rails:
@@ -631,7 +536,7 @@ For more details, check out the [Got It AI Integration](./community/gotitai.md) 
 
 NeMo Guardrails supports using the AutoAlign's guardrails API (you need to have the `AUTOALIGN_API_KEY` environment variable set).
 
-Example usage:
+#### Example usage
 
 ```yaml
 rails:
