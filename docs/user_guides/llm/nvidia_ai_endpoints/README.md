@@ -1,6 +1,6 @@
 # Using LLMs hosted on NVIDIA API Catalog
 
-This guide teaches you how to use NeMo Guardrails with LLMs hosted on NVIDIA API Catalog. It uses the [ABC Bot configuration](../../../../examples/bots/abc) and changes the model to `meta/llama3-70b-instruct`.
+This guide teaches you how to use NeMo Guardrails with LLMs hosted on NVIDIA API Catalog. It uses the [ABC Bot configuration](../../../../examples/bots/abc) and with the `meta/llama-3.1-70b-instruct` model. Similarly, you can use `meta/llama-3.1-405b-instruct`, `meta/llama-3.1-8b-instruct` or any other [AI Foundation Model](https://build.nvidia.com/explore/discover).
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ pip install -U --quiet langchain-nvidia-ai-endpoints
 2. An NVIDIA NGC account to access AI Foundation Models. To create a free account go to [NVIDIA NGC website](https://ngc.nvidia.com/).
 
 3. An API key from NVIDIA API Catalog:
-   - Generate an API key by navigating to the AI Foundation Models section on the NVIDIA NGC website, selecting a model with an API endpoint, and generating an API key. You can use this API key for all models available in the NVIDIA API Catalog.
+   - Generate an API key by navigating to the [AI Foundation Models](https://build.nvidia.com/explore/discover) section on the NVIDIA NGC website, selecting a model with an API endpoint, and generating an API key. You can use this API key for all models available in the NVIDIA API Catalog.
    - Export the NVIDIA API key as an environment variable:
 
 ```bash
@@ -45,7 +45,7 @@ Update the `models` section of the `config.yml` file to the desired model suppor
 models:
   - type: main
     engine: nvidia_ai_endpoints
-    model: meta/llama3-70b-instruct
+    model: meta/llama-3.1-70b-instruct
 ...
 ```
 
@@ -60,10 +60,6 @@ config = RailsConfig.from_path("./config")
 rails = LLMRails(config)
 ```
 
-```
-Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]
-```
-
 Test that it works:
 
 ```python
@@ -76,11 +72,11 @@ print(response['content'])
 ```
 
 ```
-According to the employee handbook, eligible employees are entitled to 20 days of paid vacation per year, accrued monthly.
+According to our company policy, you are eligible for 20 days of vacation per year, accrued monthly.
 ```
 
 You can see that the bot responds correctly.
 
 ## Conclusion
 
-In this guide, you learned how to connect a NeMo Guardrails configuration to an NVIDIA API Catalog LLM model. This guide uses `meta/llama3-70b-instruct`, however, you can connect any other model by following the same steps.
+In this guide, you learned how to connect a NeMo Guardrails configuration to an NVIDIA API Catalog LLM model. This guide uses `meta/llama-3.1-70b-instruct`, however, you can connect any other model by following the same steps.
