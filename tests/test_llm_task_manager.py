@@ -153,7 +153,7 @@ def test_prompt_length_exceeded_empty_events():
             prompts:
             - task: generate_user_intent
               models:
-              - gpt-3.5-turbo-instruct
+              - openai/gpt-3.5-turbo-instruct
               max_length: 2000
               content: |-
                 {{ general_instructions }}
@@ -195,7 +195,7 @@ def test_prompt_length_exceeded_compressed_history():
             prompts:
             - task: generate_user_intent
               models:
-              - gpt-3.5-turbo-instruct
+              - openai/gpt-3.5-turbo-instruct
               max_length: 3000
               content: |-
                 {{ general_instructions }}
@@ -257,7 +257,7 @@ def test_stop_configuration_parameter():
             prompts:
             - task: generate_user_intent
               models:
-              - gpt-3.5-turbo-instruct
+              - openai/gpt-3.5-turbo-instruct
               stop:
               - <<end>>
               - <<stop>>
