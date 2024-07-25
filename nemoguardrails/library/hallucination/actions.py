@@ -36,13 +36,6 @@ from nemoguardrails.logging.explain import LLMCallInfo
 
 log = logging.getLogger(__name__)
 
-try:
-    from langchain_openai import OpenAI
-except ImportError:
-    log.warning(
-        "The langchain_openai module is not installed. Please install it using pip: pip install langchain_openai"
-    )
-
 HALLUCINATION_NUM_EXTRA_RESPONSES = 2
 
 
@@ -58,6 +51,12 @@ async def check_hallucination(
 
     :return: True if hallucination is detected, False otherwise.
     """
+    try:
+        from langchain_openai import OpenAI
+    except ImportError:
+        log.warning(
+            "The langchain_openai module is not installed. Please install it using pip: pip install langchain_openai"
+        )
 
     bot_response = context.get("bot_message")
     last_bot_prompt_string = context.get("_last_bot_prompt")

@@ -101,10 +101,9 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
                     if msg.type == "ai"
                     else "System"
                 )
-                + "[/][black on white]"
+                + "[/]"
                 + "\n"
                 + msg.content
-                + "[/]"
                 for msg in messages[0]
             ]
         )

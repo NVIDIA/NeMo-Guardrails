@@ -171,6 +171,49 @@ def to_messages(colang_history: str) -> List[dict]:
     return messages
 
 
+def to_intent_messages(colang_history: str) -> List[dict]:
+    messages = []
+
+    lines = colang_history.split("\n")
+    for i, line in enumerate(lines):
+        if line.startswith('user "'):
+            continue
+        else:
+            if i > 0 and lines[i - 1].startswith('user "'):
+                line = "User intent: " + line.strip()
+                messages.append({"type": "user", "content": line})
+            elif line.startswith("user "):
+                line = "User intent: " + line[5:].strip()
+                messages.append({"type": "user", "content": line})
+            elif line.startswith("bot "):
+                line = "Bot intent: " + line[4:].strip()
+                messages.append({"type": "assistant", "content": line})
+            elif line.startswith('  "'):
+                continue
+
+    return messages
+
+
+def to_intent_messages_2(colang_history: str) -> List[dict]:
+    messages = []
+
+    lines = colang_history.split("\n")
+    for i, line in enumerate(lines):
+        if line.startswith('user "'):
+            messages.append({"type": "user", "content": line[6:-1]})
+        else:
+            if i > 0 and lines[i - 1].startswith('user "'):
+                continue
+            if line.startswith("bot "):
+                line = "Bot intent: " + line[4:].strip()
+                messages.append({"type": "assistant", "content": line})
+            elif line.startswith('  "'):
+                line = "Bot message: " + line[2:].strip()
+                messages.append({"type": "assistant", "content": line})
+
+    return messages
+
+
 def verbose_v1(colang_history: str) -> str:
     """Filter that given a history in colang format, returns a verbose version of the history."""
     lines = colang_history.split("\n")
@@ -191,6 +234,18 @@ def verbose_v1(colang_history: str) -> str:
             lines[i] = "Bot message: " + line[2:]
 
     return "\n".join(lines)
+
+
+def to_chat_messages(events: List[dict]) -> str:
+    """Filter that turns an array of events into a sequence of user/assistant messages."""
+    messages = []
+    for event in events:
+        if event["type"] == "UserMessage":
+            messages.append({"type": "user", "content": event["text"]})
+        elif event["type"] == "StartUtteranceBotAction":
+            messages.append({"type": "assistant", "content": event["script"]})
+
+    return messages
 
 
 def user_assistant_sequence(events: List[dict]) -> str:
