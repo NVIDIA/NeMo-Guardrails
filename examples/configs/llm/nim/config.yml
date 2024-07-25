@@ -1,0 +1,6 @@
+models:
+  - type: main
+    engine: nim
+    model: meta/llama3-8b-instruct
+    parameters:
+      base_url: http://localhost:7331/v1

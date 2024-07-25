@@ -103,6 +103,8 @@ def encode_to_dict(obj: Any, refs: Dict[int, Any]):
             value = {"__type": "deque", "value": [encode_to_dict(v, refs) for v in obj]}
         elif isinstance(obj, tuple):
             value = {"__type": "tuple", "value": [encode_to_dict(v, refs) for v in obj]}
+        elif isinstance(obj, set):
+            value = {"__type": "set", "value": [encode_to_dict(v, refs) for v in obj]}
         else:
             raise Exception(f"Unhandled type in encode_to_dict: {type(obj)}")
 
@@ -164,6 +166,9 @@ def decode_from_dict(d: Any, refs: Dict[int, Any]):
 
             elif d_type == "dict":
                 value = {k: decode_from_dict(v, refs) for k, v in d["value"].items()}
+
+            elif d_type == "set":
+                value = set(decode_from_dict(d["value"], refs))
 
             else:
                 raise Exception(f"Unknown d_type: {d_type}")

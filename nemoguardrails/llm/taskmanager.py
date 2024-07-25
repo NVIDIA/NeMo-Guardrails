@@ -20,12 +20,16 @@ from typing import Any, List, Optional, Union
 from jinja2 import Environment, meta
 
 from nemoguardrails.llm.filters import (
+    co_v2,
     colang,
     colang_without_identifiers,
     first_turns,
     indent,
     last_turns,
     remove_text_messages,
+    to_chat_messages,
+    to_intent_messages,
+    to_intent_messages_2,
     to_messages,
     to_messages_nemollm,
     user_assistant_sequence,
@@ -55,6 +59,7 @@ class LLMTaskManager:
 
         # Register the default filters.
         self.env.filters["colang"] = colang
+        self.env.filters["co_v2"] = co_v2
         self.env.filters["colang_without_identifiers"] = colang_without_identifiers
         self.env.filters["remove_text_messages"] = remove_text_messages
         self.env.filters["first_turns"] = first_turns
@@ -65,6 +70,9 @@ class LLMTaskManager:
             "user_assistant_sequence_nemollm"
         ] = user_assistant_sequence_nemollm
         self.env.filters["to_messages"] = to_messages
+        self.env.filters["to_intent_messages"] = to_intent_messages
+        self.env.filters["to_intent_messages_2"] = to_intent_messages_2
+        self.env.filters["to_chat_messages"] = to_chat_messages
         self.env.filters["to_messages_nemollm"] = to_messages_nemollm
         self.env.filters["verbose_v1"] = verbose_v1
 

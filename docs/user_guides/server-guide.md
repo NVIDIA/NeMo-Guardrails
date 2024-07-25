@@ -9,7 +9,7 @@ The Guardrails Server loads a predefined set of guardrails configurations at sta
 To launch the server:
 
 ```
-> nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT] [--prefix PREFIX] [--disable-chat-ui] [--auto-reload]
+> nemoguardrails server [--config PATH/TO/CONFIGS] [--port PORT] [--prefix PREFIX] [--disable-chat-ui] [--auto-reload] [--default-config-id DEFAULT_CONFIG_ID]
 ```
 
 If no `--config` option is specified, the server will try to load the configurations from the `config` folder in the current directory. If no configurations are found, it will load all the example guardrails configurations.
@@ -103,7 +103,28 @@ POST /v1/chat/completions
 
 The configurations will be combined in the order they are specified in the `config_ids` list. If there are any conflicts between the configurations, the last configuration in the list will take precedence. The rails will be combined in the order they are specified in the `config_ids` list. The model type and engine across the configurations must be the same.
 
+#### Default Configuration
+
+The NeMo Guardrails server supports having a default guardrail configuration which can be set using the `--default-config-id` flag.
+This configuration is used when no `config_id` is provided in the request.
+
+```
+POST /v1/chat/completions
+```
+```json
+{
+    "messages": [{
+      "role":"user",
+      "content":"Hello! What can you do for me?"
+    }]
+}
+
+```
+
+
 ### Threads
+
+
 
 The Guardrails Server has basic support for storing the conversation threads. This is useful when you can only send the latest user message(s) for a conversation rather than the entire history (e.g., from a third-party integration hook).
 

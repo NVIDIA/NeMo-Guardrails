@@ -20,9 +20,7 @@ import pytest
 from nemoguardrails import LLMRails, RailsConfig
 
 try:
-    from nemoguardrails.embeddings.embedding_providers.openai import (
-        OpenAIEmbeddingModel,
-    )
+    from nemoguardrails.embeddings.providers.openai import OpenAIEmbeddingModel
 except ImportError:
     # Ignore this if running in test environment when openai not installed.
     OpenAIEmbeddingModel = None

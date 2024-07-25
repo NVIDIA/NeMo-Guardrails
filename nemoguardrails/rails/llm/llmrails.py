@@ -32,7 +32,6 @@ from nemoguardrails.actions.v2_x.generation import LLMGenerationActionsV2dotx
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.flows import compute_context
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
-from nemoguardrails.colang.v2_x.lang.utils import new_uuid
 from nemoguardrails.colang.v2_x.runtime.flows import Action, State
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.colang.v2_x.runtime.serialization import (
@@ -43,9 +42,12 @@ from nemoguardrails.context import (
     explain_info_var,
     generation_options_var,
     llm_stats_var,
+    raw_llm_request,
     streaming_handler_var,
 )
 from nemoguardrails.embeddings.index import EmbeddingsIndex
+from nemoguardrails.embeddings.providers import register_embedding_provider
+from nemoguardrails.embeddings.providers.base import EmbeddingModel
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.explain import ExplainInfo
@@ -61,7 +63,7 @@ from nemoguardrails.rails.llm.options import (
 )
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import get_or_create_event_loop, new_event_dict
+from nemoguardrails.utils import get_or_create_event_loop, new_event_dict, new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -346,7 +348,10 @@ class LLMRails:
                         "vertexai",
                     ]:
                         kwargs["model_name"] = llm_config.model
-                    elif llm_config.engine == "nvidia_ai_endpoints":
+                    elif (
+                        llm_config.engine == "nvidia_ai_endpoints"
+                        or llm_config.engine == "nim"
+                    ):
                         kwargs["model"] = llm_config.model
                     else:
                         # The `__fields__` attribute is computed dynamically by pydantic.
@@ -596,6 +601,9 @@ class LLMRails:
         if prompt is not None:
             # Currently, we transform the prompt request into a single turn conversation
             messages = [{"role": "user", "content": prompt}]
+            raw_llm_request.set(prompt)
+        else:
+            raw_llm_request.set(messages)
 
         # If we have generation options, we also add them to the context
         if options:
@@ -947,7 +955,10 @@ class LLMRails:
         return loop.run_until_complete(self.generate_events_async(events=events))
 
     async def process_events_async(
-        self, events: List[dict], state: Optional[dict] = None
+        self,
+        events: List[dict],
+        state: Optional[dict] = None,
+        blocking: bool = False,
     ) -> Tuple[List[dict], dict]:
         """Process a sequence of events in a given state.
 
@@ -971,7 +982,7 @@ class LLMRails:
         # TODO (cschueller): Why is this?
         async with process_events_semaphore:
             output_events, output_state = await self.runtime.process_events(
-                events, state
+                events, state, blocking
             )
 
         took = time.time() - t0
@@ -983,7 +994,10 @@ class LLMRails:
         return output_events, output_state
 
     def process_events(
-        self, events: List[dict], state: Optional[dict] = None
+        self,
+        events: List[dict],
+        state: Optional[dict] = None,
+        blocking: bool = False,
     ) -> Tuple[List[dict], dict]:
         """Synchronous version of `LLMRails.process_events_async`."""
 
@@ -994,7 +1008,9 @@ class LLMRails:
             )
 
         loop = get_or_create_event_loop()
-        return loop.run_until_complete(self.process_events_async(events, state))
+        return loop.run_until_complete(
+            self.process_events_async(events, state, blocking)
+        )
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""
@@ -1031,6 +1047,21 @@ class LLMRails:
         """
 
         self.embedding_search_providers[name] = cls
+
+    def register_embedding_provider(
+        self, cls: Type[EmbeddingModel], name: Optional[str] = None
+    ) -> None:
+        """Register a custom embedding provider.
+
+        Args:
+            model (Type[EmbeddingModel]): The embedding model class.
+            name (str): The name of the embedding engine. If available in the model, it will be used.
+
+        Raises:
+            ValueError: If the engine name is not provided and the model does not have an engine name.
+            ValueError: If the model does not have 'encode' or 'encode_async' methods.
+        """
+        register_embedding_provider(engine_name=name, model=cls)
 
     def explain(self) -> ExplainInfo:
         """Helper function to return the latest ExplainInfo object."""

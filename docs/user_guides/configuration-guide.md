@@ -85,9 +85,84 @@ The meaning of the attributes is as follows:
 
 You can use any LLM provider that is supported by LangChain, e.g., `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `cohere`, `huggingface_endpoint`, `huggingface_hub`, `openai`, `self_hosted`, `self_hosted_hugging_face`. Check out the LangChain official documentation for the full list.
 
-**NOTE**: to use any of the providers, you will need to install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instruct you on what packages should be installed.
+```{note}
+To use any of the providers, you must install additional packages; when you first try to use a configuration with a new provider, you typically receive an error from LangChain that instructs which packages you should install.
+```
 
-**IMPORTANT**: while from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g., `openai`, `nemollm`). For others, you can optimize the prompts yourself (see the [LLM Prompts](#llm-prompts) section).
+```{important}
+Although you can instantiate any of the previously mentioned LLM providers, depending on the capabilities of the model, the NeMo Guardrails toolkit works better with some providers than others. The toolkit includes prompts that have been optimized for certain types of models, such as `openai` and `nemollm`. For others, you can optimize the prompts yourself following the information in the [LLM Prompts](#llm-prompts) section.
+```
+#### NIM for LLMs
+
+[NVIDIA NIM](https://docs.nvidia.com/nim/index.html) is a set of easy-to-use microservices designed to accelerate the deployment of generative AI models across the cloud, data center, and workstations.
+[NVIDIA NIM for LLMs](https://docs.nvidia.com/nim/large-language-models/latest/introduction.html) brings the power of state-of-the-art LLMs to enterprise applications, providing unmatched natural language processing and understanding capabilities. [Learn more about NIMs](https://developer.nvidia.com/blog/nvidia-nim-offers-optimized-inference-microservices-for-deploying-ai-models-at-scale/).
+
+NeMo Guardrails supports connecting to a NIM as follows:
+
+```yaml
+models:
+  - type: main
+    engine: nim
+    model: <MODEL_NAME>
+    parameters:
+      base_url: <NIM_ENDPOINT_URL>
+```
+
+For example, to connect to a locally deployed `meta/llama3-8b-instruct` model, on port 8000, use the following model configuration:
+
+```yaml
+models:
+  - type: main
+    engine: nim
+    model: meta/llama3-8b-instruct
+    parameters:
+      base_url: http://localhost:8000/v1
+```
+
+```{important}
+To use the `nim` LLM provider, install the `langchain-nvidia-ai-endpoints` package using the command `pip install langchain-nvidia-ai-endpoints`.
+```
+
+
+#### NVIDIA AI Endpoints
+
+[NVIDIA AI Endpoints](https://www.nvidia.com/en-us/ai-data-science/foundation-models/) give users easy access to NVIDIA hosted API endpoints for NVIDIA AI Foundation Models such as Llama 3, Mixtral 8x7B, and Stable Diffusion.
+These models, hosted on the [NVIDIA API catalog](https://build.nvidia.com/), are optimized, tested, and hosted on the NVIDIA AI platform, making them fast and easy to evaluate, further customize, and seamlessly run at peak performance on any accelerated stack.
+
+To use an LLM model through the NVIDIA AI Endpoints, use the following model configuration:
+
+```yaml
+models:
+  - type: main
+    engine: nvidia_ai_endpoints
+    model: <MODEL_NAME>
+```
+
+For example, to use the `llama3-8b-instruct` model, use the following model configuration:
+
+```yaml
+models:
+  - type: main
+    engine: nvidia_ai_endpoints
+    model: meta/llama3-8b-instruct
+```
+
+```{important}
+To use the `nvidia_ai_endpoints` LLM provider, you must install the `langchain-nvidia-ai-endpoints` package using the command `pip install langchain-nvidia-ai-endpoints`, and configure a valid `NVIDIA_API_KEY`.
+```
+
+For further information, see the [user guide](./llm/nvidia_ai_endpoints/README.md).
+
+Here's an example configuration for using `llama3` model with [Ollama](https://ollama.com/):
+
+```yaml
+models:
+  - type: main
+    engine: ollama
+    model: llama3
+    parameters:
+      base_url: http://your_base_url
+```
 
 #### NeMo LLM Service
 
@@ -182,7 +257,7 @@ models:
 
 ### The Embeddings Model
 
-To configure the embeddings model that is used for the various steps in the [guardrails process](../architecture/README.md) (e.g., canonical form generation, next step generation), you can add a model configuration in the `models` key as shown below:
+To configure the embedding model used for the various steps in the [guardrails process](../architecture/README.md), such as canonical form generation and next step generation, add a model configuration in the `models` key as shown in the following configuration file:
 
 ```yaml
 models:
@@ -202,9 +277,84 @@ models:
     model: text-embedding-ada-002
 ```
 
+#### Supported Embedding Providers
+
+The following tables lists the supported embedding providers:
+
+| Provider Name        | `engine_name`          | `model`                            |
+|----------------------|------------------------|------------------------------------|
+| FastEmbed (default)  | `FastEmbed`            | `all-MiniLM-L6-v2` (default), etc. |
+| OpenAI               | `openai`               | `text-embedding-ada-002`, etc.     |
+| SentenceTransformers | `SentenceTransformers` | `all-MiniLM-L6-v2`, etc.           |
+| NVIDIA AI Endpoints  | `nvidia_ai_endpoints`  | `nv-embed-v1`, etc.                |
+
+```{note}
+You can use any of the supported models for any of the supported embedding providers.
+The previous table includes an example of a model that can be used.
+```
+
+#### Custom Embedding Provider
+
+You can also register a custom embedding provider by using the `LLMRails.register_embedding_provider` function.
+
+To register a custom LLM provider,
+create a class that inherits from `EmbeddingModel` and register it in your `config.py`.
+
+```python
+from typing import List
+from nemoguardrails.embeddings.providers.base import EmbeddingModel
+from nemoguardrails import LLMRails
+
+
+class CustomEmbeddingModel(EmbeddingModel):
+    """An implementation of a custom embedding provider."""
+    engine_name = "CustomEmbeddingModel"
+
+    def __init__(self, embedding_model: str):
+        # Initialize the model
+        ...
+
+    async def encode_async(self, documents: List[str]) -> List[List[float]]:
+        """Encode the provided documents into embeddings.
+
+        Args:
+            documents (List[str]): The list of documents for which embeddings should be created.
+
+        Returns:
+            List[List[float]]: The list of embeddings corresponding to the input documents.
+        """
+        ...
+
+    def encode(self, documents: List[str]) -> List[List[float]]:
+        """Encode the provided documents into embeddings.
+
+        Args:
+            documents (List[str]): The list of documents for which embeddings should be created.
+
+        Returns:
+            List[List[float]]: The list of embeddings corresponding to the input documents.
+        """
+        ...
+
+
+def init(app: LLMRails):
+    """Initialization function in your config.py."""
+    app.register_embedding_provider(CustomEmbeddingModel, "CustomEmbeddingModel")
+```
+
+You can then use the custom embedding provider in your configuration:
+
+```yaml
+models:
+  # ...
+  - type: embeddings
+    engine: SomeCustomName
+    model: SomeModelName      # supported by the provider.
+```
+
 ### Embedding Search Provider
 
-NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../architecture/README.md#the-guardrails-process) and for the [knowledge base](#knowledge-base-documents) functionality. The default embedding search uses FastEmbed for computing the embeddings (the `all-MiniLM-L6-v2` model) and [Annoy](https://github.com/spotify/annoy) for performing the search. As shown in the previous section, the embeddings model supports both FastEmbed and OpenAI. SentenceTransformers is also supported.
+NeMo Guardrails uses embedding search, also called vector databases, for implementing the [guardrails process](../architecture/README.md#the-guardrails-process) and for the [knowledge base](#knowledge-base-documents) functionality. The default embedding search uses FastEmbed for computing the embeddings (the `all-MiniLM-L6-v2` model) and [Annoy](https://github.com/spotify/annoy) for performing the search. As shown in the previous section, the embeddings model supports both FastEmbed and OpenAI. SentenceTransformers is also supported.
 
 For advanced use cases or integrations with existing knowledge bases, you can [provide a custom embedding search provider](advanced/embedding-search-providers.md).
 
@@ -270,6 +420,7 @@ prompts:
     models:
       - openai/gpt-3.5-turbo
     max_length: 3000
+    output_parser: user_intent
     content: |-
       <<This is a placeholder for a custom prompt for generating the user intent>>
 ```

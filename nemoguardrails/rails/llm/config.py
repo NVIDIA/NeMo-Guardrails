@@ -24,6 +24,7 @@ from pydantic.fields import Field
 
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
+from nemoguardrails.colang.v2_x.lang.utils import format_colang_parsing_error_message
 from nemoguardrails.colang.v2_x.runtime.errors import ColangParsingError
 
 log = logging.getLogger(__name__)
@@ -331,12 +332,40 @@ class JailbreakDetectionConfig(BaseModel):
     )
 
 
+class AutoAlignOptions(BaseModel):
+    """List of guardrails that are activated"""
+
+    guardrails_config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="The guardrails configuration that is passed to the AutoAlign endpoint",
+    )
+
+
+class AutoAlignRailConfig(BaseModel):
+    """Configuration data for the AutoAlign API"""
+
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    input: AutoAlignOptions = Field(
+        default_factory=AutoAlignOptions,
+        description="Input configuration for AutoAlign guardrails",
+    )
+    output: AutoAlignOptions = Field(
+        default_factory=AutoAlignOptions,
+        description="Output configuration for AutoAlign guardrails",
+    )
+
+
 class RailsConfigData(BaseModel):
     """Configuration data for specific rails that are supported out-of-the-box."""
 
     fact_checking: FactCheckingRailConfig = Field(
         default_factory=FactCheckingRailConfig,
         description="Configuration data for the fact-checking rail.",
+    )
+
+    autoalign: AutoAlignRailConfig = Field(
+        default_factory=AutoAlignRailConfig,
+        description="Configuration data for the AutoAlign guardrails API.",
     )
 
     sensitive_data_detection: Optional[SensitiveDataDetection] = Field(
@@ -459,7 +488,7 @@ def _join_config(dest_config: dict, additional_config: dict):
     ]
 
     for field in additional_fields:
-        if additional_config.get(field):
+        if field in additional_config:
             dest_config[field] = additional_config[field]
 
     # TODO: Rethink the best way to parse and load yaml config files
@@ -608,12 +637,14 @@ def _parse_colang_files_recursively(
 
         with open(current_path, "r", encoding="utf-8") as f:
             try:
+                content = f.read()
                 _parsed_config = parse_colang_file(
-                    current_file, content=f.read(), version=colang_version
+                    current_file, content=content, version=colang_version
                 )
             except Exception as e:
                 raise ColangParsingError(
-                    f"Error while parsing Colang file: {current_path}"
+                    f"Error while parsing Colang file: {current_path}\n"
+                    + format_colang_parsing_error_message(e, content)
                 ) from e
 
             # We join only the "import_paths" field in the config for now
@@ -707,7 +738,7 @@ class RailsConfig(BaseModel):
     # will be used for those tasks. Models like dolly don't allow for a temperature of 0.0,
     # for example, in which case a custom one can be set.
     lowest_temperature: Optional[float] = Field(
-        default=0.0,
+        default=0.001,
         description="The lowest temperature that should be used for the LLM.",
     )
 
@@ -744,8 +775,8 @@ class RailsConfig(BaseModel):
         description="Whether this configuration should use streaming mode or not.",
     )
 
-    passthrough: bool = Field(
-        default=False,
+    passthrough: Optional[bool] = Field(
+        default=None,
         description="Weather the original prompt should pass through the guardrails configuration as is. "
         "This means it will not be altered in any way. ",
     )
@@ -787,6 +818,13 @@ class RailsConfig(BaseModel):
             raise ValueError(
                 "You must provide a `llama_guard_check_output` prompt template."
             )
+        if (
+            "patronus lynx check output hallucination" in enabled_output_rails
+            and "patronus_lynx_check_output_hallucination" not in provided_task_prompts
+        ):
+            raise ValueError(
+                "You must provide a `patronus_lynx_check_output_hallucination` prompt template."
+            )
 
         if (
             "self check facts" in enabled_output_rails
@@ -818,8 +856,9 @@ class RailsConfig(BaseModel):
         description="The name of the action that would execute the original raw LLM call. ",
     )
 
-    @staticmethod
+    @classmethod
     def from_path(
+        cls,
         config_path: str,
     ):
         """Loads a configuration from a given path.
@@ -853,10 +892,11 @@ class RailsConfig(BaseModel):
 
         raw_config["config_path"] = config_path
 
-        return RailsConfig.parse_object(raw_config)
+        return cls.parse_object(raw_config)
 
-    @staticmethod
+    @classmethod
     def from_content(
+        cls,
         colang_content: Optional[str] = None,
         yaml_content: Optional[str] = None,
         config: Optional[dict] = None,
@@ -907,7 +947,7 @@ class RailsConfig(BaseModel):
         if len(raw_config.get("instructions", [])) == 0:
             raw_config["instructions"] = _default_config["instructions"]
 
-        return RailsConfig.parse_object(raw_config)
+        return cls.parse_object(raw_config)
 
     @classmethod
     def parse_object(cls, obj):
@@ -923,7 +963,7 @@ class RailsConfig(BaseModel):
                 ):
                     flow_data["elements"] = parse_flow_elements(flow_data["elements"])
 
-        return RailsConfig.parse_obj(obj)
+        return cls.parse_obj(obj)
 
     @property
     def streaming_supported(self):

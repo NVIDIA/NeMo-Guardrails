@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import re
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from langchain.base_language import BaseLanguageModel
 from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackManager
@@ -27,6 +27,18 @@ from nemoguardrails.colang.v2_x.runtime.flows import InternalEvent, InternalEven
 from nemoguardrails.context import llm_call_info_var
 from nemoguardrails.logging.callbacks import logging_callbacks
 from nemoguardrails.logging.explain import LLMCallInfo
+
+
+class LLMCallException(Exception):
+    """A wrapper around the LLM call invocation exception.
+
+    This is used to propagate the exception out of the `generate_async` call (the default behavior is to
+    catch it and return an "Internal server error." message.
+    """
+
+    def __init__(self, inner_exception: Any):
+        super().__init__(f"LLM Call Exception: {str(inner_exception)}")
+        self.inner_exception = inner_exception
 
 
 async def llm_call(
@@ -53,9 +65,12 @@ async def llm_call(
 
     if isinstance(prompt, str):
         # stop sinks here
-        result = await llm.agenerate_prompt(
-            [StringPromptValue(text=prompt)], callbacks=all_callbacks, stop=stop
-        )
+        try:
+            result = await llm.agenerate_prompt(
+                [StringPromptValue(text=prompt)], callbacks=all_callbacks, stop=stop
+            )
+        except Exception as e:
+            raise LLMCallException(e)
         llm_call_info.raw_response = result.llm_output
 
         # TODO: error handling
@@ -64,17 +79,24 @@ async def llm_call(
         # We first need to translate the array of messages into LangChain message format
         messages = []
         for _msg in prompt:
-            if _msg["type"] == "user":
+            msg_type = _msg["type"] if "type" in _msg else _msg["role"]
+            if msg_type == "user":
                 messages.append(HumanMessage(content=_msg["content"]))
-            elif _msg["type"] in ["bot", "assistant"]:
+            elif msg_type in ["bot", "assistant"]:
                 messages.append(AIMessage(content=_msg["content"]))
-            elif _msg["type"] == "system":
+            elif msg_type == "system":
                 messages.append(SystemMessage(content=_msg["content"]))
             else:
-                raise ValueError(f"Unknown message type {_msg['type']}")
-        result = await llm.agenerate_prompt(
-            [ChatPromptValue(messages=messages)], callbacks=all_callbacks, stop=stop
-        )
+                # TODO: add support for tool-related messages
+                raise ValueError(f"Unknown message type {msg_type}")
+
+        try:
+            result = await llm.agenerate_prompt(
+                [ChatPromptValue(messages=messages)], callbacks=all_callbacks, stop=stop
+            )
+        except Exception as e:
+            raise LLMCallException(e)
+
         llm_call_info.raw_response = result.llm_output
 
         return result.generations[0][0].text
@@ -317,7 +339,7 @@ def get_last_user_utterance(events: List[dict]) -> Optional[str]:
     return None
 
 
-def get_retrieved_relevant_chunks(events: List[dict]) -> Optional[dict]:
+def get_retrieved_relevant_chunks(events: List[dict]) -> Optional[str]:
     """Returns the retrieved chunks for current user utterance from the events."""
     for event in reversed(events):
         if event["type"] == "UserMessage":
@@ -325,7 +347,7 @@ def get_retrieved_relevant_chunks(events: List[dict]) -> Optional[dict]:
         if event["type"] == "ContextUpdate" and "relevant_chunks" in event.get(
             "data", {}
         ):
-            return event["data"]["relevant_chunks"]
+            return (event["data"]["relevant_chunks"] or "").strip()
 
     return None
 
@@ -476,6 +498,44 @@ def get_initial_actions(strings: List[str]) -> List[str]:
     return previous_strings
 
 
+def get_first_user_intent(strings: List[str]) -> Optional[str]:
+    """Returns first user intent."""
+    for string in strings:
+        if string.startswith("user intent: "):
+            return string.replace("user intent: ", "")
+    return None
+
+
+def get_first_bot_intent(strings: List[str]) -> Optional[str]:
+    """Returns first bot intent."""
+    for string in strings:
+        if string.startswith("bot intent: "):
+            return string.replace("bot intent: ", "")
+    return None
+
+
+def get_first_bot_action(strings: List[str]) -> Optional[str]:
+    """Returns first bot action."""
+    action_started = False
+    action: str = ""
+    for string in strings:
+        if string.startswith("bot action: "):
+            if action != "":
+                action += "\n"
+            action += string.replace("bot action: ", "")
+            action_started = True
+        elif (
+            string.startswith("  and") or string.startswith("  or")
+        ) and action_started:
+            action = action + string
+        elif string == "":
+            action_started = False
+            continue
+        elif action != "":
+            return action
+    return action
+
+
 def escape_flow_name(name: str) -> str:
     """Escape invalid keywords in flow names."""
     # TODO: We need to figure out how we can distinguish from valid flow parameters
@@ -483,9 +543,6 @@ def escape_flow_name(name: str) -> str:
         name.replace(" and ", "_and_")
         .replace(" or ", "_or_")
         .replace(" as ", "_as_")
-        .replace(" not ", "_not_")
-        .replace(" is ", "_is_")
-        .replace(" in ", "_in_")
         .replace("(", "")
         .replace(")", "")
         .replace("'", "")

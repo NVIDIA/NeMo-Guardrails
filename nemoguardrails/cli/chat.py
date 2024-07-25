@@ -26,7 +26,7 @@ from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
 from nemoguardrails.logging import verbose
 from nemoguardrails.logging.verbose import console
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import new_event_dict, new_uid
+from nemoguardrails.utils import new_event_dict, new_uuid
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -155,9 +155,6 @@ async def _run_chat_v2_x(rails_app: LLMRails):
         # We detect any "StartUtteranceBotAction" events, show the message, and
         # generate the corresponding Finished events as new input events.
         for event in output_events:
-            # Add all output events also to input events
-            input_events.append(event)
-
             if event["type"] == "StartUtteranceBotAction":
                 # We print bot messages in green.
                 if not verbose.verbose_mode_enabled:
@@ -409,10 +406,12 @@ async def _run_chat_v2_x(rails_app: LLMRails):
             if len(input_events) == 0:
                 input_events = [new_event_dict("CheckLocalAsync")]
 
-            output_events, output_state = await rails_app.process_events_async(
-                input_events, state
-            )
+            # We need to copy input events to prevent race condition
+            input_events_copy = input_events.copy()
             input_events = []
+            output_events, output_state = await rails_app.process_events_async(
+                input_events_copy, state
+            )
 
             # Process output_events and potentially generate new input_events
             _process_output()
@@ -436,10 +435,12 @@ async def _run_chat_v2_x(rails_app: LLMRails):
     async def _process_input_events():
         nonlocal first_time, output_events, output_state, input_events, check_task
         while input_events or first_time:
-            output_events, output_state = await rails_app.process_events_async(
-                input_events, state
-            )
+            # We need to copy input events to prevent race condition
+            input_events_copy = input_events.copy()
             input_events = []
+            output_events, output_state = await rails_app.process_events_async(
+                input_events_copy, state
+            )
             _process_output()
             # If we don't have a check task, we start it
             if check_task is None:
@@ -489,7 +490,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         new_event_dict(
                             "UtteranceUserActionFinished",
                             final_transcript=user_message,
-                            action_uid=new_uid(),
+                            action_uid=new_uuid(),
                             is_success=True,
                         )
                     ]
@@ -586,7 +587,6 @@ def run_chat(
         config_id (Optional[str]): The configuration ID. Defaults to None.
     """
     rails_config = RailsConfig.from_path(config_path)
-    rails_app = LLMRails(rails_config, verbose=verbose)
 
     if verbose and verbose_llm_calls:
         console.print(
@@ -607,6 +607,7 @@ def run_chat(
             )
         )
     elif rails_config.colang_version == "2.x":
+        rails_app = LLMRails(rails_config, verbose=verbose)
         asyncio.run(_run_chat_v2_x(rails_app))
     else:
         raise Exception(f"Invalid colang version: {rails_config.colang_version}")

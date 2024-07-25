@@ -1,0 +1,32 @@
+prompts:
+    - task: patronus_lynx_check_output_hallucination
+      content: |
+        Given the following QUESTION, DOCUMENT and ANSWER you must analyze the provided answer and determine whether it is faithful to the contents of the DOCUMENT.
+
+        The ANSWER must not offer new information beyond the context provided in the DOCUMENT.
+
+        The ANSWER also must not contradict information provided in the DOCUMENT.
+
+        Output your final score by strictly following this format: "PASS" if the answer is faithful to the DOCUMENT and "FAIL" if the answer is not faithful to the DOCUMENT.
+
+        Show your reasoning.
+
+        --
+        QUESTION (THIS DOES NOT COUNT AS BACKGROUND INFORMATION):
+        {{ user_input }}
+
+        --
+        DOCUMENT:
+        {{ provided_context }}
+
+        --
+        ANSWER:
+        {{ bot_response }}
+
+        --
+
+        Your output should be in JSON FORMAT with the keys "REASONING" and "SCORE".
+
+        Ensure that the JSON is valid and properly formatted.
+
+        {"REASONING": ["<your reasoning as bullet points>"], "SCORE": "<final score>"}
