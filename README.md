@@ -59,7 +59,7 @@ Key benefits of adding *programmable guardrails* include:
 NeMo Guardrails provides several mechanisms for protecting an LLM-powered chat application against common LLM vulnerabilities, such as jailbreaks and prompt injections. Below is a sample overview of the protection offered by different guardrails configuration for the example [ABC Bot](./examples/bots/abc) included in this repository. For more details, please refer to the [LLM Vulnerability Scanning](https://docs.nvidia.com/nemo/guardrails/evaluation/llm-vulnerability-scanning.html) page.
 
 <div align="center">
-<img src="https://github.com/NVIDIA/NeMo-Guardrails/raw/develop/docs/_static/images/abc-llm-vulnerability-scan-results.png" width="750">
+<img src="https://github.com/NVIDIA/NeMo-Guardrails/raw/develop/docs/_static/images/abc-llm-vulnerability-scan-results.png" width="500">
 </div>
 
 
@@ -220,13 +220,20 @@ NeMo Guardrails comes with a set of [built-in guardrails](https://docs.nvidia.co
 
 > **NOTE**: The built-in guardrails are only intended to enable you to get started quickly with NeMo Guardrails. For production use cases, further development and testing of the rails are needed.
 
-Currently, the guardrails library includes guardrails for:
-- [jailbreak detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#jailbreak-detection-heuristics)
-- [output moderation](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#self-check-output)
-- [fact-checking](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#fact-checking)
-- [sensitive data detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#presidio-based-sensitive-data-detection), [hallucination detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#hallucination-detection)
-- [input moderation using ActiveFence] (https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#activefence>), [hallucination detection for RAG applications using Got It AI's TruthChecker API](docs/user_guides/guardrails-library.md#got-it-ai)
-[RAG hallucination detection using Patronus Lynx](docs/user_guides/guardrails-library.md#patronus-lynx-based-rag-hallucination-detection)
+Currently, the guardrails library includes:
+
+- [Jailbreak Detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#jailbreak-detection-heuristics)
+- [Self-Check Input Moderation](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#self-input-output)
+- [Self-Check Output Moderation](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#self-check-output)
+- [Self-Check Fact-checking](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#fact-checking)
+- [Hallucination Detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#hallucination-detection)
+- [AlignScore-based Fact-checking](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#alignscore-based-fact-checking)
+- [LlamaGuard-based Content Moderation](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#llama-guard-based-content-moderation)
+- [RAG hallucination detection using Patronus Lynx](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.md#patronus-lynx-based-rag-hallucination-detection)
+- [Presidio-based Sensitive Data Detection](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#presidio-based-sensitive-data-detection)
+- [Input moderation using ActiveFence](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.html#activefence)
+- [RAG Hallucination detection using Got It AI's TruthChecker API](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.md#got-it-ai)
+- [AutoAlign-based guardrails](https://docs.nvidia.com/nemo/guardrails/user_guides/guardrails-library.md#autoalign)
 
 ## CLI
 

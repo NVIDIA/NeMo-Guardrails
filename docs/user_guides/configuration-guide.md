@@ -86,7 +86,7 @@ The meaning of the attributes is as follows:
 You can use any LLM provider that is supported by LangChain, e.g., `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `cohere`, `huggingface_endpoint`, `huggingface_hub`, `openai`, `self_hosted`, `self_hosted_hugging_face`. Check out the LangChain official documentation for the full list.
 
 ```{note}
-To use any of the providers, you must install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instructs which packages you should install.
+To use any of the providers, you must install additional packages; when you first try to use a configuration with a new provider, you typically receive an error from LangChain that instructs which packages you should install.
 ```
 
 ```{important}
