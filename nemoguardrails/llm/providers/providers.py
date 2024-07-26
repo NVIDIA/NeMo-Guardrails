@@ -242,6 +242,8 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
+            from ._langchain_nvidia_ai_endpoints_patch import ChatNVIDIA
+
             return ChatNVIDIA
         except ImportError:
             raise ImportError(
