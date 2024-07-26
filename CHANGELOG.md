@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 NOTE:
 The changes related to the Colang language and runtime have moved to [CHANGELOG-Colang](./CHANGELOG-Colang.md) file.
 
-## [0.9.1.1] - 2024-07-27
+## [0.9.1.1] - 2024-07-26
 
 ### Fixed
 
