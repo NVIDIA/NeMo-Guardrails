@@ -1,6 +1,6 @@
 define user ask summary
   "Give me a summary of the doc"
-  "Please summarize this for me
+  "Please summarize this for me"
 
 define flow summarize document
   user ask about asteroids
