@@ -271,20 +271,6 @@ class RuntimeV2_x(Runtime):
             if result.context_updates is not None:
                 context_updates.update(result.context_updates)
 
-        # next_steps = []
-        #
-        # if context_updates:
-        #     # We check if at least one key changed
-        #     changes = False
-        #     for k, v in context_updates.items():
-        #         if context.get(k) != v:
-        #             changes = True
-        #             break
-        #
-        #     if changes:
-        #         next_steps.append(new_event_dict("ContextUpdate", data=context_updates))
-        #
-        # # If the action returned additional events, we also add them to the next steps.
         # if return_events:
         #     next_steps.extend(return_events)
 
@@ -321,8 +307,9 @@ class RuntimeV2_x(Runtime):
                                 )
 
                             resp = await resp.json()
-                            result, status = resp.get("result", result), resp.get(
-                                "status", status
+                            result, status = (
+                                resp.get("result", result),
+                                resp.get("status", status),
                             )
                     except Exception as e:
                         log.info(
@@ -556,7 +543,7 @@ class RuntimeV2_x(Runtime):
                             output_events.append(action_finished_event)
                             input_events.append(action_finished_event)
 
-                        elif action_name in self.action_dispatcher.registered_actions:
+                        elif self.action_dispatcher.has_registered(action_name):
                             # In this case we need to start the action locally
                             action_fn = self.action_dispatcher.get_action(action_name)
                             execute_async = getattr(action_fn, "action_meta", {}).get(
@@ -678,6 +665,9 @@ class RuntimeV2_x(Runtime):
             events=events_history,
             state=state,
         )
+
+        state.context.update(context_updates)
+
         return {
             "action_name": action_name,
             "return_value": return_value,
