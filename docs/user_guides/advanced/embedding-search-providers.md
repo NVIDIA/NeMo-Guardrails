@@ -16,6 +16,7 @@ core:
       use_batching: False
       max_batch_size: 10
       max_batch_hold: 0.01
+      search_threshold: None
     cache:
       enabled: False
       key_generator: md5
@@ -31,6 +32,7 @@ knowledge_base:
       use_batching: False
       max_batch_size: 10
       max_batch_hold: 0.01
+      search_threshold: None
     cache:
       enabled: False
       key_generator: md5

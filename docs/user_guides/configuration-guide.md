@@ -600,6 +600,11 @@ rails:
     user_messages:
       # Whether to use only the embeddings when interpreting the user's message
       embeddings_only: True
+      # Use only the embeddings when the similarity is above the specified threshold.
+      embeddings_only_similarity_threshold: 0.5
+      # When the fallback is set to None, if the similarity is below the threshold, the user intent is computed normally using the LLM.
+      # When it is set to a string value, that string value will be used as the intent.
+      embeddings_only_fallback_intent: None
 ```
 
 **IMPORTANT**: This is recommended only when enough examples are provided.
