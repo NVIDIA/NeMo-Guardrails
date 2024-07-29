@@ -1,0 +1,6 @@
+prompts:
+  - task: self_check_facts
+    content: |-
+      You are given a task to identify if the main claims in a statement are faithful to the given evidence.
+      You will only use the contents of the evidence and not rely on external knowledge.
+      Answer with yes/no. "evidence": {{ evidence }} "statement": {{ response }} "faithful":

@@ -45,5 +45,6 @@ class Task(Enum):
         "patronus_lynx_check_output_hallucination"
     )
 
-    SELF_CHECK_FACTS = "fact_checking"
+    SELF_CHECK_FACTS = "self_check_facts"
+    FACT_CHECKING = "fact_checking"
     CHECK_HALLUCINATION = "check_hallucination"
