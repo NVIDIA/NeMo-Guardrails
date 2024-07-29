@@ -24,8 +24,8 @@ from fastapi import FastAPI
 from nemoguardrails import __version__
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
-from nemoguardrails.eval.cli import evaluate
-from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
+from nemoguardrails.evaluate.cli import evaluate
+from nemoguardrails.evaluate.cli.simplify_formatter import SimplifyFormatter
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
 from nemoguardrails.utils import init_random_seed
