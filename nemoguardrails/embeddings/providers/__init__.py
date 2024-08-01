@@ -16,13 +16,12 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Optional, Type
 
-from . import fastembed, nim, openai, sentence_transformers, ollama
+from . import fastembed, nim, ollama, openai, sentence_transformers
 from .base import EmbeddingModel
 from .registry import EmbeddingProviderRegistry
-
-import inspect
 
 # This is the executor that will be used for computing the embeddings.
 # Currently, we leave this as None, to use the default executor from asyncio.
