@@ -57,6 +57,7 @@ def register_embedding_provider(
     registry = EmbeddingProviderRegistry()
     registry.add(engine_name, model)
 
+
 # The cache for embedding models, to make sure they are singleton.
 _embedding_model_cache = {}
 
@@ -71,7 +72,10 @@ register_embedding_provider(nim.NIMEmbeddingModel)
 register_embedding_provider(nim.NVIDIAAIEndpointsEmbeddingModel)
 register_embedding_provider(ollama.OllamaEmbeddingModel)
 
-def init_embedding_model(embedding_model: str, embedding_engine: str, base_url: str) -> EmbeddingModel:
+
+def init_embedding_model(
+    embedding_model: str, embedding_engine: str, base_url: str
+) -> EmbeddingModel:
     """Initialize the embedding model.
 
     Args:
@@ -89,7 +93,6 @@ def init_embedding_model(embedding_model: str, embedding_engine: str, base_url: 
     model_key = f"{embedding_engine}-{embedding_model}"
 
     if model_key not in _embedding_model_cache:
-
         embedding_engine = EmbeddingProviderRegistry().get(embedding_engine)
 
         if "base_url" in inspect.signature(embedding_engine.__init__).parameters:
