@@ -131,7 +131,10 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     def _init_model(self):
         """Initialize the model used for computing the embeddings."""
         self._model = init_embedding_model(
-            embedding_model=self.embedding_model, embedding_engine=self.embedding_engine, base_url=self.base_url)
+            embedding_model=self.embedding_model,
+            embedding_engine=self.embedding_engine,
+            base_url=self.base_url,
+        )
 
     @cache_embeddings
     async def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
