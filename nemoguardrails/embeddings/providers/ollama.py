@@ -41,7 +41,7 @@ class OllamaEmbeddingModel(EmbeddingModel):
 
     engine_name = "OllamaEmbed"
 
-    def __init__(self,  embedding_model: str, base_url: str):
+    def __init__(self, embedding_model: str, base_url: str):
         try:
             from langchain_community.embeddings import OllamaEmbeddings
         except ImportError:
@@ -50,8 +50,10 @@ class OllamaEmbeddingModel(EmbeddingModel):
                 "`pip install langchain_community`."
             )
 
-        self.model = OllamaEmbeddings( model=embedding_model, base_url=base_url )
-        self.response = self.model.embed_query( 'The sky is blue because of rayleigh scattering')
+        self.model = OllamaEmbeddings(model=embedding_model, base_url=base_url)
+        self.response = self.model.embed_query(
+            "The sky is blue because of rayleigh scattering"
+        )
         # Get the embedding dimension of the model
         self.embedding_size = len(self.response)
 
