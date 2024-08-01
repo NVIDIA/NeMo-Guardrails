@@ -206,7 +206,7 @@ class LLMRails:
             if model.type == "embeddings":
                 self.default_embedding_model = model.model
                 self.default_embedding_engine = model.engine
-                self.default_base_url = model.parameters.get('base_url')
+                self.default_base_url = model.parameters.get("base_url")
                 break
 
         # We run some additional checks on the config
@@ -395,9 +395,7 @@ class LLMRails:
                 embedding_engine=esp_config.parameters.get(
                     "embedding_engine", self.default_embedding_engine
                 ),
-                base_url=esp_config.parameters.get(
-                    "base_url", self.default_base_url
-                ),
+                base_url=esp_config.parameters.get("base_url", self.default_base_url),
                 cache_config=esp_config.cache,
                 # We make sure we also pass additional relevant params.
                 **{
