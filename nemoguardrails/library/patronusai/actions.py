@@ -15,7 +15,7 @@
 
 import logging
 import re
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from langchain.llms.base import BaseLLM
 
@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 def parse_patronus_lynx_response(
     response: str,
-) -> Tuple[bool, List[str] | None]:
+) -> Tuple[bool, Union[List[str], None]]:
     """
     Parses the response from the Patronus Lynx LLM and returns a tuple of:
     - Whether the response is hallucinated or not.

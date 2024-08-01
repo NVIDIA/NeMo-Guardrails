@@ -91,6 +91,10 @@ def _get_prompt(
                     _score = 0.8
                     break
 
+                # If we match a substring, the score is 0.4
+                elif _model in model:
+                    _score = 0.4
+
         if prompt.mode != prompting_mode:
             # Penalize matching score for being in an incorrect mode.
             # This way, if a prompt with the correct mode (say "compact") is found, it will be preferred over a prompt with another mode (say "standard").

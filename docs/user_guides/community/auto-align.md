@@ -1,4 +1,4 @@
-# AutoAlign
+# AutoAlign Integration
 
 This package implements the AutoAlign's guardrails API integration - a comprehensive guardrail library by [AutoAlign](https://autoalign.ai/).
 

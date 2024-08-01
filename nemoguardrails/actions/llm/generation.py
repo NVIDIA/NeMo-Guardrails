@@ -497,9 +497,17 @@ class LLMGenerationActions:
                 # Initialize the LLMCallInfo object
                 llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
 
+                if kb:
+                    chunks = await kb.search_relevant_chunks(event["text"])
+                    relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
+                else:
+                    relevant_chunks = ""
+
                 # Otherwise, we still create an altered prompt.
                 prompt = self.llm_task_manager.render_task_prompt(
-                    task=Task.GENERAL, events=events
+                    task=Task.GENERAL,
+                    events=events,
+                    context={"relevant_chunks": relevant_chunks},
                 )
 
                 generation_options: GenerationOptions = generation_options_var.get()
@@ -1130,6 +1138,8 @@ class LLMGenerationActions:
                 relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
             else:
                 relevant_chunks = ""
+
+            relevant_chunks = relevant_chunks.strip()
 
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERATE_INTENT_STEPS_MESSAGE,

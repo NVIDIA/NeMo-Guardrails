@@ -241,7 +241,13 @@ def get_data_path(package_name: str, file_path: str) -> str:
     """Helper to get the path to the data directory."""
     try:
         # Try to get the path from the package resources
-        path = pkg_resources.files(package_name).joinpath(file_path)
+        if hasattr(pkg_resources, "files"):
+            path = pkg_resources.files(package_name).joinpath(file_path)
+        else:
+            # For Python 3.8 we need this approach
+            with pkg_resources.path(package_name, "__init__.py") as path:
+                path = path.parent.joinpath(file_path)
+
         if path.exists():
             return str(path)
     except FileNotFoundError:
