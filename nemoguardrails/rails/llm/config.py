@@ -788,7 +788,8 @@ class RailsConfig(BaseModel):
         enabled_input_rails = rails.get("input", {}).get("flows", [])
         enabled_output_rails = rails.get("output", {}).get("flows", [])
         provided_task_prompts = [
-            prompt.get("task") for prompt in values.get("prompts", [])
+            prompt.task if hasattr(prompt, "task") else prompt.get("task")
+            for prompt in values.get("prompts", [])
         ]
 
         # Input moderation prompt verification
