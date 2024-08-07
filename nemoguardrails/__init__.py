@@ -14,6 +14,14 @@
 # limitations under the License.
 
 """NeMo Guardrails Toolkit."""
+import os
+
+# If no explicit value is set for TOKENIZERS_PARALLELISM, we disable it
+# to get rid of the annoying warning.
+if not os.environ.get("TOKENIZERS_PARALLELISM"):
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+
 import warnings
 
 from . import patch_asyncio
