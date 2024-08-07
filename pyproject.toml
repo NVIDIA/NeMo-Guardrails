@@ -15,7 +15,7 @@
 
 [project]
 name = "nemoguardrails"
-description = "NeMo Guardrails is an open-source toolkit for easily adding programmagle guardrails to LLM-based conversational systems."
+description = "NeMo Guardrails is an open-source toolkit for easily adding programmable guardrails to LLM-based conversational systems."
 authors = [
   { name = "NVIDIA", email = "nemoguardrails@nvidia.com"}
 ]
