@@ -20,7 +20,14 @@ from typing import Any, Dict, List, Union
 
 import yaml
 
-from nemoguardrails.utils import CustomDumper
+# We try to load the efficient versions of the Loader and Dumper for YAML.
+# https://pyyaml.org/wiki/PyYAMLDocumentation
+# https://stackoverflow.com/questions/27743711/can-i-speedup-yaml
+try:
+    from yaml import CDumper as Dumper
+    from yaml import CLoader as Loader
+except ImportError:
+    from yaml import Dumper, Loader
 
 
 def load_dict_from_file(file_path: str) -> Dict[str, Any]:
@@ -30,7 +37,7 @@ def load_dict_from_file(file_path: str) -> Dict[str, Any]:
     _obj = {}
     if file_extension == ".yaml" or file_extension == ".yml":
         with open(file_path) as f:
-            _obj = yaml.safe_load(f)
+            _obj = yaml.load(f, Loader=Loader)
     elif file_extension == ".json":
         with open(file_path) as f:
             _obj = json.load(f)
@@ -71,6 +78,10 @@ def update_dict_at_path(path: str, d: dict):
     for root, _, files in os.walk(path, followlinks=True):
         for file in files:
             full_path = os.path.join(root, file)
+            _, ext = os.path.splitext(full_path)
+            if ext not in [".json", ".yaml", ".yml"]:
+                continue
+
             _obj = load_dict_from_file(full_path)
 
             changed = False
@@ -98,7 +109,7 @@ def save_dict_to_file(val: Any, output_path: str, output_format: str = "yaml"):
                 yaml.dump(
                     val,
                     sort_keys=False,
-                    Dumper=CustomDumper,
+                    Dumper=Dumper,
                     width=1000,
                 )
             )

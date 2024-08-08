@@ -22,7 +22,6 @@ import typer
 from langchain_community.cache import SQLiteCache
 from langchain_core.globals import set_llm_cache
 
-from nemoguardrails.eval import check
 from nemoguardrails.eval.check import LLMJudgeComplianceChecker
 from nemoguardrails.eval.eval import run_eval
 from nemoguardrails.eval.utils import get_output_paths
@@ -52,6 +51,10 @@ def run(
         help="Output directory for the results. "
         "Defaults to a folder in the current directory with the same name as the guardrail configuration.",
     ),
+    output_format: str = typer.Option(
+        default="json",
+        help="The format that should be used for the output files (JSON/YAML). Defaults to JSON.",
+    ),
 ):
     """Run an evaluation."""
     eval_config_path = os.path.abspath(eval_config_path)
@@ -66,6 +69,7 @@ def run(
         eval_config_path=eval_config_path,
         guardrail_config_path=guardrail_config_path,
         output_path=output_path,
+        output_format=output_format.lower(),
     )
 
 

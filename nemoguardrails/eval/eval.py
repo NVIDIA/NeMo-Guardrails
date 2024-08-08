@@ -248,8 +248,7 @@ def run_eval(
     eval_config_path: str,
     guardrail_config_path: str,
     output_path: str,
-    output_format: str = "yaml",
-    verbose: bool = False,
+    output_format: str = "json",
 ):
     """Run a guardrail evaluation.
 
@@ -258,7 +257,6 @@ def run_eval(
         guardrail_config_path (str): Path to a directory containing the guardrail configuration.
         output_path (str, optional): Output directory for predictions. Defaults to None.
         output_format (str, optional): Output format. Supported values are "yaml" and "json". Defaults to "yaml".
-        verbose (bool, optional): If the evaluation should be verbose. Defaults to False.
     """
     # status = console.status("[bold green]Working ...[/]")
     # status.start()
