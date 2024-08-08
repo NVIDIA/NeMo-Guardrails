@@ -61,6 +61,7 @@ def co_v2(
         "wolframalpha_query",
         "zapier_nla_query",
         "call activefence api",
+        "call gcpnlp api",
         "jailbreak_detection_heuristics",
         "check_hallucination",
         "llama_guard_check_input",
