@@ -16,18 +16,17 @@
 import logging
 from typing import Optional
 
-from nemoguardrails.actions import action
-
 from google.cloud import language_v2
+
+from nemoguardrails.actions import action
 
 log = logging.getLogger(__name__)
 
 
 @action(name="call gcpnlp api", is_system_action=True)
 async def call_gcp_text_moderation_api(context: Optional[dict] = None):
-    
     """
-    Application Default Credentials (ADC) is a strategy used by the GCP authentication libraries to automatically 
+    Application Default Credentials (ADC) is a strategy used by the GCP authentication libraries to automatically
     find credentials based on the application environment. ADC searches for credentials in the following locations (Search order):
     1. GOOGLE_APPLICATION_CREDENTIALS environment variable
     2. User credentials set up by using the Google Cloud CLI
@@ -43,7 +42,7 @@ async def call_gcp_text_moderation_api(context: Optional[dict] = None):
     document = language_v2.Document()
     document.content = user_message
     document.type_ = language_v2.Document.Type.PLAIN_TEXT
-    
+
     response = await client.moderate_text(document=document)
 
     violations_dict = {}
@@ -52,5 +51,5 @@ async def call_gcp_text_moderation_api(context: Optional[dict] = None):
         if violation.confidence > max_risk_score:
             max_risk_score = violation.confidence
         violations_dict[violation.name] = violation.confidence
-    
+
     return {"max_risk_score": max_risk_score, "violations": violations_dict}

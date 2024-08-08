@@ -48,7 +48,7 @@ define subflow gcpnlp moderation detailed
   if $result.violations.get("Profanity", 0) > 0.6
     bot inform cannot engage in abusive or harmful behavior
     stop
-  
+
   if $result.violations.get("Derogatory", 0) > 0.4
     bot inform cannot engage in abusive or harmful behavior
     stop
@@ -56,7 +56,7 @@ define subflow gcpnlp moderation detailed
   if $result.violations.get("Violent", 0) > 0.8
     bot inform cannot engage in abusive or harmful behavior
     stop
-    
+
   if $result.violations.get("Sexual", 0) > 0.7
     bot inform cannot engage in inappropriate content
     stop
@@ -64,11 +64,11 @@ define subflow gcpnlp moderation detailed
   if $result.violations.get("Death, Harm & Tragedy", 0) > 0.8
     bot inform cannot engage in inappropriate content
     stop
-  
+
   if $result.violations.get("Firearms & Weapons", 0) > 0.8
     bot inform cannot engage in inappropriate content
     stop
-  
+
   if $result.violations.get("Illicit Drugs", 0) > 0.8
     bot inform cannot engage with sensitive content
     stop
@@ -80,19 +80,19 @@ define subflow gcpnlp moderation detailed
   if $result.violations.get("Health", 0) > 0.8
     bot inform cannot engage with sensitive content
     stop
-  
+
   if $result.violations.get("Religion & Belief", 0) > 0.8
     bot inform cannot engage with sensitive content
     stop
-  
+
   if $result.violations.get("War & Conflict", 0) > 0.8
     bot inform cannot engage with sensitive content
     stop
-  
+
   if $result.violations.get("Politics", 0) > 0.8
     bot inform cannot engage with sensitive content
     stop
-  
+
   if $result.violations.get("Finance", 0) > 0.8
     bot inform cannot engage with sensitive content
     stop
