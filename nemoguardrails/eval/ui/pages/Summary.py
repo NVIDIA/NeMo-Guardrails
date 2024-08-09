@@ -16,22 +16,10 @@ from typing import List
 
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 
-from nemoguardrails.eval.models import EvalConfig
 from nemoguardrails.eval.ui.utils import EvalData, load_eval_data
 from nemoguardrails.eval.utils import collect_interaction_metrics
-
-
-def _render_policies(eval_config: EvalConfig):
-    """Render the list of policies."""
-    st.header("Policies")
-    policies = pd.DataFrame(
-        [[policy.id, policy.description] for policy in eval_config.policies],
-        columns=["Policy ID", "Description"],
-    )
-    st.dataframe(policies, use_container_width=True)
 
 
 def _render_sidebar(output_names: List[str], policy_options: List[str]):
@@ -229,9 +217,6 @@ def main():
 
     # Sidebar
     output_names, policy_options = _render_sidebar(output_names, policy_options)
-
-    # Policies
-    _render_policies(eval_config)
 
     # Compliance data
     _render_compliance_data(output_names, policy_options, eval_data)

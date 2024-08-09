@@ -23,7 +23,6 @@ import streamlit as st
 
 from nemoguardrails.eval.models import ComplianceCheckResult, InteractionOutput, Policy
 from nemoguardrails.eval.ui.utils import EvalData, get_span_colors, load_eval_data
-from nemoguardrails.eval.utils import update_results
 from nemoguardrails.utils import new_uuid
 
 
@@ -78,7 +77,7 @@ def _render_policy(
         )
 
         # We need to save the output data
-        st.session_state.executor.submit(update_results, eval_data)
+        st.session_state.executor.submit(eval_data.update_results)
 
 
 def main():
@@ -102,7 +101,6 @@ def main():
             st.session_state.non_compliant_filter = st.checkbox(
                 "Non-compliant interactions"
             )
-            st.write(st.session_state.non_compliant_filter)
 
         with st.sidebar.expander("Filter", expanded=True):
             for policy in eval_data.eval_config.policies:
@@ -240,7 +238,7 @@ def main():
             interaction_output.compliance[policy_id] = True
 
         # We need to save the output data
-        st.session_state.executor.submit(update_results, eval_data)
+        st.session_state.executor.submit(eval_data.update_results)
 
         st.rerun()
 

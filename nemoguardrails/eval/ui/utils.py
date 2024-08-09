@@ -17,13 +17,14 @@ import argparse
 import os
 import random
 from concurrent.futures import ThreadPoolExecutor
+from time import time
 from typing import Dict, List, Optional
 
 import streamlit as st
 from pydantic import BaseModel
 
 from nemoguardrails.eval.models import EvalConfig, EvalOutput
-from nemoguardrails.eval.utils import get_output_paths
+from nemoguardrails.eval.utils import get_output_paths, update_dict_at_path
 
 
 class EvalData(BaseModel):
@@ -34,6 +35,32 @@ class EvalData(BaseModel):
     output_paths: List[str]
     selected_output_path: Optional[str] = None
     eval_outputs: Dict[str, EvalOutput]
+
+    def update_results(self):
+        """Updates back the evaluation results."""
+        t0 = time()
+        results = [
+            r.dict() for r in self.eval_outputs[self.selected_output_path].results
+        ]
+        update_dict_at_path(self.selected_output_path, {"results": results})
+        print(f"Updating output results took {time() - t0:.2f} seconds.")
+
+    def update_results_and_logs(self, output_path: str):
+        """Update back the results and the logs."""
+        t0 = time()
+        results = [r.dict() for r in self.results]
+        logs = [r.dict() for r in self.logs]
+        update_dict_at_path(output_path, {"results": results, "logs": logs})
+        print(f"Updating output results took {time() - t0:.2f} seconds.")
+
+    def update_config_latencies(self):
+        """Update back the expected latencies."""
+        t0 = time()
+        update_dict_at_path(
+            self.eval_config_path,
+            {"expected_latencies": self.eval_config.expected_latencies},
+        )
+        print(f"Updating expected latencies took {time() - t0:.2f} seconds.")
 
 
 @st.cache_resource

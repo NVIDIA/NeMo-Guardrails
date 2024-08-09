@@ -172,22 +172,3 @@ def get_output_paths() -> List[str]:
         for folder in os.listdir(base_path)
         if folder != "config" and folder[0] != "."
     ]
-
-
-def update_results(eval_data: "EvalData"):
-    """Helper to save changes to the evaluation results."""
-    t0 = time()
-    results = [
-        r.dict() for r in eval_data.eval_outputs[eval_data.selected_output_path].results
-    ]
-    update_dict_at_path(eval_data.selected_output_path, {"results": results})
-    print(f"Updating output results took {time() - t0:.2f} seconds.")
-
-
-def update_results_and_logs(eval_output: "EvalOutput", output_path: str):
-    """Helper to save changes to the evaluation results."""
-    t0 = time()
-    results = [r.dict() for r in eval_output.results]
-    logs = [r.dict() for r in eval_output.logs]
-    update_dict_at_path(output_path, {"results": results, "logs": logs})
-    print(f"Updating output results took {time() - t0:.2f} seconds.")

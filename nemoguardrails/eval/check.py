@@ -35,7 +35,6 @@ from nemoguardrails.eval.models import (
     InteractionOutput,
     InteractionSet,
 )
-from nemoguardrails.eval.utils import update_results_and_logs
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.logging.explain import LLMCallInfo
@@ -377,7 +376,7 @@ class LLMJudgeComplianceChecker:
                         # executor.submit(
                         #     update_results_and_logs, eval_output, output_path
                         # )
-                        update_results_and_logs(eval_output, output_path)
+                        eval_output.update_results_and_logs(output_path)
 
             # We also do one final save at the end
             update_results_and_logs(eval_output, output_path)
