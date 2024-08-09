@@ -165,7 +165,7 @@ def check_compliance(
 
 
 @app.command()
-def review(
+def ui(
     eval_config_path: str = typer.Option(
         default="config",
         exists=True,
@@ -178,40 +178,11 @@ def review(
         "Defaults to the list of folders in the current folder, except `config`.",
     ),
 ):
-    """Review the interactions included in the evaluation.
-
-    Launches a web Streamlit web UI.
-    """
+    """Launches the Evaluation UI."""
     if not output_path:
         output_path = get_output_paths()
 
     console.print(f"Using eval configuration from {eval_config_path}.")
     console.print(f"Using output paths: {output_path}.")
 
-    _launch_ui("review.py", port=8501)
-
-
-@app.command()
-def summary(
-    eval_config_path: str = typer.Option(
-        default="",
-        exists=True,
-        help="Path to a directory containing eval configuration files.",
-    ),
-    output_path: List[str] = typer.Option(
-        default=[],
-        help="One or more output directories from evaluation runs."
-        "Defaults to the list of folders in the current folder, except `config`.",
-    ),
-):
-    """Show a summary of the evaluation.
-
-    Launches a web Streamlit web UI.
-    """
-    if not output_path:
-        output_path = get_output_paths()
-
-    console.print(f"Using eval configuration from {eval_config_path}.")
-    console.print(f"Using output paths: {output_path}.")
-
-    _launch_ui("summary.py", port=8502)
+    _launch_ui("README.py", port=8501)

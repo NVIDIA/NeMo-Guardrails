@@ -15,14 +15,70 @@
 
 import json
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from nemoguardrails.eval.models import Policy
-from nemoguardrails.eval.ui.utils import get_span_colors, load_eval_data
+from nemoguardrails.eval.models import ComplianceCheckResult, InteractionOutput, Policy
+from nemoguardrails.eval.ui.utils import EvalData, get_span_colors, load_eval_data
 from nemoguardrails.eval.utils import update_results
+from nemoguardrails.utils import new_uuid
+
+
+def _render_policy(
+    _policy: Policy, interaction_output: InteractionOutput, eval_data: EvalData
+):
+    index = 0
+    orig_option = ""
+    if interaction_output.compliance[_policy.id] is True:
+        index = 1
+        orig_option = "Complies"
+    elif interaction_output.compliance[_policy.id] is False:
+        index = 2
+        orig_option = "Does NOT comply"
+    elif interaction_output.compliance[_policy.id] == "n/a":
+        index = 3
+        orig_option = "n/a"
+
+    option = st.selectbox(
+        _policy.id,
+        (
+            "",
+            "Complies",
+            "Does NOT comply",
+            "n/a",
+        ),
+        index=index,
+        placeholder="Complies?",
+        help=_policy.description,
+        key=f"{_policy.id}-{eval_data.selected_output_path}-{interaction_output.id}",
+    )
+    if orig_option != option:
+        if option == "Complies":
+            interaction_output.compliance[_policy.id] = True
+        elif option == "Does NOT comply":
+            interaction_output.compliance[_policy.id] = False
+        elif option == "n/a":
+            interaction_output.compliance[_policy.id] = "n/a"
+        else:
+            interaction_output.compliance[_policy.id] = None
+
+        # We also need to record the change made by the human
+        interaction_output.compliance_checks.append(
+            ComplianceCheckResult(
+                id=new_uuid(),
+                created_at=datetime.now(timezone.utc).isoformat(),
+                interaction_id=interaction_output.id,
+                method="manual",
+                compliance={_policy.id: interaction_output.compliance[_policy.id]},
+                details="",
+            )
+        )
+
+        # We need to save the output data
+        st.session_state.executor.submit(update_results, eval_data)
 
 
 def main():
@@ -38,6 +94,42 @@ def main():
             "Results", options=eval_data.eval_outputs.keys(), index=0
         )
         eval_output = eval_data.eval_outputs[eval_data.selected_output_path]
+
+        if "interactions_filter" not in st.session_state:
+            st.session_state.interactions_filter = {}
+
+        with st.sidebar:
+            st.session_state.non_compliant_filter = st.checkbox(
+                "Non-compliant interactions"
+            )
+            st.write(st.session_state.non_compliant_filter)
+
+        with st.sidebar.expander("Filter", expanded=True):
+            for policy in eval_data.eval_config.policies:
+                option = st.selectbox(
+                    policy.id,
+                    (
+                        "",
+                        "No value",
+                        "Complies",
+                        "Does NOT comply",
+                        "n/a",
+                    ),
+                    placeholder="Complies?",
+                    help=policy.description,
+                    key=f"{policy.id}-filter",
+                )
+                if option == "Complies":
+                    st.session_state.interactions_filter[policy.id] = True
+                elif option == "Does NOT comply":
+                    st.session_state.interactions_filter[policy.id] = False
+                elif option == "n/a":
+                    st.session_state.interactions_filter[policy.id] = "n/a"
+                elif option == "No Value":
+                    st.session_state.interactions_filter[policy.id] = None
+                else:
+                    if policy.id in st.session_state.interactions_filter:
+                        del st.session_state.interactions_filter[policy.id]
 
     if "idx" not in st.session_state:
         st.session_state.idx = 1
@@ -55,20 +147,52 @@ def main():
     else:
         st.session_state.idx = st.session_state.slider_idx
 
-    st.title("Review")
+    # Do the filtering
+
+    filtered_results = []
+    filtered_logs = []
+
+    for i in range(len(eval_output.results)):
+        item = eval_output.results[i]
+        log = eval_output.logs[i]
+        skip = False
+        for policy_id, val in st.session_state.interactions_filter.items():
+            if item.compliance.get(policy_id) != val:
+                skip = True
+                break
+
+        if st.session_state.non_compliant_filter:
+            if False not in item.compliance.values():
+                skip = True
+
+        if not skip:
+            filtered_results.append(item)
+            filtered_logs.append(log)
+
+    # Make sure the index does not fall outside
+    if st.session_state.idx >= len(filtered_results):
+        st.session_state.idx = 0
+
+    # Title
+    st.title(f"Review {len(filtered_results)} interactions")
+
+    if len(filtered_results) == 0:
+        return
 
     st.slider(
         "Interaction Index",
         min_value=1,
-        max_value=len(eval_output.results),
+        max_value=len(filtered_results),
         key="slider_idx",
     )
 
-    interaction_output = eval_output.results[st.session_state.idx - 1]
+    interaction_output = filtered_results[st.session_state.idx - 1]
     interaction_id = interaction_output.id.split("/")[0]
     interaction_set = [
         _i for _i in eval_data.eval_config.interactions if _i.id == interaction_id
     ][0]
+
+    # Interaction history
 
     if isinstance(interaction_output.input, str):
         with st.chat_message("user"):
@@ -87,6 +211,8 @@ def main():
             with st.chat_message(message["role"]):
                 st.write(message["content"])
 
+    # Expected output
+
     if interaction_set.expected_output:
         lines = ["**Expected**:"]
         for expected_output in interaction_set.expected_output:
@@ -94,6 +220,20 @@ def main():
         lines.append("---")
 
         st.markdown("\n".join(lines))
+
+    # Violations
+
+    violations = []
+    for policy_id, val in interaction_output.compliance.items():
+        if val is False:
+            for check in reversed(interaction_output.compliance_checks):
+                if check.compliance.get(policy_id) is False:
+                    violations.append(
+                        f" - [{check.method}] **{policy_id}**: {check.details}"
+                    )
+                    break
+    if violations:
+        st.markdown("**Violations**:\n" + "\n".join(violations) + "\n---")
 
     if st.button("Complies with all policies"):
         for policy_id in interaction_output.compliance:
@@ -106,58 +246,22 @@ def main():
 
     col1, col2 = st.columns([1, 1])
 
-    def _render_policy(_policy: Policy):
-        index = 0
-        orig_option = ""
-        if interaction_output.compliance[_policy.id] is True:
-            index = 1
-            orig_option = "Complies"
-        elif interaction_output.compliance[_policy.id] is False:
-            index = 2
-            orig_option = "Does NOT comply"
-        elif interaction_output.compliance[_policy.id] == "n/a":
-            index = 3
-            orig_option = "n/a"
-
-        option = st.selectbox(
-            _policy.id,
-            (
-                "",
-                "Complies",
-                "Does NOT comply",
-                "n/a",
-            ),
-            index=index,
-            placeholder="Complies?",
-            help=_policy.description,
-            key=f"{_policy.id}-{eval_data.selected_output_path}-{interaction_output.id}",
-        )
-        if orig_option != option:
-            if option == "Complies":
-                interaction_output.compliance[_policy.id] = True
-            elif option == "Does NOT comply":
-                interaction_output.compliance[_policy.id] = False
-            elif option == "n/a":
-                interaction_output.compliance[_policy.id] = "n/a"
-            else:
-                interaction_output.compliance[_policy.id] = None
-
-            # We need to save the output data
-            st.session_state.executor.submit(update_results, eval_data)
-
+    # Render the policies in a two-column layout.
     with col1:
         for i, policy in enumerate(eval_data.eval_config.policies):
             if i % 2 == 1:
                 continue
 
-            _render_policy(policy)
+            _render_policy(policy, interaction_output, eval_data)
 
     with col2:
         for i, policy in enumerate(eval_data.eval_config.policies):
             if i % 2 == 0:
                 continue
 
-            _render_policy(policy)
+            _render_policy(policy, interaction_output, eval_data)
+
+    # Render the navigation buttons
 
     col1, col2, col3 = st.columns([1, 1, 4])
     with col1:
@@ -179,8 +283,17 @@ def main():
     if "show_compliance_check_details" not in st.session_state:
         st.session_state.show_compliance_check_details = False
 
-    if st.checkbox("Show compliance check details"):
-        st.session_state.show_compliance_check_details = True
+    def _switch():
+        st.session_state.show_compliance_check_details = not getattr(
+            st.session_state, "show_compliance_check_details", False
+        )
+
+    # Compliance check details
+    st.checkbox(
+        "Show compliance check details",
+        value=getattr(st.session_state, "show_compliance_check_details", False),
+        on_change=_switch,
+    )
 
     if st.session_state.show_compliance_check_details:
         rows = [["Policy", "Compliance", "Check", "Reason", "DateTime"]]
