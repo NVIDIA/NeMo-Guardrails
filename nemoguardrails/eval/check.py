@@ -35,6 +35,7 @@ from nemoguardrails.eval.models import (
     InteractionOutput,
     InteractionSet,
 )
+from nemoguardrails.eval.ui.utils import EvalData
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.taskmanager import LLMTaskManager
 from nemoguardrails.logging.explain import LLMCallInfo
@@ -123,6 +124,13 @@ class LLMJudgeComplianceChecker:
 
         # Global progress bar.
         self.progress = None
+
+        self.eval_data = EvalData(
+            eval_config_path=self.eval_config_path,
+            eval_config=self.eval_config,
+            output_paths=self.output_paths,
+            eval_outputs={},
+        )
 
     def print_prompt(self, prompt: str):
         """Helper for printing a prompt."""
@@ -337,6 +345,7 @@ class LLMJudgeComplianceChecker:
             console.print(f"Checking {output_path}")
 
             eval_output = EvalOutput.from_path(output_path)
+            self.eval_data.eval_outputs[output_path] = eval_output
 
             # Create a mapping from id to logs for all interactions
             id_to_log = {}
@@ -376,10 +385,10 @@ class LLMJudgeComplianceChecker:
                         # executor.submit(
                         #     update_results_and_logs, eval_output, output_path
                         # )
-                        eval_output.update_results_and_logs(output_path)
+                        self.eval_data.update_results_and_logs(output_path)
 
             # We also do one final save at the end
-            update_results_and_logs(eval_output, output_path)
+            self.eval_data.update_results_and_logs(output_path)
             console.print(
                 f"The evaluation for {output_path} took {time.time() - t0:.2f} seconds."
             )

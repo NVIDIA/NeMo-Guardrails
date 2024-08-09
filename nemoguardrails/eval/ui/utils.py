@@ -48,8 +48,8 @@ class EvalData(BaseModel):
     def update_results_and_logs(self, output_path: str):
         """Update back the results and the logs."""
         t0 = time()
-        results = [r.dict() for r in self.results]
-        logs = [r.dict() for r in self.logs]
+        results = [r.dict() for r in self.eval_outputs[output_path].results]
+        logs = [r.dict() for r in self.eval_outputs[output_path].logs]
         update_dict_at_path(output_path, {"results": results, "logs": logs})
         print(f"Updating output results took {time() - t0:.2f} seconds.")
 
