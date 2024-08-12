@@ -196,8 +196,13 @@ def _render_resource_usage_and_latencies(output_names: List[str], eval_data: Eva
 
     # Latencies
     st.header("Latencies")
+    df_latencies = pd.DataFrame(latencies_table, columns=["Metric"] + output_names)
+    # Format the latencies to 2 decimals.
+    for output_name in output_names:
+        df_latencies[output_name] = df_latencies[output_name].round(2)
+
     st.dataframe(
-        pd.DataFrame(latencies_table, columns=["Metric"] + output_names),
+        df_latencies,
         use_container_width=True,
         hide_index=True,
     )
