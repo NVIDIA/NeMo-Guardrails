@@ -170,5 +170,7 @@ def get_output_paths() -> List[str]:
     return [
         os.path.join(base_path, folder)
         for folder in os.listdir(base_path)
-        if folder != "config" and folder[0] != "."
+        if os.path.isdir(os.path.join(base_path, folder))
+        and folder != "config"
+        and folder[0] != "."
     ]
