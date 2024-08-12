@@ -109,6 +109,10 @@ def main():
                 "Non-compliant interactions"
             )
 
+            st.session_state.judge_inconsistency_filter = st.checkbox(
+                "Compliance inconsistencies"
+            )
+
             for policy in eval_data.eval_config.policies:
                 option = st.selectbox(
                     policy.id,
@@ -167,6 +171,21 @@ def main():
 
         if st.session_state.non_compliant_filter:
             if False not in item.compliance.values():
+                skip = True
+
+        if st.session_state.judge_inconsistency_filter:
+            inconsistency = False
+            for policy_id in item.compliance:
+                val = "---"
+                for _item in item.compliance_checks:
+                    for _policy_id in _item.compliance:
+                        if _policy_id == policy_id:
+                            if val == "---":
+                                val = _item.compliance[_policy_id]
+                            elif val != _item.compliance[_policy_id]:
+                                inconsistency = True
+
+            if not inconsistency:
                 skip = True
 
         if not skip:
