@@ -15,7 +15,6 @@
 
 import json
 import os
-from time import time
 from typing import Any, Dict, List, Union
 
 import yaml
@@ -167,10 +166,14 @@ def collect_interaction_metrics(
 def get_output_paths() -> List[str]:
     """Helper to return the output paths from the current dir."""
     base_path = os.getcwd()
-    return [
-        os.path.join(base_path, folder)
-        for folder in os.listdir(base_path)
-        if os.path.isdir(os.path.join(base_path, folder))
-        and folder != "config"
-        and folder[0] != "."
-    ]
+    return list(
+        sorted(
+            [
+                os.path.join(base_path, folder)
+                for folder in os.listdir(base_path)
+                if os.path.isdir(os.path.join(base_path, folder))
+                and folder != "config"
+                and folder[0] != "."
+            ]
+        )
+    )

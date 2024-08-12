@@ -12,13 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import asyncio
 import json
 import os
+import time
 from typing import Dict, List, Union
 
 from rich.progress import Progress
-from rich.table import Table
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.eval.models import (
@@ -28,7 +28,7 @@ from nemoguardrails.eval.models import (
     InteractionOutput,
     Span,
 )
-from nemoguardrails.eval.utils import collect_interaction_metrics, save_eval_output
+from nemoguardrails.eval.utils import save_eval_output
 from nemoguardrails.rails.llm.options import (
     ActivatedRail,
     GenerationLog,
@@ -244,11 +244,12 @@ def _collect_span_metrics(spans: List[Span]) -> Dict[str, Union[int, float]]:
     return metrics
 
 
-def run_eval(
+async def run_eval(
     eval_config_path: str,
     guardrail_config_path: str,
     output_path: str,
     output_format: str = "json",
+    parallel: int = 1,
 ):
     """Run a guardrail evaluation.
 
@@ -257,9 +258,9 @@ def run_eval(
         guardrail_config_path (str): Path to a directory containing the guardrail configuration.
         output_path (str, optional): Output directory for predictions. Defaults to None.
         output_format (str, optional): Output format. Supported values are "yaml" and "json". Defaults to "yaml".
+        parallel (int, optional): Number degree of parallelism to use. Defaults to 1.
     """
-    # status = console.status("[bold green]Working ...[/]")
-    # status.start()
+    t0 = time.time()
 
     console.print(f"Loading eval configuration [bold]{eval_config_path}[/] ...")
     eval_config_path = os.path.abspath(eval_config_path)
@@ -273,6 +274,8 @@ def run_eval(
     console.print(
         f"Loading guardrail configuration [bold]{guardrail_config_path}[/] ..."
     )
+    if parallel > 1:
+        console.print(f"[bold]Parallelism set to {parallel}[/]")
     rails_config = RailsConfig.from_path(guardrail_config_path)
     rails = LLMRails(config=rails_config)
 
@@ -287,104 +290,52 @@ def run_eval(
 
     progress = Progress()
     with progress:
-        for i in progress.track(
-            range(len(interactions)),
-            description=f"Running {len(interactions)} interactions ...",
-        ):
-            interaction = eval_output.results[i]
+        task_id = progress.add_task(
+            f"Running {len(interactions)} interactions ...", total=len(interactions)
+        )
+        i = 0
 
-            result: GenerationResponse
+        async def _worker():
+            """Async worker that processes interactions until the end."""
+            nonlocal i
 
-            if isinstance(interaction.input, str):
-                progress.print(f'[{i}] "{interaction.input}"')
-                result = rails.generate(
-                    prompt=interaction.input,
-                    options=generation_options,
-                )
-            else:
-                progress.print(f"[{i}] {json.dumps(interaction.input)}")
-                result = rails.generate(
-                    messages=interaction.input["messages"],
-                    options=generation_options,
-                )
+            while i < len(interactions):
+                interaction = eval_output.results[i]
+                idx = i
+                i += 1
 
-            interaction.output = result.response
-            interaction_log = _extract_interaction_log(interaction, result.log)
-            eval_output.logs[i] = interaction_log
+                result: GenerationResponse
 
-            metrics = _collect_span_metrics(interaction_log.trace)
-            interaction.resource_usage = {
-                k: v for k, v in metrics.items() if "_seconds" not in k
-            }
-            interaction.latencies = {
-                k: v for k, v in metrics.items() if "_seconds" in k
-            }
+                if isinstance(interaction.input, str):
+                    progress.print(f'[{i}] "{interaction.input}"')
+                    result = await rails.generate_async(
+                        prompt=interaction.input,
+                        options=generation_options,
+                    )
+                else:
+                    progress.print(f"[{i}] {json.dumps(interaction.input)}")
+                    result = await rails.generate_async(
+                        messages=interaction.input["messages"],
+                        options=generation_options,
+                    )
 
-            save_eval_output(eval_output, output_path, output_format)
+                interaction.output = result.response
+                interaction_log = _extract_interaction_log(interaction, result.log)
+                eval_output.logs[idx] = interaction_log
 
+                metrics = _collect_span_metrics(interaction_log.trace)
+                interaction.resource_usage = {
+                    k: v for k, v in metrics.items() if "_seconds" not in k
+                }
+                interaction.latencies = {
+                    k: v for k, v in metrics.items() if "_seconds" in k
+                }
 
-def eval_summary(
-    eval_config_path: str,
-    output_path: str,
-):
-    """Prints a summary of the evaluation results.
+                save_eval_output(eval_output, output_path, output_format)
 
-    Args:
-        eval_config_path (str): Path to a directory containing eval configuration files.
-        output_path (str, optional): Output directory for predictions. Defaults to None.
-    """
-    console.print(f"Loading eval configuration [bold]{eval_config_path}[/] ...")
-    eval_config_path = os.path.abspath(eval_config_path)
-    eval_config = EvalConfig.from_path(eval_config_path)
-    interactions = _extract_interaction_outputs(eval_config)
+                progress.update(task_id, advance=1)
 
-    console.print(
-        f"Loaded {len(eval_config.policies)} policies and {len(interactions)} interactions."
-    )
+        # Start the desired number of workers.
+        await asyncio.gather(*[_worker() for _ in range(parallel)])
 
-    # Create the output paths if it doesn't exist
-    os.makedirs(output_path, exist_ok=True)
-
-    # Start running the interactions.
-    eval_output = _load_eval_output(output_path, eval_config)
-
-    metrics = collect_interaction_metrics(eval_output.results)
-
-    resource_usage_table = Table(title="Resource Usage")
-    resource_usage_table.add_column("Metric")
-    resource_usage_table.add_column("Value", justify="right")
-
-    latencies_table = Table(title="Latencies")
-    latencies_table.add_column("Metric")
-    latencies_table.add_column("Value", justify="right")
-
-    for metric, value in metrics.items():
-        if "_seconds" in metric:
-            table = latencies_table
-        else:
-            table = resource_usage_table
-
-        if isinstance(value, int):
-            val = str(value)
-        else:
-            val = f"{value:.3f}"
-
-        table.add_row(metric, val)
-
-    console.print(resource_usage_table)
-    console.print("")
-    console.print(latencies_table)
-
-
-if __name__ == "__main__":
-    run_eval(
-        eval_config_path=os.path.join(ROOT, "examples/eval/abc_1/config"),
-        guardrail_config_path=os.path.join(ROOT, "examples/bots/abc"),
-        output_path=os.path.join(ROOT, "examples/eval/abc_1/output_1"),
-        verbose=True,
-    )
-
-    # eval_summary(
-    #     eval_config_path=os.path.join(ROOT, "examples/eval/abc_1/config"),
-    #     output_path=os.path.join(ROOT, "examples/eval/abc_1/output_1"),
-    # )
+    console.print(f"The run for {output_path} took {time.time() - t0:.2f} seconds.")

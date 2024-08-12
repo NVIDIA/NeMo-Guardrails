@@ -37,17 +37,24 @@ logging.getLogger().setLevel(logging.WARNING)
 @app.command()
 def run(
     eval_config_path: str = typer.Option(
-        default="config",
+        "config",
+        "-e",
+        "--eval-config-path",
         exists=True,
         help="Path to a directory containing eval configuration files. "
         "Defaults to the `config` folder in the current folder.",
     ),
     guardrail_config_path: str = typer.Option(
+        None,
+        "-g",
+        "--guardrail-config-path",
         exists=True,
         help="Path to a directory containing guardrail configuration files.",
     ),
     output_path: str = typer.Option(
-        default="",
+        "",
+        "-o",
+        "--output-path",
         help="Output directory for the results. "
         "Defaults to a folder in the current directory with the same name as the guardrail configuration.",
     ),
@@ -55,8 +62,20 @@ def run(
         default="json",
         help="The format that should be used for the output files (JSON/YAML). Defaults to JSON.",
     ),
+    parallel: int = typer.Option(
+        1,
+        "--parallel",
+        help="The degree of parallelism to use when running the checks. "
+        "Default is 1.",
+    ),
 ):
-    """Run an evaluation."""
+    """Run the interactions for an evaluation."""
+    if guardrail_config_path is None:
+        console.print(
+            "[red]No guardrail configuration provided! Use --help for more details.[/]"
+        )
+        exit(1)
+
     eval_config_path = os.path.abspath(eval_config_path)
     if output_path == "":
         output_path = os.path.abspath(os.path.basename(guardrail_config_path))
@@ -65,11 +84,14 @@ def run(
     console.print(f"Starting the evaluation for {guardrail_config_path}.")
     console.print(f"Writing results to {output_path}.")
 
-    run_eval(
-        eval_config_path=eval_config_path,
-        guardrail_config_path=guardrail_config_path,
-        output_path=output_path,
-        output_format=output_format.lower(),
+    asyncio.run(
+        run_eval(
+            eval_config_path=eval_config_path,
+            guardrail_config_path=guardrail_config_path,
+            output_path=output_path,
+            output_format=output_format.lower(),
+            parallel=parallel,
+        )
     )
 
 
