@@ -2,7 +2,6 @@ import core
 import avatars
 import llm
 import timing
-import utils
 
 flow showcase posture capabilities
   bot ask "Now I am going to show you how my posture can be controlled based on me or you talking."

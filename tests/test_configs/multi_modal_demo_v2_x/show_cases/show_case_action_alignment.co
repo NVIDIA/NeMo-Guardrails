@@ -2,7 +2,6 @@ import core
 import avatars
 import llm
 import timing
-import utils
 
 flow showcase multimodality
   bot inform "I am going to demonstrate to you the different ways of how actions can be aligned!"
