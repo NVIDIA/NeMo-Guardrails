@@ -27,6 +27,13 @@ def _render_sidebar(output_names: List[str], policy_options: List[str]):
     _policy_options = []
 
     with st.sidebar:
+        st.write(
+            "If you change the result files outside of the Eval UI, you must reload from disk. "
+        )
+        if st.button("Reload"):
+            load_eval_data.clear()
+            st.rerun()
+
         with st.sidebar.expander("Results", expanded=True):
             for output_path in output_names:
                 if st.checkbox(output_path, True):

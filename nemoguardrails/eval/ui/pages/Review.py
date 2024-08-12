@@ -94,15 +94,21 @@ def main():
         )
         eval_output = eval_data.eval_outputs[eval_data.selected_output_path]
 
+        st.write(
+            "If you change the result files outside of the Eval UI, you must reload from disk. "
+        )
+        if st.button("Reload"):
+            load_eval_data.clear()
+            st.rerun()
+
         if "interactions_filter" not in st.session_state:
             st.session_state.interactions_filter = {}
 
-        with st.sidebar:
+        with st.sidebar.expander("Filter", expanded=True):
             st.session_state.non_compliant_filter = st.checkbox(
                 "Non-compliant interactions"
             )
 
-        with st.sidebar.expander("Filter", expanded=True):
             for policy in eval_data.eval_config.policies:
                 option = st.selectbox(
                     policy.id,
@@ -233,14 +239,51 @@ def main():
     if violations:
         st.markdown("**Violations**:\n" + "\n".join(violations) + "\n---")
 
-    if st.button("Complies with all policies"):
-        for policy_id in interaction_output.compliance:
-            interaction_output.compliance[policy_id] = True
+    st.write(
+        "Any changes to you make to the compliance statuses below are saved automatically to the result files. "
+    )
+    # Render the navigation buttons
 
-        # We need to save the output data
-        st.session_state.executor.submit(eval_data.update_results)
+    col1, col2, col3, col4 = st.columns([4, 2, 3, 5])
+    with col1:
+        if st.button('Mark all as "Complies"'):
+            for policy_id in interaction_output.compliance:
+                # We only change the status for the applicable policies
+                if interaction_output.compliance[policy_id] != "n/a":
+                    interaction_output.compliance[policy_id] = True
 
-        st.rerun()
+                    # We also need to record the change made by the human
+                    interaction_output.compliance_checks.append(
+                        ComplianceCheckResult(
+                            id=new_uuid(),
+                            created_at=datetime.now(timezone.utc).isoformat(),
+                            interaction_id=interaction_output.id,
+                            method="manual",
+                            compliance={
+                                policy_id: interaction_output.compliance[policy_id]
+                            },
+                            details="",
+                        )
+                    )
+
+            # We need to save the output data
+            st.session_state.executor.submit(eval_data.update_results)
+
+            st.rerun()
+
+    with col2:
+        if st.button("Previous"):
+            if st.session_state.idx > 1:
+                st.session_state.idx -= 1
+                st.session_state.idx_change = "button"
+                st.rerun()
+
+    with col3:
+        if st.button("Next"):
+            if st.session_state.idx < len(eval_output.results):
+                st.session_state.idx += 1
+                st.session_state.idx_change = "button"
+                st.rerun()
 
     col1, col2 = st.columns([1, 1])
 
@@ -258,25 +301,6 @@ def main():
                 continue
 
             _render_policy(policy, interaction_output, eval_data)
-
-    # Render the navigation buttons
-
-    col1, col2, col3 = st.columns([1, 1, 4])
-    with col1:
-        if st.button("Previous"):
-            if st.session_state.idx > 1:
-                st.session_state.idx -= 1
-                st.session_state.idx_change = "button"
-                st.rerun()
-
-    with col2:
-        if st.button("Next"):
-            if st.session_state.idx < len(eval_output.results):
-                st.session_state.idx += 1
-                st.session_state.idx_change = "button"
-                st.rerun()
-    with col3:
-        pass
 
     if "show_compliance_check_details" not in st.session_state:
         st.session_state.show_compliance_check_details = False
