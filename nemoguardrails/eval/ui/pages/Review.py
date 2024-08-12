@@ -129,7 +129,7 @@ def main():
                     st.session_state.interactions_filter[policy.id] = False
                 elif option == "n/a":
                     st.session_state.interactions_filter[policy.id] = "n/a"
-                elif option == "No Value":
+                elif option == "No value":
                     st.session_state.interactions_filter[policy.id] = None
                 else:
                     if policy.id in st.session_state.interactions_filter:
@@ -176,6 +176,9 @@ def main():
     # Make sure the index does not fall outside
     if st.session_state.idx >= len(filtered_results):
         st.session_state.idx = 0
+
+    if st.session_state.slider_idx >= len(filtered_results):
+        st.session_state.slider_idx = 0
 
     # Title
     st.title(f"Review {len(filtered_results)} interactions")
