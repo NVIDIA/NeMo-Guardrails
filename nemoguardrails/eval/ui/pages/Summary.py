@@ -55,7 +55,7 @@ def _render_compliance_data(
     for output_name in output_names:
         compliance_info[output_name] = eval_data.eval_outputs[
             output_name
-        ].compute_compliance()
+        ].compute_compliance(eval_data.eval_config)
 
         compliance_rate_per_policy[output_name] = [
             round(compliance_info[output_name][policy_id]["rate"] * 100, 2)
@@ -86,12 +86,16 @@ def _render_compliance_data(
 
     st.subheader("Overall Compliance Rate")
     df = pd.DataFrame(
-        overall_compliance,
-        columns=["Overall Compliance", "Results", "Compliance Rate"],
+        [row[1:] for row in overall_compliance],
+        columns=["Results", "Compliance Rate"],
     )
     st.dataframe(df)
 
     # Create a bar chart using Plotly
+    df = pd.DataFrame(
+        overall_compliance,
+        columns=["Overall Compliance", "Results", "Compliance Rate"],
+    )
     fig = px.bar(
         df,
         x="Overall Compliance",
@@ -139,27 +143,42 @@ def _render_resource_usage_and_latencies(output_names: List[str], eval_data: Eva
     """Render the resource usage part."""
     resource_usage_table = []
     latencies_table = []
+    metrics = {}
+    all_metrics = []
 
-    def _append_value(table, metric, value):
+    def _update_value(table, column, metric, value):
+        """Helper to update the value of a metric in the table."""
         for row in table:
             if row[0] == metric:
-                row.append(value)
+                row[column + 1] = value
                 return
-        table.append([metric, value])
 
-    metrics = {}
     for output_name in output_names:
         metrics[output_name] = collect_interaction_metrics(
             eval_data.eval_outputs[output_name].results
         )
+        for k in metrics[output_name]:
+            if k not in all_metrics:
+                all_metrics.append(k)
 
+    all_metrics = list(sorted(all_metrics))
+
+    for metric in all_metrics:
+        if "_seconds" in metric:
+            table = latencies_table
+        else:
+            table = resource_usage_table
+
+        table.append([metric] + [None for _ in range(len(output_names))])
+
+    for i, output_name in enumerate(output_names):
         for metric, value in metrics[output_name].items():
             if "_seconds" in metric:
                 # latencies_table.append([metric, value])
-                _append_value(latencies_table, metric, value)
+                _update_value(latencies_table, i, metric, value)
             else:
                 # resource_usage_table.append([metric, value])
-                _append_value(resource_usage_table, metric, value)
+                _update_value(resource_usage_table, i, metric, value)
 
     st.header("Resource Usage")
     st.dataframe(

@@ -141,7 +141,7 @@ def _render_expected_latencies(eval_data: EvalData):
 def main():
     """Show a summary of the evaluation results."""
 
-    st.title("Evaluation Results")
+    st.title("Evaluation Config")
 
     st.markdown(
         """

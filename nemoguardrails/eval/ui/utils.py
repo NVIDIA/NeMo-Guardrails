@@ -16,7 +16,6 @@
 import argparse
 import os
 import random
-from concurrent.futures import ThreadPoolExecutor
 from time import time
 from typing import Dict, List, Optional
 
@@ -33,8 +32,8 @@ class EvalData(BaseModel):
     eval_config_path: str
     eval_config: EvalConfig
     output_paths: List[str]
-    selected_output_path: Optional[str] = None
     eval_outputs: Dict[str, EvalOutput]
+    selected_output_path: Optional[str] = None
 
     def update_results(self):
         """Updates back the evaluation results."""

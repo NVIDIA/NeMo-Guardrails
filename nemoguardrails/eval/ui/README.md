@@ -17,12 +17,12 @@ To run a new evaluation with a guardrail configuration:
 nemoguardrails eval run --guardrail-config-path=... --output-path=...
 ```
 
-## Compliance Check
+## Check Compliance
 
 To check the compliance with the policies, you can use the LLM-as-a-judge method.
 
 ```bash
-nemoguardrails eval check --llm-judge=gpt-4 --ouput-path=...
+nemoguardrails eval check-compliance --llm-judge=gpt-4 --ouput-path=...
 ```
 
 You can use any LLM supported by NeMo Guardrails.

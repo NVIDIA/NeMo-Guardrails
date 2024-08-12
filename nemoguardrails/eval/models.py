@@ -97,6 +97,11 @@ class InteractionSet(BaseModel):
         description="The list of policies that should be excluded from the evaluation "
         "for this interaction set.",
     )
+    evaluation_context: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional context that can be used when evaluating the compliance for various policies. "
+        "Can be used in the prompt templates. ",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -290,7 +295,7 @@ class EvalOutput(BaseModel):
         description="Detailed information about the execution of the interactions.",
     )
 
-    def compute_compliance(self) -> Dict[str, dict]:
+    def compute_compliance(self, eval_config: EvalConfig) -> Dict[str, dict]:
         """Helper to compute the compliance rate per policy."""
         # we take the policies from the first interaction
         policy_ids = self.results[0].compliance
@@ -306,13 +311,20 @@ class EvalOutput(BaseModel):
             }
 
         for interaction_output in self.results:
-            # First, we make sure that the compliance dict is up to date
+            # First, we make sure that the compliance dict is up-to-date.
             for item in interaction_output.compliance_checks:
                 interaction_output.compliance.update(item.compliance)
+            for policy in eval_config.policies:
+                if (
+                    policy.apply_to_all
+                    and policy.id not in interaction_output.compliance
+                ):
+                    interaction_output.compliance[policy.id] = None
 
             for policy_id, val in interaction_output.compliance.items():
                 if val is None:
                     compliance[policy_id]["interactions_not_rated_count"] += 1
+                    compliance[policy_id]["interactions_count"] += 1
                 elif val is True:
                     compliance[policy_id]["interactions_comply_count"] += 1
                     compliance[policy_id]["interactions_count"] += 1
@@ -320,7 +332,7 @@ class EvalOutput(BaseModel):
                     compliance[policy_id]["interactions_violation_count"] += 1
                     compliance[policy_id]["interactions_count"] += 1
                 elif val == "n/a":
-                    compliance[policy_id]["interactions_not_rated_count"] += 1
+                    compliance[policy_id]["interactions_not_applicable_count"] += 1
                 else:
                     raise ValueError(f"Invalid compliance value for {policy_id}: {val}")
 

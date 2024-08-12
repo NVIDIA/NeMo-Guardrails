@@ -93,45 +93,57 @@ def _launch_ui(script: str, port: int = 8501):
 
 @app.command()
 def check_compliance(
+    llm_judge: str = typer.Option(
+        help="The name of the model to be used as a judge. "
+        "The model needs to be configured in the `models` key in the evaluation config.",
+    ),
     eval_config_path: str = typer.Option(
-        default="config",
+        "config",
+        "-e",
+        "--eval-config-path",
         exists=True,
         help="Path to a directory containing eval configuration files. "
         "Defaults to the `config` folder in the current folder.",
     ),
     output_path: List[str] = typer.Option(
-        default=[],
+        [],
+        "-o",
+        "--output-path",
         help="One or more output directories from evaluation runs."
         "Defaults to the list of folders in the current folder, except `config`.",
     ),
-    llm_judge: str = typer.Option(
-        help="The name of the model to be used as a judge. "
-        "The model needs to be configured in the `models` key in the evaluation config.",
-    ),
     policy_ids: List[str] = typer.Option(
-        default=[],
+        [],
+        "-p",
+        "--policy-ids",
         help="The ids of all the policies that should be checked. "
         "If no policies are specified, all policies will be checked.",
     ),
-    multi_check: bool = typer.Option(
-        default=False,
-        help="Whether to check compliance for multiple policies in a single LLM call.",
-    ),
     verbose: bool = typer.Option(
-        default=False,
+        False,
+        "-v",
+        "--verbose",
         help="Whether the output should be verbose or not.",
+    ),
+    force: bool = typer.Option(
+        False,
+        "-f",
+        "--force",
+        help="Whether to force the compliance check, even if a result exists. Defaults to False.",
     ),
     disable_llm_cache: bool = typer.Option(
         default=False,
         help="Whether to disable the LLM caching. By default it's enabled.",
     ),
-    force: bool = typer.Option(
-        default=False,
-        help="Whether to force the compliance check, even if a result exists. Defaults to False.",
-    ),
     reset: bool = typer.Option(
         default=False,
         help="Whether to reset the compliance check data. Defaults to False.",
+    ),
+    parallel: int = typer.Option(
+        1,
+        "--parallel",
+        help="The degree of parallelism to use when running the checks. "
+        "Default is 1.",
     ),
 ):
     """Check the policy compliance of the interactions in the `output_path`."""
@@ -156,10 +168,10 @@ def check_compliance(
         output_paths=output_paths,
         llm_judge_model=llm_judge,
         policy_ids=policy_ids,
-        multi_check=multi_check,
         verbose=verbose,
         force=force,
         reset=reset,
+        parallel=parallel,
     )
     asyncio.run(compliance_checker.run())
 
