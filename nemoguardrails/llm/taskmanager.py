@@ -286,6 +286,10 @@ class LLMTaskManager:
         else:
             return output
 
+    def has_output_parser(self, task: Task):
+        prompt = get_prompt(self.config, task)
+        return prompt.output_parser is not None
+
     def get_stop_tokens(self, task: Union[str, Task]) -> Optional[List[str]]:
         """Return the stop sequence for the given task."""
         prompt = get_prompt(self.config, task)
