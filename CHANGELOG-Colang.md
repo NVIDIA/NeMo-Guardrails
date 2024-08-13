@@ -4,7 +4,17 @@ All notable changes to the Colang language and runtime will be documented in thi
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0-beta.2] - Unreleased
+## [2.0-beta.3] - Unreleased
+
+### Added
+
+### Changed
+
+* [#669](https://github.com/NVIDIA/NeMo-Guardrails/pull/669) Merged (and removed) utils library file with core library.
+
+### Fixed
+
+## [2.0-beta.2] - 2024-07-25
 
 This second beta version of Colang brings a set of improvements and fixes.
 
@@ -30,7 +40,6 @@ Other:
 * [#594](https://github.com/NVIDIA/NeMo-Guardrails/pull/594) Add more information to Colang syntax errors.
 * [#599](https://github.com/NVIDIA/NeMo-Guardrails/pull/599) Runtime processing loop also consumes generated events before completion.
 * [#540](https://github.com/NVIDIA/NeMo-Guardrails/pull/540) LLM prompting improvements targeting `gpt-4o`.
-* [#669](https://github.com/NVIDIA/NeMo-Guardrails/pull/669) Merged (and removed) utils library file with core library.
 
 ### Fixed
 
