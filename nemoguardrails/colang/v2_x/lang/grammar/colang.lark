@@ -54,6 +54,7 @@ spec_operator: "match" -> match_spec
              | "start" -> start_spec
              | "stop" -> stop_spec
              | "activate" -> activate_spec
+             | "deactivate" -> deactivate_spec
              | "send" -> send_spec
 
 spec_op: spec_operator spec_expr

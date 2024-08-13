@@ -71,6 +71,8 @@ def expand_elements(
                         expanded_elements = _expand_stop_element(element)
                     elif element.op == "activate":
                         expanded_elements = _expand_activate_element(element)
+                    elif element.op == "deactivate":
+                        expanded_elements = _expand_deactivate_element(element)
                     elif element.op == "await":
                         expanded_elements = _expand_await_element(element)
                 elif isinstance(element, Assignment):
@@ -663,11 +665,55 @@ def _expand_activate_element(
         # Multiple match elements
         normalized_group = normalize_element_groups(element.spec)
         if len(normalized_group["elements"]) > 1:
-            raise NotImplementedError("Activating 'or' groups not implemented yet!")
+            raise NotImplementedError("Activating 'or' groups not supported yet!")
         for group_element in normalized_group["elements"][0]["elements"]:
             new_elements.append(
                 SpecOp(
                     op="activate",
+                    spec=group_element,
+                )
+            )
+
+    return new_elements
+
+
+def _expand_deactivate_element(
+    element: SpecOp,
+) -> List[ElementType]:
+    new_elements: List[ElementType] = []
+    if isinstance(element.spec, Spec):
+        # Single element
+        if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
+            # It's a flow
+            # send StopFlow(flow_id=<flow_id>)
+            new_elements.append(
+                SpecOp(
+                    op="send",
+                    spec=Spec(
+                        name=InternalEvents.STOP_FLOW,
+                        arguments={
+                            "flow_id": f"'{element.spec.name}'",
+                            "deactivate": True,
+                            **element.spec.arguments,
+                        },
+                        spec_type=SpecType.EVENT,
+                    ),
+                )
+            )
+        else:
+            # It's an UMIM event
+            raise ColangSyntaxError(
+                f"Only flows can be deactivated but not '{element.spec.spec_type}', element '{element.spec.name}'"
+            )
+    elif isinstance(element.spec, dict):
+        # Multiple elements
+        normalized_group = normalize_element_groups(element.spec)
+        if len(normalized_group["elements"]) > 1:
+            raise NotImplementedError("Deactivating 'or' groups not supported yet!")
+        for group_element in normalized_group["elements"][0]["elements"]:
+            new_elements.append(
+                SpecOp(
+                    op="deactivate",
                     spec=group_element,
                 )
             )
