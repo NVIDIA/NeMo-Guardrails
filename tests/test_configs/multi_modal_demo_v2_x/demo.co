@@ -218,40 +218,40 @@ flow showcase selector
 
     or when user picked number guessing game showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
-      send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
+      deactivate continuation on unhandled user utterance
+      deactivate handling bot talking interruption
       $showcase_selection_ui = None
       bot inform "Great! You picked the number guessing game!"
       showcase number guessing game
 
     or when user picked multimodality showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
-      send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
+      deactivate continuation on unhandled user utterance
+      deactivate handling bot talking interruption
       $showcase_selection_ui = None
       bot inform "Great! You picked the multimodality showcase!"
       showcase multimodality
 
     or when user picked backchanneling showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
-      send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
+      deactivate continuation on unhandled user utterance
+      deactivate handling bot talking interruption
       $showcase_selection_ui = None
       bot inform "Great! You picked the backchanneling example!"
       showcase backchannelling interaction
 
     or when user picked posture showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
-      send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
+      deactivate continuation on unhandled user utterance
+      deactivate handling bot talking interruption
       $showcase_selection_ui = None
       bot inform "Great! You picked the posture showcase!"
       showcase posture capabilities
 
     or when user picked proactive showcase
       send $showcase_selection_ui.Stop()
-      send FinishFlow(flow_id="continuation on unhandled user utterance", deactivate=True)
-      send FinishFlow(flow_id="handling bot talking interruption", deactivate=True)
+      deactivate continuation on unhandled user utterance
+      deactivate handling bot talking interruption
       $showcase_selection_ui = None
       bot inform "Great! You picked the proactive turn-taking example!"
       showcase proactive turn taking

@@ -65,8 +65,8 @@ flow bot asks user how the day was
 
   user said something with pause 3.5
 
-  send StopFlow(flow_id="bot reacts to nice things")
-  send StopFlow(flow_id="bot reacts to bad things")
+  deactivate bot reacts to nice things
+  deactivate bot reacts to bad things
 
   bot say "Thanks for sharing"
 
