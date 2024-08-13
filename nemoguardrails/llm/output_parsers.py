@@ -85,6 +85,14 @@ def is_content_safe(response: str) -> Tuple[bool, List[str]]:
     Note: If you are using this function for a different task with a custom prompt, ensure to update the logic to match the new context.
     Here, "yes" implies the content should be blocked, is unsafe, or violates a policy, while "no" implies the content is safe or does not violate any policy.
 
+
+    For example, in the `self_check_facts` action, we have a different interpretation.
+    Here, "yes" indicates the content is safe. This is against the default logic of the `is_content_safe` function.
+    Therefore, we invert the result of `is_content_safe` to align with this interpretation.
+    If `is_content_safe` returns `False` (content is safe), `result` will be `0.0`. If `is_content_safe` returns `True` (content is unsafe), `result` will be `1.0`.
+
+
+
     Args:
         response (str): The response string to analyze.
 
