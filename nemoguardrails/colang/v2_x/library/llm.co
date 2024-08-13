@@ -1,7 +1,6 @@
 # meta: exclude from llm
 import core
 import timing
-import utils
 
 # -----------------------------------
 # LLM Enabled Bot Actions
