@@ -73,7 +73,7 @@ async def self_check_facts(
         )
         result = llm_task_manager.output_parsers["is_content_safe"](response)
 
-    is_safe, _ = result
+    is_not_safe, _ = result
 
-    result = float(is_safe)
+    result = float(not is_not_safe)
     return result
