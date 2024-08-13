@@ -14,6 +14,7 @@
 # limitations under the License.
 from typing import List, Tuple
 
+import pandas as pd
 import streamlit as st
 from pandas import DataFrame
 
@@ -24,6 +25,9 @@ from nemoguardrails.eval.ui.chart_utils import (
 )
 from nemoguardrails.eval.ui.utils import EvalData, load_eval_data
 from nemoguardrails.eval.utils import collect_interaction_metrics
+
+# Disable SettingWithCopyWarning
+pd.options.mode.chained_assignment = None
 
 
 def _render_sidebar(output_names: List[str], policy_options: List[str]):
@@ -95,7 +99,10 @@ def _get_compliance_df(
 
 
 def _render_compliance_data(
-    output_names: List[str], policy_options: List[str], eval_data: EvalData
+    output_names: List[str],
+    policy_options: List[str],
+    eval_data: EvalData,
+    short: bool = False,
 ):
     st.header("Compliance")
     st.markdown(
@@ -120,6 +127,9 @@ def _render_compliance_data(
     plot_as_series(
         df_overall_compliance, range_y=[0, 100], title="Overall Compliance Rate"
     )
+
+    if short:
+        return
 
     with st.expander("Table", expanded=False):
         st.dataframe(df_overall_compliance)
@@ -210,28 +220,31 @@ def _get_resource_usage_and_latencies_df(
     )
 
 
-def _render_resource_usage_and_latencies(output_names: List[str], eval_data: EvalData):
+def _render_resource_usage_and_latencies(
+    output_names: List[str], eval_data: EvalData, short: bool = False
+):
     """Render the resource usage part."""
     df_resource_usage, df_latencies = _get_resource_usage_and_latencies_df(
         output_names, eval_data
     )
 
-    st.header("Resource Usage")
+    if not short:
+        st.header("Resource Usage")
 
-    st.markdown(
+        st.markdown(
+            """
+            *Resources* are divided into two categories: *LLMs* and *Actions*.
+            For each resource, the number of calls and latencies are tracked.
+            For LLM resources, the token usage is also tracked.
         """
-        *Resources* are divided into two categories: *LLMs* and *Actions*.
-        For each resource, the number of calls and latencies are tracked.
-        For LLM resources, the token usage is also tracked.
-    """
-    )
-
-    if st.checkbox("Show raw resource usage data"):
-        st.dataframe(
-            df_resource_usage,
-            use_container_width=True,
-            hide_index=True,
         )
+
+        if st.checkbox("Show raw resource usage data"):
+            st.dataframe(
+                df_resource_usage,
+                use_container_width=True,
+                hide_index=True,
+            )
 
     st.header("LLM Usage")
 
@@ -263,14 +276,15 @@ def _render_resource_usage_and_latencies(output_names: List[str], eval_data: Eva
     df.columns = ["Guardrail Config", "LLM Calls"]
     plot_as_series(df, title="Total LLM Calls", include_table=True)
 
-    if len(llm_models) > 1:
-        plot_matrix_series(
-            df_llm_calls_count,
-            "Guardrail Config",
-            "LLM Calls",
-            include_table=True,
-            title="Total LLM Calls by Model",
-        )
+    if not short:
+        if len(llm_models) > 1:
+            plot_matrix_series(
+                df_llm_calls_count,
+                "Guardrail Config",
+                "LLM Calls",
+                include_table=True,
+                title="Total LLM Calls by Model",
+            )
 
     # Token Usage
     st.subheader("Token Usage")
@@ -319,74 +333,139 @@ def _render_resource_usage_and_latencies(output_names: List[str], eval_data: Eva
         df_total_tokens_per_category, title="Total Token Usage", include_table=True
     )
 
-    if len(llm_models) > 1:
-        # Compute total tokens usage per LLM
-        df_llm_total_tokens = df_llm_usage_detailed[
-            ~df_llm_usage_detailed["Metric"].str.contains("completion")
-            & ~df_llm_usage_detailed["Metric"].str.contains("prompt")
-        ]
-        df_llm_total_tokens = df_llm_total_tokens.rename(
-            columns={"Value": "Total Tokens"}
-        )
-        plot_bar_series(
-            df_llm_total_tokens, title="Total Tokens per LLM", include_table=True
+    if not short:
+        if len(llm_models) > 1:
+            # Compute total tokens usage per LLM
+            df_llm_total_tokens = df_llm_usage_detailed[
+                ~df_llm_usage_detailed["Metric"].str.contains("completion")
+                & ~df_llm_usage_detailed["Metric"].str.contains("prompt")
+            ]
+            df_llm_total_tokens = df_llm_total_tokens.rename(
+                columns={"Value": "Total Tokens"}
+            )
+            plot_bar_series(
+                df_llm_total_tokens, title="Total Tokens per LLM", include_table=True
+            )
+
+            # st.dataframe(df_llm_usage, use_container_width=True)
+            plot_bar_series(
+                df_llm_usage_detailed,
+                title="Detailed Token Usage per LLM",
+                include_table=True,
+            )
+            # if st.checkbox("Show table", key="show-llm-usage-table"):
+            #     st.dataframe(df_llm_usage)
+
+    if not short:
+        st.header("Latencies")
+
+        st.markdown(
+            """
+            The *Total Latency* is the total duration of all interactions in the dataset.
+        """
         )
 
-        # st.dataframe(df_llm_usage, use_container_width=True)
-        plot_bar_series(
-            df_llm_usage_detailed,
-            title="Detailed Token Usage per LLM",
+        if st.checkbox("Show raw latency data"):
+            st.dataframe(
+                df_latencies,
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    # Chart with Total Latency for the test
+    st.subheader("Interaction Latencies")
+
+    if not short:
+        df = (
+            df_latencies.set_index("Metric")
+            .loc[["interaction_seconds_total"]]
+            .reset_index()
+            .transpose()
+            .reset_index()
+            .drop(0)
+        )
+        df.columns = ["Guardrail Config", "Total Latency"]
+        plot_as_series(df, title="Total Interactions Latency", include_table=True)
+
+    df = (
+        df_latencies.set_index("Metric")
+        .loc[["interaction_seconds_avg"]]
+        .reset_index()
+        .transpose()
+        .reset_index()
+        .drop(0)
+    )
+    df.columns = ["Guardrail Config", "Average Latency"]
+    plot_as_series(df, title="Average Interaction Latency", include_table=True)
+
+    if not short:
+        # Total and Average latency per LLM Call
+        st.subheader("LLM Call Latencies")
+        df = df_latencies[
+            df_latencies["Metric"].str.startswith("llm_call_")
+            & df_latencies["Metric"].str.endswith("_seconds_total")
+        ]
+        df["Metric"] = df["Metric"].str[9:-14]
+        plot_matrix_series(
+            df,
+            var_name="Guardrail Config",
+            value_name="Total Latency",
+            title="Total Latency per LLM",
             include_table=True,
         )
-        # if st.checkbox("Show table", key="show-llm-usage-table"):
-        #     st.dataframe(df_llm_usage)
 
-    #
-    # # Latencies
-    # st.header("Latencies")
-    # df_latencies = pd.DataFrame(latencies_table, columns=["Metric"] + output_names)
-    # # Format the latencies to 2 decimals.
-    # for output_name in output_names:
-    #     df_latencies[output_name] = df_latencies[output_name].round(2)
-    #
-    # st.dataframe(
-    #     df_latencies,
-    #     use_container_width=True,
-    #     hide_index=True,
-    # )
-    #
-    # unique_latency_labels = []
-    # for output_name in output_names:
-    #     for label in metrics[output_name]:
-    #         if label not in unique_latency_labels and "_seconds_total" in label:
-    #             unique_latency_labels.append(label[0:-14])
-    #
-    # total_latency = []
-    #
-    # for output_name in output_names:
-    #     for metric in unique_latency_labels:
-    #         total_latency.append(
-    #             [
-    #                 output_name,
-    #                 metric,
-    #                 metrics[output_name].get(metric + "_seconds_total"),
-    #             ]
-    #         )
-    # fig = px.bar(
-    #     pd.DataFrame(total_latency, columns=["Results", "Action", "Total Latency"]),
-    #     x="Action",  # Column name for the x-axis
-    #     y="Total Latency",  # Column name for the y-axis
-    #     color="Results",  # Differentiating the series by time of day
-    #     barmode="group",  # Can be "group" or "stack" for different visual styles
-    #     title="Total Latency by Action",
-    # )
-    # st.plotly_chart(fig, use_container_width=True)
+        df = df_latencies[
+            df_latencies["Metric"].str.startswith("llm_call_")
+            & df_latencies["Metric"].str.endswith("_seconds_avg")
+        ]
+        df["Metric"] = df["Metric"].str[9:-12]
+        plot_matrix_series(
+            df,
+            var_name="Guardrail Config",
+            value_name="Average Latency",
+            title="Average Latency per LLM",
+            include_table=True,
+        )
+
+        # Total and Average latency per action
+        st.subheader("Action Latencies")
+
+        st.info(
+            """
+            **Note**: The latency of an action also includes the latency of the LLM calls it makes.
+        """
+        )
+        df = df_latencies[
+            df_latencies["Metric"].str.startswith("action_")
+            & df_latencies["Metric"].str.endswith("_seconds_total")
+        ]
+        df["Metric"] = df["Metric"].str[7:-14]
+        plot_matrix_series(
+            df,
+            var_name="Guardrail Config",
+            value_name="Total Latency",
+            title="Total Latency per Action",
+            include_table=True,
+        )
+
+        df = df_latencies[
+            df_latencies["Metric"].str.startswith("action_")
+            & df_latencies["Metric"].str.endswith("_seconds_avg")
+        ]
+        df["Metric"] = df["Metric"].str[7:-12]
+        plot_matrix_series(
+            df,
+            var_name="Guardrail Config",
+            value_name="Average Latency",
+            title="Average Latency per Action",
+            include_table=True,
+        )
 
 
-def main():
+def render_summary(short: bool = False):
     """Show a summary of the evaluation results."""
 
-    st.title("Evaluation Results")
+    st.title("Evaluation Summary")
 
     # Load the evaluation data
     eval_data = load_eval_data()
@@ -398,11 +477,7 @@ def main():
     output_names, policy_options = _render_sidebar(output_names, policy_options)
 
     # Compliance data
-    _render_compliance_data(output_names, policy_options, eval_data)
+    _render_compliance_data(output_names, policy_options, eval_data, short=short)
 
     # Resource Usage and Latencies
-    _render_resource_usage_and_latencies(output_names, eval_data)
-
-
-if __name__ == "__main__":
-    main()
+    _render_resource_usage_and_latencies(output_names, eval_data, short=short)
