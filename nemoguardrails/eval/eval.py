@@ -184,7 +184,7 @@ def _extract_spans(activated_rails: List[ActivatedRail]) -> List[Span]:
             spans.append(action_span)
 
             for llm_call in action.llm_calls:
-                model_name = llm_call.raw_response.get("model_name", "unknown")
+                model_name = llm_call.llm_model_name
                 llm_span = Span(
                     span_id=new_uuid(),
                     name="LLM: " + model_name,
@@ -195,7 +195,7 @@ def _extract_spans(activated_rails: List[ActivatedRail]) -> List[Span]:
                 )
 
                 # Compute the metrics
-                base_metric_name = f"llm_call_{model_name}"
+                base_metric_name = f"llm_call_{model_name.replace('/', '_')}"
 
                 # Update the latency metrics
                 llm_span.metrics.update(
@@ -206,21 +206,13 @@ def _extract_spans(activated_rails: List[ActivatedRail]) -> List[Span]:
                     }
                 )
 
-                token_usage = llm_call.raw_response.get("token_usage", {})
-                if token_usage:
-                    llm_span.metrics.update(
-                        {
-                            f"{base_metric_name}_prompt_tokens_total": token_usage.get(
-                                "prompt_tokens", 0
-                            ),
-                            f"{base_metric_name}_completion_tokens_total": token_usage.get(
-                                "completion_tokens", 0
-                            ),
-                            f"{base_metric_name}_tokens_total": token_usage.get(
-                                "total_tokens", 0
-                            ),
-                        }
-                    )
+                llm_span.metrics.update(
+                    {
+                        f"{base_metric_name}_prompt_tokens_total": llm_call.prompt_tokens,
+                        f"{base_metric_name}_completion_tokens_total": llm_call.completion_tokens,
+                        f"{base_metric_name}_tokens_total": llm_call.total_tokens,
+                    }
+                )
 
                 spans.append(llm_span)
 
