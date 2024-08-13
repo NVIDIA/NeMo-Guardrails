@@ -12,12 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List
+from typing import List, Tuple
 
-import pandas as pd
-import plotly.express as px
 import streamlit as st
+from pandas import DataFrame
 
+from nemoguardrails.eval.ui.chart_utils import (
+    plot_as_series,
+    plot_bar_series,
+    plot_matrix_series,
+)
 from nemoguardrails.eval.ui.utils import EvalData, load_eval_data
 from nemoguardrails.eval.utils import collect_interaction_metrics
 
@@ -47,107 +51,120 @@ def _render_sidebar(output_names: List[str], policy_options: List[str]):
     return _output_names, _policy_options
 
 
+def _get_compliance_df(
+    output_names: List[str], policy_options: List[str], eval_data: EvalData
+) -> DataFrame:
+    """Computes a DataFrame with information about compliance.
+
+    Returns
+        DataFrame: ["Guardrail Config", "Policy", "Compliance Rate", "Violations Count", "Interaction Count"]
+    """
+    data = []
+    for output_name in output_names:
+        compliance_info = eval_data.eval_outputs[output_name].compute_compliance(
+            eval_data.eval_config
+        )
+
+        for policy_id in policy_options:
+            compliance_rate = round(compliance_info[policy_id]["rate"] * 100, 2)
+            violations_count = compliance_info[policy_id][
+                "interactions_violation_count"
+            ]
+            interactions_count = compliance_info[policy_id]["interactions_count"]
+
+            data.append(
+                [
+                    output_name,
+                    policy_id,
+                    compliance_rate,
+                    violations_count,
+                    interactions_count,
+                ]
+            )
+
+    return DataFrame(
+        data,
+        columns=[
+            "Guardrail Config",
+            "Policy",
+            "Compliance Rate",
+            "Violations Count",
+            "Interactions Count",
+        ],
+    )
+
+
 def _render_compliance_data(
     output_names: List[str], policy_options: List[str], eval_data: EvalData
 ):
-    # Compute the compliance rate for all outputs
-    compliance_info = {}
-    general_compliance = {}
+    st.header("Compliance")
+    st.markdown(
+        """
+        The *overall compliance rate* is the weighted average of the compliance rate across all policies.
+        The *compliance rate* is the percentage of interactions which comply with a policy out
+        of the number of interactions for which the policy is applicable.
+    """
+    )
+    df_compliance = _get_compliance_df(output_names, policy_options, eval_data)
 
-    overall_compliance = []
-    compliance_rate_per_policy = {"Policy": policy_options}
-    violations_per_policy = {"Policy": policy_options}
-    interactions_per_policy = {"Policy": policy_options}
-
-    for output_name in output_names:
-        compliance_info[output_name] = eval_data.eval_outputs[
-            output_name
-        ].compute_compliance(eval_data.eval_config)
-
-        compliance_rate_per_policy[output_name] = [
-            round(compliance_info[output_name][policy_id]["rate"] * 100, 2)
-            for policy_id in policy_options
-        ]
-        violations_per_policy[output_name] = [
-            compliance_info[output_name][policy_id]["interactions_violation_count"]
-            for policy_id in policy_options
-        ]
-        interactions_per_policy[output_name] = [
-            compliance_info[output_name][policy_id]["interactions_count"]
-            for policy_id in policy_options
-        ]
-
-        # We also compute the general compliance rate
-        compliance_rate = round(
-            sum(
-                compliance_info[output_name][policy_id]["rate"]
-                for policy_id in policy_options
-            )
-            / len(policy_options)
-            * 100,
-            2,
+    df_overall_compliance = (
+        df_compliance.groupby("Guardrail Config")
+        .apply(
+            # lambda x: (x["Value"] * x["Weight"]).sum() / x["Weight"].sum(),
+            lambda g: g["Compliance Rate"].mean(),
+            include_groups=False,
         )
-        general_compliance[output_name] = compliance_rate
-
-        overall_compliance.append(["Overall Compliance", output_name, compliance_rate])
-
-    st.subheader("Overall Compliance Rate")
-    df = pd.DataFrame(
-        [row[1:] for row in overall_compliance],
-        columns=["Results", "Compliance Rate"],
-    )
-    st.dataframe(df)
-
-    # Create a bar chart using Plotly
-    df = pd.DataFrame(
-        overall_compliance,
-        columns=["Overall Compliance", "Results", "Compliance Rate"],
-    )
-    fig = px.bar(
-        df,
-        x="Overall Compliance",
-        y="Compliance Rate",
-        color="Results",
-        barmode="group",
-        title="Overall Compliance Rate",
+        .reset_index(name="Compliance Rate")
     )
 
-    # Display the plot in Streamlit
-    st.plotly_chart(fig, use_container_width=True)
+    plot_as_series(
+        df_overall_compliance, range_y=[0, 100], title="Overall Compliance Rate"
+    )
 
-    # Compliance Rate per policy
-    fig = px.bar(
-        pd.DataFrame(compliance_rate_per_policy),
-        x=policy_options,
-        y=output_names,
-        barmode="group",
+    with st.expander("Table", expanded=False):
+        st.dataframe(df_overall_compliance)
+
+    plot_bar_series(
+        df_compliance[["Guardrail Config", "Policy", "Compliance Rate"]],
         title="Compliance Rate per Policy",
+        include_table=True,
     )
-    st.plotly_chart(fig, use_container_width=True)
 
-    # Violations per policy
-    fig = px.bar(
-        pd.DataFrame(violations_per_policy),
-        x=policy_options,
-        y=output_names,
-        barmode="group",
-        title="Violations per Policy",
+    st.subheader("Violations")
+
+    st.markdown(
+        """
+        *Violations* are interactions which don't comply with one or more policies.
+        You can review them individually by using the "Non-compliant interactions" filter in *Review mode*.
+    """
     )
-    st.plotly_chart(fig, use_container_width=True)
 
-    # Interactions per policy
-    fig = px.bar(
-        pd.DataFrame(interactions_per_policy),
-        x=policy_options,
-        y=output_names,
-        barmode="group",
-        title="Interactions per Policy",
+    plot_bar_series(
+        df_compliance[["Guardrail Config", "Policy", "Violations Count"]],
+        title="Violations Count per Policy",
+        include_table=True,
     )
-    st.plotly_chart(fig, use_container_width=True)
+
+    plot_bar_series(
+        df_compliance[["Guardrail Config", "Policy", "Interactions Count"]],
+        title="Interactions Count per Policy",
+        include_table=True,
+    )
+
+    st.info(
+        "**Note**: For policies where the LLM judge can decide if the policy is applicable or not, "
+        "the number of interactions can be different between different evaluations."
+    )
 
 
-def _render_resource_usage_and_latencies(output_names: List[str], eval_data: EvalData):
-    """Render the resource usage part."""
+def _get_resource_usage_and_latencies_df(
+    output_names: List[str], eval_data: EvalData
+) -> Tuple[DataFrame, DataFrame]:
+    """Computes a DataFrame with information about resource usage and latencies.
+
+    Returns
+        DataFrame: ["Metric", *output_names]
+    """
     resource_usage_table = []
     latencies_table = []
     metrics = {}
@@ -187,52 +204,183 @@ def _render_resource_usage_and_latencies(output_names: List[str], eval_data: Eva
                 # resource_usage_table.append([metric, value])
                 _update_value(resource_usage_table, i, metric, value)
 
+    return (
+        DataFrame(resource_usage_table, columns=["Metric", *output_names]),
+        DataFrame(latencies_table, columns=["Metric", *output_names]),
+    )
+
+
+def _render_resource_usage_and_latencies(output_names: List[str], eval_data: EvalData):
+    """Render the resource usage part."""
+    df_resource_usage, df_latencies = _get_resource_usage_and_latencies_df(
+        output_names, eval_data
+    )
+
     st.header("Resource Usage")
-    st.dataframe(
-        pd.DataFrame(resource_usage_table, columns=["Metric"] + output_names),
-        use_container_width=True,
-        hide_index=True,
+
+    st.markdown(
+        """
+        *Resources* are divided into two categories: *LLMs* and *Actions*.
+        For each resource, the number of calls and latencies are tracked.
+        For LLM resources, the token usage is also tracked.
+    """
     )
 
-    # Latencies
-    st.header("Latencies")
-    df_latencies = pd.DataFrame(latencies_table, columns=["Metric"] + output_names)
-    # Format the latencies to 2 decimals.
-    for output_name in output_names:
-        df_latencies[output_name] = df_latencies[output_name].round(2)
+    if st.checkbox("Show raw resource usage data"):
+        st.dataframe(
+            df_resource_usage,
+            use_container_width=True,
+            hide_index=True,
+        )
 
-    st.dataframe(
-        df_latencies,
-        use_container_width=True,
-        hide_index=True,
+    st.header("LLM Usage")
+
+    st.markdown(
+        """
+        **Total LLM Calls** represents the total number of LLM calls made
+        when running the interactions in the evaluation dataset,
+        regardless of the LLM model used.
+    """
     )
 
-    unique_latency_labels = []
-    for output_name in output_names:
-        for label in metrics[output_name]:
-            if label not in unique_latency_labels and "_seconds_total" in label:
-                unique_latency_labels.append(label[0:-14])
+    # 1. LLM Calls Count
+    df_llm_calls_count = df_resource_usage[
+        df_resource_usage["Metric"].str.startswith("llm_call_")
+        & df_resource_usage["Metric"].str.endswith("_total")
+        & ~df_resource_usage["Metric"].str.endswith("_tokens_total")
+    ]
+    # remove the `llm_call_` prefix and `_total` suffix.
+    df_llm_calls_count["Metric"] = df_llm_calls_count["Metric"].str[9:-6]
 
-    total_latency = []
+    # We extract
+    llm_models = df_llm_calls_count["Metric"].values
 
-    for output_name in output_names:
-        for metric in unique_latency_labels:
-            total_latency.append(
-                [
-                    output_name,
-                    metric,
-                    metrics[output_name].get(metric + "_seconds_total"),
-                ]
-            )
-    fig = px.bar(
-        pd.DataFrame(total_latency, columns=["Results", "Action", "Total Latency"]),
-        x="Action",  # Column name for the x-axis
-        y="Total Latency",  # Column name for the y-axis
-        color="Results",  # Differentiating the series by time of day
-        barmode="group",  # Can be "group" or "stack" for different visual styles
-        title="Total Latency by Action",
+    # We also compute the total LLM calls, independent of the LLM
+    df = df_llm_calls_count.copy()
+    df["Metric"] = "LLM Calls"
+    df = df.groupby(["Metric"]).sum().reset_index()
+    df = df.transpose().reset_index().drop(0)
+    df.columns = ["Guardrail Config", "LLM Calls"]
+    plot_as_series(df, title="Total LLM Calls", include_table=True)
+
+    if len(llm_models) > 1:
+        plot_matrix_series(
+            df_llm_calls_count,
+            "Guardrail Config",
+            "LLM Calls",
+            include_table=True,
+            title="Total LLM Calls by Model",
+        )
+
+    # Token Usage
+    st.subheader("Token Usage")
+    st.markdown(
+        """
+        **Total Token Usage** represents the total number of tokens used when running the interactions,
+        regardless of the LLM model.
+    """
     )
-    st.plotly_chart(fig, use_container_width=True)
+
+    # Detailed information about the token usage.
+    df_llm_usage = df_resource_usage[
+        (df_resource_usage["Metric"].str.startswith("llm_call_"))
+        & (df_resource_usage["Metric"].str.endswith("_tokens_total"))
+    ]
+    df_llm_usage["Metric"] = df_llm_usage["Metric"].str[9:-13]
+
+    # Detailed usage
+    df_llm_usage_detailed = df_llm_usage.melt(
+        id_vars=["Metric"], var_name="Guardrail Config", value_name="Value"
+    )[["Guardrail Config", "Metric", "Value"]]
+
+    # Compute total token usage per category (Prompt, Completion, Total)
+    df_total_tokens_per_category = df_llm_usage_detailed.copy()
+
+    def _update_value(value):
+        if "_prompt" in value:
+            return "Prompt Tokens"
+        elif "_completion" in value:
+            return "Completion Tokens"
+        else:
+            return "Total Tokens"
+
+    df_total_tokens_per_category["Metric"] = df_total_tokens_per_category[
+        "Metric"
+    ].apply(_update_value)
+    df_total_tokens_per_category = (
+        df_total_tokens_per_category.groupby(["Guardrail Config", "Metric"])["Value"]
+        .sum()
+        .reset_index()
+    )
+    df_total_tokens_per_category = df_total_tokens_per_category.rename(
+        columns={"Value": "Tokens"}
+    )
+    plot_bar_series(
+        df_total_tokens_per_category, title="Total Token Usage", include_table=True
+    )
+
+    if len(llm_models) > 1:
+        # Compute total tokens usage per LLM
+        df_llm_total_tokens = df_llm_usage_detailed[
+            ~df_llm_usage_detailed["Metric"].str.contains("completion")
+            & ~df_llm_usage_detailed["Metric"].str.contains("prompt")
+        ]
+        df_llm_total_tokens = df_llm_total_tokens.rename(
+            columns={"Value": "Total Tokens"}
+        )
+        plot_bar_series(
+            df_llm_total_tokens, title="Total Tokens per LLM", include_table=True
+        )
+
+        # st.dataframe(df_llm_usage, use_container_width=True)
+        plot_bar_series(
+            df_llm_usage_detailed,
+            title="Detailed Token Usage per LLM",
+            include_table=True,
+        )
+        # if st.checkbox("Show table", key="show-llm-usage-table"):
+        #     st.dataframe(df_llm_usage)
+
+    #
+    # # Latencies
+    # st.header("Latencies")
+    # df_latencies = pd.DataFrame(latencies_table, columns=["Metric"] + output_names)
+    # # Format the latencies to 2 decimals.
+    # for output_name in output_names:
+    #     df_latencies[output_name] = df_latencies[output_name].round(2)
+    #
+    # st.dataframe(
+    #     df_latencies,
+    #     use_container_width=True,
+    #     hide_index=True,
+    # )
+    #
+    # unique_latency_labels = []
+    # for output_name in output_names:
+    #     for label in metrics[output_name]:
+    #         if label not in unique_latency_labels and "_seconds_total" in label:
+    #             unique_latency_labels.append(label[0:-14])
+    #
+    # total_latency = []
+    #
+    # for output_name in output_names:
+    #     for metric in unique_latency_labels:
+    #         total_latency.append(
+    #             [
+    #                 output_name,
+    #                 metric,
+    #                 metrics[output_name].get(metric + "_seconds_total"),
+    #             ]
+    #         )
+    # fig = px.bar(
+    #     pd.DataFrame(total_latency, columns=["Results", "Action", "Total Latency"]),
+    #     x="Action",  # Column name for the x-axis
+    #     y="Total Latency",  # Column name for the y-axis
+    #     color="Results",  # Differentiating the series by time of day
+    #     barmode="group",  # Can be "group" or "stack" for different visual styles
+    #     title="Total Latency by Action",
+    # )
+    # st.plotly_chart(fig, use_container_width=True)
 
 
 def main():
