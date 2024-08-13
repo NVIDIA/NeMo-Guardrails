@@ -2,7 +2,6 @@ import core
 import avatars
 import llm
 import timing
-import utils
 
 flow showcase backchannelling interaction
   bot inform "First, I am going to ask you about your day and will react to keywords such as nice, great or terrible."
