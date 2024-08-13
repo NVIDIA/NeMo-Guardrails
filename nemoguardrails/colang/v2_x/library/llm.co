@@ -65,7 +65,7 @@ flow generating user intent for unhandled user utterance
   log 'generated user intent: {$intent}'
 
   # Generate the 'user intent' by sending out the FinishFlow event
-  send FinishFlow(flow_id=$intent, info="llm", priority=True)
+  send FinishFlow(flow_id=$intent)
 
   # We need to log the user action
   send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id=$intent)
@@ -107,7 +107,7 @@ flow continuation on unhandled user utterance
   log "generated bot action: `{$bot_action}`"
 
   # Generate `user intent` by sending out the FinishFlow event
-  send FinishFlow(flow_id=$user_intent, info="llm", priority=True)
+  send FinishFlow(flow_id=$user_intent)
 
   # We need to log the user action
   send UserActionLog(flow_id="user said", parameter=$event.final_transcript, intent_flow_id=$user_intent)
