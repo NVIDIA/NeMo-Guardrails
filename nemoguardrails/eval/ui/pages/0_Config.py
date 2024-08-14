@@ -65,7 +65,7 @@ def _render_interactions_info(eval_data: EvalData):
                 target_policies.append(False)
 
         for item in interaction_set.inputs:
-            inputs_array.append([item] + target_policies)
+            inputs_array.append([str(item)] + target_policies)
 
     st.write(f"This evaluation dataset contains {counters['all']} interactions.")
 
@@ -115,7 +115,6 @@ def _render_expected_latencies(eval_data: EvalData):
     for i, row in df_expected_latencies.iterrows():
         metric = row["Metric"]
         value = row["Value (seconds)"]
-        print(f"Checking {metric}='{value}'")
         if (
             metric is not None
             and (not isinstance(value, float) or not math.isnan(value))

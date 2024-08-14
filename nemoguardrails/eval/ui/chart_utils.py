@@ -50,7 +50,7 @@ def plot_bar_series(
     range_y=None,
     include_table: bool = False,
 ):
-    """Helper to plot a dataframe."""
+    """Helper to plot a dataframe as bar chart."""
     fig = px.bar(
         df,
         x=df.columns[1],
