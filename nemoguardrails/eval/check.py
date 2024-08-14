@@ -244,15 +244,20 @@ class LLMJudgeComplianceChecker:
 
             # Extract the expected output according to this policy, if any
             expected_output = "\n".join(
+                [" - " + str(item) for item in interaction_set.expected_output]
+            )
+            expected_output_for_policy = "\n".join(
                 [
                     " - " + str(item)
                     for item in interaction_set.expected_output
                     if item.policy == policy_id
                 ]
             )
+
             render_context = {
                 "policy": [p for p in self.policies if p.id == policy_id][0],
                 "expected_output": expected_output or None,
+                "expected_output_for_policy": expected_output_for_policy or None,
                 "allow_not_applicable": not (
                     policy_id in implicitly_include_policies
                     or policy_id in interaction_set.include_policies
