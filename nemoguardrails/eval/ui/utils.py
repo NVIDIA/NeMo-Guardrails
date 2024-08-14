@@ -17,13 +17,23 @@ import argparse
 import os
 import random
 from time import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import streamlit as st
 from pydantic import BaseModel
 
-from nemoguardrails.eval.models import EvalConfig, EvalOutput
-from nemoguardrails.eval.utils import get_output_paths, update_dict_at_path
+from nemoguardrails.eval.models import (
+    EvalConfig,
+    EvalOutput,
+    InteractionLog,
+    InteractionOutput,
+    Span,
+)
+from nemoguardrails.eval.utils import (
+    _collect_span_metrics,
+    get_output_paths,
+    update_dict_at_path,
+)
 
 
 class EvalData(BaseModel):
@@ -114,3 +124,122 @@ def load_eval_data():
         eval_config=eval_config,
         eval_outputs=eval_outputs,
     )
+
+
+def collect_interaction_metrics(
+    interaction_outputs: List[InteractionOutput],
+) -> Dict[str, Union[int, float]]:
+    """Collects and aggregates the metrics from all the interactions."""
+    metrics = {}
+    counters = {}
+    for interaction_output in interaction_outputs:
+        for metric in interaction_output.resource_usage:
+            metrics[metric] = (
+                metrics.get(metric, 0) + interaction_output.resource_usage[metric]
+            )
+            counters[metric] = counters.get(metric, 0) + 1
+
+        for metric in interaction_output.latencies:
+            metrics[metric] = (
+                metrics.get(metric, 0) + interaction_output.latencies[metric]
+            )
+            counters[metric] = counters.get(metric, 0) + 1
+
+    # For the avg metrics, we need to average them
+    for metric in counters:
+        if metric.endswith("_avg"):
+            metrics[metric] = metrics[metric] / counters[metric]
+
+    return metrics
+
+
+def collect_interaction_metrics_with_expected_latencies(
+    interaction_outputs: List[InteractionOutput],
+    interaction_logs: List[InteractionLog],
+    expected_latencies: Dict[str, float],
+):
+    """Similar to collect_interaction_metrics but with expected latencies."""
+    metrics = {}
+    counters = {}
+    for interaction_output, interaction_log in zip(
+        interaction_outputs, interaction_logs
+    ):
+        # Resource usage computation stays the same
+        for metric in interaction_output.resource_usage:
+            metrics[metric] = (
+                metrics.get(metric, 0) + interaction_output.resource_usage[metric]
+            )
+            counters[metric] = counters.get(metric, 0) + 1
+
+        # For the latency part, we need to first update the spans and then recompute the latencies.
+        updated_spans = [Span.parse_obj(span.dict()) for span in interaction_log.trace]
+
+        # We create an index so that we can quickly look up the parents.
+        updated_span_by_idx = {}
+        for updated_span in updated_spans:
+            updated_span_by_idx[updated_span.span_id] = updated_span
+
+        for span in updated_spans:
+            metric_names = list(span.metrics.keys())
+            if metric_names:
+                if metric_names[0].startswith("llm_call_"):
+                    # The first metric should be the total number of calls
+                    assert metric_names[0].endswith("_total")
+                    llm_name = metric_names[0][9:-6]
+
+                    # If we don't have prompt info, we skip
+                    if f"llm_call_{llm_name}_prompt_tokens_total" not in span.metrics:
+                        continue
+
+                    prompt_tokens = span.metrics[
+                        f"llm_call_{llm_name}_prompt_tokens_total"
+                    ]
+                    completion_tokens = span.metrics[
+                        f"llm_call_{llm_name}_completion_tokens_total"
+                    ]
+
+                    fixed_latency = expected_latencies.get(
+                        f"llm_call_{llm_name}_fixed_latency", 0.25
+                    )
+                    prompt_token_latency = expected_latencies.get(
+                        f"llm_call_{llm_name}_prompt_token_latency", 0.0001
+                    )
+                    completion_token_latency = expected_latencies.get(
+                        f"llm_call_{llm_name}_completion_token_latency", 0.01
+                    )
+
+                    # This is a heuristic to approximate the latency based on a set of
+                    # pre-defined latencies and prompt/completion size.
+                    latency = (
+                        fixed_latency
+                        + prompt_token_latency * prompt_tokens
+                        + completion_token_latency * completion_tokens
+                    )
+
+                    current_latency = span.metrics[f"llm_call_{llm_name}_seconds_avg"]
+                    span.metrics[f"llm_call_{llm_name}_seconds_avg"] = latency
+                    span.metrics[f"llm_call_{llm_name}_seconds_total"] = latency
+
+                    diff = latency - current_latency
+                    span.duration += diff
+
+                    while span.parent_id:
+                        span = updated_span_by_idx[span.parent_id]
+                        span.duration += diff
+                        for metric in span.metrics.keys():
+                            if "_seconds" in metric:
+                                span.metrics[metric] += diff
+
+        _metrics = _collect_span_metrics(updated_spans)
+        latencies = {k: v for k, v in _metrics.items() if "_seconds" in k}
+
+        for metric in latencies:
+            metrics[metric] = metrics.get(metric, 0) + latencies[metric]
+            counters[metric] = counters.get(metric, 0) + 1
+
+    # For the avg metrics, we need to average them
+    for metric in counters:
+        if metric.endswith("_avg"):
+            metrics[metric] = metrics[metric] / counters[metric]
+
+    return metrics

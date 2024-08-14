@@ -18,13 +18,18 @@ import pandas as pd
 import streamlit as st
 from pandas import DataFrame
 
+from nemoguardrails.eval.models import EvalConfig
 from nemoguardrails.eval.ui.chart_utils import (
     plot_as_series,
     plot_bar_series,
     plot_matrix_series,
 )
-from nemoguardrails.eval.ui.utils import EvalData, load_eval_data
-from nemoguardrails.eval.utils import collect_interaction_metrics
+from nemoguardrails.eval.ui.utils import (
+    EvalData,
+    collect_interaction_metrics,
+    collect_interaction_metrics_with_expected_latencies,
+    load_eval_data,
+)
 
 # Disable SettingWithCopyWarning
 pd.options.mode.chained_assignment = None
@@ -42,7 +47,14 @@ def _render_sidebar(output_names: List[str], policy_options: List[str]):
             load_eval_data.clear()
             st.rerun()
 
-        with st.sidebar.expander("Results", expanded=True):
+        st.session_state.use_expected_latencies = st.checkbox(
+            "Use expected latencies",
+            value=False,
+            help="Expected latencies are computed according to pre-defined values. \n"
+            "For more details go to the 'Config > Expected Latencies' section.",
+        )
+
+        with st.sidebar.expander("Guardrail Configurations", expanded=True):
             for output_path in output_names:
                 if st.checkbox(output_path, True):
                     _output_names.append(output_path)
@@ -168,7 +180,10 @@ def _render_compliance_data(
 
 
 def _get_resource_usage_and_latencies_df(
-    output_names: List[str], eval_data: EvalData
+    output_names: List[str],
+    eval_data: EvalData,
+    eval_config: EvalConfig,
+    use_expected_latencies: bool = False,
 ) -> Tuple[DataFrame, DataFrame]:
     """Computes a DataFrame with information about resource usage and latencies.
 
@@ -188,9 +203,17 @@ def _get_resource_usage_and_latencies_df(
                 return
 
     for output_name in output_names:
-        metrics[output_name] = collect_interaction_metrics(
-            eval_data.eval_outputs[output_name].results
-        )
+        if not use_expected_latencies:
+            metrics[output_name] = collect_interaction_metrics(
+                eval_data.eval_outputs[output_name].results
+            )
+        else:
+            metrics[output_name] = collect_interaction_metrics_with_expected_latencies(
+                eval_data.eval_outputs[output_name].results,
+                eval_data.eval_outputs[output_name].logs,
+                expected_latencies=eval_config.expected_latencies,
+            )
+
         for k in metrics[output_name]:
             if k not in all_metrics:
                 all_metrics.append(k)
@@ -221,12 +244,20 @@ def _get_resource_usage_and_latencies_df(
 
 
 def _render_resource_usage_and_latencies(
-    output_names: List[str], eval_data: EvalData, short: bool = False
+    output_names: List[str],
+    eval_data: EvalData,
+    eval_config: EvalConfig,
+    short: bool = False,
 ):
     """Render the resource usage part."""
     df_resource_usage, df_latencies = _get_resource_usage_and_latencies_df(
-        output_names, eval_data
+        output_names,
+        eval_data,
+        eval_config=eval_config,
+        use_expected_latencies=st.session_state.use_expected_latencies,
     )
+
+    latency_type = "Expected" if st.session_state.use_expected_latencies else "Measured"
 
     if not short:
         st.header("Resource Usage")
@@ -357,11 +388,11 @@ def _render_resource_usage_and_latencies(
             #     st.dataframe(df_llm_usage)
 
     if not short:
-        st.header("Latencies")
+        st.header(f"{latency_type} Latencies")
 
         st.markdown(
-            """
-            The *Total Latency* is the total duration of all interactions in the dataset.
+            f"""
+            The *Total {latency_type} Latency* is the total duration of all interactions in the dataset.
         """
         )
 
@@ -373,7 +404,7 @@ def _render_resource_usage_and_latencies(
             )
 
     # Chart with Total Latency for the test
-    st.subheader("Interaction Latencies")
+    st.subheader(f"{latency_type} Interaction Latencies")
 
     if not short:
         df = (
@@ -385,7 +416,9 @@ def _render_resource_usage_and_latencies(
             .drop(0)
         )
         df.columns = ["Guardrail Config", "Total Latency"]
-        plot_as_series(df, title="Total Interactions Latency", include_table=True)
+        plot_as_series(
+            df, title=f"Total {latency_type} Interactions Latency", include_table=True
+        )
 
     df = (
         df_latencies.set_index("Metric")
@@ -396,11 +429,13 @@ def _render_resource_usage_and_latencies(
         .drop(0)
     )
     df.columns = ["Guardrail Config", "Average Latency"]
-    plot_as_series(df, title="Average Interaction Latency", include_table=True)
+    plot_as_series(
+        df, title=f"Average {latency_type} Interaction Latency", include_table=True
+    )
 
     if not short:
         # Total and Average latency per LLM Call
-        st.subheader("LLM Call Latencies")
+        st.subheader(f"LLM Call {latency_type} Latencies")
         df = df_latencies[
             df_latencies["Metric"].str.startswith("llm_call_")
             & df_latencies["Metric"].str.endswith("_seconds_total")
@@ -410,7 +445,7 @@ def _render_resource_usage_and_latencies(
             df,
             var_name="Guardrail Config",
             value_name="Total Latency",
-            title="Total Latency per LLM",
+            title=f"Total {latency_type} Latency per LLM",
             include_table=True,
         )
 
@@ -423,12 +458,12 @@ def _render_resource_usage_and_latencies(
             df,
             var_name="Guardrail Config",
             value_name="Average Latency",
-            title="Average Latency per LLM",
+            title=f"Average {latency_type} Latency per LLM",
             include_table=True,
         )
 
         # Total and Average latency per action
-        st.subheader("Action Latencies")
+        st.subheader(f"{latency_type} Action Latencies")
 
         st.info(
             """
@@ -444,7 +479,7 @@ def _render_resource_usage_and_latencies(
             df,
             var_name="Guardrail Config",
             value_name="Total Latency",
-            title="Total Latency per Action",
+            title=f"Total {latency_type} Latency per Action",
             include_table=True,
         )
 
@@ -457,7 +492,7 @@ def _render_resource_usage_and_latencies(
             df,
             var_name="Guardrail Config",
             value_name="Average Latency",
-            title="Average Latency per Action",
+            title=f"Average {latency_type} Latency per Action",
             include_table=True,
         )
 
@@ -480,4 +515,6 @@ def render_summary(short: bool = False):
     _render_compliance_data(output_names, policy_options, eval_data, short=short)
 
     # Resource Usage and Latencies
-    _render_resource_usage_and_latencies(output_names, eval_data, short=short)
+    _render_resource_usage_and_latencies(
+        output_names, eval_data, eval_config=eval_config, short=short
+    )

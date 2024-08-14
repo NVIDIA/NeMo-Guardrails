@@ -136,33 +136,6 @@ def save_eval_output(
     )
 
 
-def collect_interaction_metrics(
-    interaction_outputs: List["InteractionOutput"],
-) -> Dict[str, Union[int, float]]:
-    """Collects and aggregates the metrics from all the interactions."""
-    metrics = {}
-    counters = {}
-    for interaction_output in interaction_outputs:
-        for metric in interaction_output.resource_usage:
-            metrics[metric] = (
-                metrics.get(metric, 0) + interaction_output.resource_usage[metric]
-            )
-            counters[metric] = counters.get(metric, 0) + 1
-
-        for metric in interaction_output.latencies:
-            metrics[metric] = (
-                metrics.get(metric, 0) + interaction_output.latencies[metric]
-            )
-            counters[metric] = counters.get(metric, 0) + 1
-
-    # For the avg metrics, we need to average them
-    for metric in counters:
-        if metric.endswith("_avg"):
-            metrics[metric] = metrics[metric] / counters[metric]
-
-    return metrics
-
-
 def get_output_paths() -> List[str]:
     """Helper to return the output paths from the current dir."""
     base_path = os.getcwd()
@@ -177,3 +150,20 @@ def get_output_paths() -> List[str]:
             ]
         )
     )
+
+
+def _collect_span_metrics(spans: List["Span"]) -> Dict[str, Union[int, float]]:
+    """Collects and aggregates the metrics from all the spans."""
+    metrics = {}
+    counters = {}
+    for span in spans:
+        for metric in span.metrics:
+            metrics[metric] = metrics.get(metric, 0) + span.metrics[metric]
+            counters[metric] = counters.get(metric, 0) + 1
+
+    # For the avg metrics, we need to average them
+    for metric in counters:
+        if metric.endswith("_avg"):
+            metrics[metric] = metrics[metric] / counters[metric]
+
+    return metrics

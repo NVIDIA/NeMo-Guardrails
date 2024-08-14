@@ -16,7 +16,7 @@ import asyncio
 import json
 import os
 import time
-from typing import Dict, List, Union
+from typing import List
 
 from rich.progress import Progress
 
@@ -28,7 +28,7 @@ from nemoguardrails.eval.models import (
     InteractionOutput,
     Span,
 )
-from nemoguardrails.eval.utils import save_eval_output
+from nemoguardrails.eval.utils import _collect_span_metrics, save_eval_output
 from nemoguardrails.rails.llm.options import (
     ActivatedRail,
     GenerationLog,
@@ -217,23 +217,6 @@ def _extract_spans(activated_rails: List[ActivatedRail]) -> List[Span]:
                 spans.append(llm_span)
 
     return spans
-
-
-def _collect_span_metrics(spans: List[Span]) -> Dict[str, Union[int, float]]:
-    """Collects and aggregates the metrics from all the spans."""
-    metrics = {}
-    counters = {}
-    for span in spans:
-        for metric in span.metrics:
-            metrics[metric] = metrics.get(metric, 0) + span.metrics[metric]
-            counters[metric] = counters.get(metric, 0) + 1
-
-    # For the avg metrics, we need to average them
-    for metric in counters:
-        if metric.endswith("_avg"):
-            metrics[metric] = metrics[metric] / counters[metric]
-
-    return metrics
 
 
 async def run_eval(

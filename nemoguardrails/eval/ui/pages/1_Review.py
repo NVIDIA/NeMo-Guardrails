@@ -90,7 +90,7 @@ def main():
 
     with st.sidebar:
         eval_data.selected_output_path = st.sidebar.selectbox(
-            "Results", options=eval_data.eval_outputs.keys(), index=0
+            "Guardrail Configurations", options=eval_data.eval_outputs.keys(), index=0
         )
         eval_output = eval_data.eval_outputs[eval_data.selected_output_path]
 
@@ -106,11 +106,15 @@ def main():
 
         with st.sidebar.expander("Filter", expanded=True):
             st.session_state.non_compliant_filter = st.checkbox(
-                "Non-compliant interactions"
+                "Non-compliant interactions",
+                help="Interactions that have at least on policy violation.",
             )
 
             st.session_state.judge_inconsistency_filter = st.checkbox(
-                "Compliance inconsistencies"
+                "Compliance inconsistencies",
+                help="An interaction has compliance inconsistencies if there are different "
+                "compliance values for a policy (e.g., either between human and LLM-as-a-judge, "
+                "or between multiple runs of the LLM-as-a-judge).",
             )
 
             for policy in eval_data.eval_config.policies:
