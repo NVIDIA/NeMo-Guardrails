@@ -234,13 +234,61 @@ models:
 
 To register a custom LLM provider, you need to create a class that inherits from `BaseLanguageModel` and register it using `register_llm_provider`.
 
+It is important to implement the following methods:
+
+**Required**:
+
+- `_call`
+- `_llm_type`
+
+**Optional**:
+
+- `_acall`
+- `_astream`
+- `_stream`
+- `_identifying_params`
+
+In other words, to create your custom LLM provider, you need to implement the following interface methods: `_call`, `_llm_type`, and optionally `_acall`, `_astream`, `_stream`, and `_identifying_params`. Here's how you can do it:
+
 ```python
+from typing import Any, Dict, Iterator, List, Mapping, Optional
 from langchain.base_language import BaseLanguageModel
 from nemoguardrails.llm.providers import register_llm_provider
+from langchain_core.callbacks.manager import CallbackManagerForLLMRun, AsyncCallbackManagerForLLMRun
+from langchain_core.outputs import GenerationChunk
 
+class MyCustomLLM(BaseLanguageModel):
+    async def _acall(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs,
+    ) -> str:
+        pass
 
-class CustomLLM(BaseLanguageModel):
-    """A custom LLM."""
+     def _call(
+      self,
+      prompt: str,
+      stop: Optional[List[str]] = None,
+      run_manager: Optional[CallbackManagerForLLMRun] = None,
+      **kwargs,
+      ) -> str:
+        pass
+        # required to implement
+
+      def _stream(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+       ) -> Iterator[GenerationChunk]:
+         pass
+         #Optional to implement
+
+    # rest of the implementation
+....
 
 register_llm_provider("custom_llm", CustomLLM)
 ```
@@ -251,6 +299,8 @@ You can then use the custom LLM provider in your configuration:
 models:
   - type: main
     engine: custom_llm
+```
+
 ```
 
 ### Configuring LLMs per Task
