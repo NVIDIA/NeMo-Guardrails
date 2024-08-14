@@ -274,6 +274,8 @@ class LLMRails:
                 )
 
         for flow_name in self.config.rails.output.flows:
+            if flow_name.startswith("content safety check"):
+                continue
             if flow_name not in existing_flows_names:
                 raise ValueError(
                     f"The provided output rail flow `{flow_name}` does not exist"
