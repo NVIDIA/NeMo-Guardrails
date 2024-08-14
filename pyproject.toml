@@ -61,7 +61,8 @@ dependencies = [
 [project.optional-dependencies]
 eval = [
   "tqdm~=4.65",
-  "numpy~=1.24"
+  "numpy~=1.24",
+  "streamlit>=1.37.0"
 ]
 openai = [
   "langchain-openai>=0.0.5"
@@ -83,7 +84,8 @@ dev = [
   "pytest>=7.2.2",
   "pytest-asyncio>=0.21.0",
   "pytest-cov>=4.1.0",
-  "pytest-httpx>=0.22.0"
+  "pytest-httpx>=0.22.0",
+  "streamlit>=1.37.0"
 ]
 
 [project.urls]
