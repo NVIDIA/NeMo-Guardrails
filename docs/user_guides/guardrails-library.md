@@ -7,6 +7,7 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
    - [Output Checking](#self-check-output)
    - [Fact Checking](#fact-checking)
    - [Hallucination Detection](#hallucination-detection)
+   - [Content Safety](#content-safety)
 
 2. Community Models and Libraries
    - [AlignScore-based Fact Checking](#alignscore-based-fact-checking)
@@ -24,13 +25,11 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
 4. Other
    - [Jailbreak Detection Heuristics](#jailbreak-detection-heuristics)
 
-
 ## LLM Self-Checking
 
 This category of rails relies on prompting the LLM to perform various tasks like input checking, output checking, or fact-checking.
 
 > DISCLAIMER: You should only use the example self-check prompts as a starting point. For production use cases, you should perform additional evaluations and customizations.
-
 
 ### Self Check Input
 
@@ -405,6 +404,97 @@ The implementation for the self-check hallucination rail uses a slight variation
 
 Similar to the self-check fact-checking, we formulate the consistency checking similar to an NLI task with the original bot response as the *hypothesis* (`{{ statement }}`) and the extra generated responses as the context or *evidence* (`{{ paragraph }}`).
 
+### Content Safety
+
+Content Safety feature acts as a robust set of guardrails designed to ensure the integrity and safety of both input and output text. This feature allows users to utilize a variety of advanced content safety models such as AEGIS, Llama Guard 3, ShieldGemma, Llama Guard 2, etc.
+
+To use the content safety check, you should:
+
+1. Include the desired content safety models in the models section of the `config.yml` file:
+
+```yaml
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo-instruct
+
+  - type: shieldgemma
+    engine: nim
+    model: google/shieldgemma-9b
+
+  - type: llama_guard_2
+    engine: vllm_openai
+    parameters:
+      openai_api_base: "http://localhost:5005/v1"
+      model_name: "meta-llama/Meta-Llama-Guard-2-8B"
+```
+
+> NOTE: the `type` is a unique idenfier for the model that will be passed to the input and output rails as a parameter.
+
+2. Include the content safety check in the input and output rails section of the `config.yml` file:
+
+```yaml
+rails:
+  input:
+    flows:
+      - content safety check input $model=shieldgemma
+  output:
+    flows:
+      - content safety check output $model=llama_guard_2
+```
+
+It is important to note that you must define the models in the `models` section of the `config.yml` file before using them in the input and output flows. The `content safety check input` and `content safety check output` flows are used to check the input and output text, respectively. The `$model` parameter specifies the model to be used for content safety checking. The model must be defined in the `models` section of the `config.yml` file. The `content safety check input` and `content safetry check output` flows return a boolean value indicating whether the input or output text is safe. Depending on the model, it also returns set of policy violations. Please refer to the [content safety example](../../examples/configs/content_safety/README.md) for more details.
+
+3. Specify the prompts for each content safety check flow in the `prompts.yml` file, here is the example prompt for the `shieldgemma` model:
+
+```yaml
+prompts:
+  - task: content_safety_check_input $model=shieldgemma
+    content: |
+      You are a policy expert trying to help determine whether a user prompt is in
+      violation of the defined safety policies.
+
+      <start_of_turn>
+      Human Question: {{ user_input }}
+      <end_of_turn>
+
+      Our safety principle is defined in the below:
+
+      * "No Hate Speech": The prompt shall not contain or seek generation of content
+        that expresses, incites, or promotes hate based on race, gender, ethnicity,
+        religion, nationality, sexual orientation, disability status, or caste.
+      * "No Dangerous Content": The prompt shall not contain or seek generation of content that harming oneself
+        and/or others (e.g., accessing or building firearms and explosive devices, promotion of terrorism, instructions for suicide).
+      * "No Sexually Explicit Information": The prompt shall not contain or seek generation of content
+        that contains references to sexual acts or other lewd content (e.g., sexually graphic descriptions,
+        content aimed at causing arousal). Medical or scientific terms related to human anatomy or sex education are permitted.
+      * "No Harassment": The prompt shall not contain or seek generation of content that is malicious,
+        intimidating, bullying, or abusive content targeting another individual (e.g., physical threats,
+        denial of tragic events, disparaging victims of violence).
+      ===
+
+      Does the human prompt/question violate the above principle? Your answer must start with
+      'Yes' or 'No'. And then walk through step by step to be sure we answer
+      correctly.
+    output_parser: is_content_safe
+```
+
+>WARNING: If a prompt is not defined, an exception will be raised when the configuration is loaded.
+
+4. you must specify the output parser. You can use your own parser and register it or use the off the shelf `is_content_safe` output parser as shown above.
+
+    This parser works by checking for specific keywords in the response:
+    - If the response includes "safe", the content is considered safe.
+    - If the response includes "unsafe" or "yes", the content is considered unsafe.
+    - If the response includes "no", the content is considered safe.
+
+> NOTE: If you're using this function for a different task with a custom prompt, you'll need to update the logic to fit the new context. In this case, "yes" means the content should be blocked, is unsafe, or breaks a policy, while "no" means the content is safe and doesn't break any policies.
+
+The above is an example prompt that you can use with the *content safety check input $model=shieldgemma*. The prompt has one input variable: `{{ user_input }}`, which includes user input that should be moderated. The completion must be "yes" if the response is not safe and "no" otherwise. Opetionaly, some models may return a set of policy violations.
+
+The `content safety check input` and `content safety check output` rails executes the [`content_safety_check_input`](../../nemoguardrails/library/content_safety/actions.py) and [`content_safety_check_output`](../../nemoguardrails/library/content_safety/actions.py) actions respectively.
+
+It is important to note that you must define the models in the `models` section of the `config.yml` file before using them in the input and output flows. The `content safety check input` and `content safety check output` flows are used to check the input and output text, respectively. The `$model` parameter specifies the model to be used for content safety checking. The model must be defined in the `models` section of the `config.yml` file. The `content safety check input` and `content safetry check output` flows return a boolean value indicating whether the input or output text is safe. Depending on the model, it also returns set of policy violations. Please refer to the [content safety example](../../examples/configs/content_safety/README.md) for more details.
 
 ## Community Models and Libraries
 
@@ -605,8 +695,8 @@ Increasing this threshold will decrease the number of jailbreaks detected but wi
 
 **USAGE NOTES**:
 
-* Manual inspection of false positives uncovered a number of mislabeled examples in the dataset and a substantial number of system-like prompts. If your application is intended for simple question answering or retrieval-aided generation, this should be a generally safe heuristic.
-* This heuristic in its current form is intended only for English language evaluation and will yield significantly more false positives on non-English text, including code.
+- Manual inspection of false positives uncovered a number of mislabeled examples in the dataset and a substantial number of system-like prompts. If your application is intended for simple question answering or retrieval-aided generation, this should be a generally safe heuristic.
+- This heuristic in its current form is intended only for English language evaluation and will yield significantly more false positives on non-English text, including code.
 
 ##### Prefix and Suffix Perplexity
 
@@ -619,7 +709,7 @@ Using the default value allows for detection of 49/50 GCG-style attacks with a 0
 
 **USAGE NOTES**:
 
-* This heuristic in its current form is intended only for English language evaluation and will yield significantly more false positives on non-English text, including code.
+- This heuristic in its current form is intended only for English language evaluation and will yield significantly more false positives on non-English text, including code.
 
 #### Perplexity Computation
 
