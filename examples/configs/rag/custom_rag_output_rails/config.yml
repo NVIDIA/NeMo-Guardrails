@@ -7,7 +7,7 @@ rails:
   output:
     flows:
       - self check facts
-      - check hallucination
+      - self check hallucination
 
 prompts:
   - task: self_check_facts

@@ -5,7 +5,7 @@ define flow hallucination warning
   """Warning rail for hallucination."""
   bot ...
   if $hallucination_warning == True
-    $is_hallucination = execute check_hallucination
+    $is_hallucination = execute self_check_hallucination
     $hallucination_warning = False
 
     if $is_hallucination
@@ -16,10 +16,10 @@ define bot inform answer prone to hallucination
   "The above response may have been hallucinated, and should be independently verified."
 
 
-define subflow check hallucination
+define subflow self check hallucination
   """Output rail for checking hallucinations."""
   if $check_hallucination == True
-    $is_hallucination = execute check_hallucination
+    $is_hallucination = execute self_check_hallucination
     $check_hallucination = False
 
     if $is_hallucination
