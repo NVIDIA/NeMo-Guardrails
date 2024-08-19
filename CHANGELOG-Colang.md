@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+* [#672](https://github.com/NVIDIA/NeMo-Guardrails/pull/672) Fixes a event group match bug (e.g. `match $flow_ref.Finished() or $flow_ref.Failed()`)
+
 ## [2.0-beta.2] - 2024-07-25
 
 This second beta version of Colang brings a set of improvements and fixes.
