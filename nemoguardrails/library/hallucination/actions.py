@@ -58,8 +58,6 @@ async def self_check_hallucination(
             "The langchain_openai module is not installed. Please install it using pip: pip install langchain_openai"
         )
 
-    print(hasattr(llm, "best_of"))
-    print("***" * 100)
     bot_response = context.get("bot_message")
     last_bot_prompt_string = context.get("_last_bot_prompt")
 
@@ -67,7 +65,7 @@ async def self_check_hallucination(
         num_responses = HALLUCINATION_NUM_EXTRA_RESPONSES
         # Use beam search for the LLM call, to get several completions with only one call.
         # At the current moment, only OpenAI LLM engines are supported for computing the additional completions.
-        #
+
         if "openai" not in str(type(llm)).lower():
             log.warning(
                 f"Hallucination rail can only be used with OpenAI LLM engines."
@@ -81,16 +79,6 @@ async def self_check_hallucination(
 
         # Generate multiple responses with temperature 1.
         with llm_params(llm, temperature=1.0, n=num_responses):
-            # best_of
-            # integer or null
-            #
-            # Optional
-            # Defaults to 1
-            # Generates best_of completions server-side and returns the "best" (the one with the highest log probability per token). Results cannot be streamed.
-            #
-            # When used with n, best_of controls the number of candidate completions and n specifies how many to return – best_of must be greater than n.
-            #
-            # Note: Because this parameter generates many completions, it can quickly consume your token quota. Use carefully and ensure that you have reasonable settings for max_tokens and stop.
             extra_llm_response = await chain.agenerate(
                 [{"text": last_bot_prompt_string}],
                 run_manager=logging_callback_manager_for_chain,
