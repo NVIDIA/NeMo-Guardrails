@@ -266,7 +266,6 @@ def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState
     if _flow_id_has_params(subflow_id):
         flow_params = _get_flow_params(subflow_id)
         subflow_id = _normalize_flow_id(subflow_id)
-        # new_state.context.update(flow_params)
         new_state.context_updates.update(flow_params)
 
     subflow_state = FlowState(

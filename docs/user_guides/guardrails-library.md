@@ -481,7 +481,7 @@ prompts:
 
 >WARNING: If a prompt is not defined, an exception will be raised when the configuration is loaded.
 
-4. you must specify the output parser. You can use your own parser and register it or use the off the shelf `is_content_safe` output parser as shown above.
+4. You must specify the output parser. You can use your own parser and register it or use the off-the-shelf `is_content_safe` output parser as shown above.
 
     This parser works by checking for specific keywords in the response:
     - If the response includes "safe", the content is considered safe.
@@ -490,11 +490,9 @@ prompts:
 
 > NOTE: If you're using this function for a different task with a custom prompt, you'll need to update the logic to fit the new context. In this case, "yes" means the content should be blocked, is unsafe, or breaks a policy, while "no" means the content is safe and doesn't break any policies.
 
-The above is an example prompt that you can use with the *content safety check input $model=shieldgemma*. The prompt has one input variable: `{{ user_input }}`, which includes user input that should be moderated. The completion must be "yes" if the response is not safe and "no" otherwise. Opetionaly, some models may return a set of policy violations.
+The above is an example prompt that you can use with the *content safety check input $model=shieldgemma*. The prompt has one input variable: `{{ user_input }}`, which includes user input that should be moderated. The completion must be "yes" if the response is not safe and "no" otherwise. Optionally, some models may return a set of policy violations.
 
 The `content safety check input` and `content safety check output` rails executes the [`content_safety_check_input`](../../nemoguardrails/library/content_safety/actions.py) and [`content_safety_check_output`](../../nemoguardrails/library/content_safety/actions.py) actions respectively.
-
-It is important to note that you must define the models in the `models` section of the `config.yml` file before using them in the input and output flows. The `content safety check input` and `content safety check output` flows are used to check the input and output text, respectively. The `$model` parameter specifies the model to be used for content safety checking. The model must be defined in the `models` section of the `config.yml` file. The `content safety check input` and `content safetry check output` flows return a boolean value indicating whether the input or output text is safe. Depending on the model, it also returns set of policy violations. Please refer to the [content safety example](../../examples/configs/content_safety/README.md) for more details.
 
 ## Community Models and Libraries
 
