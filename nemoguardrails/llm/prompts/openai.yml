@@ -8,6 +8,13 @@ prompts:
       content: |-
           {{ general_instructions }}
 
+          {% if relevant_chunks != None and relevant_chunks != '' %}
+            This is some relevant context:
+            ```markdown
+            {{ relevant_chunks }}
+            ```
+          {% endif %}
+
           {{ history | user_assistant_sequence }}
           Assistant:
 
