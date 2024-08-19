@@ -62,7 +62,7 @@ def co_v2(
         "zapier_nla_query",
         "call activefence api",
         "jailbreak_detection_heuristics",
-        "check_hallucination",
+        "self_check_hallucination",
         "llama_guard_check_input",
         "llama_guard_check_output",
         "alignscore_check_facts",

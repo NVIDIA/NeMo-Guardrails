@@ -323,14 +323,14 @@ To use the hallucination rail, you should:
 rails:
   input:
     flows:
-      - self check hallucinations
+      - self check hallucination
 ```
 
-2. Define a `self_check_hallucinations` prompt in the `prompts.yml` file:
+2. Define a `self_check_hallucination` prompt in the `prompts.yml` file:
 
 ```yaml
 prompts:
-  - task: self_check_hallucinations
+  - task: self_check_hallucination
     content: |-
       You are given a task to identify if the hypothesis is in agreement with the context below.
       You will only use the contents of the context and not rely on external knowledge.

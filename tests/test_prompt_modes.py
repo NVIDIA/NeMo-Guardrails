@@ -33,10 +33,14 @@ TEST_CASES = [
         Task.GENERATE_USER_INTENT,
         "<<This is a placeholder for a custom prompt for generating the user intent using gpt-3.5-turbo>>",
     ),
-    ("task3_nemo_compact", Task.CHECK_HALLUCINATION, "<<Check for hallucinations>>"),
+    (
+        "task3_nemo_compact",
+        Task.SELF_CHECK_HALLUCINATION,
+        "<<Check for hallucinations>>",
+    ),
     (
         "task4_nemo_standard",
-        Task.CHECK_HALLUCINATION,
+        Task.SELF_CHECK_HALLUCINATION,
         "<<This is a long placeholder prompt to check for hallucinations>>",
     ),
 ]

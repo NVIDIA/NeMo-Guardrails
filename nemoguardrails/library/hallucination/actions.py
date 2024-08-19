@@ -40,7 +40,7 @@ HALLUCINATION_NUM_EXTRA_RESPONSES = 2
 
 
 @action()
-async def check_hallucination(
+async def self_check_hallucination(
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
     llm: Optional[BaseLLM] = None,
@@ -65,7 +65,8 @@ async def check_hallucination(
         num_responses = HALLUCINATION_NUM_EXTRA_RESPONSES
         # Use beam search for the LLM call, to get several completions with only one call.
         # At the current moment, only OpenAI LLM engines are supported for computing the additional completions.
-        if type(llm) != OpenAI:
+
+        if "openai" not in str(type(llm)).lower():
             log.warning(
                 f"Hallucination rail can only be used with OpenAI LLM engines."
                 f"Current LLM engine is {type(llm).__name__}."
@@ -77,7 +78,7 @@ async def check_hallucination(
         chain = LLMChain(prompt=last_bot_prompt, llm=llm)
 
         # Generate multiple responses with temperature 1.
-        with llm_params(llm, temperature=1.0, n=num_responses, best_of=num_responses):
+        with llm_params(llm, temperature=1.0, n=num_responses):
             extra_llm_response = await chain.agenerate(
                 [{"text": last_bot_prompt_string}],
                 run_manager=logging_callback_manager_for_chain,
@@ -112,7 +113,7 @@ async def check_hallucination(
         if use_llm_checking:
             # Only support LLM-based agreement check in current version
             prompt = llm_task_manager.render_task_prompt(
-                task=Task.CHECK_HALLUCINATION,
+                task=Task.SELF_CHECK_HALLUCINATION,
                 context={
                     "statement": bot_response,
                     "paragraph": ". ".join(extra_responses),
@@ -120,8 +121,8 @@ async def check_hallucination(
             )
 
             # Initialize the LLMCallInfo object
-            llm_call_info_var.set(LLMCallInfo(task=Task.CHECK_HALLUCINATION.value))
-            stop = llm_task_manager.get_stop_tokens(task=Task.CHECK_HALLUCINATION)
+            llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_HALLUCINATION.value))
+            stop = llm_task_manager.get_stop_tokens(task=Task.SELF_CHECK_HALLUCINATION)
 
             with llm_params(llm, temperature=config.lowest_temperature):
                 agreement = await llm_call(llm, prompt, stop=stop)
