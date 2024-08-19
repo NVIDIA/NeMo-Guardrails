@@ -71,7 +71,6 @@ async def self_check_hallucination(
                 f"Hallucination rail can only be used with OpenAI LLM engines."
                 f"Current LLM engine is {type(llm).__name__}."
             )
-            return False
 
         # Use the "generate" call from langchain to get all completions in the same response.
         last_bot_prompt = PromptTemplate(template="{text}", input_variables=["text"])
