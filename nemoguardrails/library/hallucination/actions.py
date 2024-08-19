@@ -68,8 +68,8 @@ async def self_check_hallucination(
 
         if "openai" not in str(type(llm)).lower():
             log.warning(
-                f"Hallucination rail can only be used with OpenAI LLM engines."
-                f"Current LLM engine is {type(llm).__name__}."
+                f"Hallucination rail is optimized for OpenAI LLM engines. "
+                f"Current LLM engine is {type(llm).__name__}, which may not support all features."
             )
 
         # Use the "generate" call from langchain to get all completions in the same response.
