@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Module for the configuration of rails."""
+
 import logging
 import os
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -161,6 +162,11 @@ class TaskPrompt(BaseModel):
     stop: Optional[List[str]] = Field(
         default=None,
         description="If specified, will be configure stop tokens for models that support this.",
+    )
+
+    max_tokens: Optional[int] = Field(
+        default=None,
+        description="The maximum number of tokens that can be generated in the chat completion.",
     )
 
     @root_validator(pre=True, allow_reuse=True)
