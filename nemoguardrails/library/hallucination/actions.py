@@ -41,9 +41,9 @@ HALLUCINATION_NUM_EXTRA_RESPONSES = 2
 
 @action()
 async def self_check_hallucination(
+    llm: BaseLLM,
     llm_task_manager: LLMTaskManager,
     context: Optional[dict] = None,
-    llm: Optional[BaseLLM] = None,
     use_llm_checking: bool = True,
     config: Optional[RailsConfig] = None,
 ):
@@ -68,10 +68,16 @@ async def self_check_hallucination(
 
         if "openai" not in str(type(llm)).lower():
             log.warning(
-                f"Hallucination rail can only be used with OpenAI LLM engines."
-                f"Current LLM engine is {type(llm).__name__}."
+                f"Hallucination rail is optimized for OpenAI LLM engines. "
+                f"Current LLM engine is {type(llm).__name__}, which may not support all features."
             )
-            return False
+
+            if "n" not in llm.__fields__:
+                log.warning(
+                    f"LLM engine {type(llm).__name__} does not support the 'n' parameter for generating multiple completion choices. "
+                    f"Please use an OpenAI LLM engine or a model that supports the 'n' parameter for optimal performance."
+                )
+                return False
 
         # Use the "generate" call from langchain to get all completions in the same response.
         last_bot_prompt = PromptTemplate(template="{text}", input_variables=["text"])
