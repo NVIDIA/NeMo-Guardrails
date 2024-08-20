@@ -29,7 +29,7 @@
                 {
                     "name": "keyword.control.flow.colang",
                     "comment": "Must be the first word in the line.",
-                    "match": "(?<=(^|=)[ \t]*)\\b(send|start|match|await|activate|abort|while|if|else|elif|when|orwhen|or when|break|continue|return|priority|pass|global|print|log)\\b"
+                    "match": "(?<=(^|=)[ \t]*)\\b(send|start|match|await|activate|deactivate|abort|while|if|else|elif|when|orwhen|or when|break|continue|return|priority|pass|global|print|log)\\b"
                 },
                 {
                     "name": "keyword.control.flow.colang",
@@ -604,7 +604,7 @@
             "match": "(?x)\n     <<= | >>= | //= | \\*\\*=\n    | \\+= | -= | /= | @=\n    | \\*= | %= | ~= | \\^= | &= | \\|=\n    | =(?!=)\n"
         },
         "operator": {
-            "match": "(?x)\n    \\b(?<!\\.)\n      (?:\n        (and | or | and not | in | is)                         (?# 1)\n        |\n        (for | if | else | await | match | send | start | activate | (?:yield(?:\\s+from)?))  (?# 2)\n      )\n    (?!\\s*:)\\b\n\n    | (<< | >> | & | \\| | \\^ | ~)                          (?# 3)\n\n    | (\\*\\* | \\* | \\+ | - | % | // | / | @)                (?# 4)\n\n    | (!= | == | >= | <= | < | >)                          (?# 5)\n\n    | (:=)                                                 (?# 6)\n",
+            "match": "(?x)\n    \\b(?<!\\.)\n      (?:\n        (and | or | and not | in | is)                         (?# 1)\n        |\n        (for | if | else | await | match | send | start | activate | deactivate | (?:yield(?:\\s+from)?))  (?# 2)\n      )\n    (?!\\s*:)\\b\n\n    | (<< | >> | & | \\| | \\^ | ~)                          (?# 3)\n\n    | (\\*\\* | \\* | \\+ | - | % | // | / | @)                (?# 4)\n\n    | (!= | == | >= | <= | < | >)                          (?# 5)\n\n    | (:=)                                                 (?# 6)\n",
             "captures": {
                 "1": {
                     "name": "keyword.operator.logical.colang"
@@ -1792,7 +1792,7 @@
             ]
         },
         "illegal-names": {
-            "match": "(?x)\n  \\b(?:\n    (\n      and | assert |  await | break |  continue | flow | match | send | start | activate\n      | del | elif | else | except | finally | for | from | global\n      | if | in | is | (?<=\\.)lambda | lambda(?=\\s*[\\.=])\n      | nonlocal | not | or | pass | raise | return | try | while | with\n      | yield\n    ) | (\n      as | import\n    )\n  )\\b\n",
+            "match": "(?x)\n  \\b(?:\n    (\n      and | assert |  await | break |  continue | flow | match | send | start | activate | deactivate\n      | del | elif | else | except | finally | for | from | global\n      | if | in | is | (?<=\\.)lambda | lambda(?=\\s*[\\.=])\n      | nonlocal | not | or | pass | raise | return | try | while | with\n      | yield\n    ) | (\n      as | import\n    )\n  )\\b\n",
             "captures": {
                 "1": {
                     "name": "keyword.control.flow.colang"

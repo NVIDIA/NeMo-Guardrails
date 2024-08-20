@@ -13,13 +13,13 @@ prompts:
     content: |-
       <<This custom prompt generates the user intent>>
 
-  - task: check_hallucination
+  - task: self_check_hallucination
     models:
       - nemollm
     content: |-
       <<This is a long placeholder prompt to check for hallucinations>>
 
-  - task: check_hallucination
+  - task: self_check_hallucination
     models:
       - nemollm
     mode: compact

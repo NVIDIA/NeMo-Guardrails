@@ -2,7 +2,6 @@ import core
 import avatars
 import llm
 import timing
-import utils
 
 flow showcase backchannelling interaction
   bot inform "First, I am going to ask you about your day and will react to keywords such as nice, great or terrible."
@@ -65,8 +64,8 @@ flow bot asks user how the day was
 
   user said something with pause 3.5
 
-  send StopFlow(flow_id="bot reacts to nice things")
-  send StopFlow(flow_id="bot reacts to bad things")
+  deactivate bot reacts to nice things
+  deactivate bot reacts to bad things
 
   bot say "Thanks for sharing"
 

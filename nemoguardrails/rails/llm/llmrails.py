@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """LLM Rails entry point."""
+
 import asyncio
 import importlib.util
 import logging
@@ -160,11 +161,13 @@ class LLMRails:
 
         # Last but not least, we mark all the flows that are used in any of the rails
         # as system flows (so they don't end up in the prompt).
+
         rail_flow_ids = (
             config.rails.input.flows
             + config.rails.output.flows
             + config.rails.retrieval.flows
         )
+
         for flow_config in self.config.flows:
             if flow_config.get("id") in rail_flow_ids:
                 flow_config["is_system_flow"] = True
@@ -263,12 +266,17 @@ class LLMRails:
         existing_flows_names = set([flow.get("id") for flow in self.config.flows])
 
         for flow_name in self.config.rails.input.flows:
+            # content safety check input/output flows are special as they have parameters
+            if flow_name.startswith("content safety check"):
+                continue
             if flow_name not in existing_flows_names:
                 raise ValueError(
                     f"The provided input rail flow `{flow_name}` does not exist"
                 )
 
         for flow_name in self.config.rails.output.flows:
+            if flow_name.startswith("content safety check"):
+                continue
             if flow_name not in existing_flows_names:
                 raise ValueError(
                     f"The provided output rail flow `{flow_name}` does not exist"
@@ -362,6 +370,7 @@ class LLMRails:
             self.runtime.register_action_param("llm", self.llm)
             return
 
+        llms = dict()
         for llm_config in self.config.models:
             if llm_config.type == "embeddings":
                 pass
@@ -386,6 +395,9 @@ class LLMRails:
                     self.runtime.register_action_param(
                         model_name, getattr(self, model_name)
                     )
+                    llms[llm_config.type] = getattr(self, model_name)
+
+            self.runtime.register_action_param("llms", llms)
 
     def _get_embeddings_search_provider_instance(
         self, esp_config: Optional[EmbeddingSearchProvider] = None
@@ -408,7 +420,13 @@ class LLMRails:
                 **{
                     k: v
                     for k, v in esp_config.parameters.items()
-                    if k in ["use_batching", "max_batch_size", "matx_batch_hold"]
+                    if k
+                    in [
+                        "use_batching",
+                        "max_batch_size",
+                        "matx_batch_hold",
+                        "search_threshold",
+                    ]
                     and v is not None
                 },
             )
@@ -1076,3 +1094,13 @@ class LLMRails:
     def explain(self) -> ExplainInfo:
         """Helper function to return the latest ExplainInfo object."""
         return self.explain_info
+
+    def __getstate__(self):
+        return {"config": self.config}
+
+    def __setstate__(self, state):
+        if state["config"].config_path:
+            config = RailsConfig.from_path(state["config"].config_path)
+        else:
+            config = state["config"]
+        self.__init__(config=config, verbose=False)
