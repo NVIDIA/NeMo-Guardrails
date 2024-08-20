@@ -91,7 +91,7 @@ NeMo Guardrails is under active development and the main branch always contains 
 The `nemoguardrails` package also defines the following extra dependencies:
 
 - `dev`: packages required by some extra Guardrails features for developers, such as the **autoreload** feature.
-- `eval`: packages used for the Guardrails [evaluation tools](../../nemoguardrails/eval/README.md).
+- `eval`: packages used for the Guardrails [evaluation tools](../../nemoguardrails/evaluate/README.md).
 - `openai`: installs the latest `openai` package supported by NeMo Guardrails.
 - `sdd`: packages used by the [sensitive data detector](../user_guides/guardrails-library.md#sensitive-data-detection) integrated in NeMo Guardrails.
 - `all`: installs all extra packages.
