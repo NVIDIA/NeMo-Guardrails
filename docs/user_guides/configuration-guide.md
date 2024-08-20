@@ -251,13 +251,29 @@ It is important to implement the following methods:
 In other words, to create your custom LLM provider, you need to implement the following interface methods: `_call`, `_llm_type`, and optionally `_acall`, `_astream`, `_stream`, and `_identifying_params`. Here's how you can do it:
 
 ```python
-from typing import Any, Dict, Iterator, List, Mapping, Optional
+from typing import Any, Iterator, List, Optional
+
 from langchain.base_language import BaseLanguageModel
-from nemoguardrails.llm.providers import register_llm_provider
-from langchain_core.callbacks.manager import CallbackManagerForLLMRun, AsyncCallbackManagerForLLMRun
+from langchain_core.callbacks.manager import (
+    CallbackManagerForLLMRun,
+    AsyncCallbackManagerForLLMRun,
+)
 from langchain_core.outputs import GenerationChunk
 
+from nemoguardrails.llm.providers import register_llm_provider
+
+
 class MyCustomLLM(BaseLanguageModel):
+
+    def _call(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs,
+    ) -> str:
+        pass
+
     async def _acall(
         self,
         prompt: str,
@@ -267,30 +283,19 @@ class MyCustomLLM(BaseLanguageModel):
     ) -> str:
         pass
 
-     def _call(
-      self,
-      prompt: str,
-      stop: Optional[List[str]] = None,
-      run_manager: Optional[CallbackManagerForLLMRun] = None,
-      **kwargs,
-      ) -> str:
-        pass
-        # required to implement
-
-      def _stream(
+    def _stream(
         self,
         prompt: str,
         stop: Optional[List[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
-       ) -> Iterator[GenerationChunk]:
-         pass
-         #Optional to implement
+    ) -> Iterator[GenerationChunk]:
+        pass
 
     # rest of the implementation
-....
+    ...
 
-register_llm_provider("custom_llm", CustomLLM)
+register_llm_provider("custom_llm", MyCustomLLM)
 ```
 
 You can then use the custom LLM provider in your configuration:
@@ -301,31 +306,18 @@ models:
     engine: custom_llm
 ```
 
-```
-
 ### Configuring LLMs per Task
 
-The interaction with the LLM is structured in a task-oriented manner. Each invocation of the LLM is associated with a specific task. These tasks are integral to the guardrails process and include:
+The interaction with the LLM is structured in a task-oriented manner. Each invocation of the LLM is associated with a specific task. These tasks are integral to the guardrail process and include:
 
 1. `generate_user_intent`: This task transforms the raw user utterance into a canonical form. For instance, "Hello there" might be converted to `express greeting`.
 2. `generate_next_steps`: This task determines the bot's response or the action to be executed. Examples include `bot express greeting` or `bot respond to question`.
 3. `generate_bot_message`: This task decides the exact bot message to be returned.
 4. `general`: This task generates the next bot message based on the history of user and bot messages. It is used when there are no dialog rails defined (i.e., no user message canonical forms).
 
-For a comprehensive list of tasks, refer to the [Task type](https://github.com/NVIDIA/NeMo-Guardrails/blob/develop/nemoguardrails/llm/types.py). Below we list some of the common tasks:
-
-- `generate_intent_steps_message`
-- `self_check_input`
-- `self_check_output`
-- `llama_guard_check_input`
-- `llama_guard_check_output`
-- `patronus_lynx_check_output_hallucination`
-- `self_check_facts`
-- `check_hallucination`
-
 For a comprehensive list of tasks, refer to the [Task type](https://github.com/NVIDIA/NeMo-Guardrails/blob/develop/nemoguardrails/llm/types.py).
 
-You have the flexibility of selecting models for specific tasks. For example, you can use a different model for the `self_check_input` and `self_check_output` tasks from various providers. Here's an example configuration:
+You can use different LLM models for specific tasks. For example, you can use a different model for the `self_check_input` and `self_check_output` tasks from various providers. Here's an example configuration:
 
 ```yaml
 
@@ -337,11 +329,11 @@ models:
     model: meta/llama3-8b-instruct
     engine: nim
   - type: self_check_output
-    model: meta/llama-3.1-405b-instruct
+    model: meta/llama-3.1-70b-instruct
     engine: nim
 ```
 
-as you can see for the `self_check_input` and `self_check_output` tasks, we are using different models. It is even possible to get more granular and use different models for a task like `generate_user_intent`.
+In the previous example, the `self_check_input` and `self_check_output` tasks use different models. It is even possible to get more granular and use different models for a task like `generate_user_intent`:
 
 ```yaml
 models:
@@ -352,7 +344,7 @@ models:
     model: meta/llama3-8b-instruct
     engine: nim
   - type: self_check_output
-    model: meta/llama-3.1-405b-instruct
+    model: meta/llama-3.1-70b-instruct
     engine: nim
   - type: generate_user_intent
     model: meta/llama-3.1-8b-instruct
