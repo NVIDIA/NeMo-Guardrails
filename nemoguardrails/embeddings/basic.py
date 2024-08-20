@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import logging
 from typing import Any, Dict, List, Optional, Union
 
 from annoy import AnnoyIndex
@@ -22,6 +23,8 @@ from nemoguardrails.embeddings.cache import cache_embeddings
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.embeddings.providers import EmbeddingModel, init_embedding_model
 from nemoguardrails.rails.llm.config import EmbeddingsCacheConfig
+
+log = logging.getLogger(__name__)
 
 
 class BasicEmbeddingsIndex(EmbeddingsIndex):
@@ -285,6 +288,14 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
             max_results,
             include_distances=True,
         )
+
+        # In verbose mode, we show detailed info about the scores
+        if threshold != float("inf"):
+            log_items = []
+            for i in range(len(results[0])):
+                score = 1 - results[1][i] / 2
+                log_items.append((score, self._items[results[0][i]].text))
+            log.info("Similarity scores :: %s", str(log_items))
 
         filtered_results = self._filter_results(results[0], results[1], threshold)
 
