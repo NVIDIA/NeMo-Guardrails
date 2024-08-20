@@ -22,7 +22,8 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from nemoguardrails.eval.models import ComplianceCheckResult, InteractionOutput, Policy
-from nemoguardrails.eval.ui.utils import EvalData, get_span_colors, load_eval_data
+from nemoguardrails.eval.ui.streamlit_utils import get_span_colors, load_eval_data
+from nemoguardrails.eval.ui.utils import EvalData
 from nemoguardrails.utils import new_uuid
 
 

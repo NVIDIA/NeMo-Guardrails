@@ -13,13 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
-import os
-import random
 from time import time
 from typing import Dict, List, Optional, Union
 
-import streamlit as st
 from pydantic import BaseModel
 
 from nemoguardrails.eval.models import (
@@ -29,11 +25,7 @@ from nemoguardrails.eval.models import (
     InteractionOutput,
     Span,
 )
-from nemoguardrails.eval.utils import (
-    _collect_span_metrics,
-    get_output_paths,
-    update_dict_at_path,
-)
+from nemoguardrails.eval.utils import _collect_span_metrics, update_dict_at_path
 
 
 class EvalData(BaseModel):
@@ -70,60 +62,6 @@ class EvalData(BaseModel):
             {"expected_latencies": self.eval_config.expected_latencies},
         )
         print(f"Updating expected latencies took {time() - t0:.2f} seconds.")
-
-
-@st.cache_resource
-def get_span_colors(_eval_output: EvalOutput):
-    """Helper to get colors for the spans."""
-    random.seed(4)
-    colors = {}
-    for log in _eval_output.logs:
-        for span in reversed(log.trace):
-            if span.name not in colors:
-                colors[span.name] = "#" + "".join(
-                    [random.choice("0123456789ABCDEF") for _ in range(6)]
-                )
-    return colors
-
-
-@st.cache_resource
-def load_eval_data():
-    """Loads the evaluation data"""
-    # Setup argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--eval-config-path", type=str, default="")
-    parser.add_argument("--output-path", nargs="+", type=str, default=[])
-
-    # Parse arguments
-    args = parser.parse_args()
-
-    # Load the evaluation configuration
-    eval_config_path = os.path.abspath(args.eval_config_path)
-    eval_config = EvalConfig.from_path(eval_config_path)
-
-    # If no explicit output paths are provided, load all the output
-    # dirs from the current folder
-    if not args.output_path:
-        args.output_path = get_output_paths()
-
-    eval_outputs = {}
-    for output_path in args.output_path:
-        # We use relative paths to CWD to have them shorter in the UI
-        output_path = os.path.relpath(output_path, os.getcwd())
-
-        if os.path.basename(output_path).startswith("."):
-            continue
-
-        # Load the output
-        eval_output = EvalOutput.from_path(output_path)
-        eval_outputs[output_path] = eval_output
-
-    return EvalData(
-        eval_config_path=eval_config_path,
-        output_paths=args.output_path,
-        eval_config=eval_config,
-        eval_outputs=eval_outputs,
-    )
 
 
 def collect_interaction_metrics(
