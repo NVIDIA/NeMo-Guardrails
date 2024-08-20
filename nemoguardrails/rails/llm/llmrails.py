@@ -23,9 +23,10 @@ import re
 import threading
 import time
 import warnings
-from typing import Any, AsyncIterator, List, Optional, Tuple, Type, Union, cast
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, Union, cast
 
 from langchain.llms.base import BaseLLM
+from langchain_core.language_models import BaseLanguageModel
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
@@ -56,7 +57,7 @@ from nemoguardrails.logging.processing_log import compute_generation_log
 from nemoguardrails.logging.stats import LLMStats
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
-from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
+from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, Model, RailsConfig
 from nemoguardrails.rails.llm.options import (
     GenerationLog,
     GenerationOptions,
@@ -311,6 +312,48 @@ class LLMRails:
         self.kb.init()
         await self.kb.build()
 
+    @staticmethod
+    def get_model_cls_and_kwargs(
+        model_config: Model,
+    ) -> Tuple[Type[BaseLanguageModel], Dict[str, Any]]:
+        """Helper to return the model class and kwargs for initialization."""
+        if model_config.engine not in get_llm_provider_names():
+            msg = f"Unknown LLM engine: {model_config.engine}."
+            if model_config.engine == "openai":
+                msg += " Please install langchain-openai using `pip install langchain-openai`."
+
+            raise Exception(msg)
+
+        provider_cls = get_llm_provider(model_config)
+        # We need to compute the kwargs for initializing the LLM
+        kwargs = model_config.parameters
+
+        # We also need to pass the model, if specified
+        if model_config.model:
+            # Some LLM providers use `model_name` instead of model. For backward compatibility
+            # we keep this hard-coded mapping.
+            if model_config.engine in [
+                "azure",
+                "openai",
+                "gooseai",
+                "nlpcloud",
+                "petals",
+                "trt_llm",
+                "vertexai",
+            ]:
+                kwargs["model_name"] = model_config.model
+            elif (
+                model_config.engine == "nvidia_ai_endpoints"
+                or model_config.engine == "nim"
+            ):
+                kwargs["model"] = model_config.model
+            else:
+                # The `__fields__` attribute is computed dynamically by pydantic.
+                if "model" in provider_cls.__fields__:
+                    kwargs["model"] = model_config.model
+
+        return provider_cls, kwargs
+
     def _init_llms(self):
         """
         Initializes the right LLM engines based on the configuration.
@@ -333,40 +376,7 @@ class LLMRails:
             if llm_config.type == "embeddings":
                 pass
             else:
-                if llm_config.engine not in get_llm_provider_names():
-                    msg = f"Unknown LLM engine: {llm_config.engine}."
-                    if llm_config.engine == "openai":
-                        msg += " Please install langchain-openai using `pip install langchain-openai`."
-
-                    raise Exception(msg)
-
-                provider_cls = get_llm_provider(llm_config)
-                # We need to compute the kwargs for initializing the LLM
-                kwargs = llm_config.parameters
-
-                # We also need to pass the model, if specified
-                if llm_config.model:
-                    # Some LLM providers use `model_name` instead of model. For backward compatibility
-                    # we keep this hard-coded mapping.
-                    if llm_config.engine in [
-                        "azure",
-                        "openai",
-                        "gooseai",
-                        "nlpcloud",
-                        "petals",
-                        "trt_llm",
-                        "vertexai",
-                    ]:
-                        kwargs["model_name"] = llm_config.model
-                    elif (
-                        llm_config.engine == "nvidia_ai_endpoints"
-                        or llm_config.engine == "nim"
-                    ):
-                        kwargs["model"] = llm_config.model
-                    else:
-                        # The `__fields__` attribute is computed dynamically by pydantic.
-                        if "model" in provider_cls.__fields__:
-                            kwargs["model"] = llm_config.model
+                provider_cls, kwargs = self.get_model_cls_and_kwargs(llm_config)
 
                 if self.config.streaming:
                     if "streaming" in provider_cls.__fields__:

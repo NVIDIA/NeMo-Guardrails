@@ -39,7 +39,7 @@ def config():
             dialog:
                 user_messages:
                     embeddings_only: True
-                    embeddings_only_similarity_threshold: 0.5
+                    embeddings_only_similarity_threshold: 0.8
                     embeddings_only_fallback_intent: "express greeting"
         """,
     )
