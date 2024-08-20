@@ -63,7 +63,7 @@ from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.options import GenerationOptions
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import new_event_dict
+from nemoguardrails.utils import get_or_create_event_loop, new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ class LLMGenerationActions:
 
         # There are still some edge cases not covered by nest_asyncio.
         # Using a separate thread always for now.
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
         if True or check_sync_call_from_async_loop():
             t = threading.Thread(target=asyncio.run, args=(self.init(),))
             t.start()

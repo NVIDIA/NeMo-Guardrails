@@ -1084,3 +1084,13 @@ class LLMRails:
     def explain(self) -> ExplainInfo:
         """Helper function to return the latest ExplainInfo object."""
         return self.explain_info
+
+    def __getstate__(self):
+        return {"config": self.config}
+
+    def __setstate__(self, state):
+        if state["config"].config_path:
+            config = RailsConfig.from_path(state["config"].config_path)
+        else:
+            config = state["config"]
+        self.__init__(config=config, verbose=False)
