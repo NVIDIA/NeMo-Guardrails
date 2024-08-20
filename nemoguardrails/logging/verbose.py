@@ -159,7 +159,7 @@ class VerboseHandler(logging.StreamHandler):
                 else:
                     msg += f"[dim]{title}[/]"
 
-                console.print(msg, highlight=False, no_wrap=True)
+                console.print(msg, highlight=False, no_wrap=False)
 
 
 def set_verbose(

@@ -410,7 +410,13 @@ class LLMRails:
                 **{
                     k: v
                     for k, v in esp_config.parameters.items()
-                    if k in ["use_batching", "max_batch_size", "matx_batch_hold"]
+                    if k
+                    in [
+                        "use_batching",
+                        "max_batch_size",
+                        "matx_batch_hold",
+                        "search_threshold",
+                    ]
                     and v is not None
                 },
             )
