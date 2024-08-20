@@ -797,7 +797,7 @@ class RailsConfig(BaseModel):
         description="If true, allows the rails to throw/pass exceptions to the user.",
     )
 
-    passthrough: bool = Field(
+    passthrough: Optional[bool] = Field(
         default=None,
         description="Weather the original prompt should pass through the guardrails configuration as is. "
         "This means it will not be altered in any way. ",
