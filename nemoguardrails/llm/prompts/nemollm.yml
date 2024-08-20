@@ -111,7 +111,15 @@ prompts:
       ${{ var_name }} =
     output_parser: "verbose_v1"
 
-  - task: check_hallucination
+  - task: fact_checking
+    models:
+      - nemollm
+    content: |-
+      You are given a task to identify if the hypothesis is grounded and entailed to the evidence.
+      You will only use the contents of the evidence and not rely on external knowledge.
+      Answer with yes/no. "evidence": {{ evidence }} "hypothesis": {{ response }} "entails":
+
+  - task: self_check_hallucination
     models:
       - nemollm
     content: |-

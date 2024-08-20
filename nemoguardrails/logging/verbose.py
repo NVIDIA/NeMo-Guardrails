@@ -67,14 +67,15 @@ class VerboseHandler(logging.StreamHandler):
                     skip_print = True
                     console.print("")
 
-                    if title == "Prompt Messages":
-                        body = body.split("\n", 3)[3]
-
                     for line in body.split("\n"):
                         if line.strip() == "[/]":
                             continue
 
-                        text = Text(line, style="black on #909090", end="\n")
+                        if line.startswith("[cyan]") and line.endswith("[/]"):
+                            text = Text(line[6:-3], style="maroon", end="\n")
+                        else:
+                            text = Text(line, style="black on #909090", end="\n")
+
                         text.pad_right(console.width)
                         console.print(text)
                     console.print("")
@@ -158,7 +159,7 @@ class VerboseHandler(logging.StreamHandler):
                 else:
                     msg += f"[dim]{title}[/]"
 
-                console.print(msg, highlight=False, no_wrap=True)
+                console.print(msg, highlight=False, no_wrap=False)
 
 
 def set_verbose(

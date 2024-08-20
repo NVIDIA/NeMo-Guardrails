@@ -12,7 +12,7 @@ Please install additional package via :
 `pip install accelerate transformers==4.33.1 sentencepiece --upgrade`
 
 
-The `meta-llama/Llama-2-13b-chat-hf` LLM model has been tested on the topical rails evaluation sets, results are available [here](../../../../nemoguardrails/eval/README.md).
+The `meta-llama/Llama-2-13b-chat-hf` LLM model has been tested on the topical rails evaluation sets, results are available [here](../../../../nemoguardrails/evaluate/README.md).
 We have also tested the factchecking rail for the same model with good results.
 There are examples on how to use the models with a HF repo id or from a local path.
 

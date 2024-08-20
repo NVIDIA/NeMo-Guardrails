@@ -1,8 +1,0 @@
-# meta: exclude from llm
-
-flow await_flow_by_name $flow_name
-  """Start a flow with the provided name and wait for it to finish."""
-  $new_flow_instance_uid = "({$flow_name}){uid()}"
-  send StartFlow(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid)
-  match FlowStarted(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
-  match $event_ref.flow.Finished()

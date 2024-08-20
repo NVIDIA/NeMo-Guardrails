@@ -63,7 +63,7 @@ from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.options import GenerationOptions
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import new_event_dict
+from nemoguardrails.utils import get_or_create_event_loop, new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ class LLMGenerationActions:
 
         # There are still some edge cases not covered by nest_asyncio.
         # Using a separate thread always for now.
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
         if True or check_sync_call_from_async_loop():
             t = threading.Thread(target=asyncio.run, args=(self.init(),))
             t.start()
@@ -225,6 +225,7 @@ class LLMGenerationActions:
         self.user_message_index = self.get_embedding_search_provider_instance(
             self.config.core.embedding_search_provider
         )
+
         await self.user_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -366,22 +367,38 @@ class LLMGenerationActions:
             examples = ""
             potential_user_intents = []
 
-            if self.user_message_index:
+            if self.user_message_index is not None:
+                threshold = None
+
+                if config.rails.dialog.user_messages:
+                    threshold = (
+                        config.rails.dialog.user_messages.embeddings_only_similarity_threshold
+                    )
+
                 results = await self.user_message_index.search(
-                    text=event["text"], max_results=5
+                    text=event["text"], max_results=5, threshold=threshold
                 )
 
                 # If the option to use only the embeddings is activated, we take the first
                 # canonical form.
                 if results and config.rails.dialog.user_messages.embeddings_only:
+                    intent = results[0].meta["intent"]
+
                     return ActionResult(
-                        events=[
-                            new_event_dict(
-                                "UserIntent", intent=results[0].meta["intent"]
-                            )
-                        ]
+                        events=[new_event_dict("UserIntent", intent=intent)]
                     )
 
+                if (
+                    config.rails.dialog.user_messages.embeddings_only
+                    and config.rails.dialog.user_messages.embeddings_only_fallback_intent
+                ):
+                    intent = (
+                        config.rails.dialog.user_messages.embeddings_only_fallback_intent
+                    )
+
+                    return ActionResult(
+                        events=[new_event_dict("UserIntent", intent=intent)]
+                    )
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
                     examples += f"user \"{result.text}\"\n  {result.meta['intent']}\n\n"
@@ -497,9 +514,17 @@ class LLMGenerationActions:
                 # Initialize the LLMCallInfo object
                 llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
 
+                if kb:
+                    chunks = await kb.search_relevant_chunks(event["text"])
+                    relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
+                else:
+                    relevant_chunks = ""
+
                 # Otherwise, we still create an altered prompt.
                 prompt = self.llm_task_manager.render_task_prompt(
-                    task=Task.GENERAL, events=events
+                    task=Task.GENERAL,
+                    events=events,
+                    context={"relevant_chunks": relevant_chunks},
                 )
 
                 generation_options: GenerationOptions = generation_options_var.get()
@@ -1130,6 +1155,8 @@ class LLMGenerationActions:
                 relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
             else:
                 relevant_chunks = ""
+
+            relevant_chunks = relevant_chunks.strip()
 
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERATE_INTENT_STEPS_MESSAGE,

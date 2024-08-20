@@ -18,10 +18,10 @@ from typing import List
 
 import typer
 
-from nemoguardrails.eval.evaluate_factcheck import FactCheckEvaluation
-from nemoguardrails.eval.evaluate_hallucination import HallucinationRailsEvaluation
-from nemoguardrails.eval.evaluate_moderation import ModerationRailsEvaluation
-from nemoguardrails.eval.evaluate_topical import TopicalRailsEvaluation
+from nemoguardrails.evaluate.evaluate_factcheck import FactCheckEvaluation
+from nemoguardrails.evaluate.evaluate_hallucination import HallucinationRailsEvaluation
+from nemoguardrails.evaluate.evaluate_moderation import ModerationRailsEvaluation
+from nemoguardrails.evaluate.evaluate_topical import TopicalRailsEvaluation
 from nemoguardrails.logging.verbose import set_verbose
 
 app = typer.Typer()

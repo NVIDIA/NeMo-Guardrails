@@ -34,7 +34,7 @@ rails:
     enable_on_predefined_messages: false
     flows:
       - self check facts
-      - check hallucination
+      - self check hallucination
       - activefence moderation
       - check sensitive data
       - gotitai rag truthcheck

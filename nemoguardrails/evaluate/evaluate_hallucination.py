@@ -22,7 +22,7 @@ import tqdm
 import typer
 
 from nemoguardrails import LLMRails
-from nemoguardrails.eval.utils import load_dataset
+from nemoguardrails.evaluate.utils import load_dataset
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task
 from nemoguardrails.llm.taskmanager import LLMTaskManager
@@ -102,7 +102,7 @@ class HallucinationRailsEvaluation:
 
         return extra_responses
 
-    def check_hallucination(self):
+    def self_check_hallucination(self):
         """
         Run the hallucination rail evaluation.
         For each prompt, generate 2 extra responses from the LLM and check consistency with the bot response.
@@ -150,7 +150,7 @@ class HallucinationRailsEvaluation:
             else:
                 paragraph = ". ".join(extra_responses)
                 hallucination_check_prompt = self.llm_task_manager.render_task_prompt(
-                    Task.CHECK_HALLUCINATION,
+                    Task.SELF_CHECK_HALLUCINATION,
                     {"paragraph": paragraph, "statement": bot_response},
                 )
                 hallucination = self.llm(hallucination_check_prompt)
@@ -177,7 +177,7 @@ class HallucinationRailsEvaluation:
             hallucination_check_predictions,
             num_flagged,
             num_error,
-        ) = self.check_hallucination()
+        ) = self.self_check_hallucination()
         print(
             f"% of samples flagged as hallucinations: {num_flagged/len(self.dataset) * 100}"
         )

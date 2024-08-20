@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import logging
 from typing import Any, Dict, List, Optional, Union
 
 from annoy import AnnoyIndex
@@ -22,6 +23,8 @@ from nemoguardrails.embeddings.cache import cache_embeddings
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.embeddings.providers import EmbeddingModel, init_embedding_model
 from nemoguardrails.rails.llm.config import EmbeddingsCacheConfig
+
+log = logging.getLogger(__name__)
 
 
 class BasicEmbeddingsIndex(EmbeddingsIndex):
@@ -48,6 +51,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
     embedding_size: int
     cache_config: EmbeddingsCacheConfig
     embeddings: List[List[float]]
+    search_threshold: float
     use_batching: bool
     max_batch_size: int
     max_batch_hold: float
@@ -58,6 +62,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         embedding_engine=None,
         index=None,
         cache_config: Union[EmbeddingsCacheConfig, Dict[str, Any]] = None,
+        search_threshold: float = None,
         use_batching: bool = False,
         max_batch_size: int = 10,
         max_batch_hold: float = 0.01,
@@ -79,6 +84,7 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         self.embedding_model = embedding_model
         self.embedding_engine = embedding_engine
         self._embedding_size = 0
+        self.search_threshold = search_threshold or float("inf")
         if isinstance(cache_config, Dict):
             self._cache_config = EmbeddingsCacheConfig(**cache_config)
         else:
@@ -252,7 +258,9 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
 
         return result
 
-    async def search(self, text: str, max_results: int = 20) -> List[IndexItem]:
+    async def search(
+        self, text: str, max_results: int = 20, threshold: Optional[float] = None
+    ) -> List[IndexItem]:
         """Search the closest `max_results` items.
 
         Args:
@@ -262,14 +270,46 @@ class BasicEmbeddingsIndex(EmbeddingsIndex):
         Returns:
             List[IndexItem]: The closest items found.
         """
+        if threshold is None:
+            threshold = self.search_threshold
+
         if self.use_batching:
             _embedding = await self._batch_get_embeddings(text)
         else:
             _embedding = (await self._get_embeddings([text]))[0]
 
+        if self._index is None:
+            raise ValueError(
+                "Index is not built yet. Ensure to call `build` before searching."
+            )
+
         results = self._index.get_nns_by_vector(
             _embedding,
             max_results,
+            include_distances=True,
         )
 
-        return [self._items[i] for i in results]
+        # In verbose mode, we show detailed info about the scores
+        if threshold != float("inf"):
+            log_items = []
+            for i in range(len(results[0])):
+                score = 1 - results[1][i] / 2
+                log_items.append((score, self._items[results[0][i]].text))
+            log.info("Similarity scores :: %s", str(log_items))
+
+        filtered_results = self._filter_results(results[0], results[1], threshold)
+
+        return [self._items[i] for i in filtered_results]
+
+    @staticmethod
+    def _filter_results(
+        indices: List[int], distances: List[float], threshold: float
+    ) -> List[int]:
+        if threshold == float("inf"):
+            return indices
+        else:
+            return [
+                index
+                for index, distance in zip(indices, distances)
+                if (1 - distance / 2) >= threshold
+            ]

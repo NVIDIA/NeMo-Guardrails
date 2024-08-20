@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import logging
 import os
 from typing import List, Optional
@@ -24,14 +25,14 @@ from fastapi import FastAPI
 from nemoguardrails import __version__
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
-from nemoguardrails.eval.cli import evaluate
-from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
+from nemoguardrails.eval import cli
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
 from nemoguardrails.utils import init_random_seed
 
 app = typer.Typer()
-app.add_typer(evaluate.app, name="evaluate", short_help="Run an evaluation task.")
+
+app.add_typer(cli.app, name="eval", short_help="Evaluation a guardrail configuration.")
 app.pretty_exceptions_enable = False
 
 logging.getLogger().setLevel(logging.WARNING)
@@ -138,7 +139,7 @@ def server(
     if config:
         # We make sure there is no trailing separator, as that might break things in
         # single config mode.
-        api.app.rails_config_path = config[0].rstrip(os.path.sep)
+        api.app.rails_config_path = os.path.expanduser(config[0].rstrip(os.path.sep))
     else:
         # If we don't have a config, we try to see if there is a local config folder
         local_path = os.getcwd()
@@ -189,6 +190,6 @@ def version_callback(value: bool):
 def cli(
     _: Optional[bool] = typer.Option(
         None, "-v", "--version", callback=version_callback, is_eager=True
-    )
+    ),
 ):
     pass
