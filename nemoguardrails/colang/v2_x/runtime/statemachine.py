@@ -555,18 +555,24 @@ def _process_internal_events_without_default_matchers(
                     assert flow_state.loop_id
                     handled_event_loops.add(flow_state.loop_id)
         elif "flow_id" in event.arguments:
-            flow_id = event.arguments["flow_id"]
+            # Extract flow parameters
+            arguments = dict(event.arguments)
+
+            flow_id = arguments.pop("flow_id", None)
+            deactivate = arguments.pop("deactivate", False)
+            arguments.pop("source_flow_instance_uid", None)
+            arguments.pop("source_head_uid", None)
             if flow_id in state.flow_id_states:
                 for flow_state in state.flow_id_states[flow_id]:
-                    deactivate = event.arguments.get("deactivate", False)
-                    _finish_flow(
-                        state,
-                        flow_state,
-                        event.matching_scores,
-                        deactivate,
-                    )
-                    assert flow_state.loop_id
-                    handled_event_loops.add(flow_state.loop_id)
+                    if arguments.items() <= flow_state.arguments.items():
+                        _finish_flow(
+                            state,
+                            flow_state,
+                            event.matching_scores,
+                            deactivate,
+                        )
+                        assert flow_state.loop_id
+                        handled_event_loops.add(flow_state.loop_id)
     elif event.name == InternalEvents.STOP_FLOW:
         if "flow_instance_uid" in event.arguments:
             flow_instance_uid = event.arguments["flow_instance_uid"]
@@ -582,17 +588,23 @@ def _process_internal_events_without_default_matchers(
                     assert flow_state.loop_id
                     handled_event_loops.add(flow_state.loop_id)
         elif "flow_id" in event.arguments:
-            flow_id = event.arguments["flow_id"]
+            # Extract flow parameters
+            arguments = dict(event.arguments)
+            flow_id = arguments.pop("flow_id", None)
+            deactivate = arguments.pop("deactivate", False)
+            arguments.pop("source_flow_instance_uid", None)
+            arguments.pop("source_head_uid", None)
             if flow_id in state.flow_id_states:
                 for flow_state in state.flow_id_states[flow_id]:
-                    _abort_flow(
-                        state=state,
-                        flow_state=flow_state,
-                        matching_scores=event.matching_scores,
-                        deactivate_flow=flow_state.activated > 0,
-                    )
-                    assert flow_state.loop_id
-                    handled_event_loops.add(flow_state.loop_id)
+                    if arguments.items() <= flow_state.arguments.items():
+                        _abort_flow(
+                            state=state,
+                            flow_state=flow_state,
+                            matching_scores=event.matching_scores,
+                            deactivate_flow=deactivate,
+                        )
+                        assert flow_state.loop_id
+                        handled_event_loops.add(flow_state.loop_id)
         # TODO: Add support for all flow instances of same flow with "flow_id"
     # elif event.name == "ResumeFlow":
     #     pass

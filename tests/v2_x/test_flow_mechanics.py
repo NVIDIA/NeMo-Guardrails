@@ -595,6 +595,79 @@ def test_activate_flow_mechanism():
     )
 
 
+def test_deactivate_flow_mechanism():
+    """Test the deactivate a flow mechanism."""
+
+    content = """
+    flow a $text
+      start UtteranceBotAction(script=$text)
+      match UtteranceUserAction().Finished(final_transcript="Hi")
+      start UtteranceBotAction(script="End")
+
+    flow main
+      activate a "Start 1"
+      activate a "Start 2"
+      match Event1()
+      deactivate a "Start 1"
+      match WaitEvent()
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start 1",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start 2",
+            },
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StopUtteranceBotAction",
+            }
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "UtteranceUserActionFinished",
+            "final_transcript": "Hi",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "End",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Start 2",
+            },
+        ],
+    )
+
+
 def test_infinite_loops_avoidance_for_activate_flows():
     """Test that activated flows don't loop infinitely if not match statement is present."""
 
@@ -747,7 +820,7 @@ def test_stop_activated_flow_mechanism():
 
     flow main
       activate a
-      send StopFlow(flow_id="a")
+      send StopFlow(flow_id="a", deactivate=True)
       start UtteranceBotAction(script="End")
       match WaitAction().Finished()
     """
@@ -2204,4 +2277,4 @@ def test_single_flow_activation_3():
 
 
 if __name__ == "__main__":
-    test_flow_started_matching()
+    test_deactivate_flow_mechanism()
