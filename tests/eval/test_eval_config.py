@@ -13,25 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""NeMo Guardrails Toolkit."""
-import os
+import os.path
 
-# If no explicit value is set for TOKENIZERS_PARALLELISM, we disable it
-# to get rid of the annoying warning.
-if not os.environ.get("TOKENIZERS_PARALLELISM"):
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+from nemoguardrails.eval.models import EvalConfig
+
+ROOT = os.path.dirname(__file__)
 
 
-import warnings
+def test_eval_config():
+    config = EvalConfig.from_path(os.path.join(ROOT, "config_yml"))
 
-from . import patch_asyncio
-from .rails import LLMRails, RailsConfig
-
-patch_asyncio.apply()
-
-# Ignore a warning message from torch.
-warnings.filterwarnings(
-    "ignore", category=UserWarning, message="TypedStorage is deprecated"
-)
-
-__version__ = "0.9.1.1"
+    assert len(config.policies) == 8

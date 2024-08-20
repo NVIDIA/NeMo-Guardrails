@@ -3,7 +3,7 @@
 This configuration uses the HuggingFace Pipeline LLM with the [dolly-v2-3b](https://huggingface.co/databricks/dolly-v2-3b) model.
 It also shows how to support streaming in NeMo Guardrails for LLMs deployed using HuggingFacePipeline.
 
-The `dolly-v2-3b` LLM model has been tested on the topical rails evaluation sets, results are available [here](../../../../nemoguardrails/eval/README.md).
+The `dolly-v2-3b` LLM model has been tested on the topical rails evaluation sets, results are available [here](../../../../nemoguardrails/evaluate/README.md).
 
 In this folder, the guardrails application is very basic, but anyone can change it with any other more complex configuration.
 

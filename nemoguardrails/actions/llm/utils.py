@@ -41,6 +41,28 @@ class LLMCallException(Exception):
         self.inner_exception = inner_exception
 
 
+def _infer_model_name(llm: BaseLanguageModel):
+    """Helper to infer the model name based from an LLM instance.
+
+    Because not all models implement correctly _identifying_params from LangChain, we have to
+    try to do this manually.
+    """
+    for attr in ["model", "model_name"]:
+        if hasattr(llm, attr):
+            val = getattr(llm, attr)
+            if isinstance(val, str):
+                return val
+
+    if hasattr(llm, "model_kwargs") and isinstance(llm.model_kwargs, dict):
+        for attr in ["model", "model_name", "name"]:
+            val = llm.model_kwargs.get(attr)
+            if isinstance(val, str):
+                return val
+
+    # If we still can't figure out, return "unknown".
+    return "unknown"
+
+
 async def llm_call(
     llm: BaseLanguageModel,
     prompt: Union[str, List[dict]],
@@ -48,12 +70,13 @@ async def llm_call(
     custom_callback_handlers: Optional[List[AsyncCallbackHandler]] = None,
 ) -> str:
     """Calls the LLM with a prompt and returns the generated text."""
-
     # We initialize a new LLM call if we don't have one already
     llm_call_info = llm_call_info_var.get()
     if llm_call_info is None:
         llm_call_info = LLMCallInfo()
         llm_call_info_var.set(llm_call_info)
+
+    llm_call_info.llm_model_name = _infer_model_name(llm)
 
     if custom_callback_handlers and custom_callback_handlers != [None]:
         all_callbacks = BaseCallbackManager(
