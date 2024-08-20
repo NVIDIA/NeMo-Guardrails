@@ -71,6 +71,8 @@ def expand_elements(
                         expanded_elements = _expand_stop_element(element)
                     elif element.op == "activate":
                         expanded_elements = _expand_activate_element(element)
+                    elif element.op == "deactivate":
+                        expanded_elements = _expand_deactivate_element(element)
                     elif element.op == "await":
                         expanded_elements = _expand_await_element(element)
                 elif isinstance(element, Assignment):
@@ -173,10 +175,12 @@ def _expand_element_group(element: SpecOp) -> List[ElementType]:
             new_elements.append(goto_end_element)
         new_elements.append(failure_label_element)
         new_elements.append(WaitForHeads(number=len(normalized_group["elements"])))
+        new_elements.append(MergeHeads(fork_uid=fork_uid))
         new_elements.append(CatchPatternFailure(label=None))
         new_elements.append(Abort())
         new_elements.append(end_label_element)
         new_elements.append(MergeHeads(fork_uid=fork_uid))
+        new_elements.append(CatchPatternFailure(label=None))
 
     return new_elements
 
@@ -401,64 +405,95 @@ def _expand_match_element(
         # Element group
         normalized_group = normalize_element_groups(element.spec)
 
-        if (
-            len(normalized_group["elements"]) == 1
-            and len(normalized_group["elements"][0]["elements"]) == 1
-        ):
-            # Only one and-group with a single element
-            new_elements.append(
-                SpecOp(
-                    op=element.op,
-                    spec=normalized_group["elements"][0]["elements"][0],
+        if len(normalized_group["elements"]) == 1:
+            # Single and-group
+            if len(normalized_group["elements"][0]["elements"]) == 1:
+                # and-group with a single element
+                new_elements.append(
+                    SpecOp(
+                        op=element.op,
+                        spec=normalized_group["elements"][0]["elements"][0],
+                    )
                 )
-            )
+            else:
+                # and-group with multiple elements
+                fork_uid: str = new_var_uid()
+                fork_element = ForkHead(fork_uid=fork_uid)
+                event_label_elements: List[Label] = []
+                failure_label_name = f"failure_label_{new_var_uid()}"
+                failure_label_element = Label(name=failure_label_name)
+                end_label_name = f"end_label_{new_var_uid()}"
+                goto_end_element = Goto(label=end_label_name)
+                end_label_element = Label(name=end_label_name)
+
+                and_group = normalized_group["elements"][0]
+                for element_idx, _ in enumerate(and_group["elements"]):
+                    element_label_name = f"event_{element_idx}_{new_var_uid()}"
+                    event_label_elements.append(Label(name=element_label_name))
+                    fork_element.labels.append(element_label_name)
+
+                new_elements.append(CatchPatternFailure(label=failure_label_name))
+                new_elements.append(fork_element)
+
+                for idx, element in enumerate(and_group["elements"]):
+                    new_elements.append(event_label_elements[idx])
+                    new_elements.append(
+                        SpecOp(
+                            op="match",
+                            spec=element,
+                        )
+                    )
+                    new_elements.append(goto_end_element)
+
+                new_elements.append(failure_label_element)
+                new_elements.append(MergeHeads(fork_uid=fork_uid))
+                new_elements.append(CatchPatternFailure(label=None))
+                new_elements.append(Abort())
+
+                new_elements.append(end_label_element)
+                new_elements.append(WaitForHeads(number=len(and_group["elements"])))
+                new_elements.append(MergeHeads(fork_uid=fork_uid))
+                new_elements.append(CatchPatternFailure(label=None))
+
         else:
+            # Multiple and-groups combined by or
             fork_uid: str = new_var_uid()
             fork_element = ForkHead(fork_uid=fork_uid)
-            event_label_elements: List[Label] = []
-            event_match_elements: List[SpecOp] = []
-            goto_group_elements: List[Goto] = []
             group_label_elements: List[Label] = []
-            wait_for_heads_elements: List[WaitForHeads] = []
+            failure_label_name = f"failure_label_{new_var_uid()}"
+            failure_label_element = Label(name=failure_label_name)
             end_label_name = f"end_label_{new_var_uid()}"
             goto_end_element = Goto(label=end_label_name)
             end_label_element = Label(name=end_label_name)
 
-            element_idx = 0
-            for group_idx, and_group in enumerate(normalized_group["elements"]):
+            or_group = normalized_group["elements"]
+            for group_idx, _ in enumerate(or_group):
                 group_label_name = f"group_{group_idx}_{new_var_uid()}"
                 group_label_elements.append(Label(name=group_label_name))
-                goto_group_elements.append(Goto(label=group_label_name))
-                wait_for_heads_elements.append(
-                    WaitForHeads(number=len(and_group["elements"]))
-                )
+                fork_element.labels.append(group_label_name)
 
-                for match_element in and_group["elements"]:
-                    label_name = f"event_{element_idx}_{new_var_uid()}"
-                    event_label_elements.append(Label(name=label_name))
-                    fork_element.labels.append(label_name)
-                    event_match_elements.append(
-                        SpecOp(
-                            op="match",
-                            spec=match_element,
-                        ),
-                    )
-                    element_idx += 1
-
-            # Generate new element sequence
-            element_idx = 0
+            new_elements.append(CatchPatternFailure(label=failure_label_name))
             new_elements.append(fork_element)
-            for group_idx, and_group in enumerate(normalized_group["elements"]):
-                for match_element in and_group["elements"]:
-                    new_elements.append(event_label_elements[element_idx])
-                    new_elements.append(event_match_elements[element_idx])
-                    new_elements.append(goto_group_elements[group_idx])
-                    element_idx += 1
-                new_elements.append(group_label_elements[group_idx])
-                new_elements.append(wait_for_heads_elements[group_idx])
-                new_elements.append(MergeHeads(fork_uid=fork_uid))
+
+            for idx, group_element in enumerate(or_group):
+                new_elements.append(group_label_elements[idx])
+                new_elements.append(
+                    SpecOp(
+                        op="match",
+                        spec=group_element,
+                    )
+                )
                 new_elements.append(goto_end_element)
+
+            new_elements.append(failure_label_element)
+            new_elements.append(WaitForHeads(number=len(or_group)))
+            new_elements.append(MergeHeads(fork_uid=fork_uid))
+            new_elements.append(CatchPatternFailure(label=None))
+            new_elements.append(Abort())
+
             new_elements.append(end_label_element)
+            new_elements.append(MergeHeads(fork_uid=fork_uid))
+            new_elements.append(CatchPatternFailure(label=None))
 
     else:
         raise ColangSyntaxError(f"Unknown element type '{type(element.spec)}'")
@@ -663,11 +698,55 @@ def _expand_activate_element(
         # Multiple match elements
         normalized_group = normalize_element_groups(element.spec)
         if len(normalized_group["elements"]) > 1:
-            raise NotImplementedError("Activating 'or' groups not implemented yet!")
+            raise NotImplementedError("Activating 'or' groups not supported yet!")
         for group_element in normalized_group["elements"][0]["elements"]:
             new_elements.append(
                 SpecOp(
                     op="activate",
+                    spec=group_element,
+                )
+            )
+
+    return new_elements
+
+
+def _expand_deactivate_element(
+    element: SpecOp,
+) -> List[ElementType]:
+    new_elements: List[ElementType] = []
+    if isinstance(element.spec, Spec):
+        # Single element
+        if element.spec.spec_type == SpecType.FLOW and element.spec.members is None:
+            # It's a flow
+            # send StopFlow(flow_id=<flow_id>)
+            new_elements.append(
+                SpecOp(
+                    op="send",
+                    spec=Spec(
+                        name=InternalEvents.STOP_FLOW,
+                        arguments={
+                            "flow_id": f"'{element.spec.name}'",
+                            "deactivate": True,
+                            **element.spec.arguments,
+                        },
+                        spec_type=SpecType.EVENT,
+                    ),
+                )
+            )
+        else:
+            # It's an UMIM event
+            raise ColangSyntaxError(
+                f"Only flows can be deactivated but not '{element.spec.spec_type}', element '{element.spec.name}'"
+            )
+    elif isinstance(element.spec, dict):
+        # Multiple elements
+        normalized_group = normalize_element_groups(element.spec)
+        if len(normalized_group["elements"]) > 1:
+            raise NotImplementedError("Deactivating 'or' groups not supported yet!")
+        for group_element in normalized_group["elements"][0]["elements"]:
+            new_elements.append(
+                SpecOp(
+                    op="deactivate",
                     spec=group_element,
                 )
             )

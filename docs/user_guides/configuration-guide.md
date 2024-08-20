@@ -80,18 +80,18 @@ The meaning of the attributes is as follows:
 - `model`: the name of the model, e.g., `gpt-3.5-turbo-instruct`.
 - `parameters`: any additional parameters, e.g., `temperature`, `top_k`, etc.
 
-
 #### Supported LLM Models
 
 You can use any LLM provider that is supported by LangChain, e.g., `ai21`, `aleph_alpha`, `anthropic`, `anyscale`, `azure`, `cohere`, `huggingface_endpoint`, `huggingface_hub`, `openai`, `self_hosted`, `self_hosted_hugging_face`. Check out the LangChain official documentation for the full list.
 
 ```{note}
-To use any of the providers, you will need to install additional packages; when you first try to use a configuration with a new provider, you will typically receive an error from LangChain that will instruct you on what packages should be installed.
+To use any of the providers, you must install additional packages; when you first try to use a configuration with a new provider, you typically receive an error from LangChain that instructs which packages you should install.
 ```
 
 ```{important}
-While from a technical perspective, you can instantiate any of the LLM providers above, depending on the capabilities of the model, some will work better than others with the NeMo Guardrails toolkit. The toolkit includes prompts that have been optimized for certain types of models (e.g., `openai`, `nemollm`). For others, you can optimize the prompts yourself (see the [LLM Prompts](#llm-prompts) section).
+Although you can instantiate any of the previously mentioned LLM providers, depending on the capabilities of the model, the NeMo Guardrails toolkit works better with some providers than others. The toolkit includes prompts that have been optimized for certain types of models, such as `openai` and `nemollm`. For others, you can optimize the prompts yourself following the information in the [LLM Prompts](#llm-prompts) section.
 ```
+
 #### NIM for LLMs
 
 [NVIDIA NIM](https://docs.nvidia.com/nim/index.html) is a set of easy-to-use microservices designed to accelerate the deployment of generative AI models across the cloud, data center, and workstations.
@@ -120,13 +120,12 @@ models:
 ```
 
 ```{important}
-To use the `nim` LLM provider, you must install the `langchain-nvidia-ai-endpoints` package (`pip install langchain-nvidia-ai-endpoints`).
+To use the `nim` LLM provider, install the `langchain-nvidia-ai-endpoints` package using the command `pip install langchain-nvidia-ai-endpoints`.
 ```
-
 
 #### NVIDIA AI Endpoints
 
-[NVIDIA AI Endpoints](https://www.nvidia.com/en-us/ai-data-science/foundation-models/) give users easy access to NVIDIA hosted API endpoints for NVIDIA AI Foundation Models like Llama 3, Mixtral 8x7B, Stable Diffusion, etc.
+[NVIDIA AI Endpoints](https://www.nvidia.com/en-us/ai-data-science/foundation-models/) give users easy access to NVIDIA hosted API endpoints for NVIDIA AI Foundation Models such as Llama 3, Mixtral 8x7B, and Stable Diffusion.
 These models, hosted on the [NVIDIA API catalog](https://build.nvidia.com/), are optimized, tested, and hosted on the NVIDIA AI platform, making them fast and easy to evaluate, further customize, and seamlessly run at peak performance on any accelerated stack.
 
 To use an LLM model through the NVIDIA AI Endpoints, use the following model configuration:
@@ -148,10 +147,10 @@ models:
 ```
 
 ```{important}
-To use the `nvidia_ai_endpoints` LLM provider, you must install the `langchain-nvidia-ai-endpoints` package (`pip install langchain-nvidia-ai-endpoints`) and configure a valid `NVIDIA_API_KEY`.
+To use the `nvidia_ai_endpoints` LLM provider, you must install the `langchain-nvidia-ai-endpoints` package using the command `pip install langchain-nvidia-ai-endpoints`, and configure a valid `NVIDIA_API_KEY`.
 ```
 
-For more details, check out this [user guide](./llm/nvidia_ai_endpoints/README.md).
+For further information, see the [user guide](./llm/nvidia_ai_endpoints/README.md).
 
 Here's an example configuration for using `llama3` model with [Ollama](https://ollama.com/):
 
@@ -191,7 +190,7 @@ models:
 You can specify additional parameters when using NeMo LLM models using the `parameters` key. The supported parameters are:
 
 - `temperature`: the temperature that should be used for making the calls;
-- `api_host`: points to the NeMo LLM Service host (default 'https://api.llm.ngc.nvidia.com');
+- `api_host`: points to the NeMo LLM Service host (default '<https://api.llm.ngc.nvidia.com>');
 - `api_key`: the NeMo LLM Service key that should be used;
 - `organization_id`: the NeMo LLM Service organization ID that should be used;
 - `tokens_to_generate`: the maximum number of tokens to generate;
@@ -235,15 +234,68 @@ models:
 
 To register a custom LLM provider, you need to create a class that inherits from `BaseLanguageModel` and register it using `register_llm_provider`.
 
+It is important to implement the following methods:
+
+**Required**:
+
+- `_call`
+- `_llm_type`
+
+**Optional**:
+
+- `_acall`
+- `_astream`
+- `_stream`
+- `_identifying_params`
+
+In other words, to create your custom LLM provider, you need to implement the following interface methods: `_call`, `_llm_type`, and optionally `_acall`, `_astream`, `_stream`, and `_identifying_params`. Here's how you can do it:
+
 ```python
+from typing import Any, Iterator, List, Optional
+
 from langchain.base_language import BaseLanguageModel
+from langchain_core.callbacks.manager import (
+    CallbackManagerForLLMRun,
+    AsyncCallbackManagerForLLMRun,
+)
+from langchain_core.outputs import GenerationChunk
+
 from nemoguardrails.llm.providers import register_llm_provider
 
 
-class CustomLLM(BaseLanguageModel):
-    """A custom LLM."""
+class MyCustomLLM(BaseLanguageModel):
 
-register_llm_provider("custom_llm", CustomLLM)
+    def _call(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs,
+    ) -> str:
+        pass
+
+    async def _acall(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
+        **kwargs,
+    ) -> str:
+        pass
+
+    def _stream(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> Iterator[GenerationChunk]:
+        pass
+
+    # rest of the implementation
+    ...
+
+register_llm_provider("custom_llm", MyCustomLLM)
 ```
 
 You can then use the custom LLM provider in your configuration:
@@ -254,10 +306,56 @@ models:
     engine: custom_llm
 ```
 
+### Configuring LLMs per Task
+
+The interaction with the LLM is structured in a task-oriented manner. Each invocation of the LLM is associated with a specific task. These tasks are integral to the guardrail process and include:
+
+1. `generate_user_intent`: This task transforms the raw user utterance into a canonical form. For instance, "Hello there" might be converted to `express greeting`.
+2. `generate_next_steps`: This task determines the bot's response or the action to be executed. Examples include `bot express greeting` or `bot respond to question`.
+3. `generate_bot_message`: This task decides the exact bot message to be returned.
+4. `general`: This task generates the next bot message based on the history of user and bot messages. It is used when there are no dialog rails defined (i.e., no user message canonical forms).
+
+For a comprehensive list of tasks, refer to the [Task type](https://github.com/NVIDIA/NeMo-Guardrails/blob/develop/nemoguardrails/llm/types.py).
+
+You can use different LLM models for specific tasks. For example, you can use a different model for the `self_check_input` and `self_check_output` tasks from various providers. Here's an example configuration:
+
+```yaml
+
+models:
+  - type: main
+    model: meta/llama-3.1-8b-instruct
+    engine: nim
+  - type: self_check_input
+    model: meta/llama3-8b-instruct
+    engine: nim
+  - type: self_check_output
+    model: meta/llama-3.1-70b-instruct
+    engine: nim
+```
+
+In the previous example, the `self_check_input` and `self_check_output` tasks use different models. It is even possible to get more granular and use different models for a task like `generate_user_intent`:
+
+```yaml
+models:
+  - type: main
+    model: meta/llama-3.1-8b-instruct
+    engine: nim
+  - type: self_check_input
+    model: meta/llama3-8b-instruct
+    engine: nim
+  - type: self_check_output
+    model: meta/llama-3.1-70b-instruct
+    engine: nim
+  - type: generate_user_intent
+    model: meta/llama-3.1-8b-instruct
+    engine: nim
+```
+
+> Remember, the best model for your needs will depend on your specific requirements and constraints. It's often a good idea to experiment with different models to see which one works best for your specific use case.
 
 ### The Embeddings Model
 
-To configure the embedding model used for the various steps in the [guardrails process](../architecture/README.md) (e.g., canonical form generation, next step generation), you can add a model configuration in the `models` key as shown below:
+To configure the embedding model used for the various steps in the [guardrails process](../architecture/README.md), such as canonical form generation and next step generation, add a model configuration in the `models` key as shown in the following configuration file:
 
 ```yaml
 models:
@@ -279,7 +377,7 @@ models:
 
 #### Supported Embedding Providers
 
-The complete list of supported embedding providers is the following:
+The following tables lists the supported embedding providers:
 
 | Provider Name        | `engine_name`          | `model`                            |
 |----------------------|------------------------|------------------------------------|
@@ -289,7 +387,7 @@ The complete list of supported embedding providers is the following:
 | NVIDIA AI Endpoints  | `nvidia_ai_endpoints`  | `nv-embed-v1`, etc.                |
 
 ```{note}
-For any of the supported embedding providers you can use any of the supported models.
+You can use any of the supported models for any of the supported embedding providers.
 The previous table includes an example of a model that can be used.
 ```
 
@@ -298,7 +396,7 @@ The previous table includes an example of a model that can be used.
 You can also register a custom embedding provider by using the `LLMRails.register_embedding_provider` function.
 
 To register a custom LLM provider,
-you need to create a class that inherits from `EmbeddingModel` and register it in your `config.py`.
+create a class that inherits from `EmbeddingModel` and register it in your `config.py`.
 
 ```python
 from typing import List
@@ -354,10 +452,9 @@ models:
 
 ### Embedding Search Provider
 
-NeMo Guardrails uses embedding search (a.k.a. vector databases) for implementing the [guardrails process](../architecture/README.md#the-guardrails-process) and for the [knowledge base](#knowledge-base-documents) functionality. The default embedding search uses FastEmbed for computing the embeddings (the `all-MiniLM-L6-v2` model) and [Annoy](https://github.com/spotify/annoy) for performing the search. As shown in the previous section, the embeddings model supports both FastEmbed and OpenAI. SentenceTransformers is also supported.
+NeMo Guardrails uses embedding search, also called vector databases, for implementing the [guardrails process](../architecture/README.md#the-guardrails-process) and for the [knowledge base](#knowledge-base-documents) functionality. The default embedding search uses FastEmbed for computing the embeddings (the `all-MiniLM-L6-v2` model) and [Annoy](https://github.com/spotify/annoy) for performing the search. As shown in the previous section, the embeddings model supports both FastEmbed and OpenAI. SentenceTransformers is also supported.
 
 For advanced use cases or integrations with existing knowledge bases, you can [provide a custom embedding search provider](advanced/embedding-search-providers.md).
-
 
 ### General Instructions
 
@@ -424,6 +521,7 @@ prompts:
     content: |-
       <<This is a placeholder for a custom prompt for generating the user intent>>
 ```
+
 For each task, you can also specify the maximum length of the prompt to be used for the LLM call in terms of the number of characters. This is useful if you want to limit the number of tokens used by the LLM or when you want to make sure that the prompt length does not exceed the maximum context length. When the maximum length is exceeded, the prompt is truncated by removing older turns from the conversation history until the length of the prompt is less than or equal to the maximum length. The default maximum length is 16000 characters.
 
 The full list of tasks used by the NeMo Guardrails toolkit is the following:
@@ -475,7 +573,6 @@ def init(app: LLMRails):
 
     # Do something with config.custom_data
 ```
-
 
 ## Guardrails Definitions
 
@@ -600,6 +697,11 @@ rails:
     user_messages:
       # Whether to use only the embeddings when interpreting the user's message
       embeddings_only: True
+      # Use only the embeddings when the similarity is above the specified threshold.
+      embeddings_only_similarity_threshold: 0.5
+      # When the fallback is set to None, if the similarity is below the threshold, the user intent is computed normally using the LLM.
+      # When it is set to a string value, that string value will be used as the intent.
+      embeddings_only_fallback_intent: None
 ```
 
 **IMPORTANT**: This is recommended only when enough examples are provided.

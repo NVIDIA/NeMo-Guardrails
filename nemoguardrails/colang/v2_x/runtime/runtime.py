@@ -709,6 +709,17 @@ def create_flow_configs_from_flow_list(flows: List[Flow]) -> Dict[str, FlowConfi
     # Create two dictionaries with normal and override flows
     for flow in flows:
         assert isinstance(flow, Flow)
+
+        if flow.name.split(" ")[0] in [
+            "send",
+            "match",
+            "start",
+            "stop",
+            "await",
+            "activate",
+        ]:
+            raise ColangSyntaxError(f"Flow '{flow.name}' starts with a keyword!")
+
         config = FlowConfig(
             id=flow.name,
             elements=flow.elements,

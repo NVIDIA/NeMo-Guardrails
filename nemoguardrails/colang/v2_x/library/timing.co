@@ -1,9 +1,5 @@
 # meta: exclude from llm
 
-flow wait indefinitely
-  """Little helper flow to wait indefinitely."""
-  match NeverComingEvent()
-
 @loop("NEW")
 flow wait $time_s $timer_id = "wait_timer_{uid()}"
   """Wait the specified number of seconds before continuing."""

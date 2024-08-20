@@ -264,6 +264,116 @@ def test_start_mismatch_action_on_event_parameter():
     )
 
 
+def test_event_match_group():
+    """Test mixed and/or event match groups."""
+
+    content = """
+    flow a
+      start b as $ref_b and c as $ref_c
+      match ($ref_b.Finished() and $ref_c.Finished()) or ($ref_b.Failed() and $ref_c.Failed())
+      start UtteranceBotAction(script="Hello world")
+
+    flow b
+      match WaitEvent()
+
+    flow c
+      match WaitEvent()
+
+    flow main
+      activate a
+      match Event1()
+      send FinishFlow(flow_id="b")
+      match Event2()
+      send StopFlow(flow_id="c")
+      match Event1()
+      send StopFlow(flow_id="b")
+      match Event2()
+      send StopFlow(flow_id="c")
+      match WaitEvent()
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event2",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event2",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            },
+            {
+                "type": "StopUtteranceBotAction",
+            },
+        ],
+    )
+
+
+def test_finished_or_failed_flow_event_match():
+    """Test matching to the finished and failed event of a flow in a single or group."""
+
+    content = """
+    flow a
+      start b as $ref
+      match $ref.Finished() or $ref.Failed()
+      await UtteranceBotAction(script="Hello world")
+
+    flow b
+      match WaitEvent()
+
+    flow main
+      start a
+      send StopFlow(flow_id="b")
+    """
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "Hello world",
+            }
+        ],
+    )
+
+
 def test_start_match_action_with_reference():
     """Test to start and match an UMIM action based on action reference."""
 
@@ -1534,4 +1644,4 @@ def test_runtime_exception_handling_2():
 
 
 if __name__ == "__main__":
-    test_runtime_exception_handling_2()
+    test_event_match_group()
