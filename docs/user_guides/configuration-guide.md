@@ -706,6 +706,60 @@ rails:
 
 **IMPORTANT**: This is recommended only when enough examples are provided.
 
+## Exception Handling in Flows
+
+NeMo Guardrails supports exception handling in flows. To enable it you need to set the `enable_rails_exceptions` flag in the config file.
+
+```yaml
+enable_rails_exceptions: True
+```
+
+Now you can handle exceptions in flows by creating an exception event. For example:
+
+```colang
+define flow an example flow
+  if $config.enable_rails_exceptions
+    create event SomeException(message="An error occurred in the 'something' flow.")
+```
+
+Or you can use it in an existing flow:
+
+```colang
+define flow self check input
+  $allowed = execute self_check_input
+  if not $allowed
+    if $config.enable_rails_exceptions
+      create event InputRailException(message="Input not allowed. The input was blocked by the 'self check input' flow.")
+    else
+      bot refuse to respond
+      stop
+```
+
+We have already integerated the exception handling in the NeMo Guardrails library and it is enabled by default for `abc` bot example. So you can use `abc` bot to see how the exception handling works:
+
+```sh
+chat nemoguardrails `./examples/bots/abc`
+
+```
+
+```
+
+Then invoking the rails with a hate speech message will trigger the exception event:
+
+```json
+
+{
+  "role": "exception",
+  "content": {
+    "type": "InputRailException",
+    "uid": "45a452fa-588e-49a5-af7a-0bab5234dcc3",
+    "event_created_at": "9999-99-99999:24:30.093749+00:00",
+    "source_uid": "NeMoGuardrails",
+    "message": "Input not allowed. The input was blocked by the 'self check input' flow."
+  }
+}
+```
+
 ## Knowledge base Documents
 
 By default, an `LLMRails` instance supports using a set of documents as context for generating the bot responses. To include documents as part of your knowledge base, you must place them in the `kb` folder inside your config folder:
