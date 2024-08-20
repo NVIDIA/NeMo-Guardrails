@@ -1,72 +1,70 @@
 # Evaluation Methodology
 
-As mentioned in the [evaluation tooling](./tooling.md), we propose a guardrails evaluation methodology based on policies.
-The next section clarifies the key concepts of a policy-based methodology for guardrails applications.
+As mentioned in the [evaluation tooling](./tooling.md), we propose a guardrail evaluation methodology based on policies.
+The next section clarifies the key concepts of a policy-based methodology for guardrail configuration.
 
 ## Key Concepts
 
-We start from the premise that guardrails configurations are added to an LLM-based system to enforce compliance with a set of policies.
+We start from the premise that guardrail configurations are added to an LLM-based system to enforce compliance with a set of policies.
 
-A **policy** describes an aspect of how the system should perform (e.g. should not engage with toxic content, should not talk about anything unrelated to X, should respond with factually correct information).
+A **policy** describes an aspect of how the system should perform (e.g., should not engage with toxic content, should not talk about anything unrelated to X, should respond with factually correct information).
 
-At the same time, the evaluation of any guardrails application requires a dataset of **interactions**. These define the **expected behavior** of the guardrails application for specific user inputs, either single-turn or longer interactions (both turns and sequences of actions).
+At the same time, the evaluation of any guardrail configuration requires a dataset of **interactions**. These define the **expected behavior** of the application for specific user inputs, either single-turn or longer interactions (both turns and sequences of actions).
 
-The main objective of a guardrails evaluation is to define how well the **actual behavior** of a specific guardrails configuration compares to the expected behavior defined by the policies and set of interactions.
-In the following two sections, we will talk about the metrics used to evaluate the performance of a guardrails configuration.
+In the following two sections, we will talk about the metrics used to evaluate the performance of a guardrail configuration.
 
-## Measuring Guardrails Compliance
+## Measuring Guardrail Compliance
 
 As for any evaluation, choosing the right metric is one of the most important parts.
-In the current methodology, we have opted for a simple and unitary evaluation metric that can be applied for any policy-based guardrails evaluation.
+In the current methodology, we have opted for a simple and unitary evaluation metric that can be applied for any policy-based guardrail evaluation.
 
 To this extent, we introduce the **compliance rate** for a policy defined as the percentage of interactions from the evaluation dataset that comply with the policy (out of all the interactions for which the policy is applicable).
-For an application with various guardrails policies, the **general compliance rate** is an average of the individual per policy compliance rate.
+For an application with various guardrails policies, the **general compliance rate** is a weighted average of the individual per policy compliance rate.
 
-While overall compliance rate can be useful as a single metric to compare different guardrails configurations, for a comprehensive evaluation it is always important to also analyze the compliance rate for each policy and even for specific interactions.
+While overall compliance rate can be useful as a single metric to compare different guardrail configurations, for a comprehensive evaluation, it is always important to also analyze the compliance rate for each policy and even for specific interactions.
 
-### Compliance Rate vs Other Evaluation Metrics
+### Compliance Rate vs. Other Evaluation Metrics
 
-We have chosen compliance rate as because it is relevant for measuring guardrails effectiveness, being at the same time simple to understand.
+We have chosen compliance rate as because it is relevant for measuring guardrail effectiveness, being at the same time simple to understand.
 From a machine learning metrics perspective, the compliance rate is similar to accuracy. For example, for a moderation policy it counts all correctly unsafe & blocked interactions and all correctly safe & unblocked interactions from the total considered ones.
 
-If you are interested in other metrics for a specific policy, such as precision, recall or F1 scores for moderation, or relevance and groundness for RAG (Retrieval Augmented Applications), these are not currently supported and you need to extend the evaluation framework.
+If you are interested in other metrics for a specific policy, such as precision, recall or F1 scores for moderation, or relevance and grounding for RAG (Retrieval Augmented Applications), you need to compute these with other tools.
 
 ### Metrics Related to Efficiency
 
-As compliance rate is used to measure the effectiveness of a guardrail configuration given the defined policies and interactions used for evaluation, additional metrics are computed to account for the efficiency such as number of LLM calls and other invoked actions, total tokens in LLM calls, and overall latency.
-These efficiency related metrics are intended to help determine the costs for achieving a specific compliance rate. In general, higher compliance rates might require a larger consumption of resources, although smaller models developed for specific rails (e.g. moderation, fact-checking, topical rails) can provide both an increased compliance rate without increasing costs or latency.
+In addition to the compliance rate, additional metrics are computed to account for the efficiency of a guardrail configuration. Such metrics include the number of LLM calls, invoked actions, total tokens in LLM calls, and overall latency.
+These efficiency-related metrics are intended to help determine the costs of achieving a specific compliance rate. In general, higher compliance rates might require larger consumption of resources, although smaller models developed for specific rails (e.g., moderation, fact-checking, topical rails) can provide both an increased compliance rate without increasing costs or latency.
 
-Having the key concepts and evaluations metrics clearly defined, let us have a walkthrough on how to create your own evaluation.
-
-## Creating your Own Evaluation
+## Evaluation Configuration
 
 An [evaluation configuration](./tooling.md#evaluation-configuration) contains information about policies, interactions, llm as a judge, and latencies.
-In this section, we will focus on the best practices in defining these key components of any guardrails evaluation.
+In this section, we will focus on the best practices for defining these key components of any guardrail evaluation.
 
-As an example, we will consider the guardrails configuration of the [ABC bot](./../../../examples/bots/abc/README.md).
+As an example, we will consider the guardrail configuration of the [ABC bot](./../../../examples/bots/abc/README.md).
 This bot configuration is designed to only answer questions the company's general information and HR policy, and not engage in other topics.
-It contains guardrails using a system prompt describing the general bot functionality, moderation rails using self-check, and topical rails not to engage in other topics but the aforementioned.
+It contains guardrails using a system prompt, describing the general bot functionality, moderation rails using self-check, and topical rails not to engage in other topics.
 
-The steps required to create a guardrails evaluation configuration are the following:
+The steps required to create a guardrail evaluation configuration are the following:
+
 1. Define the evaluation policies
-2. Create the interactions dataset
-3. Use LLM as a judge for an initial evaluation
-4. Manual annotate complex interactions
+2. Create the interactions' dataset
+3. Use LLM-as-a-judge for an initial evaluation
+4. Manually annotate complex interactions
 5. _(Optional) Define and evaluate alternative guardrails configurations for comparison_
 
 ### Defining the Policies
 
-Always, the first step in defining an evaluation configuration is to define the policies that are enforced by the guardrails configuration to be tested.
+The first step in defining an evaluation configuration is to define the policies that are enforced by the guardrail configuration.
 These are defined in the `policies.yaml` file and define the most important behaviors of the LLM application.
 
-As an example, for the ABC bot we define several policies that must assess the bot's behavior:
+As an example, for the ABC bot, we define several policies that must assess the bot's behavior:
 1. Input moderation: not engaging with toxic or unsafe content.
 2. On-topic: always respond to on-topic content and not engage in off-topic, except for basic chit-chat.
 3. Chit-chat: allow the bot to engage in simple chit-chat conversations.
 4. HR questions: respond to any user questions about the employee handbook, and use the expected output defined for each interaction as the desired response.
 
-The evaluation configuration contains some other policies that are not detailed in this user guide, for example output moderation or responding to general company information queries.
-Depending on the guardrails configuration to be assessed other policies could be added, for example not discussing HR policies from any other companies.
+The evaluation configuration contains some other policies that are not detailed in this user guide (e.g., output moderation or responding to general company information queries).
+Depending on the guardrail configuration to be assessed, other policies could be added, for example, not discussing HR policies from any other companies.
 
 The definition of the policies mentioned above is presented in the following snippet.
 The `description` field for any policy is very important, as it should contain all the rules that are enforced by each policy.
@@ -109,7 +107,7 @@ The attribute `apply_to_all` is used to specify this behavior.
 
 ### Creating the Interactions Dataset
 
-Next to policies, the instruction datasets are also essential for a guardrails evaluation.
+The instruction datasets are also essential for a guardrail evaluation.
 Interactions can contain single or multi-turn interactions and, together with the definition of the policies, they define the expected behavior.
 
 The expected behavior combines the information in the policy definition (e.g. `id` and `description`) with the one in the interactions.
@@ -147,29 +145,32 @@ For example, the following set of interactions are defined to evaluate the `inpu
         policy: input-moderation
 ```
 
-The `expected_output` attribute, which defines the expected behavior, can contain either an expected behavior (e.g. refusal) or an expected message that the actual response is compared to.
+The `expected_output` attribute, which defines the expected behavior, can contain either an expected behavior (e.g., refusal) or an expected message that the actual response is compared to.
 
 When creating interaction sets, both synthetic data generation and real data selected and annotated by humans are good strategies.
 
 #### Synthetic Generation of Interaction Sets
+
 The simplest strategy to create a set of interactions for evaluating guardrails is to generate synthetic interaction data.
 This should be the easiest method and can be employed when no human annotated datasets are available.
 
 In our ABC bot evaluation experiments, we have successfully generated synthetic data for the `chit-chat` and `hr-questions` policies.
-When doing this, it is important to specify the task (policy), and to generate also the expected output together with each interaction.
+When doing this, it is important to specify the task (policy), and to include the expected output together with each interaction.
 
 However, it is important to analyze the synthetically generated interactions, iteratively improve the prompts, and also filter out some interactions (that are either incorrect or too simple).
 
 #### Using Real Data
+
 Of course, whenever possible, the set of interactions should use real data from users or annotated by experts.
-For some policies, existing datasets for that task should also be used (e.g. moderation).
+For some policies, existing datasets for that task should also be used (e.g., moderation).
 
 ### Using LLM as a Judge
 
-The simplest way to compute the compliance rate, e.g. if the actual response generated by the tested guardrail configuration is complying with the expected output, is to use a powerful LLM as a judge.
+The simplest way to compute the compliance rate, e.g., if the actual response generated by the tested guardrail configuration is complying with the expected output, is to use a powerful LLM as a judge.
 
 In order for this automatic evaluation to provide a high percentage of correct results, we suggest the following strategies:
-1. Try to create strong (e.g. longer and clear) rules for the LLM as a judge.
+
+1. Try to create strong (e.g., longer and clear) rules for the LLM as a judge.
 2. Evaluate if there are important annotation inconsistencies when running the LLM judge several times on the same data.
 3. Also compare the results at least with a small dataset of manual annotations to understand the actual reliability for the LLM judge for each policy.
 
@@ -219,5 +220,5 @@ At least for the interactions where the LLM judge is inconsistent, we suggest to
 
 ### Evaluating Alternative Guardrails Configurations
 
-Finally, in order to better understand which are the differences between different guardrails configurations, usually it is important to evaluation several configurations (including a baseline using a system prompt).
+Finally, to better understand what are the differences between different guardrails configurations, it is important to evaluate several configurations (including a baseline using a system prompt).
 This way, you can have an assessment for the improvement of the compliance rate, but also if there are more resources used or a larger latency to achieve the improved compliance rate.
