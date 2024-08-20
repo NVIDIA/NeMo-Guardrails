@@ -119,15 +119,13 @@ prompts:
       You will only use the contents of the evidence and not rely on external knowledge.
       Answer with yes/no. "evidence": {{ evidence }} "hypothesis": {{ response }} "entails":
 
-
-  - task: check_hallucination
+  - task: self_check_hallucination
     models:
       - nemollm
     content: |-
       You are given a task to identify if the hypothesis is in agreement with the context below.
       You will only use the contents of the context and not rely on external knowledge.
       Answer with yes/no. "context": {{ paragraph }} "hypothesis": {{ statement }} "agreement":
-
 
   # Prompts for compact mode for dialogue rails
   # Prompt for detecting the user message canonical form in compact form.

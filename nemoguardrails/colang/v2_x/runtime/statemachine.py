@@ -49,6 +49,7 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
 from nemoguardrails.colang.v2_x.lang.expansion import expand_elements
 from nemoguardrails.colang.v2_x.runtime.errors import (
     ColangRuntimeError,
+    ColangSyntaxError,
     ColangValueError,
 )
 from nemoguardrails.colang.v2_x.runtime.eval import (
@@ -71,11 +72,9 @@ from nemoguardrails.colang.v2_x.runtime.flows import (
     State,
 )
 from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
-from nemoguardrails.utils import console, new_event_dict, new_uid
+from nemoguardrails.utils import console, new_event_dict, new_uuid
 
 log = logging.getLogger(__name__)
-
-random_seed = int(time.time())
 
 
 def initialize_state(state: State) -> None:
@@ -89,9 +88,17 @@ def initialize_state(state: State) -> None:
 
     state.flow_states = dict()
 
-    # TODO: Think about where to put this
-    for flow_config in state.flow_configs.values():
-        initialize_flow(state, flow_config)
+    try:
+        # TODO: Think about where to put this
+        for flow_config in state.flow_configs.values():
+            initialize_flow(state, flow_config)
+    except Exception as e:
+        if e.args[0]:
+            raise ColangSyntaxError(
+                e.args[0] + f" in flow `{flow_config.id}` ({flow_config.source_file})"
+            )
+        else:
+            raise ColangSyntaxError() from e
 
     # Create main flow state first
     main_flow_config = state.flow_configs["main"]
@@ -126,13 +133,13 @@ def create_flow_instance(
     """Create a new flow instance that can be added."""
     loop_uid: Optional[str] = None
     if flow_config.loop_type == InteractionLoopType.NEW:
-        loop_uid = new_uid()
+        loop_uid = new_uuid()
     elif flow_config.loop_type == InteractionLoopType.NAMED:
         assert flow_config.loop_id is not None
         loop_uid = flow_config.loop_id
     # For type InteractionLoopType.PARENT we keep it None to infer loop_id at run_time from parent
 
-    head_uid = new_uid()
+    head_uid = new_uuid()
     flow_state = FlowState(
         uid=flow_instance_uid,
         flow_id=flow_config.id,
@@ -548,18 +555,24 @@ def _process_internal_events_without_default_matchers(
                     assert flow_state.loop_id
                     handled_event_loops.add(flow_state.loop_id)
         elif "flow_id" in event.arguments:
-            flow_id = event.arguments["flow_id"]
+            # Extract flow parameters
+            arguments = dict(event.arguments)
+
+            flow_id = arguments.pop("flow_id", None)
+            deactivate = arguments.pop("deactivate", False)
+            arguments.pop("source_flow_instance_uid", None)
+            arguments.pop("source_head_uid", None)
             if flow_id in state.flow_id_states:
                 for flow_state in state.flow_id_states[flow_id]:
-                    deactivate = event.arguments.get("deactivate", False)
-                    _finish_flow(
-                        state,
-                        flow_state,
-                        event.matching_scores,
-                        deactivate,
-                    )
-                    assert flow_state.loop_id
-                    handled_event_loops.add(flow_state.loop_id)
+                    if arguments.items() <= flow_state.arguments.items():
+                        _finish_flow(
+                            state,
+                            flow_state,
+                            event.matching_scores,
+                            deactivate,
+                        )
+                        assert flow_state.loop_id
+                        handled_event_loops.add(flow_state.loop_id)
     elif event.name == InternalEvents.STOP_FLOW:
         if "flow_instance_uid" in event.arguments:
             flow_instance_uid = event.arguments["flow_instance_uid"]
@@ -575,17 +588,23 @@ def _process_internal_events_without_default_matchers(
                     assert flow_state.loop_id
                     handled_event_loops.add(flow_state.loop_id)
         elif "flow_id" in event.arguments:
-            flow_id = event.arguments["flow_id"]
+            # Extract flow parameters
+            arguments = dict(event.arguments)
+            flow_id = arguments.pop("flow_id", None)
+            deactivate = arguments.pop("deactivate", False)
+            arguments.pop("source_flow_instance_uid", None)
+            arguments.pop("source_head_uid", None)
             if flow_id in state.flow_id_states:
                 for flow_state in state.flow_id_states[flow_id]:
-                    _abort_flow(
-                        state=state,
-                        flow_state=flow_state,
-                        matching_scores=event.matching_scores,
-                        deactivate_flow=flow_state.activated > 0,
-                    )
-                    assert flow_state.loop_id
-                    handled_event_loops.add(flow_state.loop_id)
+                    if arguments.items() <= flow_state.arguments.items():
+                        _abort_flow(
+                            state=state,
+                            flow_state=flow_state,
+                            matching_scores=event.matching_scores,
+                            deactivate_flow=deactivate,
+                        )
+                        assert flow_state.loop_id
+                        handled_event_loops.add(flow_state.loop_id)
         # TODO: Add support for all flow instances of same flow with "flow_id"
     # elif event.name == "ResumeFlow":
     #     pass
@@ -922,9 +941,16 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
                     actionable_heads.append(head)
         except Exception as e:
             # In case there were any runtime error the flow will be aborted (fail)
+            source_line = "unknown"
+            element = flow_config.elements[head.position]
+            if hasattr(element, "_source") and element._source:
+                source_line = str(element._source.line)
             log.warning(
-                "Colang error: Flow '%s' failed due to runtime exception!",
+                "Flow '%s' failed on line %s (%s) due to Colang runtime exception: %s",
                 flow_state.flow_id,
+                source_line,
+                flow_config.source_file,
+                e,
                 exc_info=True,
             )
             colang_error_event = Event(
@@ -939,11 +965,9 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
 
         if flow_finished:
             _finish_flow(state, flow_state, head.matching_scores)
-            flow_finished = True
             log.debug("Flow finished: %s with last element", head.flow_state_uid)
         elif flow_aborted:
             _abort_flow(state, flow_state, head.matching_scores)
-            flow_aborted = True
             log.debug("Flow aborted: %s by 'abort' statement", head.flow_state_uid)
 
     # Make sure that all actionable heads still exist in flows, otherwise remove them
@@ -1068,7 +1092,7 @@ def slide(
             flow_state.head_fork_uids[element.fork_uid] = head.uid
             # We create the new child heads
             for _idx, label in enumerate(element.labels):
-                parent_fork_head_uid = new_uid()
+                parent_fork_head_uid = new_uuid()
                 pos = flow_config.element_labels[label]
                 new_head = FlowHead(
                     uid=parent_fork_head_uid,
@@ -1218,7 +1242,6 @@ def slide(
             if element.key in flow_state.__dict__:
                 warning = f"Reserved flow attribute name '{element.key}' cannot be used as variable!"
                 log.warning(warning)
-                print(warning)
             else:
                 # We need to first evaluate the expression
                 expr_val = eval_expression(
@@ -1256,7 +1279,8 @@ def slide(
 
         elif isinstance(element, Log):
             log.info(
-                "Colang debug info: %s",
+                "Colang Log %s :: %s",
+                flow_state.uid,
                 eval_expression(element.info, _get_eval_context(state, flow_state)),
             )
             head.position += 1
@@ -1354,7 +1378,7 @@ def _start_flow(state: State, flow_state: FlowState, event_arguments: dict) -> N
         loop_id = state.flow_configs[flow_state.flow_id].loop_id
         if loop_id is not None:
             if loop_id == "NEW":
-                flow_state.loop_id = new_uid()
+                flow_state.loop_id = new_uuid()
             else:
                 flow_state.loop_id = loop_id
         else:
@@ -1543,7 +1567,7 @@ def _finish_flow(
     # TODO: Refactor this to use event based mechanics (START_FLOW)
     if flow_state.flow_id == "main":
         # Find an active head
-        head_uid = new_uid()
+        head_uid = new_uuid()
         new_head = FlowHead(
             uid=head_uid,
             flow_state_uid=flow_state.uid,
@@ -2256,7 +2280,8 @@ def get_event_from_element(
             flow_config = state.flow_configs[element_spec.name]
             temp_flow_state = create_flow_instance(flow_config, "", "", {})
             flow_event_name = element_spec.members[0]["name"]
-            flow_event_arguments = element_spec.members[0]["arguments"]
+            flow_event_arguments = element_spec.arguments
+            flow_event_arguments.update(element_spec.members[0]["arguments"])
             flow_event_arguments = _evaluate_arguments(
                 flow_event_arguments, _get_eval_context(state, flow_state)
             )

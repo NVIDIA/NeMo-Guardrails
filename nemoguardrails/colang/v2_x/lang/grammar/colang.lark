@@ -54,6 +54,7 @@ spec_operator: "match" -> match_spec
              | "start" -> start_spec
              | "stop" -> stop_spec
              | "activate" -> activate_spec
+             | "deactivate" -> deactivate_spec
              | "send" -> send_spec
 
 spec_op: spec_operator spec_expr
@@ -85,6 +86,7 @@ capture_ref: "as" var_name
 // A spec includes name, arguments and potentially members access.
 // Example members: .Finished(), .action
 spec: spec_name [classic_arguments | simple_arguments] (spec_member)* [capture_ref]
+    | "(" spec_name [classic_arguments | simple_arguments] ")" (spec_member)* [capture_ref]
     | var_name (spec_member)* [capture_ref]
 spec_member: "." name [classic_arguments]
 
@@ -101,13 +103,13 @@ simple_arguments: simple_argvalue+
 
 // Compound statements
 ?compound_stmt: if_stmt | while_stmt | when_stmt
-while_stmt: "while" test suite
-if_stmt: _IF test suite elifs ["else" suite]
+while_stmt: "while" test [":"] suite
+if_stmt: _IF test [":"] suite elifs ["else" [":"] suite]
 elifs: elif_*
-elif_: _ELSE_IF test suite
-when_stmt: "when" spec_expr suite orwhens ["else" suite]
+elif_: _ELSE_IF test [":"] suite
+when_stmt: "when" spec_expr [":"] suite orwhens ["else" [":"] suite]
 orwhens: orwhen_*
-orwhen_: _OR_WHEN spec_expr suite
+orwhen_: _OR_WHEN spec_expr [":"] suite
 
 // --------------------------------
 
@@ -221,8 +223,8 @@ _NEWLINE: (/\r?\n[\t ]*/)+
 
 // Primitive values
 
-STRING: /i?("(?!"").*?(?<!\\)(\\\\)*?"|i?'(?!'').*?(?<!\\)(\\\\)*?')/i
-LONG_STRING: /(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
+STRING: /(\.\.\.\s*)?("(?!"").*?(?<!\\)(\\\\)*?"|(\.\.\.\s*)?'(?!'').*?(?<!\\)(\\\\)*?')/i
+LONG_STRING: /(\.\.\.\s*)?(""".*?(?<!\\)(\\\\)*?"""|(\.\.\.\s*)?'''.*?(?<!\\)(\\\\)*?''')/is
 
 _SPECIAL_DEC: "0".."9"        ("_"?  "0".."9"                       )*
 DEC_NUMBER:   "1".."9"        ("_"?  "0".."9"                       )*

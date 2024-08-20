@@ -30,5 +30,6 @@ eval_outputs
 local_cache
 # Ignore example configs created in user guides
 docs/user_guides/llm/vertexai/config
+docs/**/config
 # vscode local history extension
 .history

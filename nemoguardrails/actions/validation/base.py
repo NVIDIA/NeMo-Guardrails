@@ -17,7 +17,7 @@ import re
 from typing import List
 from urllib.parse import quote
 
-from .filter_secrets import contains_secrets
+from nemoguardrails.actions.validation.filter_secrets import contains_secrets
 
 MAX_LEN = 50
 

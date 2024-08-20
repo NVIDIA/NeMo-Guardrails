@@ -54,7 +54,12 @@ class FakeLLM(LLM):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> str:
-        """First try to lookup in queries, else return 'foo' or 'bar'."""
+        if self.i >= len(self.responses):
+            raise RuntimeError(
+                f"No responses available for query number {self.i + 1} in FakeLLM. "
+                "Most likely, too many LLM calls are made or additional responses need to be provided."
+            )
+
         response = self.responses[self.i]
         self.i += 1
         return response
@@ -66,7 +71,12 @@ class FakeLLM(LLM):
         run_manager: Optional[AsyncCallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> str:
-        """First try to lookup in queries, else return 'foo' or 'bar'."""
+        if self.i >= len(self.responses):
+            raise RuntimeError(
+                f"No responses available for query number {self.i + 1} in FakeLLM. "
+                "Most likely, too many LLM calls are made or additional responses need to be provided."
+            )
+
         response = self.responses[self.i]
         self.i += 1
 

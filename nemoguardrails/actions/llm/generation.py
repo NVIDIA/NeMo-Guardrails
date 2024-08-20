@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """A set of actions for generating various types of completions using an LLMs."""
+
 import asyncio
 import logging
 import random
@@ -44,6 +45,7 @@ from nemoguardrails.actions.llm.utils import (
 )
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow, Spec, SpecOp
+from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
 from nemoguardrails.context import (
     generation_options_var,
     llm_call_info_var,
@@ -61,7 +63,7 @@ from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.options import GenerationOptions
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import new_event_dict
+from nemoguardrails.utils import get_or_create_event_loop, new_event_dict
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +103,7 @@ class LLMGenerationActions:
 
         # There are still some edge cases not covered by nest_asyncio.
         # Using a separate thread always for now.
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
         if True or check_sync_call_from_async_loop():
             t = threading.Thread(target=asyncio.run, args=(self.init(),))
             t.start()
@@ -150,8 +152,9 @@ class LLMGenerationActions:
                     return
 
                 # Extract the message and remove the double quotes
-                message = spec.arguments["final_transcript"][1:-1]
-                self.user_messages[flow.name] = [message]
+                message = eval_expression(spec.arguments["final_transcript"], {})
+                if isinstance(message, str):
+                    self.user_messages[flow.name] = [message]
 
             elif el.op == "await":
                 spec = cast(SpecOp, el).spec
@@ -169,11 +172,11 @@ class LLMGenerationActions:
                     ):
                         continue
 
-                    message = spec.arguments["$0"][1:-1]
-                    if flow.name not in self.user_messages:
-                        self.user_messages[flow.name] = []
-
-                    self.user_messages[flow.name].append(message)
+                    message = eval_expression(spec.arguments["$0"], {})
+                    if isinstance(message, str):
+                        if flow.name not in self.user_messages:
+                            self.user_messages[flow.name] = []
+                        self.user_messages[flow.name].append(message)
 
     def _extract_bot_message_example(self, flow: Flow):
         # Quick heuristic to identify the user utterance examples
@@ -222,6 +225,7 @@ class LLMGenerationActions:
         self.user_message_index = self.get_embedding_search_provider_instance(
             self.config.core.embedding_search_provider
         )
+
         await self.user_message_index.add_items(items)
 
         # NOTE: this should be very fast, otherwise needs to be moved to separate thread.
@@ -363,22 +367,38 @@ class LLMGenerationActions:
             examples = ""
             potential_user_intents = []
 
-            if self.user_message_index:
+            if self.user_message_index is not None:
+                threshold = None
+
+                if config.rails.dialog.user_messages:
+                    threshold = (
+                        config.rails.dialog.user_messages.embeddings_only_similarity_threshold
+                    )
+
                 results = await self.user_message_index.search(
-                    text=event["text"], max_results=5
+                    text=event["text"], max_results=5, threshold=threshold
                 )
 
                 # If the option to use only the embeddings is activated, we take the first
                 # canonical form.
                 if results and config.rails.dialog.user_messages.embeddings_only:
+                    intent = results[0].meta["intent"]
+
                     return ActionResult(
-                        events=[
-                            new_event_dict(
-                                "UserIntent", intent=results[0].meta["intent"]
-                            )
-                        ]
+                        events=[new_event_dict("UserIntent", intent=intent)]
                     )
 
+                if (
+                    config.rails.dialog.user_messages.embeddings_only
+                    and config.rails.dialog.user_messages.embeddings_only_fallback_intent
+                ):
+                    intent = (
+                        config.rails.dialog.user_messages.embeddings_only_fallback_intent
+                    )
+
+                    return ActionResult(
+                        events=[new_event_dict("UserIntent", intent=intent)]
+                    )
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
                     examples += f"user \"{result.text}\"\n  {result.meta['intent']}\n\n"
@@ -494,9 +514,17 @@ class LLMGenerationActions:
                 # Initialize the LLMCallInfo object
                 llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
 
+                if kb:
+                    chunks = await kb.search_relevant_chunks(event["text"])
+                    relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
+                else:
+                    relevant_chunks = ""
+
                 # Otherwise, we still create an altered prompt.
                 prompt = self.llm_task_manager.render_task_prompt(
-                    task=Task.GENERAL, events=events
+                    task=Task.GENERAL,
+                    events=events,
+                    context={"relevant_chunks": relevant_chunks},
                 )
 
                 generation_options: GenerationOptions = generation_options_var.get()
@@ -910,6 +938,7 @@ class LLMGenerationActions:
             log.info(f"Generated bot message: {bot_utterance}")
 
         if bot_utterance:
+            bot_utterance = clean_utterance_content(bot_utterance)
             # In streaming mode, we also push this.
             if streaming_handler:
                 await streaming_handler.push_chunk(bot_utterance)
@@ -1127,6 +1156,8 @@ class LLMGenerationActions:
             else:
                 relevant_chunks = ""
 
+            relevant_chunks = relevant_chunks.strip()
+
             prompt = self.llm_task_manager.render_task_prompt(
                 task=Task.GENERATE_INTENT_STEPS_MESSAGE,
                 events=events,
@@ -1218,11 +1249,15 @@ class LLMGenerationActions:
             if user_intent:
                 if user_intent.startswith("user "):
                     user_intent = user_intent[5:]
+                elif user_intent.startswith("User intent: "):
+                    user_intent = user_intent[13:]
             else:
                 user_intent = "unknown message"
 
             if bot_intent and bot_intent.startswith("bot "):
                 bot_intent = bot_intent[4:]
+            elif bot_intent and bot_intent.startswith("Bot intent: "):
+                bot_intent = bot_intent[12:]
             else:
                 bot_intent = "general response"
 
@@ -1279,3 +1314,21 @@ class LLMGenerationActions:
             return ActionResult(
                 events=[new_event_dict("BotMessage", text=text)],
             )
+
+
+def clean_utterance_content(utterance: str) -> str:
+    """
+    Clean an utterance by performing the following operations:
+     - replacing "\\n" with "\n".
+
+    Args:
+        utterance (str): The utterance to clean.
+
+    Returns:
+        str: The cleaned utterance.
+    """
+    if utterance:
+        # If "\n" is used inside a predefined message, it will be returned as is as part of the message.
+        # It should be translated to an actual \n character.
+        utterance = utterance.replace("\\n", "\n")
+    return utterance

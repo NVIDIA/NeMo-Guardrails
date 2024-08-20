@@ -34,7 +34,7 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
 )
 from nemoguardrails.colang.v2_x.runtime.errors import ColangSyntaxError
 from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
-from nemoguardrails.utils import new_uid
+from nemoguardrails.utils import new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ class Action:
         self, name: str, arguments: Dict[str, Any], flow_uid: Optional[str] = None
     ) -> None:
         # The unique id of the action
-        self.uid: str = new_uid()
+        self.uid: str = new_uuid()
 
         # Name of the action
         self.name = name
@@ -372,6 +372,9 @@ class FlowConfig:
     # The actual source code, if available
     source_code: Optional[str] = None
 
+    # The name of the source code file
+    source_file: Optional[str] = None
+
     @property
     def loop_id(self) -> Optional[str]:
         """Return the interaction loop id if set."""
@@ -443,8 +446,7 @@ class FlowHead:
     # If a flow head is forked it will create new child heads
     child_head_uids: List[str] = field(default_factory=list)
 
-    # If set, a flow failure will be forwarded to the label, otherwise it will abort/fail the flow
-    # Mainly used to simplify inner flow logic
+    # If set, a flow failure (abort) will be forwarded to the label, otherwise it will abort/fail the flow
     catch_pattern_failure_label: List[str] = field(default_factory=list)
 
     # Callback that can be registered to get informed about head position updates

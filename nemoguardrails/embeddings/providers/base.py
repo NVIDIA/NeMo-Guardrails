@@ -13,23 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
-
-# This is the executor that will be used for computing the embeddings.
-# Currently, we leave this as None, to use the default executor from asyncio.
-# In the future, we might want to customize.
-embeddings_executor = None
-
-# The cache for embedding models, to make sure they are singleton.
-_embedding_model_cache = {}
+from abc import ABC, abstractmethod
+from typing import List, Optional
 
 
-class EmbeddingModel:
+class EmbeddingModel(ABC):
     """Generic interface for an embedding model.
 
     The embedding model is responsible for creating the embeddings given a list of
     input texts."""
 
+    engine_name: Optional[str] = None
+
+    @abstractmethod
     async def encode_async(self, documents: List[str]) -> List[List[float]]:
         """Encode the provided documents into embeddings.
 
@@ -41,6 +37,7 @@ class EmbeddingModel:
         """
         raise NotImplementedError()
 
+    @abstractmethod
     def encode(self, documents: List[str]) -> List[List[float]]:
         """Encode the provided documents into embeddings.
 
@@ -51,42 +48,3 @@ class EmbeddingModel:
             List[List[float]]: The list of embeddings corresponding to the input documents.
         """
         raise NotImplementedError()
-
-
-def init_embedding_model(embedding_model: str, embedding_engine: str) -> EmbeddingModel:
-    """Initialize the embedding model.
-
-    Args:
-        embedding_model (str): The path or name of the embedding model.
-        embedding_engine (str): The name of the embedding engine.
-
-    Returns:
-        EmbeddingModel: An instance of the initialized embedding model.
-
-    Raises:
-        ValueError: If the embedding engine is invalid.
-    """
-    model_key = f"{embedding_engine}-{embedding_model}"
-
-    if model_key not in _embedding_model_cache:
-        if embedding_engine == "SentenceTransformers":
-            from .sentence_transformers import SentenceTransformerEmbeddingModel
-
-            model = SentenceTransformerEmbeddingModel(embedding_model)
-
-        elif embedding_engine == "FastEmbed":
-            from .fastembed import FastEmbedEmbeddingModel
-
-            model = FastEmbedEmbeddingModel(embedding_model)
-
-        elif embedding_engine == "openai":
-            from .openai import OpenAIEmbeddingModel
-
-            model = OpenAIEmbeddingModel(embedding_model)
-
-        else:
-            raise ValueError(f"Invalid embedding engine: {embedding_engine}")
-
-        _embedding_model_cache[model_key] = model
-
-    return _embedding_model_cache[model_key]
