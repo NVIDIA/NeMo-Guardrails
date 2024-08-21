@@ -476,8 +476,14 @@ def _add_main_co_file(file_path: str, libraries: Optional[list[str]] = None) -> 
     new_lines = _read_file_lines(file_path)
     if not libraries:
         libraries = list(_LIBS_USED)
+    libraries.append("llm")
     new_lines = _add_imports(new_lines, libraries)
-    # Add the main flow at the beginning of the file
+
+    # Add the main flow
+    new_lines.append("\n")
+    new_lines.append("flow main\n")
+    new_lines.append("  activate llm continuation\n")
+
     return _write_to_file(file_path, new_lines)
 
 
@@ -670,6 +676,15 @@ def _comment_rails_flows_in_config(file_path):
     with open(file_path, "w") as file:
         file.writelines(lines)
 
+    with open(file_path, "r") as file:
+        raw_config = yaml.safe_load(file.read())
+        if not raw_config.get("rails"):
+            # If 'rails' is empty, comment out the 'rails:' line
+            for i, line in enumerate(lines):
+                if "rails:" in line.lstrip():
+                    lines[i] = "#" + line
+                    break
+
     with open(file_path, "w") as file:
         file.writelines(lines)
 
@@ -763,6 +778,8 @@ def _process_co_files(
             if include_main_flow:
                 new_lines = _generate_main_flow(new_lines)
             if use_active_decorator:
+                main_file_path = _create_main_co_if_not_exists(file_path)
+                _add_main_co_file(main_file_path)
                 new_lines = _add_active_decorator(new_lines)
 
         if new_lines and from_version == "2.0-alpha":
@@ -819,12 +836,15 @@ def _process_config_files(config_files_to_process: List[str]) -> int:
         rails_flows = _generate_rails_flows(_get_rails_flows(raw_config))
 
         if rails_flows:
-            _rails_co_file_path = Path(file_path).parent / "_rails.co"
+            _rails_co_file_path = Path(file_path).parent / "rails.co"
 
             if _write_rails_flows_to_file(_rails_co_file_path, rails_flows):
                 total_config_files_changed += 1
 
             _comment_rails_flows_in_config(file_path)
+
+        # set colang version to 2.x
+        _set_colang_version(version="2.x", file_path=file_path)
 
     return total_config_files_changed
 
@@ -842,6 +862,31 @@ def _read_file_lines(file_path):
 def _confirm_and_tag_replace(line, original_line, name):
     if original_line != line:
         _LIBS_USED.add(name)
+
+
+def _set_colang_version(file_path: str, version: str):
+    """Sets the 'colang_version' in the given raw_config.
+
+    Args:
+        file_path (str): The path to the config file.
+        version (str): The version to set.
+    """
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+
+    # Check if colang_version already exists
+    for i, line in enumerate(lines):
+        if "colang_version" in line:
+            # If it exists, replace it
+            lines[i] = f"colang_version: {version}\n"
+            break
+    else:
+        # If it doesn't exist, insert it at the first line
+        lines.insert(0, f"colang_version: {version}\n")
+
+    # Write the modified lines back to the file
+    with open(file_path, "w") as file:
+        file.writelines(lines)
 
 
 def _create_main_co_if_not_exists(file_path):
