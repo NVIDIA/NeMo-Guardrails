@@ -19,7 +19,8 @@ import plotly.express as px
 import streamlit as st
 
 from nemoguardrails.eval.models import EvalConfig
-from nemoguardrails.eval.ui.utils import EvalData, load_eval_data
+from nemoguardrails.eval.ui.streamlit_utils import load_eval_data
+from nemoguardrails.eval.ui.utils import EvalData
 
 
 def _render_policies(eval_config: EvalConfig):

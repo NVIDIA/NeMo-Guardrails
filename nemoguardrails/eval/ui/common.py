@@ -24,11 +24,11 @@ from nemoguardrails.eval.ui.chart_utils import (
     plot_bar_series,
     plot_matrix_series,
 )
+from nemoguardrails.eval.ui.streamlit_utils import load_eval_data
 from nemoguardrails.eval.ui.utils import (
     EvalData,
     collect_interaction_metrics,
     collect_interaction_metrics_with_expected_latencies,
-    load_eval_data,
 )
 
 # Disable SettingWithCopyWarning
