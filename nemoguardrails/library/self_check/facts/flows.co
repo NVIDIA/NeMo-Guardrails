@@ -16,4 +16,4 @@ define subflow self check facts
         create event FactCheckRailRailException(message="Fact check failed. The accuracy of the previous answer was below the required threshold.")
       else
         bot refuse to respond
-        stop
+      stop

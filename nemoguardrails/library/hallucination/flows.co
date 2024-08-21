@@ -27,4 +27,4 @@ define subflow self check hallucination
         create event CheckHallucinationRailException(message="Hallucination detected. The previous answer may not be accurate")
       else
         bot inform answer unknown
-        stop
+      stop

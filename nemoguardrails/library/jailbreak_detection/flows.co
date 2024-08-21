@@ -12,4 +12,4 @@ define subflow jailbreak detection heuristics
       create event JailbreakDetectionRailException(message="Jailbreak attempt detected. The user's prompt was identified as an attempted jailbreak. Please ensure your prompt adheres to the guidelines.")
     else
       bot refuse to respond
-      stop
+    stop

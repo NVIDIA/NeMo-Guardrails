@@ -9,4 +9,4 @@ define flow self check input
       create event InputRailException(message="Input not allowed. The input was blocked by the 'self check input' flow.")
     else
       bot refuse to respond
-      stop
+    stop

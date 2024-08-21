@@ -12,7 +12,7 @@ define flow llama guard check input
       create event LlamaGuardInputRailException(message="Input not allowed. The input was blocked by the 'llama guard check input' flow. Please ensure your input meets the required criteria.")
     else
       bot refuse to respond
-      stop
+    stop
 
 define flow llama guard check output
   $llama_guard_response = execute llama_guard_check_output
@@ -24,4 +24,4 @@ define flow llama guard check output
       create event LlamaGuardOutputRailException(message="Output not allowed. The output was blocked by the 'llama guard check output' flow. Please ensure your output meets the required criteria.")
     else
       bot refuse to respond
-      stop
+    stop

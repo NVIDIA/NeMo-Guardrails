@@ -11,11 +11,11 @@ define subflow dummy input rail
       create event DummyInputRailException(message="Dummy input detected. The user's message contains the word 'dummy'.")
     else
       bot deny
-      stop
+    stop
 
 define subflow allow input
   if $config.enable_rails_exceptions
     create event AllowInputRailException(message="Allow input triggered. The bot will respond with 'ALLOW'.")
   else
     bot allow
-    stop
+  stop

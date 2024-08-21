@@ -6,7 +6,7 @@ define flow self check output
 
   if not $allowed
     if $config.enable_rails_exceptions
-      create event OutputRailsException(message="Output not allowed. The output was blocked by the 'self check output' flow.")
+      create event OutputRailException(message="Output not allowed. The output was blocked by the 'self check output' flow.")
     else
       bot refuse to respond
       stop

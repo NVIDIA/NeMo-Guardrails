@@ -28,7 +28,7 @@ define subflow check facts
         create event FactCheckLowAccuracyRailException(message="Fact check triggered. The accuracy of the response is below 0.4.")
       else
         bot inform answer unknown
-        stop
+      stop
 
     if $accuracy < 0.6
       # We need to provide a warning in this case
@@ -45,7 +45,7 @@ define flow flag potentially inaccurate response
       create event PotentiallyInaccurateResponseRailException(message="Potentially inaccurate response detected. The bot's response may be inaccurate.")
     else
       bot inform answer potentially inaccurate
-      stop
+    stop
 
 define bot inform answer potentially inaccurate
   "Attention: the answer above is potentially inaccurate."
