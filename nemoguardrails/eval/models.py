@@ -16,7 +16,7 @@
 import os
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, root_validator
 
 from nemoguardrails.eval.utils import load_dict_from_path
 from nemoguardrails.logging.explain import LLMCallInfo
@@ -103,8 +103,7 @@ class InteractionSet(BaseModel):
         "Can be used in the prompt templates. ",
     )
 
-    @model_validator(mode="before")
-    @classmethod
+    @root_validator(pre=True)
     def instantiate_expected_output(cls, values: Any):
         """Creates the right instance of the expected output."""
         type_mapping = {
@@ -144,11 +143,11 @@ class EvalConfig(BaseModel):
         description="The prompts that should be used for the various LLM tasks.",
     )
 
-    @model_validator(mode="after")
-    def validate_policy_ids(self):
+    @root_validator(pre=False, skip_on_failure=True)
+    def validate_policy_ids(cls, values: Any):
         """Validates the policy ids used in the interactions."""
-        policy_ids = {policy.id for policy in self.policies}
-        for interaction_set in self.interactions:
+        policy_ids = {policy.id for policy in values.get("policies")}
+        for interaction_set in values.get("interactions"):
             for expected_output in interaction_set.expected_output:
                 if expected_output.policy not in policy_ids:
                     raise ValueError(
@@ -161,8 +160,7 @@ class EvalConfig(BaseModel):
                     raise ValueError(
                         f"Invalid policy id {policy_id} used in interaction set."
                     )
-
-        return self
+        return values
 
     @classmethod
     def from_path(
