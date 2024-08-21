@@ -706,6 +706,71 @@ rails:
 
 **IMPORTANT**: This is recommended only when enough examples are provided.
 
+## Exceptions
+
+NeMo Guardrails supports raising exceptions from within flows.
+An exception is an event whose name ends with `Exception`, e.g., `InputRailException`.
+When an exception is raised, the final output is a message with the role set to `exception` and the content
+set to additional information about the exception. For example:
+
+```colang
+define flow input rail example
+  # ...
+  create event InputRailException(message="Input not allowed.")
+```
+
+```json
+{
+  "role": "exception",
+  "content": {
+    "type": "InputRailException",
+    "uid": "45a452fa-588e-49a5-af7a-0bab5234dcc3",
+    "event_created_at": "9999-99-99999:24:30.093749+00:00",
+    "source_uid": "NeMoGuardrails",
+    "message": "Input not allowed."
+  }
+}
+```
+
+### Guardrails Library Exception
+
+By default, all the guardrails included in the [Guardrails Library](./guardrails-library.md) return a predefined message
+when a rail is triggered. You can change this behavior by setting the `enable_rails_exceptions` key to `True` in your
+`config.yml` file:
+
+```yaml
+enable_rails_exceptions: True
+```
+
+When this setting is enabled, the rails are triggered, they will return an exception message.
+To understand better what is happening under the hood, here's how the `self check input` rail is implemented:
+
+```colang
+define flow self check input
+  $allowed = execute self_check_input
+  if not $allowed
+    if $config.enable_rails_exceptions
+      create event InputRailException(message="Input not allowed. The input was blocked by the 'self check input' flow.")
+    else
+      bot refuse to respond
+      stop
+```
+
+When the `self check input` rail is triggered, the following exception is returned.
+
+```json
+{
+  "role": "exception",
+  "content": {
+    "type": "InputRailException",
+    "uid": "45a452fa-588e-49a5-af7a-0bab5234dcc3",
+    "event_created_at": "9999-99-99999:24:30.093749+00:00",
+    "source_uid": "NeMoGuardrails",
+    "message": "Input not allowed. The input was blocked by the 'self check input' flow."
+  }
+}
+```
+
 ## Knowledge base Documents
 
 By default, an `LLMRails` instance supports using a set of documents as context for generating the bot responses. To include documents as part of your knowledge base, you must place them in the `kb` folder inside your config folder:

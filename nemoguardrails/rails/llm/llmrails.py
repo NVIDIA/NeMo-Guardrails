@@ -140,6 +140,7 @@ class LLMRails:
                     # Extract the full path for the file
                     full_path = os.path.join(root, file)
                     if file.endswith(".co"):
+                        log.debug(f"Loading file: {full_path}")
                         with open(full_path, "r", encoding="utf-8") as f:
                             content = parse_colang_file(
                                 file, content=f.read(), version=config.colang_version
@@ -699,6 +700,7 @@ class LLMRails:
         response_tool_calls = []
         response_events = []
         new_extra_events = []
+        exception = None
 
         # The processing is different for Colang 1.0 and 2.0
         if self.config.colang_version == "1.0":
@@ -709,6 +711,9 @@ class LLMRails:
                         responses = responses[0:-1]
                     else:
                         responses.append(event["script"])
+                elif event["type"].endswith("Exception"):
+                    exception = event
+
         else:
             for event in new_events:
                 start_action_match = re.match(r"Start(.*Action)", event["type"])
@@ -739,7 +744,10 @@ class LLMRails:
                     # We just append the event
                     response_events.append(event)
 
-        new_message = {"role": "assistant", "content": "\n".join(responses)}
+        if exception:
+            new_message = {"role": "exception", "content": exception}
+        else:
+            new_message = {"role": "assistant", "content": "\n".join(responses)}
         if response_tool_calls:
             new_message["tool_calls"] = response_tool_calls
         if response_events:

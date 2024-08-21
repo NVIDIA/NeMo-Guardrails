@@ -501,6 +501,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "streaming",
         "passthrough",
         "raw_llm_call_action",
+        "enable_rails_exceptions",
     ]
 
     for field in additional_fields:
@@ -789,6 +790,11 @@ class RailsConfig(BaseModel):
     streaming: bool = Field(
         default=False,
         description="Whether this configuration should use streaming mode or not.",
+    )
+
+    enable_rails_exceptions: bool = Field(
+        default=False,
+        description="If set, the pre-defined guardrails raise exceptions instead of returning pre-defined messages.",
     )
 
     passthrough: Optional[bool] = Field(
