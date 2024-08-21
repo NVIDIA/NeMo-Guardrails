@@ -706,23 +706,44 @@ rails:
 
 **IMPORTANT**: This is recommended only when enough examples are provided.
 
-## Exception Handling in Flows
+## Exceptions
 
-NeMo Guardrails supports exception handling in flows. To enable it you need to set the `enable_rails_exceptions` flag in the config file.
+NeMo Guardrails supports raising exceptions from within flows.
+An exception is an event whose name ends with `Exception`, e.g., `InputRailException`.
+When an exception is raised, the final output is a message with the role set to `exception` and the content
+set to additional information about the exception. For example:
+
+```colang
+define flow input rail example
+  # ...
+  create event InputRailException(message="Input not allowed.")
+```
+
+```json
+{
+  "role": "exception",
+  "content": {
+    "type": "InputRailException",
+    "uid": "45a452fa-588e-49a5-af7a-0bab5234dcc3",
+    "event_created_at": "9999-99-99999:24:30.093749+00:00",
+    "source_uid": "NeMoGuardrails",
+    "message": "Input not allowed."
+  }
+}
+```
+
+### Guardrails Library Exception
+
+By default, all the guardrails included in the [Guardrails Library](./guardrails-library.md) return a predefined message
+when a rail is triggered. You can change this behavior by setting the `enable_rails_exceptions` key to `True` in your
+`config.yml` file:
 
 ```yaml
 enable_rails_exceptions: True
 ```
 
-Now you can handle exceptions in flows by creating an exception event. For example:
-
-```colang
-define flow an example flow
-  if $config.enable_rails_exceptions
-    create event SomeException(message="An error occurred in the 'something' flow.")
-```
-
-Or you can use it in an existing flow:
+When this setting is enabled, the rails are triggered, they will return an exception message.
+To understand better what is happening under the hood, here's how the `self check input` rail is implemented:
 
 ```colang
 define flow self check input
@@ -735,19 +756,9 @@ define flow self check input
       stop
 ```
 
-We have already integerated the exception handling in the NeMo Guardrails library and it is enabled by default for `abc` bot example. So you can use `abc` bot to see how the exception handling works:
-
-```sh
-chat nemoguardrails `./examples/bots/abc`
-
-```
-
-```
-
-Then invoking the rails with a hate speech message will trigger the exception event:
+When the `self check input` rail is triggered, the following exception is returned.
 
 ```json
-
 {
   "role": "exception",
   "content": {

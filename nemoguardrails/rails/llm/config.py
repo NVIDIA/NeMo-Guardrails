@@ -794,7 +794,7 @@ class RailsConfig(BaseModel):
 
     enable_rails_exceptions: bool = Field(
         default=False,
-        description="If true, allows the rails to throw/pass exceptions to the user.",
+        description="If set, the pre-defined guardrails raise exceptions instead of returning pre-defined messages.",
     )
 
     passthrough: Optional[bool] = Field(
