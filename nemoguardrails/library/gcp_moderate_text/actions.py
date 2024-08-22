@@ -16,7 +16,12 @@
 import logging
 from typing import Optional
 
-from google.cloud import language_v2
+try:
+    from google.cloud import language_v2
+except ImportError:
+    # The exception about installing google-cloud-language will be on the first call to the moderation api
+    pass
+
 
 from nemoguardrails.actions import action
 
@@ -34,6 +39,14 @@ async def call_gcp_text_moderation_api(context: Optional[dict] = None):
 
     For more information check https://cloud.google.com/docs/authentication/application-default-credentials
     """
+    try:
+        from google.cloud import language_v2
+
+    except ImportError:
+        raise ImportError(
+            "Could not import google.cloud.language_v2, please install it with "
+            "`pip install google-cloud-language`."
+        )
 
     user_message = context.get("user_message")
     client = language_v2.LanguageServiceAsyncClient()
