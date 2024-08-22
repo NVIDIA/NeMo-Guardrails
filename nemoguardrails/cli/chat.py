@@ -131,6 +131,14 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
     session: PromptSession = PromptSession()
     status = console.status("[bold green]Working ...[/]")
+    events_counter = 0
+
+    def watcher(*args):
+        nonlocal events_counter
+        events_counter += 1
+        status.update(f"[bold green]Working ({events_counter} events processed)...[/]")
+
+    rails_app.runtime.watchers.append(watcher)
 
     # Start an asynchronous timer
     async def _start_timer(timer_name: str, delay_seconds: float, action_uid: str):
@@ -471,6 +479,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                     ),
                 )
                 enable_input.clear()
+                events_counter = 0
                 status.start()
                 waiting_user_input = False
                 if user_message == "":
