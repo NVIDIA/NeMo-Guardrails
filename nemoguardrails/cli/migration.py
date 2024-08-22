@@ -49,11 +49,6 @@ def migrate(
         f"Starting migration for path: {path} from version {from_version} to latest version."
     )
 
-    if include_main_flow and use_active_decorator:
-        raise ValueError(
-            "Cannot use both main flow and active decorator at the same time."
-        )
-
     co_files_to_process = _get_co_files_to_process(path)
     config_files_to_process = _get_config_files_to_process(path)
 
@@ -228,6 +223,9 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
 
         # We convert "define subflow" to "flow"
         line = re.sub(r"define subflow", "flow", re.sub(r"[-']", " ", line))
+
+        # Convert "create event ..." to "send event ..." while preserving indentation
+        line = re.sub(r"(^\s*)create event", r"\1send event", line)
 
         if _is_anonymous_flow(line):
             # warnings.warn("Using anonymous flow is deprecated in Colang 2.0.")
@@ -774,14 +772,21 @@ def _process_co_files(
         if validate:
             _validate_file(file_path, new_lines)
 
+        # from 1.0 to latest
         if new_lines and from_version == "1.0":
             if include_main_flow:
-                new_lines = _generate_main_flow(new_lines)
-            if use_active_decorator:
+                # we should not include main flow for standard library
                 main_file_path = _create_main_co_if_not_exists(file_path)
                 _add_main_co_file(main_file_path)
+
+            if use_active_decorator:
+                # we should not use active decorator for standard library?
                 new_lines = _add_active_decorator(new_lines)
 
+            if _write_transformed_content_and_rename_original(file_path, new_lines):
+                total_files_changed += 1
+
+        # from 2.0-alpha to latest
         if new_lines and from_version == "2.0-alpha":
             directory = os.path.dirname(file_path)
             if directory not in checked_directories:
@@ -789,10 +794,10 @@ def _process_co_files(
                 _add_main_co_file(main_file_path)
                 checked_directories.add(directory)
             _remove_files_from_path(directory, _FILES_TO_EXCLUDE_ALPHA)
-        if file_path not in _FILES_TO_EXCLUDE_ALPHA and _write_to_file(
-            file_path, new_lines
-        ):
-            total_files_changed += 1
+            if file_path not in _FILES_TO_EXCLUDE_ALPHA and _write_to_file(
+                file_path, new_lines
+            ):
+                total_files_changed += 1
 
     return total_files_changed
 
