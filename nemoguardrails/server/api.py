@@ -25,7 +25,7 @@ from typing import Any, List, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, ValidationInfo, root_validator, validator
+from pydantic import BaseModel, Field, root_validator, validator
 from starlette.responses import StreamingResponse
 from starlette.staticfiles import StaticFiles
 
