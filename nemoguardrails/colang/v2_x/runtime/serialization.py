@@ -64,7 +64,7 @@ def encode_to_dict(obj: Any, refs: Dict[int, Any]):
         return {"__type": "ref", "__id": obj_id}
 
     # For primitive values and lists, we leave as is
-    if isinstance(obj, (list, set)):
+    if isinstance(obj, list):
         return [encode_to_dict(v, refs) for v in obj]
     elif (
         isinstance(obj, str)
