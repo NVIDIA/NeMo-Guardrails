@@ -40,7 +40,7 @@ If you want to use an LLM and you cannot see a prompt in the [prompts folder](ht
 
 Table legend:
 
-- :heavy*check_mark: - Supported (\_The feature is fully supported by the LLM based on our experiments and tests*)
+- :heavy_check_mark: - Supported (\_The feature is fully supported by the LLM based on our experiments and tests*)
 - :exclamation: - Limited Support (_Experiments and tests show that the LLM is under-performing for that feature_)
 - :x: - Not Supported (_Experiments show very poor performance or no experiments have been done for the LLM-feature pair_)
 - \- - Not Applicable (_e.g. models support streaming, it depends how they are deployed_)
