@@ -34,7 +34,7 @@ You should now be able to invoke the `nemoguardrails` CLI.
  Commands:
   actions-server  Starts a NeMo Guardrails actions server.
   chat            Starts an interactive chat session.
-  convert         Convert a colang 1.0 directory to colang 2.0.
+  convert         Convert a Colang 1.0 directory to Colang 2.0 format.
   evaluate        Run an evaluation task.
   server          Starts a NeMo Guardrails server.
  ```
