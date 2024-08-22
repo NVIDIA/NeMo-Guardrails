@@ -179,7 +179,7 @@ def convert(
         ..., help="The path to the file or directory to migrate."
     ),
     from_version: str = typer.Option(
-        ...,
+        default="1.0",
         help=f"The version of the colang files to migrate from. Available options: {_AVAILABLE_OPTIONS}.",
     ),
     verbose: bool = typer.Option(

@@ -23,6 +23,7 @@ import yaml
 
 from nemoguardrails import utils
 from nemoguardrails.colang import parse_colang_file
+from nemoguardrails.utils import console
 
 _LIBS_USED = set()
 _FILES_TO_EXCLUDE_ALPHA = ["ccl.co", "core_flo_library.co"]
@@ -44,7 +45,7 @@ def migrate(
         from_version(str): The version of the colang files to convert from. Any of '1.0' or '2.0-alpha'.
         validate (bool): Whether to validate the files.
     """
-    logging.info(
+    console.print(
         f"Starting migration for path: {path} from version {from_version} to latest version."
     )
 
@@ -56,7 +57,7 @@ def migrate(
     co_files_to_process = _get_co_files_to_process(path)
     config_files_to_process = _get_config_files_to_process(path)
 
-    logging.info("Starting migration for colang files.")
+    console.print("Starting migration for colang files.")
     total_files_changed = _process_co_files(
         co_files_to_process,
         from_version,
@@ -65,11 +66,11 @@ def migrate(
         validate,
     )
 
-    logging.info("Starting migration for config files.")
+    console.print("Starting migration for config files.")
     total_config_files_changed = _process_config_files(config_files_to_process)
 
-    logging.info(
-        f"Finished migration for path: {path}. \n Total files changed: {total_files_changed}, Total config files changed: {total_config_files_changed}"
+    console.print(
+        f"Finished migration for path: {path}. \nTotal files changed: {total_files_changed}, Total config files changed: {total_config_files_changed}"
     )
 
 
@@ -104,7 +105,7 @@ def convert_colang_2alpha_syntax(lines: List[str]) -> List[str]:
 
         # Replace specific phrases based on the file
         # if "core.co" in file_path:
-        line = line.replace("catch colang errors", "notification of colang errors")
+        line = line.replace("catch Colang errors", "notification of colang errors")
         line = line.replace(
             "catch undefined flows", "notification of undefined flow start"
         )
@@ -199,7 +200,7 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
         original_line = line
 
         # Check if the line matches the pattern $variable = ...
-        # use of ellipsis in colang 1.0
+        # use of ellipsis in Colang 1.0
         # Based on https://github.com/NVIDIA/NeMo-Guardrails/blob/ff17a88efe70ed61580a36aaae5739f5aac6dccc/nemoguardrails/colang/v1_0/lang/coyml_parser.py#L610C1-L617C84
 
         if i > 0 and re.match(r"\s*\$\s*.*\s*=\s*\.\.\.", line):
@@ -212,7 +213,7 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
                 # Extract the leading whitespace
                 leading_whitespace = re.match(r"(\s*)", line).group(1)
                 # Replace the line, preserving the leading whitespace
-                line = f'{leading_whitespace}${variable} = generate_value("{comment}")'
+                line = f'{leading_whitespace}${variable} = ... "{comment}"'
 
         line = _globalize_variable_assignment(line)
 
@@ -223,38 +224,32 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
         if line.lstrip().startswith("define "):
             prev_line = None
         # We convert "define flow" to "flow"
-        line = re.sub(r"define flow", "flow", line)
+        line = re.sub(r"define flow", "flow", re.sub(r"[-']", " ", line))
 
         # We convert "define subflow" to "flow"
-        line = re.sub(r"define subflow", "flow", line)
+        line = re.sub(r"define subflow", "flow", re.sub(r"[-']", " ", line))
 
         if _is_anonymous_flow(line):
-            logging.info(
-                "Using of anonymous flow is deprecated in colang v2.0. We add a unique name to the anonymous flow., but for better readability, please provide a name to the flow."
-            )
+            # warnings.warn("Using anonymous flow is deprecated in Colang 2.0.")
             line = _revise_anonymous_flow(line, next_line) + "\n"
 
         # We convert "define bot" to "flow bot" and set the flag
         if "define bot" in line:
-            line = re.sub(r"define bot", "flow bot", line)
+            line = re.sub(r"define bot", "flow bot", re.sub(r"[-']", " ", line))
             prev_line = "bot"
 
-        # we conver "define user" to "flow user" and set the flag
+        # we convert "define user" to "flow user" and set the flag
         elif "define user" in line:
-            line = re.sub(r"define user", "flow user", line)
+            line = re.sub(r"define user", "flow user", re.sub(r"[-']", " ", line))
             prev_line = "user"
 
         # Convert "bot ..." to "match UtteranceBotActionFinished()"
         if line.lstrip().startswith("bot ..."):
-            line = re.sub(
-                r"(\s*)bot \.\.\.", r"\1match UtteranceBotActionFinished()", line
-            )
+            line = re.sub(r"(\s*)bot \.\.\.", r"\1match bot said something", line)
 
         # Convert "user ..." to "match UtteranceUserActionFinished()"
         elif line.lstrip().startswith("user ..."):
-            line = re.sub(
-                r"(\s*)user \.\.\.", r"\1match UtteranceUserActionFinished()", line
-            )
+            line = re.sub(r"(\s*)user \.\.\.", r"\1match user said something", line)
 
         # if _is_flow(stripped_line):
         #     stripped_line = re.sub(r"[-+*/]", "", stripped_line)
@@ -390,7 +385,6 @@ def _globalize_variable_assignment(line):
         return line
 
 
-# TODO: (Razvan): modify the heuristic as needed, the limitation of this appraoch is that if the user has a flow with this name already. Appending a uuid might be beneficial.
 def _revise_anonymous_flow(flow_content: str, first_message: str) -> str:
     """Revises an anonymous flow by giving it a unique name.
     Args:
@@ -407,7 +401,7 @@ def _revise_anonymous_flow(flow_content: str, first_message: str) -> str:
 
     # TODO: Adjust the number as needed
 
-    flow_name = "_".join(first_message_words[:3])
+    flow_name = " ".join(first_message_words[:3]).replace("-", " ")
 
     return re.sub(r"flow\s*$", f"flow {flow_name}", flow_content)
     # return re.sub(r"flow\s*$", f"flow anonymous_{uuid.uuid4().hex}", flow_content)
@@ -639,6 +633,12 @@ def _remove_rails_flows_from_config(raw_config):
     return raw_config
 
 
+def _append_colang_version(file_path):
+    """Appends the Colang version "2.x" at the end of the config file."""
+    with open(file_path, "a") as file:
+        file.write('\ncolang_version: "2.x"\n')
+
+
 def _comment_rails_flows_in_config(file_path):
     with open(file_path, "r") as file:
         lines = file.readlines()
@@ -742,13 +742,13 @@ def _process_co_files(
     use_active_decorator: bool,
     validate: bool,
 ) -> int:
-    """Processes the colang files in the given path.
+    """Processes the Colang files in the given path.
 
-    It converts the colang files from the given version to the latest version and writes the changes to the files.
+    It converts the Colang files from the given version to the latest version and writes the changes to the files.
 
     Args:
-        co_files_to_process (List[str]): The list of colang files to process.
-        from_version (str): The version of the colang files to convert from.
+        co_files_to_process (List[str]): The list of Colang files to process.
+        from_version (str): The version of the Colang files to convert from.
         include_main_flow (bool): Whether to include the main flow.
         use_active_decorator (bool): Whether to use the active decorator.
         validate (bool): Whether to validate the files.
@@ -765,7 +765,7 @@ def _process_co_files(
     }
 
     for file_path in co_files_to_process:
-        logging.info(f"Converting colang files in path: {file_path}")
+        console.print(f" - converting Colang file: {file_path}")
 
         lines = _read_file_lines(file_path)
 
@@ -830,7 +830,7 @@ def _process_config_files(config_files_to_process: List[str]) -> int:
     total_config_files_changed = 0
 
     for file_path in config_files_to_process:
-        logging.info(f"Converting config files in path: {file_path}")
+        console.print(f" - converting config file: {file_path}")
         raw_config = _get_raw_config(file_path)
 
         rails_flows = _generate_rails_flows(_get_rails_flows(raw_config))
@@ -845,6 +845,10 @@ def _process_config_files(config_files_to_process: List[str]) -> int:
 
         # set colang version to 2.x
         _set_colang_version(version="2.x", file_path=file_path)
+
+        # We make sure we add the Colang version as well to the main config file.
+        if file_path.endswith("config.yml") or file_path.endswith("config.yaml"):
+            _append_colang_version(file_path)
 
     return total_config_files_changed
 
