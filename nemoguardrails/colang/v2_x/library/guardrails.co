@@ -7,6 +7,8 @@ import core
 @override
 flow _user_said $text -> $event
   """Override core flow for when the user said something."""
+  global $user_message
+
   if $text
     match UtteranceUserAction.Finished(final_transcript=$text) as $event
   else
@@ -14,12 +16,15 @@ flow _user_said $text -> $event
 
   $text = $event.final_transcript
 
-  await run input rails $text
+  $user_message = $text
+
+  await run input rails $user_message
 
 
 @override
 flow _user_saying -> $event
   """Override core flow for when the user is saying something."""
+  global $user_message
   if $text
     # This matches to a transcript where after some initial characters it finds $text followed optionally by up to two words
     match UtteranceUserAction.TranscriptUpdated(interim_transcript=regex("(?i).*({$text})((\s*\w+\s*){0,2})\W*$")) as $event
@@ -27,24 +32,35 @@ flow _user_saying -> $event
     match UtteranceUserAction.TranscriptUpdated() as $event
 
   $text = $event.interim_transcript
-  await run input rails $text
+  $user_message = $text
+  await run input rails $user_message
 
 
 @override
 flow _user_said_something_unexpected -> $event
   """Override core flow for when the user said something unexpected."""
+  global $user_message
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
 
   $text = $event.final_transcript
-  await run input rails $text
+  $user_message = $text
+  $last_user_message = $text
+  await run input rails $user_message
 
 
 @override
 flow _bot_say $text
   """Core flow for when the bot should say something."""
-  await run output rails $text
+  global $bot_message
+  global $last_bot_message
 
-  await UtteranceBotAction(script=$text) as $action
+  $bot_message = $text
+
+  $last_bot_message = $text
+
+  await run output rails $bot_message
+
+  await UtteranceBotAction(script=$bot_message) as $action
 
 
 flow run input rails $input_text
