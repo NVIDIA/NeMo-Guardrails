@@ -485,9 +485,19 @@ class RuntimeV2_x(Runtime):
 
         # While we have input events to process, or there are local running actions
         # we continue the processing.
+        events_counter = 0
         while input_events or local_running_actions:
             for event in input_events:
+                events_counter += 1
+                if events_counter > self.max_events:
+                    log.critical(
+                        f"Maximum number of events reached ({events_counter})!"
+                    )
+                    return output_events, state
+
                 log.info("Processing event :: %s", event)
+                for watcher in self.watchers:
+                    watcher(event)
 
                 event_name = event["type"] if isinstance(event, dict) else event.name
 
