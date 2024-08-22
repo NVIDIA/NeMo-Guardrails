@@ -66,7 +66,7 @@ class TestColang2AlphaSyntaxConversion:
             "respond to unhandled user intent",
         ]
         expected_output = [
-            "notification of colang errors",
+            "catch colang errors",
             "notification of undefined flow start",
             "notification of unexpected user utterance",
             "tracking bot talking state",
