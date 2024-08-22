@@ -16,13 +16,23 @@
 import json
 
 import pytest
-from google.cloud import language_v2
-from google.cloud.language_v2.types import ModerateTextResponse
+
+try:
+    from google.cloud import language_v2
+    from google.cloud.language_v2.types import ModerateTextResponse
+
+    GCP_SETUP_PRESENT = True
+except ImportError:
+    GCP_SETUP_PRESENT = False
+
 
 from nemoguardrails import RailsConfig
 from tests.utils import TestChat
 
 
+@pytest.mark.skipif(
+    not GCP_SETUP_PRESENT, reason="GCP Text Moderation setup is not present."
+)
 @pytest.mark.asyncio
 def test_analyze_text(monkeypatch):
     monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "mock_credentials.json")
