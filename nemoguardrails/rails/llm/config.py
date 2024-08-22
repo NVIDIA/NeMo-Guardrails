@@ -701,7 +701,10 @@ class RailsConfig(BaseModel):
         description="The list of bot messages that should be used for the rails.",
     )
 
-    flows: List[Union[Dict, Flow]] = Field(
+    # NOTE: the Any below is used to get rid of a warning with pydantic 1.10.x;
+    #   The correct typing should be List[Dict, Flow]. To be updated when
+    #   support for pydantic 1.10.x is dropped.
+    flows: List[Union[Dict, Any]] = Field(
         default_factory=list,
         description="The list of flows that should be used for the rails.",
     )
