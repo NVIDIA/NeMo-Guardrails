@@ -152,6 +152,9 @@ flow bot suggested something -> $text
   $text = $event.text
 
 
+flow bot refuse to respond
+    bot say "I'm sorry, I can't respond to that."
+
 # -----------------------------------
 # State Tracking Flows
 # -----------------------------------

@@ -1,3 +1,5 @@
+# TODO: add support for enable_rails_exceptions
+
 define bot refuse to respond
   "I'm sorry, I can't respond to that."
 

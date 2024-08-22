@@ -788,7 +788,7 @@ class State:
 
     # The updates to the context that should be applied before the next step
     # TODO: This would be needed if we decide to implement assignments of global variables via context updates
-    # context_updates: dict = field(default_factory=dict)
+    context_updates: dict = field(default_factory=dict)
 
     ########################
     # Helper data structures

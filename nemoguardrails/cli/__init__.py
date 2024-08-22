@@ -25,6 +25,7 @@ from fastapi import FastAPI
 from nemoguardrails import __version__
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
+from nemoguardrails.cli.migration import migrate
 from nemoguardrails.eval import cli
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
@@ -167,6 +168,51 @@ def server(
         api.set_default_config_id(default_config_id)  # Call function
 
     uvicorn.run(server_app, port=port, log_level="info", host="0.0.0.0")
+
+
+_AVAILABLE_OPTIONS = ["1.0", "2.0-alpha"]
+
+
+@app.command()
+def convert(
+    path: str = typer.Argument(
+        ..., help="The path to the file or directory to migrate."
+    ),
+    from_version: str = typer.Option(
+        default="1.0",
+        help=f"The version of the colang files to migrate from. Available options: {_AVAILABLE_OPTIONS}.",
+    ),
+    verbose: bool = typer.Option(
+        default=False,
+        help="If the migration should be verbose and output detailed logs.",
+    ),
+    validate: bool = typer.Option(
+        default=False,
+        help="If the migration should validate the output using Colang Parser.",
+    ),
+    use_active_decorator: bool = typer.Option(
+        default=True,
+        help="If the migration should use the active decorator.",
+    ),
+    include_main_flow: bool = typer.Option(
+        default=True,
+        help="If the migration should add a main flow to the config.",
+    ),
+):
+    """Convert Colang files and configs from older version to the latest."""
+
+    if verbose:
+        logging.getLogger().setLevel(logging.INFO)
+
+    absolute_path = os.path.abspath(path)
+
+    migrate(
+        path=absolute_path,
+        include_main_flow=include_main_flow,
+        use_active_decorator=use_active_decorator,
+        from_version=from_version,
+        validate=validate,
+    )
 
 
 @app.command("actions-server")

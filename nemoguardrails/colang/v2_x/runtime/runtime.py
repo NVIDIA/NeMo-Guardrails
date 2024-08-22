@@ -83,44 +83,56 @@ class RuntimeV2_x(Runtime):
                 version="2.x",
                 include_source_mapping=True,
             )
-
-            added_flows: List[str] = []
-            for flow in parsed_flow["flows"]:
-                if flow.name in state.flow_configs:
-                    log.warning("Flow '%s' already exists! Not loaded!", flow.name)
-                    break
-
-                flow_config = FlowConfig(
-                    id=flow.name,
-                    elements=expand_elements(flow.elements, state.flow_configs),
-                    decorators=convert_decorator_list_to_dictionary(flow.decorators),
-                    parameters=flow.parameters,
-                    return_members=flow.return_members,
-                    source_code=flow.source_code,
-                )
-
-                # Alternatively, we could through an exceptions
-                # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
-
-                # Print out expanded flow elements
-                # json.dump(flow_config, sys.stdout, indent=4, cls=EnhancedJsonEncoder)
-
-                initialize_flow(state, flow_config)
-
-                # Add flow config to state.flow_configs
-                state.flow_configs.update({flow.name: flow_config})
-
-                added_flows.append(flow.name)
-
-            return added_flows
-
         except Exception as e:
             log.warning(
                 "Failed parsing a generated flow\n%s\n%s",
                 flow_content,
                 format_colang_parsing_error_message(e, flow_content),
             )
-            return []
+
+            flow_name = flow_content.split("\n")[0].split(" ", maxsplit=1)[1]
+            fixed_body = (
+                f"flow {flow_name}\n"
+                + f'  bot say "Internal error on flow `{flow_name}`."'
+            )
+            log.warning("Using the following flow instead:\n%s", fixed_body)
+
+            parsed_flow = parse_colang_file(
+                filename="",
+                content=fixed_body,
+                version="2.x",
+                include_source_mapping=True,
+            )
+
+        added_flows: List[str] = []
+        for flow in parsed_flow["flows"]:
+            if flow.name in state.flow_configs:
+                log.warning("Flow '%s' already exists! Not loaded!", flow.name)
+                break
+
+            flow_config = FlowConfig(
+                id=flow.name,
+                elements=expand_elements(flow.elements, state.flow_configs),
+                decorators=convert_decorator_list_to_dictionary(flow.decorators),
+                parameters=flow.parameters,
+                return_members=flow.return_members,
+                source_code=flow.source_code,
+            )
+
+            # Alternatively, we could through an exceptions
+            # raise ColangRuntimeError(f"Could not parse the generated Colang code! {ex}")
+
+            # Print out expanded flow elements
+            # json.dump(flow_config, sys.stdout, indent=4, cls=EnhancedJsonEncoder)
+
+            initialize_flow(state, flow_config)
+
+            # Add flow config to state.flow_configs
+            state.flow_configs.update({flow.name: flow_config})
+
+            added_flows.append(flow.name)
+
+        return added_flows
 
     async def _remove_flows_action(self, state: "State", **args: dict) -> None:
         log.info("Start RemoveFlowsAction! %s", args)
@@ -271,20 +283,6 @@ class RuntimeV2_x(Runtime):
             if result.context_updates is not None:
                 context_updates.update(result.context_updates)
 
-        # next_steps = []
-        #
-        # if context_updates:
-        #     # We check if at least one key changed
-        #     changes = False
-        #     for k, v in context_updates.items():
-        #         if context.get(k) != v:
-        #             changes = True
-        #             break
-        #
-        #     if changes:
-        #         next_steps.append(new_event_dict("ContextUpdate", data=context_updates))
-        #
-        # # If the action returned additional events, we also add them to the next steps.
         # if return_events:
         #     next_steps.extend(return_events)
 
@@ -321,8 +319,9 @@ class RuntimeV2_x(Runtime):
                                 )
 
                             resp = await resp.json()
-                            result, status = resp.get("result", result), resp.get(
-                                "status", status
+                            result, status = (
+                                resp.get("result", result),
+                                resp.get("status", status),
                             )
                     except Exception as e:
                         log.info(
@@ -486,9 +485,19 @@ class RuntimeV2_x(Runtime):
 
         # While we have input events to process, or there are local running actions
         # we continue the processing.
+        events_counter = 0
         while input_events or local_running_actions:
             for event in input_events:
+                events_counter += 1
+                if events_counter > self.max_events:
+                    log.critical(
+                        f"Maximum number of events reached ({events_counter})!"
+                    )
+                    return output_events, state
+
                 log.info("Processing event :: %s", event)
+                for watcher in self.watchers:
+                    watcher(event)
 
                 event_name = event["type"] if isinstance(event, dict) else event.name
 
@@ -556,7 +565,7 @@ class RuntimeV2_x(Runtime):
                             output_events.append(action_finished_event)
                             input_events.append(action_finished_event)
 
-                        elif action_name in self.action_dispatcher.registered_actions:
+                        elif self.action_dispatcher.has_registered(action_name):
                             # In this case we need to start the action locally
                             action_fn = self.action_dispatcher.get_action(action_name)
                             execute_async = getattr(action_fn, "action_meta", {}).get(
@@ -678,6 +687,9 @@ class RuntimeV2_x(Runtime):
             events=events_history,
             state=state,
         )
+
+        state.context.update(context_updates)
+
         return {
             "action_name": action_name,
             "return_value": return_value,

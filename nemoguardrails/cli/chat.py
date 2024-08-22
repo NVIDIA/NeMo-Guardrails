@@ -14,7 +14,7 @@
 # limitations under the License.
 import asyncio
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, cast
 
 import aiohttp
 from prompt_toolkit import HTML, PromptSession
@@ -22,7 +22,9 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.styles import Style
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.cli import debugger
 from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
+from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.logging import verbose
 from nemoguardrails.logging.verbose import console
 from nemoguardrails.streaming import StreamingHandler
@@ -131,6 +133,17 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
     session: PromptSession = PromptSession()
     status = console.status("[bold green]Working ...[/]")
+    events_counter = 0
+
+    def watcher(*args):
+        nonlocal events_counter
+        events_counter += 1
+        status.update(f"[bold green]Working ({events_counter} events processed)...[/]")
+
+    rails_app.runtime.watchers.append(watcher)
+
+    # Set the runtime for the debugger to work correctly.
+    debugger.set_runtime(cast(RuntimeV2_x, rails_app.runtime))
 
     # Start an asynchronous timer
     async def _start_timer(timer_name: str, delay_seconds: float, action_uid: str):
@@ -424,6 +437,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 # If there are no pending actions, we stop
                 check_task.cancel()
                 check_task = None
+                debugger.set_output_state(output_state)
                 status.stop()
                 enable_input.set()
                 return
@@ -441,6 +455,8 @@ async def _run_chat_v2_x(rails_app: LLMRails):
             output_events, output_state = await rails_app.process_events_async(
                 input_events_copy, state
             )
+            debugger.set_output_state(output_state)
+
             _process_output()
             # If we don't have a check task, we start it
             if check_task is None:
@@ -471,10 +487,20 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                     ),
                 )
                 enable_input.clear()
+                events_counter = 0
                 status.start()
                 waiting_user_input = False
                 if user_message == "":
                     input_events = [new_event_dict("CheckLocalAsync")]
+
+                # System commands
+                elif user_message.startswith("!"):
+                    command = user_message[1:]
+                    debugger.run_command(command)
+                    status.stop()
+                    enable_input.set()
+                    continue
+
                 elif user_message.startswith("/"):
                     # Non-UtteranceBotAction actions
                     event_input = user_message.lstrip("/")
