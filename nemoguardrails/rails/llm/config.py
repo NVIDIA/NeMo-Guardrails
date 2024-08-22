@@ -861,6 +861,30 @@ class RailsConfig(BaseModel):
         return values
 
     @root_validator(pre=True, allow_reuse=True)
+    def check_output_parser_exists(cls, values):
+        tasks_requiring_output_parser = [
+            "self_check_input",
+            "self_check_facts",
+            "self_check_output",
+            # "content_safety_check input $model",
+            # "content_safety_check output $model",
+        ]
+        prompts = values.get("prompts", [])
+        for prompt in prompts:
+            task = prompt.get("task")
+            if any(
+                task.startswith(task_prefix)
+                for task_prefix in tasks_requiring_output_parser
+            ) and not prompt.get("output_parser"):
+                log.info(
+                    f"Deprecation Warning: Output parser is not registered for the task. "
+                    f"The correct way is to register the 'output_parser' in the prompts.yml for '{task}' task. "
+                    "It uses 'is_content safe' as the default output parser."
+                    "This behavior will be deprecated in future versions."
+                )
+        return values
+
+    @root_validator(pre=True, allow_reuse=True)
     def fill_in_default_values_for_v2_x(cls, values):
         instructions = values.get("instructions", {})
         sample_conversation = values.get("sample_conversation")
