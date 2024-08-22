@@ -17,6 +17,7 @@
 
 import logging
 import os
+import warnings
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import yaml
@@ -646,6 +647,7 @@ def _parse_colang_files_recursively(
     If there are imports, they will be imported recursively
     """
     colang_version = raw_config.get("colang_version", "1.0")
+    _rails_parsed_config = None
 
     # We start parsing the colang files one by one, and if we have
     # new import paths, we continue to update
@@ -658,6 +660,10 @@ def _parse_colang_files_recursively(
                 _parsed_config = parse_colang_file(
                     current_file, content=content, version=colang_version
                 )
+            except ValueError as e:
+                raise ColangParsingError(
+                    f"Unsupported colang version {colang_version} for file: {current_path}"
+                ) from e
             except Exception as e:
                 raise ColangParsingError(
                     f"Error while parsing Colang file: {current_path}\n"
@@ -676,6 +682,29 @@ def _parse_colang_files_recursively(
         if raw_config.get("import_paths"):
             _load_imported_paths(raw_config, colang_files)
 
+    if colang_version == "2.x" and _has_rails(raw_config):
+        # raise deprecation warning
+
+        rails_flows = _get_rails_flows(raw_config)
+        flow_definitions = "\n".join(_generate_rails_flows(rails_flows))
+
+        current_file = "INTRINSIC_FLOW_GENERATION"
+
+        _rails_parsed_config = parse_colang_file(
+            current_file, content=flow_definitions, version=colang_version
+        )
+
+        _DOCUMENTATION_LINK = "https://docs.nvidia.com/nemo/guardrails/colang_2/getting_started/dialog-rails.html"  # Replace with the actual documentation link
+
+        warnings.warn(
+            "The 'rails' configuration is deprecated in Colang 2.x. Please use the new flow-based configuration instead. "
+            f"For more information, please refer to the documentation at {_DOCUMENTATION_LINK}. "
+            f"Here is the expected usage:\n{flow_definitions}",
+            FutureWarning,
+        )
+
+    if _rails_parsed_config:
+        parsed_colang_files.append(_rails_parsed_config)
     # To allow overriding of elements from imported paths, we need to merge the
     # parsed data in reverse order.
     for file_parsed_data in reversed(parsed_colang_files):
@@ -962,6 +991,7 @@ class RailsConfig(BaseModel):
 
             parsed_colang_files.append(_parsed_config)
 
+        print("WE ARE HERE SUPRISE!!!!!!!!!!!!!!!")
         # Load any new colang files potentially coming from imports
         if raw_config.get("import_paths"):
             _load_imported_paths(raw_config, colang_files)
@@ -1077,3 +1107,60 @@ def _join_rails_configs(
     )
     combined_rails_config = RailsConfig(**combined_rails_config_dict)
     return combined_rails_config
+
+
+def _has_rails(raw_config):
+    """Checks if the raw configuration has rails defined."""
+
+    return "rails" in raw_config
+
+
+def _get_rails_flows(raw_config):
+    """Extracts the list of flows from the raw_config dictionary.
+
+    Args:
+        raw_config (dict): The raw configuration dictionary.
+
+    Returns:
+        list: The list of flows.
+    """
+    from collections import defaultdict
+
+    flows = defaultdict(list)
+
+    for key in raw_config["rails"]:
+        if "flows" in raw_config["rails"][key]:
+            flows[key].extend(raw_config["rails"][key]["flows"])
+    return flows
+
+
+def _generate_rails_flows(flows):
+    """Generates flow definitions from the list of flows.
+    Args:
+        flows (dict): The dictionary of flows.
+    Returns:
+        str: The flow definitions.
+    """
+    _MAPPING = {
+        "input": "flow input rails $input_text",
+        "output": "flow output rails $output_text",
+    }
+
+    _GUARDRAILS_IMPORT = "import guardrails"
+    _LIBRARY_IMPORT = "import nemoguardrails.library"
+
+    flow_definitions = []
+    _INDENT = "    "  # 4 spaces for indentation
+    _NEWLINE = "\n"
+
+    for key, value in flows.items():
+        flow_definitions.append(_MAPPING[key] + _NEWLINE)
+        for v in value:
+            flow_definitions.append(_INDENT + v + _NEWLINE)
+        flow_definitions.append(_NEWLINE)  # Add an empty line after each flow
+
+    if flow_definitions:
+        flow_definitions.insert(0, _GUARDRAILS_IMPORT + _NEWLINE)
+        flow_definitions.insert(1, _LIBRARY_IMPORT + _NEWLINE * 2)
+
+    return flow_definitions
