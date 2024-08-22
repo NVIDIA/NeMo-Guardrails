@@ -540,7 +540,7 @@ def _add_active_decorator(new_lines: list) -> list:
     _ACTIVE_DECORATOR = "@active"
     _NEWLINE = "\n"
     root_flow_pattern = re.compile(
-        r"^flow\s+(?!user|bot)(.*?)$", re.IGNORECASE | re.MULTILINE
+        r"^flow\s+(?!bot)(.*?)$", re.IGNORECASE | re.MULTILINE
     )
 
     for line in new_lines:
