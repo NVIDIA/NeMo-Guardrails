@@ -86,6 +86,7 @@ dev = [
   "pytest-cov>=4.1.0",
   "pytest-httpx>=0.22.0"
 ]
+gcp = ["google-cloud-language>=2.14.0"]
 
 [project.urls]
 homepage = "https://github.com/NVIDIA/nemo-guardrails"
