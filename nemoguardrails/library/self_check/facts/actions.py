@@ -66,11 +66,6 @@ async def self_check_facts(
     if llm_task_manager.has_output_parser(task):
         result = llm_task_manager.parse_task_output(task, output=response)
     else:
-        log.warn(
-            f"Deprecation Warning: Output parser is not registered for the task. "
-            f"The correct way is to register the 'output_parser' in the prompts.yml for {task.value}. "
-            "This behavior will be deprecated in future versions.",
-        )
         result = llm_task_manager.output_parsers["is_content_safe"](response)
 
     is_not_safe, _ = result
