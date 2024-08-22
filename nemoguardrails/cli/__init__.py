@@ -194,6 +194,10 @@ def convert(
         default=True,
         help="If the migration should use the active decorator.",
     ),
+    include_main_flow: bool = typer.Option(
+        default=True,
+        help="If the migration should add a main flow to the config.",
+    ),
 ):
     """Convert Colang files and configs from older version to the latest."""
 
@@ -204,6 +208,7 @@ def convert(
 
     migrate(
         path=absolute_path,
+        include_main_flow=include_main_flow,
         use_active_decorator=use_active_decorator,
         from_version=from_version,
         validate=validate,
