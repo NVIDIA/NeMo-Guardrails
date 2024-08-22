@@ -682,7 +682,7 @@ def _parse_colang_files_recursively(
         if raw_config.get("import_paths"):
             _load_imported_paths(raw_config, colang_files)
 
-    if colang_version == "2.x" and _has_rails(raw_config):
+    if colang_version == "2.x" and _has_input_output_config_rails(raw_config):
         # raise deprecation warning
 
         rails_flows = _get_rails_flows(raw_config)
@@ -697,7 +697,8 @@ def _parse_colang_files_recursively(
         _DOCUMENTATION_LINK = "https://docs.nvidia.com/nemo/guardrails/colang_2/getting_started/dialog-rails.html"  # Replace with the actual documentation link
 
         warnings.warn(
-            "The 'rails' configuration is deprecated in Colang 2.x. Please use the new flow-based configuration instead. "
+            "Configuring input/output rails in config.yml is deprecated. "
+            "Please use the new flow-based configuration instead. "
             f"For more information, please refer to the documentation at {_DOCUMENTATION_LINK}. "
             f"Here is the expected usage:\n{flow_definitions}",
             FutureWarning,
@@ -1109,10 +1110,16 @@ def _join_rails_configs(
     return combined_rails_config
 
 
-def _has_rails(raw_config):
-    """Checks if the raw configuration has rails defined."""
+def _has_input_output_config_rails(raw_config):
+    """Checks if the raw configuration has input/output rails configured."""
 
-    return "rails" in raw_config
+    has_input_rails = (
+        len(raw_config.get("rails", {}).get("input", {}).get("flows", [])) > 0
+    )
+    has_output_rails = (
+        len(raw_config.get("rails", {}).get("output", {}).get("flows", [])) > 0
+    )
+    return has_input_rails or has_output_rails
 
 
 def _get_rails_flows(raw_config):
