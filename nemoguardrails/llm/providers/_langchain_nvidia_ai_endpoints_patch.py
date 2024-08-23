@@ -22,7 +22,7 @@ from langchain_core.language_models.chat_models import generate_from_stream
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatResult
 from langchain_core.pydantic_v1 import Field
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from langchain_nvidia_ai_endpoints import ChatNVIDIA as ChatNVIDIAOriginal
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +49,9 @@ def stream_decorator(func):
     return wrapper
 
 
-class ChatNVIDIA(ChatNVIDIA):
+# NOTE: this needs to have the same name as the original class,
+#   otherwise, there's a check inside `langchain-nvidia-ai-endpoints` that will fail.
+class ChatNVIDIA(ChatNVIDIAOriginal):
     streaming: bool = Field(
         default=False, description="Whether to use streaming or not"
     )

@@ -243,8 +243,6 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
             )
     elif model_config.engine == "nvidia_ai_endpoints" or model_config.engine == "nim":
         try:
-            from langchain_nvidia_ai_endpoints import ChatNVIDIA
-
             from ._langchain_nvidia_ai_endpoints_patch import ChatNVIDIA
 
             # Check the version
