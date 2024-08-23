@@ -449,8 +449,7 @@ class FlowHead:
     # If a flow head is forked it will create new child heads
     child_head_uids: List[str] = field(default_factory=list)
 
-    # If set, a flow failure will be forwarded to the label, otherwise it will abort/fail the flow
-    # Mainly used to simplify inner flow logic
+    # If set, a flow failure (abort) will be forwarded to the label, otherwise it will abort/fail the flow
     catch_pattern_failure_label: List[str] = field(default_factory=list)
 
     # Callback that can be registered to get informed about head position updates
@@ -792,7 +791,7 @@ class State:
 
     # The updates to the context that should be applied before the next step
     # TODO: This would be needed if we decide to implement assignments of global variables via context updates
-    # context_updates: dict = field(default_factory=dict)
+    context_updates: dict = field(default_factory=dict)
 
     ########################
     # Helper data structures

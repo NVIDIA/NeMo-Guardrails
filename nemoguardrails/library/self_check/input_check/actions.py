@@ -47,27 +47,42 @@ async def self_check_input(
         True if the input should be allowed, False otherwise.
     """
 
+    _MAX_TOKENS = 3
     user_input = context.get("user_message")
+    task = Task.SELF_CHECK_INPUT
 
     if user_input:
         prompt = llm_task_manager.render_task_prompt(
-            task=Task.SELF_CHECK_INPUT,
+            task=task,
             context={
                 "user_input": user_input,
             },
         )
-        stop = llm_task_manager.get_stop_tokens(task=Task.SELF_CHECK_INPUT)
+        stop = llm_task_manager.get_stop_tokens(task=task)
+        max_tokens = llm_task_manager.get_max_tokens(task=task)
+        max_tokens = max_tokens or _MAX_TOKENS
 
         # Initialize the LLMCallInfo object
-        llm_call_info_var.set(LLMCallInfo(task=Task.SELF_CHECK_INPUT.value))
+        llm_call_info_var.set(LLMCallInfo(task=task.value))
 
-        with llm_params(llm, temperature=config.lowest_temperature):
-            check = await llm_call(llm, prompt, stop=stop)
+        with llm_params(
+            llm, temperature=config.lowest_temperature, max_tokens=max_tokens
+        ):
+            response = await llm_call(llm, prompt, stop=stop)
 
-        check = check.lower().strip()
-        log.info(f"Input self-checking result is: `{check}`.")
+        log.info(f"Input self-checking result is: `{response}`.")
 
-        if "yes" in check:
+        # for sake of backward compatibility
+        # if the output_parser is not registered we will use the default one
+        if llm_task_manager.has_output_parser(task):
+            result = llm_task_manager.parse_task_output(task, output=response)
+
+        else:
+            result = llm_task_manager.output_parsers["is_content_safe"](response)
+
+        is_safe, _ = result
+
+        if not is_safe:
             return ActionResult(
                 return_value=False,
                 events=[
@@ -77,4 +92,4 @@ async def self_check_input(
                 ],
             )
 
-    return True
+        return is_safe

@@ -159,7 +159,8 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             # We add these in reverse order so the most relevant is towards the end.
             for result in reversed(results):
                 examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
-                potential_user_intents.append(result.meta["intent"])
+                if result.meta["intent"] not in potential_user_intents:
+                    potential_user_intents.append(result.meta["intent"])
 
         # We add all currently active user intents (heads on match statements)
         heads = find_all_active_event_matchers(state)

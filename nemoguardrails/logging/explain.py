@@ -54,6 +54,10 @@ class LLMCallInfo(LLMCallSummary):
         description="The raw response received from the LLM. "
         "May contain additional information, e.g. logprobs.",
     )
+    llm_model_name: Optional[str] = Field(
+        default="unknown",
+        description="The name of the model use for the LLM call.",
+    )
 
 
 class ExplainInfo(BaseModel):

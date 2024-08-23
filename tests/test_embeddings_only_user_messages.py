@@ -15,32 +15,39 @@
 
 import pytest
 
-from nemoguardrails import RailsConfig
+from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.actions.llm.utils import LLMCallException
 from tests.utils import TestChat
 
-config = RailsConfig.from_content(
-    """
-    define user express greeting
-      "hi"
 
-    define bot express greeting
-      "Hello!"
+@pytest.fixture
+def config():
+    return RailsConfig.from_content(
+        """
+        define user express greeting
+          "hi"
 
-    define flow
-      user express greeting
-      bot express greeting
-    """,
-    """
-    rails:
-        dialog:
-            user_messages:
-                embeddings_only: True
-    """,
-)
+        define bot express greeting
+          "Hello!"
+
+        define flow
+          user express greeting
+          bot express greeting
+        """,
+        """
+        rails:
+            dialog:
+                user_messages:
+                    embeddings_only: True
+                    embeddings_only_similarity_threshold: 0.8
+                    embeddings_only_fallback_intent: "express greeting"
+        """,
+    )
 
 
-def test_1():
+def test_greeting(config):
+    """Test that the bot responds with 'Hello!' when the user says 'hello'."""
+
     chat = TestChat(
         config,
         llm_completions=[],
@@ -50,7 +57,9 @@ def test_1():
     chat << "Hello!"
 
 
-def test_2():
+def test_error_when_embeddings_only_is_false(config):
+    """Test that an error is raised when the 'embeddings_only' option is False."""
+
     # Check that if we deactivate the embeddings_only option we get an error
     config.rails.dialog.user_messages.embeddings_only = False
     chat = TestChat(
@@ -61,3 +70,18 @@ def test_2():
     with pytest.raises(LLMCallException):
         chat >> "hello"
         chat << "Hello!"
+
+
+def test_fallback_intent(config):
+    """Test that the bot uses the fallback intent when it doesn't recognize the user's message."""
+
+    rails = LLMRails(config)
+    res = rails.generate(messages=[{"role": "user", "content": "lets use fallback"}])
+    assert res["content"] == "Hello!"
+
+    config.rails.dialog.user_messages.embeddings_only_fallback_intent = None
+    rails = LLMRails(config)
+    with pytest.raises(LLMCallException):
+        rails.generate(messages=[{"role": "user", "content": "lets use fallback"}])
+    #
+    # Check the bot's response

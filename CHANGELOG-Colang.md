@@ -8,12 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
+* [#673](https://github.com/NVIDIA/NeMo-Guardrails/pull/673) Add support for new Colang 2 keyword `deactivate`.
+
 ### Changed
 
 * [#669](https://github.com/NVIDIA/NeMo-Guardrails/pull/669) Merged (and removed) utils library file with core library.
 
 ### Fixed
 
+* [#672](https://github.com/NVIDIA/NeMo-Guardrails/pull/672) Fixes a event group match bug (e.g. `match $flow_ref.Finished() or $flow_ref.Failed()`)
 * [#699](https://github.com/NVIDIA/NeMo-Guardrails/pull/699) Fix issues with ActionUpdated events and user utterance action extraction.
 
 ## [2.0-beta.2] - 2024-07-25

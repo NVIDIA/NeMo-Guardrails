@@ -1,27 +1,31 @@
-define bot inform answer unknown
-  "I don't know the answer to that."
+flow bot inform answer unknown
+    bot say "I don't know the answer to that."
 
-define flow hallucination warning
-  """Warning rail for hallucination."""
-  bot ...
-  if $hallucination_warning == True
-    $is_hallucination = execute check_hallucination
-    $hallucination_warning = False
+flow hallucination warning
+    """Warning rail for hallucination."""
 
-    if $is_hallucination
-      bot inform answer prone to hallucination
+    match UtteranceBotActionFinished()
 
-define bot inform answer prone to hallucination
-  "The previous answer is prone to hallucination and may not be accurate. Please double check the answer using additional sources."
-  "The above response may have been hallucinated, and should be independently verified."
+    if $hallucination_warning == True
+        $is_hallucination = await CheckHallucinationAction
+        global $hallucination_warning
+        $hallucination_warning = False
+
+        if $is_hallucination
+            bot inform answer prone to hallucination
+
+flow bot inform answer prone to hallucination
+    bot say "The previous answer is prone to hallucination and may not be accurate. Please double check the answer using additional sources."
+    or bot say "The above response may have been hallucinated, and should be independently verified."
 
 
-define subflow check hallucination
-  """Output rail for checking hallucinations."""
-  if $check_hallucination == True
-    $is_hallucination = execute check_hallucination
-    $check_hallucination = False
+flow check hallucination
+    """Output rail for checking hallucinations."""
+    if $check_hallucination == True
+        $is_hallucination = await CheckHallucinationAction
+        global $check_hallucination
+        $check_hallucination = False
 
-    if $is_hallucination
-      bot inform answer unknown
-      stop
+        if $is_hallucination
+            bot inform answer unknown
+            abort

@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from langchain.chains.base import Chain
 from langchain_core.runnables import Runnable
 
+from nemoguardrails import utils
 from nemoguardrails.actions.llm.utils import LLMCallException
 from nemoguardrails.logging.callbacks import logging_callbacks
 
@@ -153,6 +154,19 @@ class ActionDispatcher:
             if hasattr(val, "action_meta"):
                 self.register_action(val, override=override)
 
+    def _normalize_action_name(self, name: str) -> str:
+        """Normalize the action name to the required format."""
+        if name not in self.registered_actions:
+            if name.endswith("Action"):
+                name = name.replace("Action", "")
+            name = utils.camelcase_to_snakecase(name)
+        return name
+
+    def has_registered(self, name: str) -> bool:
+        """Check if an action is registered."""
+        name = self._normalize_action_name(name)
+        return name in self.registered_actions
+
     def get_action(self, name: str) -> callable:
         """Get the registered action by name.
 
@@ -162,7 +176,8 @@ class ActionDispatcher:
         Returns:
             callable: The registered action.
         """
-        return self._registered_actions.get(name)
+        name = self._normalize_action_name(name)
+        return self._registered_actions.get(name, None)
 
     async def execute_action(
         self, action_name: str, params: Dict[str, Any]
@@ -176,6 +191,8 @@ class ActionDispatcher:
         Returns:
             Tuple[Union[str, Dict[str, Any]], str]: A tuple containing the result and status.
         """
+
+        action_name = self._normalize_action_name(action_name)
 
         if action_name in self._registered_actions:
             log.info(f"Executing registered action: {action_name}")

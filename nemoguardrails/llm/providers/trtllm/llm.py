@@ -61,7 +61,7 @@ class TRTLLM(LLM):
     client: Any
     streaming: Optional[bool] = True
 
-    @root_validator()
+    @root_validator(allow_reuse=True)
     @classmethod
     def validate_environment(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         """Validate that python package exists in environment."""
