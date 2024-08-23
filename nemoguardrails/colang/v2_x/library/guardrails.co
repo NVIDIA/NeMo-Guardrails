@@ -34,14 +34,9 @@ flow _user_saying $text -> $event
   else
     match UtteranceUserAction.TranscriptUpdated() as $event
 
-<<<<<<< HEAD
-  $transcript = $event.interim_transcript
-  await run input rails $transcript
-=======
   $text = $event.interim_transcript
   $user_message = $text
   await run input rails $user_message
->>>>>>> github/develop
 
 
 @override
