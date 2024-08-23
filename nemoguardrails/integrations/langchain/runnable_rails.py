@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 from typing import Any, List, Optional
+from utils import async_wrap
 
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import AIMessage, HumanMessage
@@ -71,7 +72,8 @@ class RunnableRails(Runnable[Input, Output]):
         async def passthrough_fn(context: dict, events: List[dict]):
             # First, we fetch the input from the context
             _input = context.get("passthrough_input")
-            _output = await self.passthrough_runnable.ainvoke(input=_input)
+            async_wrapped_runnable = async_wrap(self.passthrough_runnable.invoke)
+            _output = await async_wrapped_runnable(_input, self.config, **self.kwargs)
 
             # If the output is a string, we consider it to be the output text
             if isinstance(_output, str):
