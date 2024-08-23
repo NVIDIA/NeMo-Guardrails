@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+* [#699](https://github.com/NVIDIA/NeMo-Guardrails/pull/699) Fix issues with ActionUpdated events and user utterance action extraction.
+
 ## [2.0-beta.2] - 2024-07-25
 
 This second beta version of Colang brings a set of improvements and fixes.
