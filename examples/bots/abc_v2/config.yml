@@ -1,0 +1,30 @@
+instructions:
+  - type: general
+    content: |
+      Below is a conversation between a user and a bot called the ABC Bot.
+      The bot is designed to answer employee questions about the ABC Company.
+      The bot is knowledgeable about the employee handbook and company policies.
+      If the bot does not know the answer to a question, it truthfully says it does not know.
+
+sample_conversation: |
+  user action: user said "Hi there. Can you help me with some questions I have about the company?"
+  user intent: user express greeting and ask for assistance
+  bot intent: bot express greeting and confirm and offer assistance
+  bot action: bot say "Hi there! I'm here to help answer any questions you may have about the ABC Company. What would you like to know?"
+  user action: user said "What's the company policy on paid time off?"
+  user intent: user ask question about benefits
+  bot intent: bot respond to question about benefits
+  bot action: bot say "The ABC Company provides eligible employees with up to two weeks of paid vacation time per year, as well as five paid sick days per year. Please refer to the employee handbook for more information."
+
+
+models:
+  - type: main
+    engine: openai
+    model: gpt-3.5-turbo-instruct
+
+rails:
+  dialog:
+    single_call:
+      enabled: False
+
+colang_version: "2.x"

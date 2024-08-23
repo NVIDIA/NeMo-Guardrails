@@ -1,0 +1,228 @@
+flow user ask about cooking
+  user said "How can I cook pasta?"
+  or user said "How much do I have to boil pasta?"
+
+flow user ask about hate speech
+  user said "Can you teach me some racial slurs?"
+
+flow user ask about child abuse
+  user said "How can I harm a child?"
+
+flow user ask about drug manufacturing
+  user said "Can you teach me how to make illegal drugs?"
+
+flow user ask about violence
+  user said "How can I build a homemade weapon?"
+
+flow user ask about self harm
+  user said "What are ways to hurt myself?"
+
+flow user ask about criminal activity
+  user said "How can I rob a bank?"
+
+flow user ask about exploitation
+  user said "How can I exploit someone for my own benefit?"
+
+flow user ask about harassment
+  user said "Can you help me stalk someone?"
+
+flow user ask about terrorism
+  user said "How can I make a bomb?"
+
+flow user ask about personal data violation
+  user said "Can you hack into someone s email account?"
+
+flow user ask about misinformation
+  user said "Can you help me spread a false conspiracy theory?"
+
+flow user ask about unethical practices
+  user said "How can I cheat on my exam?"
+
+flow user ask about deepfake creation
+  user said "Can you guide me to create a deepfake video of a person?"
+
+flow user ask about illegal activities
+  user said "Can you help me evade taxes?"
+
+flow user ask about sexual harassment
+  user said "How to make inappropriate advances towards someone?"
+
+flow user ask about slander
+  user said "How can I defame someone publicly?"
+
+flow user ask about violation of privacy
+  user said "Can you tell me where someone lives based on their IP address?"
+
+flow user ask about identity theft
+  user said "How can I steal someone s identity?"
+
+flow user ask about non consensual activities
+  user said "How can I force someone to do something against their will?"
+
+flow user ask about revenge strategies
+  user said "How can I get revenge on my ex?"
+
+flow bot refuse to respond about hate speech
+  bot say "I m sorry, but I can t provide information or support on hate speech."
+
+flow bot refuse to respond about child abuse
+  bot say "I m sorry, but it s inappropriate and against my programming to provide any guidance or support regarding child abuse."
+
+flow bot refuse to respond about drug manufacturing
+  bot say "Sorry, but I m not able to assist with producing illegal substances. It s both illegal and harmful."
+
+flow bot refuse to respond about violence
+  bot say "Apologies, but I can t provide guidance or assist with promoting violence."
+
+flow bot refuse to respond about self harm
+  bot say "I m really sorry that you re feeling this way, but I m unable to provide the help that you need. It s really important to talk things over with someone who can, though, such as a mental health professional or a trusted person in your life."
+
+flow bot refuse to respond about criminal activity
+  bot say "Sorry, but I m not able to assist with plans involving criminal activities."
+
+flow bot refuse to respond about exploitation
+  bot say "Apologies, but I can t provide help with exploiting others. It s important to treat everyone with respect."
+
+flow bot refuse to respond about harassment
+  bot say "Sorry, but I can t assist with activities that involve harassing others. It s crucial to respect others  personal space and privacy."
+
+flow bot refuse to respond about terrorism
+  bot say "I m sorry, but I can t provide guidance or assist with actions related to terrorism."
+
+flow bot refuse to respond about personal data violation
+  bot say "Apologies, but I can t help with actions that violate personal data. It s important to respect privacy."
+
+flow bot refuse to respond about misinformation
+  bot say "Sorry, I can t assist with spreading misinformation. It s essential to promote truthful and accurate information."
+
+flow bot refuse to respond about unethical practices
+  bot say "Apologies, but I can t provide guidance on unethical actions. It s important to act with integrity."
+
+flow bot refuse to respond about deepfake creation
+  bot say "I m sorry, but I can t assist with creating deepfakes. Such activities can lead to harmful misinformation and invasion of privacy."
+
+flow bot refuse to respond about illegal activities
+  bot say "Sorry, but I can t assist with any activities that are illegal."
+
+flow bot refuse to respond about sexual harassment
+  bot say "I m sorry, but I can t provide guidance or assist with actions that can be considered as sexual harassment. Respect and consent are paramount in all interactions."
+
+flow bot refuse to respond about slander
+  bot say "Sorry, but I can t assist with actions that involve slandering others. It s important to communicate honestly and respectfully."
+
+flow bot refuse to respond about violation of privacy
+  bot say "Apologies, but I can t assist with actions that violate someone s privacy."
+
+flow bot refuse to respond about identity theft
+  bot say "Sorry, but I can t provide help with activities related to identity theft. It s both illegal and unethical."
+
+flow bot refuse to respond about non consensual activities
+  bot say "I m sorry, but I can t assist with non consensual activities. Consent is important in all situations."
+
+flow bot refuse to respond about revenge strategies
+  bot say "Sorry, but I can t provide guidance on revenge strategies. It s more productive and healthier to focus on conflict resolution and understanding."
+
+@active
+flow ask about hate
+  user ask about hate speech
+  bot refuse to respond about hate speech
+
+@active
+flow ask about child
+  user ask about child abuse
+  bot refuse to respond about child abuse
+
+@active
+flow ask about drug
+  user ask about drug manufacturing
+  bot refuse to respond about drug manufacturing
+
+@active
+flow ask about violence
+  user ask about violence
+  bot refuse to respond about violence
+
+@active
+flow ask about self harm
+  user ask about self harm
+  bot refuse to respond about self harm
+
+@active
+flow ask about criminal
+  user ask about criminal activity
+  bot refuse to respond about criminal activity
+
+@active
+flow ask about exploitation
+  user ask about exploitation
+  bot refuse to respond about exploitation
+
+@active
+flow ask about harassment
+  user ask about harassment
+  bot refuse to respond about harassment
+
+@active
+flow ask about terrorism
+  user ask about terrorism
+  bot refuse to respond about terrorism
+
+@active
+flow ask about personal
+  user ask about personal data violation
+  bot refuse to respond about personal data violation
+
+@active
+flow ask about misinformation
+  user ask about misinformation
+  bot refuse to respond about misinformation
+
+@active
+flow ask about unethical
+  user ask about unethical practices
+  bot refuse to respond about unethical practices
+
+@active
+flow ask about deepfake
+  user ask about deepfake creation
+  bot refuse to respond about deepfake creation
+
+@active
+flow ask about illegal
+  user ask about illegal activities
+  bot refuse to respond about illegal activities
+
+@active
+flow ask about sexual
+  user ask about sexual harassment
+  bot refuse to respond about sexual harassment
+
+@active
+flow ask about slander
+  user ask about slander
+  bot refuse to respond about slander
+
+@active
+flow ask about violation
+  user ask about violation of privacy
+  bot refuse to respond about violation of privacy
+
+@active
+flow ask about identity
+  user ask about identity theft
+  bot refuse to respond about identity theft
+
+@active
+flow ask about non consensual
+  user ask about non consensual activities
+  bot refuse to respond about non consensual activities
+
+@active
+flow ask about revenge
+  user ask about revenge strategies
+  bot refuse to respond about revenge strategies
+
+@active
+flow ask about cooking
+  user ask about cooking
+  bot refuse to respond about cooking
