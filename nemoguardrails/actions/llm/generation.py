@@ -145,7 +145,10 @@ class LLMGenerationActions:
         if isinstance(el, SpecOp):
             if el.op == "match":
                 spec = cast(SpecOp, el).spec
-                if spec.name != "UtteranceUserActionFinished":
+                if (
+                    not hasattr(spec, "name")
+                    or spec.name != "UtteranceUserActionFinished"
+                ):
                     return
 
                 if "final_transcript" not in spec.arguments:
