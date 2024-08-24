@@ -3,6 +3,7 @@
 NeMo Guardrails comes with a library of built-in guardrails that you can easily use:
 
 1. LLM Self-Checking
+
    - [Input Checking](#self-check-input)
    - [Output Checking](#self-check-output)
    - [Fact Checking](#fact-checking)
@@ -10,17 +11,20 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
    - [Content Safety](#content-safety)
 
 2. Community Models and Libraries
+
    - [AlignScore-based Fact Checking](#alignscore-based-fact-checking)
    - [LlamaGuard-based Content Moderation](#llama-guard-based-content-moderation)
    - [Patronus Lynx-based RAG Hallucination Detection](#patronus-lynx-based-rag-hallucination-detection)
    - [Presidio-based Sensitive data detection](#presidio-based-sensitive-data-detection)
-   - BERT-score Hallucination Checking - *[COMING SOON]*
+   - BERT-score Hallucination Checking - _[COMING SOON]_
 
 3. Third-Party APIs
+
    - [ActiveFence Moderation](#activefence)
    - [Got It AI RAG TruthChecker](#got-it-ai)
    - [AutoAlign](#autoalign)
-   - OpenAI Moderation API - *[COMING SOON]*
+   - [GCP Text Moderation](#gcpnlp)
+   - OpenAI Moderation API - _[COMING SOON]_
 
 4. Other
    - [Jailbreak Detection Heuristics](#jailbreak-detection-heuristics)
@@ -63,7 +67,7 @@ prompts:
 
 **NOTE**: If a prompt is not defined, an exception will be raised when the configuration is loaded.
 
-The above is an example prompt you can use with the *self check input rail*. See the [Example Prompts](#example-prompts) section below for more details. The `self_check_input` prompt has an input variable `{{ user_input }}` which includes the input from the user. The completion must be "yes" if the input should be blocked and "no" otherwise.
+The above is an example prompt you can use with the _self check input rail_. See the [Example Prompts](#example-prompts) section below for more details. The `self_check_input` prompt has an input variable `{{ user_input }}` which includes the input from the user. The completion must be "yes" if the input should be blocked and "no" otherwise.
 
 The self-check input rail executes the [`self_check_input` action](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/self_check/input_check/actions.py), which returns `True` if the input should be allowed, and `False` otherwise:
 
@@ -167,7 +171,7 @@ prompts:
 
 **NOTE**: If a prompt is not defined, an exception will be raised when the configuration is loaded.
 
-The above is an example prompt you can use with the *self check output rail*. See the [Example Prompts](#example-prompts-1) section below for more details. The `self_check_output` prompt has an input variable `{{ bot_response }}` which includes the output from the bot. The completion must be "yes" if the output should be blocked and "no" otherwise.
+The above is an example prompt you can use with the _self check output rail_. See the [Example Prompts](#example-prompts-1) section below for more details. The `self_check_output` prompt has an input variable `{{ bot_response }}` which includes the output from the bot. The completion must be "yes" if the output should be blocked and "no" otherwise.
 
 The self-check output rail executes the [`self_check_output` action](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/self_check/output_check/actions.py), which returns `True` if the output should be allowed, and `False` otherwise:
 
@@ -268,7 +272,7 @@ prompts:
 
 **NOTE**: If a prompt is not defined, an exception will be raised when the configuration is loaded.
 
-The above is an example prompt that you can use with the *self check facts rail*. The `self_check_facts` prompt has two input variables: `{{ evidence }}`, which includes the relevant chunks, and `{{ response }}`, which includes the bot response that should be fact-checked. The completion must be "yes" if the response is factually correct and "no" otherwise.
+The above is an example prompt that you can use with the _self check facts rail_. The `self_check_facts` prompt has two input variables: `{{ evidence }}`, which includes the relevant chunks, and `{{ response }}`, which includes the bot response that should be fact-checked. The completion must be "yes" if the response is factually correct and "no" otherwise.
 
 The self-check fact-checking rail executes the [`self_check_facts` action](https://github.com/NVIDIA/NeMo-Guardrails/tree/develop/nemoguardrails/library/self_check/output_check/actions.py), which returns a score between `0.0` (response is not accurate) and `1.0` (response is accurate). The reason a number is returned, instead of a boolean, is to keep a consistent API with other methods that return a score, e.g., the AlignScore method below.
 
@@ -338,7 +342,7 @@ prompts:
 
 **NOTE**: If a prompt is not defined, an exception will be raised when the configuration is loaded.
 
-The above is an example prompt you can use with the *self check hallucination rail*. The `self_check_hallucination` prompt has two input variables: `{{ paragraph }}`, which represents alternative generations for the same user query, and `{{ statement }}`, which represents the current bot response. The completion must be "yes" if the statement is not a hallucination (i.e., agrees with alternative generations) and "no" otherwise.
+The above is an example prompt you can use with the _self check hallucination rail_. The `self_check_hallucination` prompt has two input variables: `{{ paragraph }}`, which represents alternative generations for the same user query, and `{{ statement }}`, which represents the current bot response. The completion must be "yes" if the statement is not a hallucination (i.e., agrees with alternative generations) and "no" otherwise.
 
 You can use the self-check hallucination detection in two modes:
 
@@ -402,7 +406,7 @@ The implementation for the self-check hallucination rail uses a slight variation
 1. First, sample several extra responses from the LLM (by default, two extra responses).
 2. Use the LLM to check if the original and extra responses are consistent.
 
-Similar to the self-check fact-checking, we formulate the consistency checking similar to an NLI task with the original bot response as the *hypothesis* (`{{ statement }}`) and the extra generated responses as the context or *evidence* (`{{ paragraph }}`).
+Similar to the self-check fact-checking, we formulate the consistency checking similar to an NLI task with the original bot response as the _hypothesis_ (`{{ statement }}`) and the extra generated responses as the context or _evidence_ (`{{ paragraph }}`).
 
 ### Content Safety
 
@@ -638,6 +642,21 @@ rails:
 
 For more details, check out the [AutoAlign Integration](./community/auto-align.md) page.
 
+### GCP Text Moderation
+
+NeMo Guardrails supports using the GCP Text Moderation. You need to be authenticated with GCP, refer [here](https://cloud.google.com/docs/authentication/application-default-credentials) for auth details.
+
+#### Example usage
+
+```yaml
+rails:
+  input:
+    flows:
+      - gcpnlp moderation
+```
+
+For more details, check out the [GCP Text Moderation](./community/gcp-text-moderations.md) page.
+
 ## Other
 
 ### Jailbreak Detection Heuristics
@@ -673,14 +692,14 @@ rails:
 
 ##### Length per Perplexity
 
-The *length per perplexity* heuristic computes the length of the input divided by the perplexity of the input. If the value is above the specified threshold (default `89.79`) then the input is considered a jailbreak attempt.
+The _length per perplexity_ heuristic computes the length of the input divided by the perplexity of the input. If the value is above the specified threshold (default `89.79`) then the input is considered a jailbreak attempt.
 
 The default value represents the mean length/perplexity for a set of jailbreaks derived from a combination of datasets including [AdvBench](https://github.com/llm-attacks/llm-attacks), [ToxicChat](https://huggingface.co/datasets/lmsys/toxic-chat/blob/main/README.md), and [JailbreakChat](https://github.com/verazuo/jailbreak_llms), with non-jailbreaks taken from the same datasets and incorporating 1000 examples from [Dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k).
 
 The statistics for this metric across jailbreak and non jailbreak datasets are as follows:
 
 |      | Jailbreaks | Non-Jailbreaks |
-|------|------------|----------------|
+| ---- | ---------- | -------------- |
 | mean | 89.79      | 27.11          |
 | min  | 0.03       | 0.00           |
 | 25%  | 12.90      | 0.46           |
@@ -698,7 +717,7 @@ Increasing this threshold will decrease the number of jailbreaks detected but wi
 
 ##### Prefix and Suffix Perplexity
 
-The *prefix and suffix perplexity* heuristic takes the input and computes the perplexity for the prefix and suffix. If any of the is above the specified threshold (default `1845.65`), then the input is considered a jailbreak attempt.
+The _prefix and suffix perplexity_ heuristic takes the input and computes the perplexity for the prefix and suffix. If any of the is above the specified threshold (default `1845.65`), then the input is considered a jailbreak attempt.
 
 This heuristic examines strings of more than 20 "words" (strings separated by whitespace) to detect potential prefix/suffix attacks.
 
@@ -732,7 +751,7 @@ For each configuration, we tested the response time for 10 prompts ranging in le
 Inference times for sequences longer than the model's maximum input length (1024 tokens for GPT-2) necessarily take longer.
 Times reported below in are **averages** and are reported in milliseconds.
 
-|            | CPU   | GPU |
-|------------|-------|-----|
-| Docker     | 2057  | 115 |
-| In-Process | 3227  | 157 |
+|            | CPU  | GPU |
+| ---------- | ---- | --- |
+| Docker     | 2057 | 115 |
+| In-Process | 3227 | 157 |

@@ -56,6 +56,7 @@ dependencies = [
   "typer>=0.7.0",
   "uvicorn>=0.23",
   "watchdog>=3.0.0",
+  "google-cloud-language>=2.14.0",
 ]
 
 [project.optional-dependencies]
@@ -87,6 +88,7 @@ dev = [
   "pytest-httpx>=0.22.0",
   "streamlit>=1.37.0"
 ]
+gcp = ["google-cloud-language>=2.14.0"]
 
 [project.urls]
 homepage = "https://github.com/NVIDIA/nemo-guardrails"
