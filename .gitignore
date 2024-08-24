@@ -33,4 +33,3 @@ docs/user_guides/llm/vertexai/config
 docs/**/config
 # vscode local history extension
 .history
-
