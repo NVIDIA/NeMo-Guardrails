@@ -163,7 +163,11 @@ flow bot refuse to respond
 flow tracking bot talking state
   """tracking bot talking state in global variable $bot_talking_state."""
   global $bot_talking_state
+
+  # TODO: keeping both for backwards compatibility reason. To clean up.
   global $last_bot_script
+  global $last_bot_message
+
   if $bot_talking_state == None
     $bot_talking_state = False
   await bot started saying something
@@ -171,6 +175,7 @@ flow tracking bot talking state
   await bot said something as $bot_said_flow
   $bot_talking_state = False
   $last_bot_script = $bot_said_flow.text
+  $last_bot_message = $bot_said_flow.text
 
 @loop("state_tracking")
 flow tracking user talking state
