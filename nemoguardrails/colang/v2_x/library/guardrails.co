@@ -22,12 +22,15 @@ flow _user_said $text -> $event
 
 
 @override
-flow _user_saying -> $event
+flow _user_saying $text -> $event
   """Override core flow for when the user is saying something."""
   global $user_message
   if $text
-    # This matches to a transcript where after some initial characters it finds $text followed optionally by up to two words
-    match UtteranceUserAction.TranscriptUpdated(interim_transcript=regex("(?i).*({$text})((\s*\w+\s*){0,2})\W*$")) as $event
+    if is_regex($text)
+      match UtteranceUserAction.TranscriptUpdated(interim_transcript=$text) as $event
+    else
+      # This matches to a transcript where after some initial characters it finds $text followed optionally by up to two words
+      match UtteranceUserAction.TranscriptUpdated(interim_transcript=regex("(?i).*({$text})((\s*\w+\s*){{0,2}})\W*$")) as $event
   else
     match UtteranceUserAction.TranscriptUpdated() as $event
 
