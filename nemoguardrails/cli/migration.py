@@ -224,8 +224,8 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
         # We convert "define subflow" to "flow"
         line = re.sub(r"define subflow", "flow", re.sub(r"[-']", " ", line))
 
-        # Convert "create event ..." to "send event ..." while preserving indentation
-        line = re.sub(r"(^\s*)create event", r"\1send event", line)
+        # Convert "create event ..." to "send  ..." while preserving indentation
+        line = re.sub(r"(^\s*)create event", r"\1send", line)
 
         if _is_anonymous_flow(line):
             # warnings.warn("Using anonymous flow is deprecated in Colang 2.0.")
