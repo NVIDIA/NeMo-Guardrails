@@ -1016,7 +1016,6 @@ class RailsConfig(BaseModel):
 
             parsed_colang_files.append(_parsed_config)
 
-        print("WE ARE HERE SUPRISE!!!!!!!!!!!!!!!")
         # Load any new colang files potentially coming from imports
         if raw_config.get("import_paths"):
             _load_imported_paths(raw_config, colang_files)
