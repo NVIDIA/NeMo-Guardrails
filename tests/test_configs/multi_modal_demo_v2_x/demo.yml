@@ -3,7 +3,7 @@ colang_version: "2.x"
 models:
     - type: main
       engine: openai
-      model: gtp-4
+      model: gpt-4o
       # engine: nim
       # model: meta/llama3-70b-instruct
 
