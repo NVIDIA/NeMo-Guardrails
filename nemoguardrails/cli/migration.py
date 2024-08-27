@@ -260,9 +260,10 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
         line = re.sub(r"execute", "await", line)
 
         # convert snake_case after "await" to CamelCase only if it's a single word, i.e., it is an action not a flow.
-        match = re.search(r"await (\w+)", line)
+        match = re.search(r"await ([\w\s]+)", line)
         if match:
             action_name = match.group(1)
+            print(action_name)
 
             if "_" in action_name:
                 snake_case = action_name
