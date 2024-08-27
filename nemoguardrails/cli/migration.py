@@ -226,6 +226,9 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
         # Convert "create event ..." to "send  ..." while preserving indentation
         line = re.sub(r"(^\s*)create event", r"\1send", line)
 
+        # Convert $config.* to $system.config.*
+        line = re.sub(r"\$config\.", r"$system.config.", line)
+
         if _is_anonymous_flow(line):
             # warnings.warn("Using anonymous flow is deprecated in Colang 2.0.")
             line = _revise_anonymous_flow(line, next_line) + "\n"
