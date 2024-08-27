@@ -264,11 +264,14 @@ class Action:
     def get_event(self, name: str, arguments: dict) -> ActionEvent:
         """Returns the corresponding action event."""
         if name.endswith("Updated"):
-            split_name = name.rsplit("Updated", 1)
-            if split_name[0] == "":
-                raise ColangSyntaxError(f"Invalid action event {name}!")
-            arguments.update({"event_parameter_name": split_name[0]})
-            name = "Updated"
+            if len(name) > 7:
+                split_name = name.rsplit("Updated", 1)
+                if split_name[0] == "":
+                    raise ColangSyntaxError(f"Invalid action event {name}!")
+                arguments.update({"event_parameter_name": split_name[0]})
+                name = "Updated"
+            else:
+                arguments.update({"event_parameter_name": ""})
         if name not in Action._event_name_map:
             raise ColangSyntaxError(f"Invalid action event {name}!")
         func = getattr(self, Action._event_name_map[name])
