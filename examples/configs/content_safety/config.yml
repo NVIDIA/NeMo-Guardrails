@@ -19,8 +19,8 @@ models:
 rails:
   input:
     flows:
-      - content safety check input $model=shieldgemma
-      - content safety check input $model=llama_guard
+      - content safety check input $model="shieldgemma"
+      - content safety check input $model="llama_guard"
   output:
     flows:
-      - content safety check output $model=llama_guard_2
+      - content safety check output $model="llama_guard_2"
