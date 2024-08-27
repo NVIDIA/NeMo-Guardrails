@@ -1,7 +1,10 @@
 
 flow self check input
-    $allowed = await SelfCheckInputAction
+  $allowed = await SelfCheckInputAction
 
-    if not $allowed
-        bot refuse to respond
-        abort
+  if not $allowed
+    if $system.config.enable_rails_exceptions
+      send InputRailException(message="Input not allowed. The input was blocked by the 'self check input' flow.")
+    else
+      bot refuse to respond
+    abort

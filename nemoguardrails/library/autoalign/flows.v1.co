@@ -2,7 +2,10 @@ define subflow autoalign check input
   $input_result = execute autoalign_input_api(show_autoalign_message=True)
   if $input_result["guardrails_triggered"]
     $autoalign_input_response = $input_result['combined_response']
-    bot refuse to respond
+    if $config.enable_rails_exceptions
+      create event AutoAlignInputRailException(message="AutoAlign input guardrail triggered")
+    else
+      bot refuse to respond
     stop
   else if $input_result["pii_fast"] and $input_result["pii_fast"]["guarded"]:
     $user_message = $input_result["pii_fast"]["response"]
@@ -10,7 +13,10 @@ define subflow autoalign check input
 define subflow autoalign check output
   $output_result = execute autoalign_output_api(show_autoalign_message=True)
   if $output_result["guardrails_triggered"]
-    bot refuse to respond
+    if $config.enable_rails_exceptions
+      create event AutoAlignOutputRailException(message="AutoAlign guardrail triggered")
+    else
+      bot refuse to respond
     stop
   else
     $pii_message_output = $output_result["pii_fast"]["response"]

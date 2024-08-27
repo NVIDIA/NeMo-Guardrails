@@ -8,5 +8,8 @@ define flow patronus lynx check output hallucination
   $reasoning = $patronus_lynx_response["reasoning"]
 
   if $hallucination
-    bot inform answer unknown
+    if $config.enable_rails_exceptions
+      create event PatronusAIHallucinationException(message="Hallucination detected. The previous answer may not be accurate")
+    else
+      bot inform answer unknown
     stop

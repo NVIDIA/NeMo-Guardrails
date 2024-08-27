@@ -11,7 +11,10 @@ define flow content safety check input
   $policy_violations = $response["policy_violations"]
 
   if not $allowed
-    bot refuse to respond
+    if $config.enable_rails_exceptions
+      create event ContentSafetyCheckInputException(message="Input not allowed. The input was blocked by the 'content safety check input $model='{$model}'' flow.")
+    else
+      bot refuse to respond
     stop
 
 define flow content safety check output
@@ -20,5 +23,8 @@ define flow content safety check output
   $policy_violations = $response["policy_violations"]
 
   if not $allowed
-    bot refuse to respond
+    if $config.enable_rails_exceptions
+      create event ContentSafetyCheckOuputException(message="Output not allowed. The output was blocked by the 'content safety check output $model='{$model}'' flow.")
+    else
+      bot refuse to respond
     stop
