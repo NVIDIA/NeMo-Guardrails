@@ -852,10 +852,6 @@ def _process_config_files(config_files_to_process: List[str]) -> int:
         # set colang version to 2.x
         _set_colang_version(version="2.x", file_path=file_path)
 
-        # We make sure we add the Colang version as well to the main config file.
-        if file_path.endswith("config.yml") or file_path.endswith("config.yaml"):
-            _append_colang_version(file_path)
-
     return total_config_files_changed
 
 
