@@ -3,7 +3,17 @@ colang_version: "2.x"
 models:
     - type: main
       engine: openai
+      # model: gpt-3.5-turbo-instruct
+      # model: gpt-3.5-turbo
       model: gpt-4o
+      # model: gpt-4o-mini
+
+      # engine: nim
+      # model: meta/llama3-70b-instruct
+      # model: meta/llama-3.1-8b-instruct
+      # model: meta/llama-3.1-70b-instruct
+
+      # Models that currently don't work:
       # engine: nim
       # model: meta/llama3-70b-instruct
 
