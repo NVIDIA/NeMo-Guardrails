@@ -274,3 +274,15 @@ prompts:
 
         - type: system
           content: "Continuation of interaction:"
+
+
+    - task: generate_flow_continuation_from_flow_nld
+      models:
+        - llama3
+        - llama-3.1
+      messages:
+        - type: system
+          content: "Directly response with expected answer. Don't provide any pre- or post-explanations."
+        - type: user
+          content: |-
+              {{ flow_nld }}

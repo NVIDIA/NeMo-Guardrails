@@ -757,13 +757,29 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         render_context["tool_names"] = ", ".join(tool_names)
 
         # TODO: add the context of the flow
-        prompt = self.llm_task_manager._render_string(
+        flow_nld = self.llm_task_manager._render_string(
             textwrap.dedent(docstring), context=render_context, events=events
         )
 
-        # We make this call with temperature 0 to have it as deterministic as possible.
+        prompt = self.llm_task_manager.render_task_prompt(
+            task=Task.GENERATE_FLOW_CONTINUATION_FROM_NLD,
+            events=events,
+            context={
+                "flow_nld": flow_nld,
+            },
+        )
+
+        stop = self.llm_task_manager.get_stop_tokens(
+            Task.GENERATE_FLOW_CONTINUATION_FROM_NLD
+        )
+
         with llm_params(llm, temperature=self.config.lowest_temperature):
-            result = await llm_call(llm, prompt)
+            result = await llm_call(llm, prompt, stop)
+
+        # Parse the output using the associated parser
+        result = self.llm_task_manager.parse_task_output(
+            Task.GENERATE_FLOW_CONTINUATION_FROM_NLD, output=result
+        )
 
         result = _remove_leading_empty_lines(result)
         lines = result.split("\n")

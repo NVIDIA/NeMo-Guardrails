@@ -206,3 +206,7 @@ prompts:
           {{ history | colang }}
 
           bot intent:
+
+    - task: generate_flow_continuation_from_flow_nld
+      content: |-
+          {{ flow_nld }}

@@ -286,3 +286,12 @@ prompts:
 
       - type: system
         content: "Continuation of interaction:"
+
+  - task: generate_flow_continuation_from_flow_nld
+    models:
+      - openai/gpt-3.5-turbo
+      - openai/gpt-4
+    messages:
+      - type: user
+        content: |-
+            {{ flow_nld }}

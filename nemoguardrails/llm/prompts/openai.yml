@@ -232,3 +232,10 @@ prompts:
           {{ history | colang }}
 
           bot intent:
+
+
+    - task: generate_flow_continuation_from_flow_nld
+      models:
+          - openai/gpt-3.5-turbo-instruct
+      content: |-
+          {{ flow_nld }}
