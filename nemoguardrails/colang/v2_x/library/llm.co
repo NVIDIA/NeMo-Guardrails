@@ -95,6 +95,9 @@ flow continuation on unhandled user utterance
 
   log 'start generating user intent and bot intent/action...'
   $action = 'user said "{$event.final_transcript}"'
+
+  # NOTE: I am not sure if this is needed here.
+  await RetrieveRelevantChunksAction()
   #await GenerateUserIntentAction(user_action=$action, max_example_flows=20) as $action_ref
   #$user_intent = $action_ref.return_value
   await GenerateUserIntentAndBotAction(user_action=$action, max_example_flows=20) as $action_ref
@@ -209,6 +212,8 @@ flow llm generate interaction continuation flow -> $flow_name
   $flow_info = await GenerateFlowContinuationAction(temperature=0.1)
   log "generated flow continuation: `{$flow_info}`"
   $exists = await CheckValidFlowExistsAction(flow_id=$flow_info.name)
+
+  await RetrieveRelevantChunksAction()
 
   if $exists == False
     $flows = await AddFlowsAction(config=$flow_info.body)
