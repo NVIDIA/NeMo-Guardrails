@@ -245,11 +245,11 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
 
         # Convert "bot ..." to "match UtteranceBotActionFinished()"
         if line.lstrip().startswith("bot ..."):
-            line = re.sub(r"(\s*)bot \.\.\.", r"\1match bot said something", line)
+            line = re.sub(r"(\s*)bot \.\.\.", r"\1bot said something", line)
 
         # Convert "user ..." to "match UtteranceUserActionFinished()"
         elif line.lstrip().startswith("user ..."):
-            line = re.sub(r"(\s*)user \.\.\.", r"\1match user said something", line)
+            line = re.sub(r"(\s*)user \.\.\.", r"\1user said something", line)
 
         # if _is_flow(stripped_line):
         #     stripped_line = re.sub(r"[-+*/]", "", stripped_line)
@@ -263,8 +263,6 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
         match = re.search(r"await ([\w\s]+)", line)
         if match:
             action_name = match.group(1)
-            print(action_name)
-
             if "_" in action_name:
                 snake_case = action_name
                 camel_case = utils.snake_to_camelcase(snake_case)
