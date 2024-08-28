@@ -1,0 +1,28 @@
+define subflow autoalign check input
+  $input_result = execute autoalign_input_api(show_autoalign_message=True)
+  if $input_result["guardrails_triggered"]
+    $autoalign_input_response = $input_result['combined_response']
+    bot refuse to respond
+    stop
+  else if $input_result["pii_fast"] and $input_result["pii_fast"]["guarded"]:
+    $user_message = $input_result["pii_fast"]["response"]
+
+define subflow autoalign check output
+  $output_result = execute autoalign_output_api(show_autoalign_message=True)
+  if $output_result["guardrails_triggered"]
+    bot refuse to respond
+    stop
+  else
+    $pii_message_output = $output_result["pii_fast"]["response"]
+    if $output_result["pii_fast"]["guarded"]
+      $bot_message = $pii_message_output
+
+define subflow autoalign factcheck output
+  if $check_facts == True
+    $check_facts = False
+    $threshold = 0.5
+    $output_result = execute autoalign_factcheck_output_api(factcheck_threshold=$threshold, show_autoalign_message=True)
+    bot provide response
+
+define bot refuse to respond
+  "I'm sorry, I can't respond to that."

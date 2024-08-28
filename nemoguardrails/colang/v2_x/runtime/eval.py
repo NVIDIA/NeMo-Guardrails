@@ -30,7 +30,7 @@ from nemoguardrails.colang.v2_x.runtime.utils import (
     AttributeDict,
     escape_special_string_characters,
 )
-from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
+from nemoguardrails.logging.simplify_formatter import SimplifyFormatter
 from nemoguardrails.utils import new_uuid
 
 log = logging.getLogger(__name__)

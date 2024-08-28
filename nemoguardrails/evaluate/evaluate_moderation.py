@@ -21,7 +21,7 @@ import tqdm
 
 from nemoguardrails import LLMRails
 from nemoguardrails.actions.llm.utils import llm_call
-from nemoguardrails.eval.utils import load_dataset
+from nemoguardrails.evaluate.utils import load_dataset
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.prompts import Task
 from nemoguardrails.llm.taskmanager import LLMTaskManager

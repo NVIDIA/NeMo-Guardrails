@@ -1,0 +1,8 @@
+expected_latencies:
+  llm_call_gpt-3.5-turbo-instruct_fixed_latency: 0.3
+  llm_call_gpt-3.5-turbo-instruct_prompt_token_latency: 0.0001
+  llm_call_gpt-3.5-turbo-instruct_completion_token_latency: 0.005
+
+  llm_call_meta_llama-3.1-8b-instruct_fixed_latency: 0.25
+  llm_call_meta_llama-3.1-8b-instruct_prompt_token_latency: 0.0001
+  llm_call_meta_llama-3.1-8b-instruct_completion_token_latency: 0.008

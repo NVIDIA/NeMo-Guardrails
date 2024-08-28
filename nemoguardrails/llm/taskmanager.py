@@ -15,7 +15,7 @@
 
 import logging
 from ast import literal_eval
-from typing import Any, List, Optional, Union
+from typing import Any, Callable, List, Optional, Union
 
 from jinja2 import Environment, meta
 
@@ -40,6 +40,7 @@ from nemoguardrails.llm.filters import (
 from nemoguardrails.llm.output_parsers import (
     bot_intent_parser,
     bot_message_parser,
+    is_content_safe,
     user_intent_parser,
     verbose_v1_parser,
 )
@@ -83,6 +84,7 @@ class LLMTaskManager:
             "bot_intent": bot_intent_parser,
             "bot_message": bot_message_parser,
             "verbose_v1": verbose_v1_parser,
+            "is_content_safe": is_content_safe,
         }
 
         # The prompt context will hold additional variables that ce also be included
@@ -286,17 +288,26 @@ class LLMTaskManager:
         else:
             return output
 
-    def get_stop_tokens(self, task: Union[str, Task]) -> List[str]:
+    def has_output_parser(self, task: Task):
+        prompt = get_prompt(self.config, task)
+        return prompt.output_parser is not None
+
+    def get_stop_tokens(self, task: Union[str, Task]) -> Optional[List[str]]:
         """Return the stop sequence for the given task."""
         prompt = get_prompt(self.config, task)
         return prompt.stop
 
-    def register_filter(self, filter_fn: callable, name: Optional[str] = None):
+    def get_max_tokens(self, task: Union[str, Task]) -> Optional[int]:
+        """Return the maximum number of tokens for the given task."""
+        prompt = get_prompt(self.config, task)
+        return prompt.max_tokens
+
+    def register_filter(self, filter_fn: Callable, name: Optional[str] = None):
         """Register a custom filter for the rails configuration."""
         name = name or filter_fn.__name__
         self.env.filters[name] = filter_fn
 
-    def register_output_parser(self, output_parser: callable, name: str):
+    def register_output_parser(self, output_parser: Callable, name: str):
         """Register a custom output parser for the rails configuration."""
         self.output_parsers[name] = output_parser
 

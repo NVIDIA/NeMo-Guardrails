@@ -20,8 +20,10 @@ and registers them.
 
 Additional providers can be registered using the `register_llm_provider` function.
 """
+
 import asyncio
 import logging
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Dict, List, Optional, Type
 
 from langchain.base_language import BaseLanguageModel
@@ -33,6 +35,7 @@ from langchain.llms.base import LLM
 from langchain.schema.output import GenerationChunk
 from langchain_community import llms
 from langchain_community.llms import HuggingFacePipeline
+from packaging import version as pkg_version
 
 from nemoguardrails.rails.llm.config import Model
 
@@ -240,9 +243,18 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
             )
     elif model_config.engine == "nvidia_ai_endpoints" or model_config.engine == "nim":
         try:
-            from langchain_nvidia_ai_endpoints import ChatNVIDIA
+            from ._langchain_nvidia_ai_endpoints_patch import ChatNVIDIA
 
+            # Check the version
+            package_version = version("langchain_nvidia_ai_endpoints")
+
+            if _parse_version(package_version) < (0, 2, 0):
+                raise ValueError(
+                    "langchain_nvidia_ai_endpoints version must be 0.2.0 or above."
+                    " Please upgrade it with `pip install langchain-nvidia-ai-endpoints --upgrade`."
+                )
             return ChatNVIDIA
+
         except ImportError:
             raise ImportError(
                 "Could not import langchain_nvidia_ai_endpoints, please install it with "
@@ -269,3 +281,7 @@ def get_llm_provider(model_config: Model) -> Type[BaseLanguageModel]:
 def get_llm_provider_names() -> List[str]:
     """Returns the list of supported LLM providers."""
     return list(sorted(list(_providers.keys())))
+
+
+def _parse_version(version_str):
+    return tuple(map(int, (version_str.split("."))))

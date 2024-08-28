@@ -110,95 +110,68 @@ prompts:
           ${{ var_name }} =
       output_parser: "verbose_v1"
 
-    - task: fact_checking
-      content: |-
-          You are given a task to identify if the hypothesis is grounded and entailed to the evidence.
-          You will only use the contents of the evidence and not rely on external knowledge.
-          Answer with yes/no. "evidence": {{ evidence }} "hypothesis": {{ response }} "entails":
-
     # Colang 2.x prompts below.
 
     # Prompt for detecting the user message canonical form.
     - task: generate_user_intent_from_user_action
-      messages:
-          - type: system
-            content: "{{ general_instructions }}"
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
-          - type: system
-            content: "This is how a conversation between a user and the bot can go:"
-          - "{{ sample_conversation | to_messages_v2 }}"
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
-          - type: system
-            content: |-
-                "These are the most likely user intents:"
-                {{ examples }}
+          # These are the most likely user intents:
+          {{ examples }}
 
-          - type: system
-            content: "This is the current conversation between the user and the bot:"
-          - "{{ history | colang | to_messages_v2}}"
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
 
-          - type: user
-            content: "user action: {{ user_action }}"
-
-          - type: system
-            content: "Derive `user intent:` from user action considering the intents from section 'These are the most likely user intents':"
+          # Continuation of interaction using only specified user intents from the section 'These are the most likely user intents:':
+          user action: {{ user_action }}
+          user intent:
+      stop:
+          - "\n"
 
     - task: generate_user_intent_and_bot_action_from_user_action
-      messages:
-          # - type: system
-          #   content: |-
-          #       {{ general_instructions }}
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
-          #       # This is how a conversation between a user and the bot can go:
-          #       {{ sample_conversation }}
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
-          #       # These are the most likely user intents:
-          #       {{ examples }}
+          # These are the most likely user intents:
+          {{ examples }}
 
-          - type: system
-            content: "{{ general_instructions }}"
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
 
-          - type: system
-            content: "This is how a conversation between a user and the bot can go:"
-          - "{{ sample_conversation | to_messages_v2 }}"
-
-          - type: system
-            content: |-
-                "These are the most likely user intents:"
-                {{ examples }}
-
-          - type: system
-            content: "This is the current conversation between the user and the bot:"
-          - "{{ history | colang | to_messages_v2}}"
-
-          - type: user
-            content: "user action: {{ user_action }}"
-
-          - type: system
-            content: "Continuation of the interaction starting with a `user intent:` from the section 'These are the most likely user intents':"
+          # Continuation of interaction using only specified user intents from the section 'These are the most likely user intents:':
+          user action: {{ user_action }}
+          user intent:
+      stop:
+          - "\nuser intent:"
 
     # Prompt for generating the value of a context variable.
     - task: generate_value_from_instruction
-      messages:
-          - type: system
-            content: |
-                {{ general_instructions }}
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
-                Your task is to generate value for the ${{ var_name }} variable..
-                Do not provide any explanations, just output value.
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
-          - type: system
-            content: "This is how a conversation between a user and the bot can go:"
-          - "{{ sample_conversation | to_messages_v2 }}"
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
 
-          - type: system
-            content: "This is the current conversation between the user and the bot:"
-          - "{{ history | colang | to_messages_v2}}"
-
-          - type: assistant
-            content: |
-                Bot thinking: follow the following instructions: {{ instructions }}
-                ${{ var_name }} =
+          # {{ instructions }}
+          ${{ var_name }} =
+      stop:
+          - "\n"
 
     # Prompt for generating a flow from instructions.
     - task: generate_flow_from_instructions
@@ -212,33 +185,24 @@ prompts:
 
     # Prompt for generating a flow from name.
     - task: generate_flow_from_name
-      messages:
-          - type: system
-            content: |-
-                Example flows:
-                {{ examples }}
+      content: |-
+          # Example flows:
+          {{ examples }}
 
-          - type: system
-            content: |-
-                Complete the following flow based on its name:
-                flow {{ flow_name }}
+          # Complete the following flow based on its name:
+          flow {{ flow_name }}
 
       # Prompt for generating the continuation for the current conversation.
     - task: generate_flow_continuation
-      models:
-          - openai/gpt-3.5-turbo
-          - openai/gpt-4
-      messages:
-          - type: system
-            content: "{{ general_instructions }}"
+      content: |-
+          """
+          {{ general_instructions }}
+          """
 
-          - type: system
-            content: "This is how a conversation between a user and the bot can go:"
-          - "{{ sample_conversation | to_messages_v2 }}"
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
 
-          - type: system
-            content: "This is the current conversation between the user and the bot:"
-          - "{{ history | colang | to_messages_v2 }}"
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
 
-          - type: system
-            content: "Continuation of interaction:"
+          bot intent:
