@@ -216,9 +216,10 @@ async def test_fact_checking_fallback_to_self_check_correct(httpx_mock):
 
 
 @pytest.mark.asyncio
-async def test_fact_checking_fallback_self_check_wrong(httpx_mock):
+async def test_fact_checking_fallback_self_check_wrong_raise_exception(httpx_mock):
     # Test 5 - Factual statement - AlignScore endpoint not set up properly, use ask llm for fact-checking
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "fact_checking"))
+    config.enable_rails_exceptions = True
     chat = TestChat(config)
     chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
 
@@ -249,5 +250,12 @@ async def test_fact_checking_fallback_self_check_wrong(httpx_mock):
             payload="API error 404",
         )
 
-        chat >> "What is NeMo Guardrails?"
-        await chat.bot_async("I don't know the answer to that.")
+        rails = chat.app
+
+        messages = [
+            {"role": "user", "content": "What is NeMo-Guardrails?"},
+        ]
+        new_message = await rails.generate_async(messages=messages)
+
+        assert new_message["role"] == "exception"
+        assert new_message["content"]["type"] == "FactCheckRailException"

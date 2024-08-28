@@ -12,13 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from typing import Optional
+
 import pytest
+from jinja2 import Template
 
 from nemoguardrails import RailsConfig
 from tests.utils import TestChat
 
-config = RailsConfig.from_content(
-    """
+colang_content = """
     define user express greeting
         "hello"
         "hi"
@@ -30,29 +33,63 @@ config = RailsConfig.from_content(
     define flow greeting
         user express greeting
         bot express greeting
-""",
-    yaml_content="""
+"""
+
+
+def create_yaml_content(
+    input_params: Optional[str] = None, output_params: Optional[str] = None
+):
+    input_prompt_param = input_params.replace(" ", "_") if input_params else None
+    output_prompt_param = output_params.replace(" ", "_") if output_params else None
+
+    template = Template(
+        """
     models: []
     rails:
-        input:
+        {% if input_params %}input:
             flows:
-                - self check input
-        output:
+                - {{ input_params }}
+        {% endif %}
+        {% if output_params %}output:
             flows:
-                - self check output
-    prompts:
-        # We need to have some prompt placeholders, otherwise the validation fails.
-        - task: self_check_input
-          content: ...
-        - task: self_check_output
-          content: ...
-
+                - {{ output_params }}
+        {% endif %}
+    {% if input_prompt_param or output_prompt_param %}prompts:
+        {% if input_prompt_param %}- task: {{ input_prompt_param }}
+          content: '...'
+        {% endif %}
+        {% if output_prompt_param %}- task: {{ output_prompt_param }}
+          content: '...'
+        {% endif %}
+    {% endif %}
     enable_rails_exceptions: True
-    """,
-)
+    """
+    )
+
+    yaml_content = template.render(
+        input_params=input_params,
+        output_params=output_params,
+        input_prompt_param=input_prompt_param,
+        output_prompt_param=output_prompt_param,
+    )
+
+    return yaml_content
+
+
+def create_config(
+    input_params: Optional[str] = None, output_params: Optional[str] = None
+):
+    yaml_content = create_yaml_content(input_params, output_params)
+    config = RailsConfig.from_content(
+        colang_content=colang_content, yaml_content=yaml_content
+    )
+    return config
 
 
 def test_self_check_input_exception():
+    config = create_config(
+        input_params="self check input", output_params="self check output"
+    )
     chat = TestChat(
         config,
         llm_completions=[
@@ -71,6 +108,9 @@ def test_self_check_input_exception():
 
 
 def test_self_check_output_exception():
+    config = create_config(
+        input_params="self check input", output_params="self check output"
+    )
     chat = TestChat(
         config,
         llm_completions=[
