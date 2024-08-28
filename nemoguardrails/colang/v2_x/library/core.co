@@ -11,8 +11,11 @@ flow _user_said $text -> $event
   else
     match UtteranceUserAction.Finished() as $event
 
+  $text = $event.final_transcript
+
 flow _user_saying $text -> $event
   """The internal flow for all semantic 'user saying' flows."""
+
   if $text
     if is_regex($text)
       match UtteranceUserAction.TranscriptUpdated(interim_transcript=$text) as $event
@@ -22,9 +25,15 @@ flow _user_saying $text -> $event
   else
     match UtteranceUserAction.TranscriptUpdated() as $event
 
+  $text = $event.interim_transcript
+
 flow _user_said_something_unexpected -> $event
   """The internal flow for all semantic 'user said something unexpected' flows."""
+  global $last_user_message
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
+
+  $text = $event.final_transcript
+  $last_user_message = $text
 
 @meta(user_action='user said "{$transcript}"')
 flow user said $text -> $transcript
@@ -73,6 +82,12 @@ flow user said something unexpected -> $event, $transcript
 
 flow _bot_say $text -> $action
   """The internal flow for all semantic level bot utterance flows."""
+  global $bot_message
+  global $last_bot_message
+
+  $bot_message = $text
+  $last_bot_message = $text
+
   await UtteranceBotAction(script=$text) as $action
 
 @meta(bot_action=True)
