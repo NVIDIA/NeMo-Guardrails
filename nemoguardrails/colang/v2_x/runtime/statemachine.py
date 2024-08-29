@@ -691,10 +691,13 @@ def _get_all_head_candidates(state: State, event: Event) -> List[Tuple[str, str]
             state.event_matching_heads.get(InternalEvents.FLOW_FINISHED, [])
         )
 
-    # Ensure that event order is related to flow hierarchy
+    # Ensure that event order is related to interaction loop priority and secondly the flow hierarchy
     sorted_head_candidates = sorted(
         head_candidates,
-        key=lambda s: state.flow_states[s[0]].hierarchy_position,
+        key=lambda s: (
+            -1 * state.flow_configs[state.flow_states[s[0]].flow_id].loop_priority,
+            state.flow_states[s[0]].hierarchy_position,
+        ),
     )
 
     return sorted_head_candidates
