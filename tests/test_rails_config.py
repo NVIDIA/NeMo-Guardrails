@@ -18,17 +18,32 @@ import logging
 import pytest
 
 from nemoguardrails import RailsConfig
+from nemoguardrails.llm.prompts import TaskPrompt
 
 
-def test_check_output_parser_exists(caplog):
-    caplog.set_level(logging.INFO)
-    values = {
-        "prompts": [
+@pytest.fixture(
+    params=[
+        [
+            TaskPrompt(task="self_check_input", output_parser=None, content="..."),
+            TaskPrompt(task="self_check_facts", output_parser="parser1", content="..."),
+            TaskPrompt(
+                task="self_check_output", output_parser="parser2", content="..."
+            ),
+        ],
+        [
             {"task": "self_check_input", "output_parser": None},
             {"task": "self_check_facts", "output_parser": "parser1"},
             {"task": "self_check_output", "output_parser": "parser2"},
-        ]
-    }
+        ],
+    ]
+)
+def prompts(request):
+    return request.param
+
+
+def test_check_output_parser_exists(caplog, prompts):
+    caplog.set_level(logging.INFO)
+    values = {"prompts": prompts}
 
     result = RailsConfig.check_output_parser_exists(values)
 

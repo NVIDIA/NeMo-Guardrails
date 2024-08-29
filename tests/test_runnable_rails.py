@@ -68,6 +68,24 @@ def test_string_in_string_out_with_verbose_flag():
     assert result == "Paris."
 
 
+def test_configurable_passed_to_invoke():
+    llm = FakeLLM(
+        responses=[
+            "Paris.",
+        ]
+    )
+    config = RailsConfig.from_content(config={"models": []})
+    rails = RunnableRails(config, llm=llm)
+
+    prompt = PromptTemplate.from_template("The capital of {param1} ")
+    chain = prompt | (rails | llm)
+
+    configurable = {"configurable": {"param1": "value1", "param2": "value2"}}
+    result = chain.invoke({"param1": "France"}, config=configurable)
+
+    assert result == "Paris."
+
+
 def test_string_in_string_out_pipe_syntax():
     llm = FakeLLM(
         responses=[

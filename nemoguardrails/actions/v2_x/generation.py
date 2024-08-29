@@ -733,7 +733,9 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         render_context = {}
         render_context.update(state.context)
-        render_context.update(state.flow_id_states[triggering_flow_id][0].context)
+        # TODO: Taking the last element is a shortcut.
+        #   a more robust logic needs to be implemented.
+        render_context.update(state.flow_id_states[triggering_flow_id][-1].context)
 
         # We also extract dynamically the list of tools
         tools = []
