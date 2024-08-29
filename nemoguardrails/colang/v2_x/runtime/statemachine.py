@@ -2401,7 +2401,7 @@ def _get_eval_context(state: State, flow_state: FlowState) -> dict:
         if var.startswith("_global_"):
             context.update({var: state.context[var[8:]]})
     # Add state as _state
-    context.update({"_state": state})
+    context.update({"system": {"state": state, "config": state.rails_config}})
     context.update({"self": flow_state})
     return context
 

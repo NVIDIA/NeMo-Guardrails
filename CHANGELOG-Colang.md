@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 
 * [#673](https://github.com/NVIDIA/NeMo-Guardrails/pull/673) Add support for new Colang 2 keyword `deactivate`.
+* [#703](https://github.com/NVIDIA/NeMo-Guardrails/pull/703) Add bot configuration as variable `$system.config`.
 
 ### Changed
 

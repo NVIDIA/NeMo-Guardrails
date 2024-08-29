@@ -769,6 +769,9 @@ class State:
     # The configuration of all the flows that are available.
     flow_configs: Dict[str, FlowConfig]
 
+    # The full rails configuration object
+    rails_config: Optional["RailsConfig"] = None
+
     # All actions that were instantiated in a flow that is still referenced somewhere
     actions: Dict[str, Action] = field(default_factory=dict)
 
