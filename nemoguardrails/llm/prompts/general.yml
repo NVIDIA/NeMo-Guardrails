@@ -146,6 +146,13 @@ prompts:
           # These are the most likely user intents:
           {{ examples }}
 
+          {% if context.relevant_chunks %}
+          # This is some additional context:
+          ```markdown
+          {{ context.relevant_chunks }}
+          ```
+          {% endif %}
+
           # This is the current conversation between the user and the bot:
           {{ history | colang }}
 
@@ -204,6 +211,14 @@ prompts:
 
           # This is the current conversation between the user and the bot:
           {{ history | colang }}
+
+          {% if context.relevant_chunks %}
+          # This is some additional context:
+          ```markdown
+          {{ context.relevant_chunks }}
+          ```
+          {% endif %}
+
 
           bot intent:
 

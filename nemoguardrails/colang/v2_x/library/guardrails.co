@@ -43,6 +43,7 @@ flow _user_saying $text -> $event
 flow _user_said_something_unexpected -> $event
   """Override core flow for when the user said something unexpected."""
   global $user_message
+  global $last_user_message
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
 
   $text = $event.final_transcript
