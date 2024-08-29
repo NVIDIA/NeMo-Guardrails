@@ -297,12 +297,12 @@ So far, any concurrently progressing flows that resulted in different event gene
 
     .. code-block:: colang
 
-        @loop("<loop_name>")
+        @loop([id=]"<loop_name>"[,[priority=]<integer_number>])
         flow <name of flow> ...
 
     Hint: To generate a new loop name for each flow call use the loop name "NEW"
 
-By default, any flow without an explicit interaction loop inherits the interaction loop of its parent flow. Let's see now an example of a second interaction loop to design flows that augment the main interaction rather than compete with it:
+By default, any flow without an explicit interaction loop inherits the interaction loop of its parent flow and has priority level 0. Let's see now an example of a second interaction loop to design flows that augment the main interaction rather than compete with it:
 
 .. code-block:: colang
     :caption: more_on_flows/interaction_loops/main.co
@@ -355,6 +355,8 @@ The example implements two bot reaction flows that listen to the user saying "Hi
     Gesture: frown
 
     Goodbye
+
+By default, parallel flows in different interaction loops advance in order of their start or activation. This might be an important detail if e.g a global variable is set in one flow and read in another. If the order is wrong, the global variable will not be set yet when read by the other flow. In order to enforce the processing order independent of the start or activation order, you can define the interaction loop priority level using an integer. By default, any interaction loop has priority 0. A higher number defines a higher priority, and lower (negative) number a lower processing priority.
 
 
 .. _more-on-flows-flow-conflict-resolution-prioritization:
