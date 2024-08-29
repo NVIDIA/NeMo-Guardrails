@@ -40,7 +40,7 @@ async def content_safety_check_input(
 
     if context is not None:
         user_input = context.get("user_message", "")
-        model_name = context.get("model", None)
+        model_name = model_name or context.get("model", None)
 
     if model_name is None:
         error_msg = (
@@ -104,7 +104,7 @@ async def content_safety_check_output(
     if context is not None:
         user_input = context.get("user_message", "")
         bot_response = context.get("bot_message", "")
-        model_name = context.get("model", None)
+        model_name = model_name or context.get("model", None)
 
     if model_name is None:
         error_msg = (

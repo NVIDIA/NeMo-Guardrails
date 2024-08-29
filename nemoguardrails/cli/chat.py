@@ -391,14 +391,15 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 if action_uid in running_timer_tasks:
                     running_timer_tasks[action_uid].cancel()
                     running_timer_tasks.pop(action_uid)
+            elif event["type"].endswith("Exception"):
+                if event["type"].endswith("Exception"):
+                    console.print("[red]" + f"Event: {event}" + "[/]")
             elif event["type"] == "LocalAsyncCounter":
                 # if verbose.verbose_mode_enabled:
                 #     console.print(Styles.GREY + f"Event: {event}" + "[/]")
                 pass
             else:
-                if event["type"] not in ["LocalAsyncCounter"]:
-                    if not verbose.verbose_mode_enabled:
-                        console.print(f"Event: {event['type']}")
+                console.print(f"Event: {event['type']}")
 
         # TODO: deserialize the output state
         # state = State.from_dict(output_state)

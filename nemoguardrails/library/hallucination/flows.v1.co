@@ -24,7 +24,7 @@ define subflow self check hallucination
 
     if $is_hallucination
       if $config.enable_rails_exceptions
-        create event CheckHallucinationRailException(message="Hallucination detected. The previous answer may not be accurate")
+        create event SelfCheckHallucinationRailException(message="Hallucination detected. The previous answer may not be accurate")
       else
         bot inform answer unknown
       stop

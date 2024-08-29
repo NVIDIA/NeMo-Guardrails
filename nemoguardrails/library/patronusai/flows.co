@@ -1,0 +1,15 @@
+
+flow patronus lynx check output hallucination
+  $patronus_lynx_response = await PatronusLynxCheckOutputHallucinationAction
+  global $hallucination
+  $hallucination = $patronus_lynx_response["hallucination"]
+  # The Reasoning trace is currently unused, but can be used to modify the bot output
+  global $reasoning
+  $reasoning = $patronus_lynx_response["reasoning"]
+
+  if $hallucination
+    if $system.config.enable_rails_exceptions
+      send PatronusAIHallucinationException(message="Hallucination detected. The previous answer may not be accurate")
+    else
+      bot inform answer unknown
+    abort

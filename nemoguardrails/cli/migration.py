@@ -218,14 +218,18 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
         # Reset prev_line if a new block is reached
         if line.lstrip().startswith("define "):
             prev_line = None
-        # We convert "define flow" to "flow"
-        line = re.sub(r"define flow", "flow", re.sub(r"[-']", " ", line))
-
-        # We convert "define subflow" to "flow"
-        line = re.sub(r"define subflow", "flow", re.sub(r"[-']", " ", line))
+        if "define flow" in line or "define subflow" in line:
+            line = re.sub(r"[-']", " ", line)
+            # We convert "define flow" to "flow"
+            line = re.sub(r"define flow", "flow", line)
+            # We convert "define subflow" to "flow"
+            line = re.sub(r"define subflow", "flow", line)
 
         # Convert "create event ..." to "send  ..." while preserving indentation
         line = re.sub(r"(^\s*)create event", r"\1send", line)
+
+        # Convert $config.* to $system.config.*
+        line = re.sub(r"\$config\.", r"$system.config.", line)
 
         if _is_anonymous_flow(line):
             # warnings.warn("Using anonymous flow is deprecated in Colang 2.0.")
@@ -243,11 +247,11 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
 
         # Convert "bot ..." to "match UtteranceBotActionFinished()"
         if line.lstrip().startswith("bot ..."):
-            line = re.sub(r"(\s*)bot \.\.\.", r"\1match bot said something", line)
+            line = re.sub(r"(\s*)bot \.\.\.", r"\1bot said something", line)
 
         # Convert "user ..." to "match UtteranceUserActionFinished()"
         elif line.lstrip().startswith("user ..."):
-            line = re.sub(r"(\s*)user \.\.\.", r"\1match user said something", line)
+            line = re.sub(r"(\s*)user \.\.\.", r"\1user said something", line)
 
         # if _is_flow(stripped_line):
         #     stripped_line = re.sub(r"[-+*/]", "", stripped_line)
@@ -258,10 +262,9 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
         line = re.sub(r"execute", "await", line)
 
         # convert snake_case after "await" to CamelCase only if it's a single word, i.e., it is an action not a flow.
-        match = re.search(r"await (\w+)", line)
+        match = re.search(r"await ([\w\s]+)", line)
         if match:
             action_name = match.group(1)
-
             if "_" in action_name:
                 snake_case = action_name
                 camel_case = utils.snake_to_camelcase(snake_case)
@@ -850,10 +853,6 @@ def _process_config_files(config_files_to_process: List[str]) -> int:
 
         # set colang version to 2.x
         _set_colang_version(version="2.x", file_path=file_path)
-
-        # We make sure we add the Colang version as well to the main config file.
-        if file_path.endswith("config.yml") or file_path.endswith("config.yaml"):
-            _append_colang_version(file_path)
 
     return total_config_files_changed
 
