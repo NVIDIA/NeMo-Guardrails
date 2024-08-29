@@ -1504,7 +1504,7 @@ def test_interaction_loop_priorities():
       match Event1()
       send EventC()
 
-    @loop("a", 10)
+    @loop(id="a", priority=10)
     flow a
       match Event2()
       match Event1()
