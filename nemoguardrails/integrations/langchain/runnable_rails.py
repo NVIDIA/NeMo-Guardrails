@@ -26,6 +26,7 @@ from langchain_core.runnables.utils import Input, Output
 from langchain_core.tools import Tool
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.integrations.langchain.utils import async_wrap
 from nemoguardrails.rails.llm.options import GenerationOptions
 
 
@@ -47,6 +48,7 @@ class RunnableRails(Runnable[Input, Output]):
         self.passthrough_user_input_key = input_key
         self.passthrough_bot_output_key = output_key
         self.verbose = verbose
+        self.config: Optional[RunnableConfig] = None
 
         # We override the config passthrough.
         config.passthrough = passthrough
@@ -71,7 +73,8 @@ class RunnableRails(Runnable[Input, Output]):
         async def passthrough_fn(context: dict, events: List[dict]):
             # First, we fetch the input from the context
             _input = context.get("passthrough_input")
-            _output = await self.passthrough_runnable.ainvoke(input=_input)
+            async_wrapped_invoke = async_wrap(self.passthrough_runnable.invoke)
+            _output = await async_wrapped_invoke(_input, self.config, **self.kwargs)
 
             # If the output is a string, we consider it to be the output text
             if isinstance(_output, str):
@@ -183,6 +186,8 @@ class RunnableRails(Runnable[Input, Output]):
     ) -> Output:
         """Invoke this runnable synchronously."""
         input_messages = self._transform_input_to_rails_format(input)
+        self.config = config
+        self.kwargs = kwargs
         res = self.rails.generate(
             messages=input_messages, options=GenerationOptions(output_vars=True)
         )

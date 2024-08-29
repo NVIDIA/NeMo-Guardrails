@@ -192,16 +192,17 @@ As in Python's formatted string literals we can use braces to evaluate an expres
 If you need to include a brace character in the literal text, it can be escaped by doubling: ``{{`` and ``}}``.
 
 ----------------------------------------
-Reserved Flow Variables
+Built-in Flow Variables
 ----------------------------------------
 
 .. important::
-    This is work in progress and some of the reserved variables might change or be removed in the future.
+    This is work in progress and some of the built-in variables might change or be removed in the future.
 
-Currently, there are a couple of reserved flow variable names that cannot be used as variable names in a flow. They contain flow instance specific information:
+Currently, there are a couple of variable names that cannot be used as custom variable names in a flow. They contain flow instance specific information:
 
 .. code-block:: colang
 
+    $system: dict # System specific data like e.g. the current bot configuration `$system.config`
     $uid: str # The unique id of the flow instance
     $flow_id: str # The name of the current flow
     $loop_id: Optional[str] # The interaction loop id of the current flow

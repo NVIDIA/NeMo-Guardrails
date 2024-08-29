@@ -170,8 +170,10 @@ def eval_expression(expr: str, context: dict) -> Any:
                 "list": list,
             }
         )
-        if "_state" in context:
-            functions.update({"flows_info": partial(_flows_info, context["_state"])})
+        if "system" in context and "state" in context["system"]:
+            functions.update(
+                {"flows_info": partial(_flows_info, context["system"]["state"])}
+            )
 
         # TODO: replace this with something even more restrictive.
         s = EvalWithCompoundTypes(

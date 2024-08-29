@@ -123,3 +123,119 @@ prompts:
           {{ history | colang }}
           # {{ instructions }}
           ${{ var_name }} =
+
+    # Colang 2.x prompts below.
+
+    # Prompt for detecting the user message canonical form.
+    - task: generate_user_intent_from_user_action
+      models:
+          - openai/gpt-3.5-turbo-instruct
+      content: |-
+          """
+          {{ general_instructions }}
+          """
+
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
+
+          # These are the most likely user intents:
+          {{ examples }}
+
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
+
+          # Continuation of interaction using only specified user intents from the section 'These are the most likely user intents:':
+          user action: {{ user_action }}
+          user intent:
+      stop:
+          - "\n"
+
+    - task: generate_user_intent_and_bot_action_from_user_action
+      models:
+          - openai/gpt-3.5-turbo-instruct
+      content: |-
+          """
+          {{ general_instructions }}
+          """
+
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
+
+          # These are the most likely user intents:
+          {{ examples }}
+
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
+
+          # Continuation of interaction using only specified user intents from the section 'These are the most likely user intents:':
+          user action: {{ user_action }}
+          user intent:
+      stop:
+          - "\nuser intent:"
+
+    # Prompt for generating the value of a context variable.
+    - task: generate_value_from_instruction
+      models:
+          - openai/gpt-3.5-turbo-instruct
+      content: |-
+          """
+          {{ general_instructions }}
+          """
+
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
+
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
+
+          # {{ instructions }}
+          ${{ var_name }} =
+      stop:
+          - "\n"
+
+    # Prompt for generating a flow from instructions.
+    - task: generate_flow_from_instructions
+      models:
+          - openai/gpt-3.5-turbo-instruct
+      content: |-
+          # Example flows:
+          {{ examples }}
+
+          # Complete the following flow based on its instruction:
+          flow {{ flow_name }}
+            """{{ instructions }}"""
+
+    # Prompt for generating a flow from name.
+    - task: generate_flow_from_name
+      models:
+          - openai/gpt-3.5-turbo-instruct
+      content: |-
+          # Example flows:
+          {{ examples }}
+
+          # Complete the following flow based on its name:
+          flow {{ flow_name }}
+
+      # Prompt for generating the continuation for the current conversation.
+    - task: generate_flow_continuation
+      models:
+          - openai/gpt-3.5-turbo-instruct
+      content: |-
+          """
+          {{ general_instructions }}
+          """
+
+          # This is how a conversation between a user and the bot can go:
+          {{ sample_conversation }}
+
+          # This is the current conversation between the user and the bot:
+          {{ history | colang }}
+
+          bot intent:
+
+
+    - task: generate_flow_continuation_from_flow_nld
+      models:
+          - openai/gpt-3.5-turbo-instruct
+      content: |-
+          {{ flow_nld }}

@@ -901,11 +901,20 @@ class RailsConfig(BaseModel):
         ]
         prompts = values.get("prompts", [])
         for prompt in prompts:
-            task = prompt.get("task")
-            if any(
-                task.startswith(task_prefix)
-                for task_prefix in tasks_requiring_output_parser
-            ) and not prompt.get("output_parser"):
+            task = prompt.task if hasattr(prompt, "task") else prompt.get("task")
+            output_parser = (
+                prompt.output_parser
+                if hasattr(prompt, "output_parser")
+                else prompt.get("output_parser")
+            )
+
+            if (
+                any(
+                    task.startswith(task_prefix)
+                    for task_prefix in tasks_requiring_output_parser
+                )
+                and not output_parser
+            ):
                 log.info(
                     f"Deprecation Warning: Output parser is not registered for the task. "
                     f"The correct way is to register the 'output_parser' in the prompts.yml for '{task}' task. "

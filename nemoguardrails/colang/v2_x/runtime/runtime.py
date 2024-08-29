@@ -435,7 +435,9 @@ class RuntimeV2_x(Runtime):
         local_running_actions: List[asyncio.Task[dict]] = []
 
         if state is None or state == {}:
-            state = State(flow_states={}, flow_configs=self.flow_configs)
+            state = State(
+                flow_states={}, flow_configs=self.flow_configs, rails_config=self.config
+            )
             initialize_state(state)
         elif isinstance(state, dict):
             # TODO: Implement dict to State conversion
