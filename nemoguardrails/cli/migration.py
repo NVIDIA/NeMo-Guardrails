@@ -218,10 +218,12 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
         # Reset prev_line if a new block is reached
         if line.lstrip().startswith("define "):
             prev_line = None
-        # We convert "define flow" to "flow"
-        line = re.sub(r"define flow", "flow", re.sub(r"[-]", " ", line))
-        # We convert "define subflow" to "flow"
-        line = re.sub(r"define subflow", "flow", re.sub(r"[-]", " ", line))
+        if "define flow" in line or "define subflow" in line:
+            line = re.sub(r"[-']", " ", line)
+            # We convert "define flow" to "flow"
+            line = re.sub(r"define flow", "flow", line)
+            # We convert "define subflow" to "flow"
+            line = re.sub(r"define subflow", "flow", line)
 
         # Convert "create event ..." to "send  ..." while preserving indentation
         line = re.sub(r"(^\s*)create event", r"\1send", line)
@@ -235,12 +237,12 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
 
         # We convert "define bot" to "flow bot" and set the flag
         if "define bot" in line:
-            line = re.sub(r"define bot", "flow bot", re.sub(r"[-]", " ", line))
+            line = re.sub(r"define bot", "flow bot", re.sub(r"[-']", " ", line))
             prev_line = "bot"
 
         # we convert "define user" to "flow user" and set the flag
         elif "define user" in line:
-            line = re.sub(r"define user", "flow user", re.sub(r"[-]", " ", line))
+            line = re.sub(r"define user", "flow user", re.sub(r"[-']", " ", line))
             prev_line = "user"
 
         # Convert "bot ..." to "match UtteranceBotActionFinished()"
