@@ -13,8 +13,8 @@ Currently, the Colang story designing and building environment is fairly limited
 Integrated Development Environment (IDE)
 -----------------------------------------
 
-- We suggest using `Visual Studio Code <https://code.visualstudio.com/>`_ and the Colang highlighting extension (`Github link <../../../vscode_extension>`_) to help with highlighting Colang code.
-- You can use the Visual Studio Code launch setting to run a Colang story with nemoguardrails in a python environment by pressing F5 (`launch.json <../../../.vscode/launch.json>`_)
+- We suggest using `Visual Studio Code <https://code.visualstudio.com/>`_ and the Colang highlighting extension (`Github link <https://github.com/NVIDIA/NeMo-Guardrails/tree/main/vscode_extension>`_) to help with highlighting Colang code.
+- You can use the Visual Studio Code launch setting to run a Colang story with nemoguardrails in a python environment by pressing F5 (`launch.json <https://github.com/NVIDIA/NeMo-Guardrails/blob/main/.vscode/launch.json>`_)
 - You can show generated and received events by adding the ``--verbose`` flag when starting nemoguardrails, that will also show all generated LLM prompts and responses
 - To see even more details and show the internal run-time logs use ``--debug-level=INFO`` or set it equal to ``DEBUG``
 
@@ -37,7 +37,7 @@ To help debugging your Colang flows you can use the print statement ``print <exp
 
     Hi
 
-Alternatively, use the log statement ``log <expression>`` to append to the logging shown in the verbose mode, which will appear as "Colang debug info: <expression>".
+Alternatively, use the log statement ``log <expression>`` to append to the logging shown in the verbose mode, which will appear as "Colang Log <flow_instance_uid> :: <expression>".
 
 Furthermore, the Colang function ``flows_info`` can be used to return more information about a flow instance:
 
@@ -70,6 +70,49 @@ Furthermore, the Colang function ``flows_info`` can be used to return more infor
     }
 
 Where ``pretty_str`` converts the returned dictionary object to a nicely formatted string. If no parameter is provided to the function it will return a dictionary containing all the currently active flow instances.
+
+-------------------------
+CLI Debugging Commands
+-------------------------
+
+The NeMo Guardrail CLI provides a couple of additional debugging commands that always start with the ``!`` character, e.g.:
+
+.. code-block:: text
+
+    > !list-flows
+    ┏━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+    ┃ ID ┃ Flow Name                                 ┃ Loop                            ┃ Flow Instances          ┃ Source                          ┃
+    ┡━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+    │ 1  │ tracking visual choice selection state    │ named ('state_tracking')        │ 924ad                   │ /colang/v2_x/library/avatars.co │
+    │ 2  │ tracking bot talking state                │ named ('state_tracking')        │ 28804                   │ /colang/v2_x/library/core.co    │
+    │ 3  │ wait                                      │ new                             │ 9e18b                   │ /colang/v2_x/library/timing.co  │
+    │ 4  │ user was silent                           │ named ('user_was_silent')       │ c1dfd                   │ /colang/v2_x/library/timing.co  │
+    │ 5  │ polling llm request response              │ named ('llm_response_polling')  │ a003b                   │ /colang/v2_x/library/llm.co     │
+    │ 6  │ continuation on unhandled user utterance  │ parent                          │ 342c6                   │ /colang/v2_x/library/llm.co     │
+    │ 7  │ automating intent detection               │ parent                          │ c5c0a                   │ /colang/v2_x/library/llm.co     │
+    │ 8  │ marking user intent flows                 │ named ('intent_log')            │ ad2b4                   │ /colang/v2_x/library/llm.co     │
+    │ 9  │ logging marked user intent flows          │ named ('intent_log')            │ a5dd9                   │ /colang/v2_x/library/llm.co     │
+    │ 10 │ marking bot intent flows                  │ named ('intent_log')            │ 8873e                   │ /colang/v2_x/library/llm.co     │
+    │ 11 │ logging marked bot intent flows           │ named ('intent_log')            │ 3d331                   │ /colang/v2_x/library/llm.co     │
+    │ 12 │ user has selected choice                  │ parent                          │ 78b3b,783b6,c4186,cd667 │ /colang/v2_x/library/avatars.co │
+    │ 13 │ user interrupted bot talking              │ parent                          │ 6e576                   │ /colang/v2_x/library/avatars.co │
+    │ 14 │ bot posture                               │ parent                          │ d9f32                   │ /colang/v2_x/library/avatars.co │
+    │ 15 │ handling bot talking interruption         │ named ('bot_interruption')      │ 625f1                   │ /colang/v2_x/library/avatars.co │
+    │ 16 │ managing idle posture                     │ named ('managing_idle_posture') │ 0bfe3                   │ /colang/v2_x/library/avatars.co │
+    │ 17 │ _user_said                                │ parent                          │ db5e4,d2cb3,b7b85,095e0 │ /colang/v2_x/library/core.co    │
+    │ 18 │ _user_said_something_unexpected           │ parent                          │ cb676                   │ /colang/v2_x/library/core.co    │
+    │ 19 │ user said                                 │ parent                          │ c4a05,45f2c,cd4ab,fecc2 │ /colang/v2_x/library/core.co    │
+    │ 20 │ bot started saying something              │ parent                          │ fc2a7,8d5f1             │ /colang/v2_x/library/core.co    │
+    │ 21 │ notification of colang errors             │ named ('colang_errors_warning') │ cd5a8                   │ /colang/v2_x/library/core.co    │
+    │ 22 │ notification of undefined flow start      │ parent                          │ 20d10                   │ /colang/v2_x/library/core.co    │
+    │ 23 │ wait indefinitely                         │ parent                          │ 3713b                   │ /colang/v2_x/library/core.co    │
+    └────┴───────────────────────────────────────────┴─────────────────────────────────┴─────────────────────────┴─────────────────────────────────┘
+
+.. code-block:: colang
+    :caption: All CLI debugging commands
+
+    list-flows [--all] [--order_by_name] # Shows all active flows in a table in order of their interaction loop priority and name
+    tree # Shows the flow hierarchy tree of all active flows
 
 -------------
 Useful Flows
