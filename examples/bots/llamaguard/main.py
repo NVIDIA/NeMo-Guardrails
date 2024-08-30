@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from ingest import retriever
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.pydantic_v1 import BaseModel
@@ -20,8 +21,6 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from nemoguardrails import RailsConfig
 from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
-
-from ingest import retriever
 
 llm = ChatNVIDIA(
     model="meta/llama-3.1-70b-instruct",
@@ -64,7 +63,7 @@ class Question(BaseModel):
 chain_with_llamaguard = chain_with_llamaguard.with_types(input_type=Question)
 
 print(
-    f"Hello, I am an AI Assistant that can answer any questions on NVIDIA AI Enterprise."
+    "Hello, I am an AI Assistant that can answer any questions on NVIDIA AI Enterprise."
 )
 question = input("How can I help you today? \n\n")
 print("\n")
