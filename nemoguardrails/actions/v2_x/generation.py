@@ -682,9 +682,12 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         if value.endswith(";"):
             value = value[:-1]
 
-        # Remove variable name from the left if it appears in the result (GTP-4o):
+        # Remove variable name from the left if it appears in the result:
         if isinstance(prompt, str):
             last_prompt_line = prompt.strip().split("\n")[-1]
+            value = value.replace(last_prompt_line, "").strip()
+        elif isinstance(prompt, list) and isinstance(prompt[-1]["content"], str):
+            last_prompt_line = prompt[-1]["content"].strip().split("\n")[-1]
             value = value.replace(last_prompt_line, "").strip()
 
         log.info("Generated value for $%s: %s", var_name, value)
@@ -759,13 +762,29 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         render_context["tool_names"] = ", ".join(tool_names)
 
         # TODO: add the context of the flow
-        prompt = self.llm_task_manager._render_string(
+        flow_nld = self.llm_task_manager._render_string(
             textwrap.dedent(docstring), context=render_context, events=events
         )
 
-        # We make this call with temperature 0 to have it as deterministic as possible.
+        prompt = self.llm_task_manager.render_task_prompt(
+            task=Task.GENERATE_FLOW_CONTINUATION_FROM_NLD,
+            events=events,
+            context={
+                "flow_nld": flow_nld,
+            },
+        )
+
+        stop = self.llm_task_manager.get_stop_tokens(
+            Task.GENERATE_FLOW_CONTINUATION_FROM_NLD
+        )
+
         with llm_params(llm, temperature=self.config.lowest_temperature):
-            result = await llm_call(llm, prompt)
+            result = await llm_call(llm, prompt, stop)
+
+        # Parse the output using the associated parser
+        result = self.llm_task_manager.parse_task_output(
+            Task.GENERATE_FLOW_CONTINUATION_FROM_NLD, output=result
+        )
 
         result = _remove_leading_empty_lines(result)
         lines = result.split("\n")

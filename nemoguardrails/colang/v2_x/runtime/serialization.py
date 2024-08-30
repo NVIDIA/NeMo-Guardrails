@@ -26,6 +26,7 @@ from nemoguardrails.colang.v2_x.lang import colang_ast as colang_ast_module
 from nemoguardrails.colang.v2_x.runtime import flows as flows_module
 from nemoguardrails.colang.v2_x.runtime.flows import Action, State
 from nemoguardrails.colang.v2_x.runtime.statemachine import _flow_head_changed
+from nemoguardrails.rails.llm.config import RailsConfig
 
 # Load dynamically a map of all classes from the `colang_ast` and `flows` module.
 # This is used on the decoding part.
@@ -92,7 +93,15 @@ def encode_to_dict(obj: Any, refs: Dict[int, Any]):
                     for k in obj.__dataclass_fields__.keys()
                 },
             }
-
+        elif isinstance(obj, RailsConfig):
+            value = {
+                "__type": "RailsConfig",
+                "value": {
+                    k: encode_to_dict(v, refs) for k, v in obj.model_dump().items()
+                },
+            }
+        elif isinstance(obj, colang_ast_module.SpecType):
+            value = {"__type": "SpecType", "value": obj.value}
         elif isinstance(obj, Action):
             value = {"__type": "Action", "value": obj.to_dict()}
         elif isinstance(obj, datetime):
@@ -138,6 +147,13 @@ def decode_from_dict(d: Any, refs: Dict[int, Any]):
 
             elif d_type == "enum":
                 value = name_to_class[d["__class"]][d["value"]]
+
+            elif d_type == "RailsConfig":
+                value = {k: decode_from_dict(v, refs) for k, v in d["value"].items()}
+                value = RailsConfig.model_validate(value)
+
+            elif d_type == "SpecType":
+                value = colang_ast_module.SpecType(d["value"])
 
             elif d_type == "Action":
                 value = Action.from_dict(decode_from_dict(d["value"], refs))

@@ -740,6 +740,11 @@ def _get_flow_params(flow_id: str) -> dict:
         arg = arg.strip()
         if "=" in arg:
             key, value = arg.split("=")
+            # Remove single or double quotes from the value
+            if (value.startswith("'") and value.endswith("'")) or (
+                value.startswith('"') and value.endswith('"')
+            ):
+                value = value[1:-1]
             params[key] = value
         else:
             params[arg] = None

@@ -3,7 +3,19 @@ colang_version: "2.x"
 models:
     - type: main
       engine: openai
+      # model: gpt-3.5-turbo-instruct
+      # model: gpt-3.5-turbo
       model: gpt-4o
+      # model: gpt-4o-mini
+
+      # engine: nim
+      # model: meta/llama3-70b-instruct
+      # model: meta/llama-3.1-8b-instruct
+      # model: meta/llama-3.1-70b-instruct
+
+      # Models that currently don't work:
+      # engine: nim
+      # model: meta/llama3-70b-instruct
 
 instructions:
     - type: "general"
@@ -30,6 +42,14 @@ instructions:
           Important:
           - The bot uses the 'bot gesture' action as much as possible
           - The bot must not repeat itself if the user was silent
+
+# sample_conversation: |
+#     user action: user said "something"
+#     user intent: user expressed something
+
+#     bot intent: bot express something
+#     bot action: bot express "something"
+#       and bot gesture "some gesture"
 
 sample_conversation: |
     user action: user said "Hello there!"
@@ -81,13 +101,15 @@ sample_conversation: |
     bot action: bot express "You're welcome. If you have any more questions or if there's anything else I can help you with, please don't hesitate to ask."
       and bot gesture "putting flat hands together and make little bow"
 
-    user intent: user was silent 15
+    user action: user was silent 15
+    user intent: user was silent
 
     bot intent: bot promote first showcase
     bot action: bot gesture "point to the left"
       and bot say "Why don't you give our first showcase a try? To do so, you can select the Option A) on screen or say 'I want to play the guessing game'"
 
-    user intent: user was silent 15
+    user action: user was silent 15
+    user intent: user was silent
 
     bot intent: bot ask about user whereabouts
     bot action: bot gesture "look around and search for user"
@@ -100,7 +122,8 @@ sample_conversation: |
     bot action: bot gesture "Turn around"
       and bot say "One, two, three, four, five, six, seven, eight, nine, ten."
 
-    user intent: user was silent 15
+    user action: user was silent 15
+    user intent: user was silent
 
     bot intent: bot promote second showcase
     bot action: bot gesture "point to the left"

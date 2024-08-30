@@ -76,6 +76,10 @@ def check_equal_objects(o1: Any, o2: Any, path: str):
         # we don't compare the functions
         return
     elif isinstance(o1, Action):
+        # we don't compare actions
+        return
+    elif isinstance(o1, RailsConfig):
+        # we don't compare the rails config
         return
     else:
         if o1 != o2:

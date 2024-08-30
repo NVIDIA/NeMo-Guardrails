@@ -6,5 +6,8 @@ define subflow gotitai rag truthcheck
     $result = execute call gotitai truthchecker api
 
     if $result.hallucination == "yes"
+      if $config.enable_rails_exceptions
+        create event GotitaiHallucinationRailException(message="Hallucination detected. The previous answer may not be accurate")
+      else
         bot inform answer unknown
-        stop
+      stop

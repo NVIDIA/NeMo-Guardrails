@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 
 * [#673](https://github.com/NVIDIA/NeMo-Guardrails/pull/673) Add support for new Colang 2 keyword `deactivate`.
+* [#703](https://github.com/NVIDIA/NeMo-Guardrails/pull/703) Add bot configuration as variable `$system.config`.
+* [#709](https://github.com/NVIDIA/NeMo-Guardrails/pull/709) Add basic support for most OpenAI and LLame 3 models.
 * [#712](https://github.com/NVIDIA/NeMo-Guardrails/pull/712) Add interaction loop priority levels for flows.
 
 ### Changed
