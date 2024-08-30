@@ -21,8 +21,14 @@ from rich.table import Table
 from rich.tree import Tree
 
 from nemoguardrails.colang.v2_x.lang.colang_ast import SpecOp, SpecType
-from nemoguardrails.colang.v2_x.runtime.flows import FlowState, State
+from nemoguardrails.colang.v2_x.runtime.flows import (
+    FlowConfig,
+    FlowState,
+    InteractionLoopType,
+    State,
+)
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
+from nemoguardrails.colang.v2_x.runtime.statemachine import _is_active_flow
 from nemoguardrails.utils import console
 
 runtime: Optional[RuntimeV2_x] = None
@@ -44,33 +50,83 @@ def set_output_state(_state: State):
     state = _state
 
 
-@app.command()
-def restart():
-    """Restart the current Colang script."""
+# @app.command()
+# def restart():
+#     """Restart the current Colang script."""
+#     runtime.state = None
+#     runtime.input_events = []
+#     runtime.first_time = True
 
 
 @app.command()
 def list_flows(
-    active: bool = typer.Option(default=False, help="Only show active flows.")
+    all: bool = typer.Option(
+        default=False, help="Show all flows (including inactive)."
+    ),
+    order_by_name: bool = typer.Option(
+        default=False,
+        help="Order flows by flow name, otherwise its ordered by event processing priority.",
+    ),
 ):
+    assert state
+
     """List the flows from the current state."""
 
     table = Table(header_style="bold magenta")
 
-    table.add_column("ID", style="dim", width=12)
+    table.add_column("ID", style="dim", width=9)
     table.add_column("Flow Name")
+    table.add_column("Loop")
+    table.add_column("Flow Instances")
     table.add_column("Source")
+
+    def get_loop_type(flow_config: FlowConfig) -> str:
+        if flow_config.loop_type == InteractionLoopType.NAMED:
+            return flow_config.loop_type.value + f" ('{flow_config.loop_id}')"
+        else:
+            return flow_config.loop_type.value
 
     rows = []
     for flow_id, flow_config in state.flow_configs.items():
         source = flow_config.source_file
-        if "nemoguardrails" in source:
+        if source and "nemoguardrails" in source:
             source = source.rsplit("nemoguardrails", 1)[1]
 
-        # if active and state.flow_id_states[flow_id]
-        rows.append([flow_id, source])
+        if not all:
+            # Show only active flows
+            active_instances = []
+            if flow_id in state.flow_id_states:
+                for flow_instance in state.flow_id_states[flow_id]:
+                    if _is_active_flow(flow_instance):
+                        active_instances.append(flow_instance.uid.split(")")[1][:5])
+                if active_instances:
+                    rows.append(
+                        [
+                            flow_id,
+                            get_loop_type(state.flow_configs[flow_id]),
+                            ",".join(active_instances),
+                            source,
+                        ]
+                    )
+        else:
+            instances = []
+            if flow_id in state.flow_id_states:
+                instances = [
+                    i.uid.split(")")[1][:5] for i in state.flow_id_states[flow_id]
+                ]
+            rows.append(
+                [
+                    flow_id,
+                    get_loop_type(state.flow_configs[flow_id]),
+                    ",".join(instances),
+                    source,
+                ]
+            )
 
-    rows.sort(key=lambda x: x[0])
+    if order_by_name:
+        rows.sort(key=lambda x: x[0])
+    else:
+        rows.sort(key=lambda x: -state.flow_configs[x[0]].loop_priority)
 
     for i, row in enumerate(rows):
         table.add_row(f"{i+1}", *row)
