@@ -76,15 +76,19 @@ def list_flows(
 
     table.add_column("ID", style="dim", width=9)
     table.add_column("Flow Name")
-    table.add_column("Loop")
+    table.add_column("Loop (Priority | Type | Id)")
     table.add_column("Flow Instances")
     table.add_column("Source")
 
-    def get_loop_type(flow_config: FlowConfig) -> str:
+    def get_loop_info(flow_config: FlowConfig) -> str:
         if flow_config.loop_type == InteractionLoopType.NAMED:
-            return flow_config.loop_type.value + f" ('{flow_config.loop_id}')"
+            return (
+                f"{flow_config.loop_priority} │ "
+                + flow_config.loop_type.value.capitalize()
+                + f" │ '{flow_config.loop_id}'"
+            )
         else:
-            return flow_config.loop_type.value
+            return f"{flow_config.loop_priority} │ " + flow_config.loop_type.value
 
     rows = []
     for flow_id, flow_config in state.flow_configs.items():
@@ -103,7 +107,7 @@ def list_flows(
                     rows.append(
                         [
                             flow_id,
-                            get_loop_type(state.flow_configs[flow_id]),
+                            get_loop_info(state.flow_configs[flow_id]),
                             ",".join(active_instances),
                             source,
                         ]
@@ -117,7 +121,7 @@ def list_flows(
             rows.append(
                 [
                     flow_id,
-                    get_loop_type(state.flow_configs[flow_id]),
+                    get_loop_info(state.flow_configs[flow_id]),
                     ",".join(instances),
                     source,
                 ]
@@ -126,7 +130,7 @@ def list_flows(
     if order_by_name:
         rows.sort(key=lambda x: x[0])
     else:
-        rows.sort(key=lambda x: -state.flow_configs[x[0]].loop_priority)
+        rows.sort(key=lambda x: (-state.flow_configs[x[0]].loop_priority, x[0]))
 
     for i, row in enumerate(rows):
         table.add_row(f"{i+1}", *row)
