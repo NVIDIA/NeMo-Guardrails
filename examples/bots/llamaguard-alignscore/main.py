@@ -1,7 +1,5 @@
 import os
-
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
-
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.pydantic_v1 import BaseModel
 from nemoguardrails import RailsConfig, LLMRails
@@ -19,13 +17,9 @@ llm = ChatNVIDIA(
 
 prompt_template = """Based on the following context, answer the question in a single, short, and straightforward sentence. 
 If unsure, respond with 'I don't know.' Avoid jargon and keep the answer as simple as possible. 
-
 {context}
-
 Question: {question}
-
 Helpful Answer:"""
-
 prompt = ChatPromptTemplate.from_template(prompt_template)
 
 config = RailsConfig.from_path("./guardrails/llamaguard_config")
