@@ -24,7 +24,7 @@ models:
     - type: llama_guard
       engine: vllm_openai
       parameters:
-          openai_api_base: "http://10.117.3.243:5123/v1"
+          openai_api_base: "http://localhost:5123/v1"
           model_name: "meta-llama/LlamaGuard-7b"
 
 rails:
@@ -35,7 +35,7 @@ rails:
       fact_checking:
         provider: align_score
         parameters:
-          endpoint: "http:///10.117.3.243:5000/alignscore_base"
+          endpoint: "http:///localhost:5000/alignscore_base"
     output:
       flows:
       - alignscore check facts
