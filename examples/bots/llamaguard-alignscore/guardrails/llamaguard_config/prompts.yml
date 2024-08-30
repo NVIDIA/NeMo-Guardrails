@@ -1,4 +1,3 @@
-# These are the default prompts released by Meta, with the exception of policy O7, which was added to address direct insults.
 prompts:
   - task: llama_guard_check_input
     content: |
@@ -70,10 +69,6 @@ prompts:
       - First line must read 'safe' or 'unsafe'.
       - If unsafe, a second line must include a comma-separated list of violated categories. [/INST]
 
-
-  # Currently, the unsafe content categories are the same for both llama_guard_check_input and
-  # llama_guard_check_output prompts. Only the conversation placeholder is different.
-  # Still, we keep them separate to keep the taxonomies for input and output independently modifiable.
   - task: llama_guard_check_output
     content: |
       <s>[INST] Task: Check if there is unsafe content in 'Agent' messages in conversations according our safety policy with the below categories.
@@ -145,3 +140,4 @@ prompts:
       Provide your safety assessment for Agent in the above conversation:
       - First line must read 'safe' or 'unsafe'.
       - If unsafe, a second line must include a comma-separated list of violated categories. [/INST]
+      
