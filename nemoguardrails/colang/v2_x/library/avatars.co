@@ -146,7 +146,7 @@ flow bot started an action -> $action
 # State Tracking Flows
 # -----------------------------------
 
-@loop("state_tracking")
+@loop("state_tracking", 10)
 flow tracking visual choice selection state
   global $choice_selection_state
   when VisualChoiceSceneAction.Started()

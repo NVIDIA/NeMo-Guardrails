@@ -174,7 +174,7 @@ flow bot refuse to respond
 # State Tracking Flows
 # -----------------------------------
 
-@loop("state_tracking")
+@loop("state_tracking", 10)
 flow tracking bot talking state
   """tracking bot talking state in global variable $bot_talking_state."""
   global $bot_talking_state
@@ -192,7 +192,7 @@ flow tracking bot talking state
   $last_bot_script = $bot_said_flow.text
   $last_bot_message = $bot_said_flow.text
 
-@loop("state_tracking")
+@loop("state_tracking", 10)
 flow tracking user talking state
   """Track user utterance state in global variables: $user_talking_state, $last_user_transcript."""
   global $user_talking_state
