@@ -45,6 +45,11 @@ def set_output_state(_state: State):
 
 
 @app.command()
+def restart():
+    """Restart the current Colang script."""
+
+
+@app.command()
 def list_flows(
     active: bool = typer.Option(default=False, help="Only show active flows.")
 ):
