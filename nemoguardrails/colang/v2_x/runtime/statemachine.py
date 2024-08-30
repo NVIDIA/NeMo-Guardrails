@@ -296,7 +296,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> State
                 # Find all active interaction loops
                 active_interaction_loops = set()
                 for flow_state in state.flow_states.values():
-                    if _is_listening_flow(flow_state):
+                    if is_listening_flow(flow_state):
                         active_interaction_loops.add(flow_state.loop_id)
 
                 # TODO: Check if we should rather should do this after the event matching step
@@ -421,7 +421,7 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> State
         actionable_heads = [
             head
             for head in actionable_heads
-            if _is_active_flow(get_flow_state_from_head(state, head))
+            if is_active_flow(get_flow_state_from_head(state, head))
             and head.status == FlowHeadStatus.ACTIVE
         ]
 
@@ -546,7 +546,7 @@ def _process_internal_events_without_default_matchers(
             flow_instance_uid = event.arguments["flow_instance_uid"]
             if flow_instance_uid in state.flow_states:
                 flow_state = state.flow_states[event.arguments["flow_instance_uid"]]
-                if not _is_inactive_flow(flow_state):
+                if not is_inactive_flow(flow_state):
                     _finish_flow(
                         state,
                         flow_state,
@@ -578,7 +578,7 @@ def _process_internal_events_without_default_matchers(
             flow_instance_uid = event.arguments["flow_instance_uid"]
             if flow_instance_uid in state.flow_states:
                 flow_state = state.flow_states[flow_instance_uid]
-                if not _is_inactive_flow(flow_state):
+                if not is_inactive_flow(flow_state):
                     _abort_flow(
                         state=state,
                         flow_state=flow_state,
@@ -881,7 +881,7 @@ def _advance_head_front(state: State, heads: List[FlowHead]) -> List[FlowHead]:
         flow_state = get_flow_state_from_head(state, head)
         flow_config = get_flow_config_from_head(state, head)
 
-        if head.status == FlowHeadStatus.INACTIVE or not _is_listening_flow(flow_state):
+        if head.status == FlowHeadStatus.INACTIVE or not is_listening_flow(flow_state):
             continue
         elif head.status == FlowHeadStatus.MERGING and len(state.internal_events) > 0:
             # We only advance merging heads if all internal events were processed
@@ -1340,7 +1340,7 @@ def slide(
                 # TODO: This should not be needed if states would be cleaned-up correctly
                 if flow_uid in state.flow_states:
                     child_flow_state = state.flow_states[flow_uid]
-                    if _is_listening_flow(child_flow_state):
+                    if is_listening_flow(child_flow_state):
                         _abort_flow(state, child_flow_state, head.matching_scores)
             for action_uid in action_uids:
                 action = state.actions[action_uid]
@@ -1440,7 +1440,7 @@ def _abort_flow(
         else:
             return
 
-    if not _is_listening_flow(flow_state) and flow_state.status != FlowStatus.STOPPING:
+    if not is_listening_flow(flow_state) and flow_state.status != FlowStatus.STOPPING:
         # Skip the rest for all inactive flows
         return
 
@@ -1534,7 +1534,7 @@ def _finish_flow(
         else:
             return
 
-    if not _is_listening_flow(flow_state):
+    if not is_listening_flow(flow_state):
         # Skip the rest for all inactive flows
         return
 
@@ -1745,7 +1745,7 @@ def _flow_head_changed(state: State, flow_state: FlowState, head: FlowHead) -> N
     if (
         element is not None
         and head.status is not FlowHeadStatus.INACTIVE
-        and _is_listening_flow(flow_state)
+        and is_listening_flow(flow_state)
         and is_match_op_element(element)
     ):
         _add_head_to_event_matching_structures(state, flow_state, head)
@@ -1785,7 +1785,7 @@ def _remove_head_from_event_matching_structures(
 
 def _update_action_status_by_event(state: State, event: ActionEvent) -> None:
     for flow_state in state.flow_states.values():
-        if not _is_listening_flow(flow_state):
+        if not is_listening_flow(flow_state):
             # Don't process flows that are not active
             continue
 
@@ -1797,7 +1797,8 @@ def _update_action_status_by_event(state: State, event: ActionEvent) -> None:
                     action.process_event(event)
 
 
-def _is_listening_flow(flow_state: FlowState) -> bool:
+def is_listening_flow(flow_state: FlowState) -> bool:
+    """True if flow is started or waiting to be started."""
     return (
         flow_state.status == FlowStatus.WAITING
         or flow_state.status == FlowStatus.STARTED
@@ -1805,14 +1806,16 @@ def _is_listening_flow(flow_state: FlowState) -> bool:
     )
 
 
-def _is_active_flow(flow_state: FlowState) -> bool:
+def is_active_flow(flow_state: FlowState) -> bool:
+    """True if flow has started."""
     return (
         flow_state.status == FlowStatus.STARTED
         or flow_state.status == FlowStatus.STARTING
     )
 
 
-def _is_inactive_flow(flow_state: FlowState) -> bool:
+def is_inactive_flow(flow_state: FlowState) -> bool:
+    """True if flow is not started."""
     return (
         flow_state.status == FlowStatus.WAITING
         or flow_state.status == FlowStatus.STOPPED
@@ -2045,7 +2048,7 @@ def find_all_active_event_matchers(
     """Return a list of all active heads that point to an event 'match' element."""
     event_matchers: List[FlowHead] = []
     for flow_state in state.flow_states.values():
-        if not _is_active_flow(flow_state) or not _is_listening_flow(flow_state):
+        if not is_active_flow(flow_state) or not is_listening_flow(flow_state):
             continue
 
         flow_config = state.flow_configs[flow_state.flow_id]

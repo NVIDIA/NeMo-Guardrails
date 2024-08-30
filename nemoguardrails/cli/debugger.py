@@ -28,7 +28,7 @@ from nemoguardrails.colang.v2_x.runtime.flows import (
     State,
 )
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
-from nemoguardrails.colang.v2_x.runtime.statemachine import _is_active_flow
+from nemoguardrails.colang.v2_x.runtime.statemachine import is_active_flow
 from nemoguardrails.utils import console
 
 runtime: Optional[RuntimeV2_x] = None
@@ -76,7 +76,7 @@ def resume():
 
 
 @app.command()
-def show_flow(
+def flow(
     flow_name: str = typer.Argument(help="Name of flow or uid of a flow instance."),
 ):
     """Shows all details about a flow or flow instance."""
@@ -98,7 +98,7 @@ def show_flow(
 
 
 @app.command()
-def list_flows(
+def flows(
     all: bool = typer.Option(
         default=False, help="Show all flows (including inactive)."
     ),
@@ -141,7 +141,7 @@ def list_flows(
             active_instances = []
             if flow_id in state.flow_id_states:
                 for flow_instance in state.flow_id_states[flow_id]:
-                    if _is_active_flow(flow_instance):
+                    if is_active_flow(flow_instance):
                         active_instances.append(flow_instance.uid.split(")")[1][:5])
                 if active_instances:
                     rows.append(
@@ -179,7 +179,11 @@ def list_flows(
 
 
 @app.command()
-def tree():
+def tree(
+    all: bool = typer.Option(
+        default=False, help="Show all flow instances (including inactive)."
+    )
+):
     """Lists the tree of all active flows."""
     main_flow = state.flow_id_states["main"][0]
 
@@ -194,8 +198,17 @@ def tree():
         elements = flow_config.elements
 
         for child_uid in flow_state.child_flow_uids:
+            child_flow_config = state.flow_configs[state.flow_states[child_uid].flow_id]
             child_flow_state = state.flow_states[child_uid]
+
+            if not all and not is_active_flow(child_flow_state):
+                continue
+
             child_uid_short = child_uid.split(")")[1][0:3] + "..."
+            parameter_values = ""
+            for param in child_flow_config.parameters:
+                value = child_flow_state.context[param.name]
+                parameter_values += f" `{value}`"
 
             # We also want to figure out if the flow is actually waiting on this child
             waiting_on = False
@@ -215,10 +228,12 @@ def tree():
             child_flow_label = (
                 ("[green]>[/] " if waiting_on else "")
                 + child_flow_state.flow_id
-                + " "
+                + parameter_values
+                + " ("
                 + child_uid_short
-                + " "
+                + " ,"
                 + child_flow_state.status.value
+                + ")"
             )
 
             child_node = node.add(child_flow_label)
