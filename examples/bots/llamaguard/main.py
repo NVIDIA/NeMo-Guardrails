@@ -14,13 +14,15 @@
 # limitations under the License.
 
 import os
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.pydantic_v1 import BaseModel
-from nemoguardrails import RailsConfig, LLMRails
-from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.pydantic_v1 import BaseModel
 from langchain_core.runnables import RunnablePassthrough
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
+
 from ingest import retriever
 
 llm = ChatNVIDIA(
