@@ -37,10 +37,15 @@ state: Optional[State] = None
 app = typer.Typer(name="!!!", no_args_is_help=True, add_completion=False)
 
 
+def set_chat_state(_chat_state: "ChatState"):
+    """Register the chat state that will be used by the debugger."""
+    global chat_state
+    chat_state = _chat_state
+
+
 def set_runtime(_runtime: RuntimeV2_x):
     """Registers the runtime that will be used by the debugger."""
     global runtime
-
     runtime = _runtime
 
 
@@ -50,12 +55,46 @@ def set_output_state(_state: State):
     state = _state
 
 
-# @app.command()
-# def restart():
-#     """Restart the current Colang script."""
-#     runtime.state = None
-#     runtime.input_events = []
-#     runtime.first_time = True
+@app.command()
+def restart():
+    """Restart the current Colang script."""
+    chat_state.state = None
+    chat_state.input_events = []
+    chat_state.first_time = True
+
+
+@app.command()
+def pause():
+    """Pause current interaction."""
+    chat_state.paused = True
+
+
+@app.command()
+def resume():
+    """Pause current interaction."""
+    chat_state.paused = False
+
+
+@app.command()
+def show_flow(
+    flow_name: str = typer.Argument(help="Name of flow or uid of a flow instance."),
+):
+    """Shows all details about a flow or flow instance."""
+    assert state
+
+    if flow_name in state.flow_configs:
+        flow_config = state.flow_configs[flow_name]
+        console.print(flow_config)
+    else:
+        matches = [
+            (uid, item) for uid, item in state.flow_states.items() if flow_name in uid
+        ]
+        if matches:
+            flow_instance = matches[0][1]
+            console.print(flow_instance.__dict__)
+        else:
+            console.print(f"Flow '{flow_name}' does not exist.")
+            return
 
 
 @app.command()
@@ -68,6 +107,7 @@ def list_flows(
         help="Order flows by flow name, otherwise its ordered by event processing priority.",
     ),
 ):
+    """Shows a table with all (active) flows ordered in terms of there interaction loop priority and name."""
     assert state
 
     """List the flows from the current state."""
