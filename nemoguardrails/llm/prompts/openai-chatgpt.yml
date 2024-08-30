@@ -267,26 +267,6 @@ prompts:
       - type: system
         content: "Continuation of interaction:"
 
-  # Prompt for generating the continuation for the current conversation.
-  - task: generate_flow_continuation
-    models:
-      - openai/gpt-3.5-turbo
-      - openai/gpt-4
-    messages:
-      - type: system
-        content: "{{ general_instructions }}"
-
-      - type: system
-        content: "This is how a conversation between a user and the bot can go:"
-      - "{{ sample_conversation | to_messages_v2 }}"
-
-      - type: system
-        content: "This is the current conversation between the user and the bot:"
-      - "{{ history | colang | to_messages_v2 }}"
-
-      - type: system
-        content: "Continuation of interaction:"
-
   - task: generate_flow_continuation_from_flow_nld
     models:
       - openai/gpt-3.5-turbo
