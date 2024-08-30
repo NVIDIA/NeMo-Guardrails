@@ -24,13 +24,16 @@ define subflow check facts
 
     $accuracy = execute check_facts
     if $accuracy < 0.4
-      bot inform answer unknown
+      if $config.enable_rails_exceptions
+        create event FactCheckLowAccuracyRailException(message="Fact check triggered. The accuracy of the response is below 0.4.")
+      else
+        bot inform answer unknown
       stop
 
     if $accuracy < 0.6
       # We need to provide a warning in this case
+      # TODO: Add a warning message
       $bot_message_potentially_inaccurate = True
-
 
 define flow flag potentially inaccurate response
   """Tell the user that the previous answer is potentially inaccurate."""
@@ -38,7 +41,11 @@ define flow flag potentially inaccurate response
 
   if $bot_message_potentially_inaccurate
     $bot_message_potentially_inaccurate = False
-    bot inform answer potentially inaccurate
+    if $config.enable_rails_exceptions
+      create event PotentiallyInaccurateResponseRailException(message="Potentially inaccurate response detected. The bot's response may be inaccurate.")
+    else
+      bot inform answer potentially inaccurate
+    stop
 
 define bot inform answer potentially inaccurate
   "Attention: the answer above is potentially inaccurate."

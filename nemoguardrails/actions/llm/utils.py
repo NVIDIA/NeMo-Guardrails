@@ -41,6 +41,28 @@ class LLMCallException(Exception):
         self.inner_exception = inner_exception
 
 
+def _infer_model_name(llm: BaseLanguageModel):
+    """Helper to infer the model name based from an LLM instance.
+
+    Because not all models implement correctly _identifying_params from LangChain, we have to
+    try to do this manually.
+    """
+    for attr in ["model", "model_name"]:
+        if hasattr(llm, attr):
+            val = getattr(llm, attr)
+            if isinstance(val, str):
+                return val
+
+    if hasattr(llm, "model_kwargs") and isinstance(llm.model_kwargs, dict):
+        for attr in ["model", "model_name", "name"]:
+            val = llm.model_kwargs.get(attr)
+            if isinstance(val, str):
+                return val
+
+    # If we still can't figure out, return "unknown".
+    return "unknown"
+
+
 async def llm_call(
     llm: BaseLanguageModel,
     prompt: Union[str, List[dict]],
@@ -48,12 +70,13 @@ async def llm_call(
     custom_callback_handlers: Optional[List[AsyncCallbackHandler]] = None,
 ) -> str:
     """Calls the LLM with a prompt and returns the generated text."""
-
     # We initialize a new LLM call if we don't have one already
     llm_call_info = llm_call_info_var.get()
     if llm_call_info is None:
         llm_call_info = LLMCallInfo()
         llm_call_info_var.set(llm_call_info)
+
+    llm_call_info.llm_model_name = _infer_model_name(llm)
 
     if custom_callback_handlers and custom_callback_handlers != [None]:
         all_callbacks = BaseCallbackManager(
@@ -339,7 +362,7 @@ def get_last_user_utterance(events: List[dict]) -> Optional[str]:
     return None
 
 
-def get_retrieved_relevant_chunks(events: List[dict]) -> Optional[dict]:
+def get_retrieved_relevant_chunks(events: List[dict]) -> Optional[str]:
     """Returns the retrieved chunks for current user utterance from the events."""
     for event in reversed(events):
         if event["type"] == "UserMessage":
@@ -347,7 +370,7 @@ def get_retrieved_relevant_chunks(events: List[dict]) -> Optional[dict]:
         if event["type"] == "ContextUpdate" and "relevant_chunks" in event.get(
             "data", {}
         ):
-            return event["data"]["relevant_chunks"]
+            return (event["data"]["relevant_chunks"] or "").strip()
 
     return None
 
@@ -498,6 +521,14 @@ def get_initial_actions(strings: List[str]) -> List[str]:
     return previous_strings
 
 
+def get_first_user_intent(strings: List[str]) -> Optional[str]:
+    """Returns first user intent."""
+    for string in strings:
+        if string.startswith("user intent: "):
+            return string.replace("user intent: ", "")
+    return None
+
+
 def get_first_bot_intent(strings: List[str]) -> Optional[str]:
     """Returns first bot intent."""
     for string in strings:
@@ -535,9 +566,6 @@ def escape_flow_name(name: str) -> str:
         name.replace(" and ", "_and_")
         .replace(" or ", "_or_")
         .replace(" as ", "_as_")
-        .replace(" not ", "_not_")
-        .replace(" is ", "_is_")
-        .replace(" in ", "_in_")
         .replace("(", "")
         .replace(")", "")
         .replace("'", "")

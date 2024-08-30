@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import logging
 import os
 from typing import List, Optional
@@ -24,13 +25,15 @@ from fastapi import FastAPI
 from nemoguardrails import __version__
 from nemoguardrails.actions_server import actions_server
 from nemoguardrails.cli.chat import run_chat
-from nemoguardrails.eval.cli import evaluate
-from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
+from nemoguardrails.cli.migration import migrate
+from nemoguardrails.eval import cli
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.server import api
+from nemoguardrails.utils import init_random_seed
 
 app = typer.Typer()
-app.add_typer(evaluate.app, name="evaluate", short_help="Run an evaluation task.")
+
+app.add_typer(cli.app, name="eval", short_help="Evaluation a guardrail configuration.")
 app.pretty_exceptions_enable = False
 
 logging.getLogger().setLevel(logging.WARNING)
@@ -83,6 +86,9 @@ def chat(
     # This means that the user doesn't have to use both options at the same time.
     verbose = verbose or verbose_no_llm or len(debug_level) > 0
 
+    if len(debug_level) > 0 or os.environ.get("DEBUG_MODE"):
+        init_random_seed(0)
+
     if verbose:
         set_verbose(
             True,
@@ -112,6 +118,10 @@ def server(
         exists=True,
         help="Path to a directory containing multiple configuration sub-folders.",
     ),
+    default_config_id: Optional[str] = typer.Option(
+        default=None,
+        help="The default configuration to use when no config is specified.",
+    ),
     verbose: bool = typer.Option(
         default=False,
         help="If the server should be verbose and output detailed logs including prompts.",
@@ -130,7 +140,7 @@ def server(
     if config:
         # We make sure there is no trailing separator, as that might break things in
         # single config mode.
-        api.app.rails_config_path = config[0].rstrip(os.path.sep)
+        api.app.rails_config_path = os.path.expanduser(config[0].rstrip(os.path.sep))
     else:
         # If we don't have a config, we try to see if there is a local config folder
         local_path = os.getcwd()
@@ -154,7 +164,55 @@ def server(
     else:
         server_app = api.app
 
+    if default_config_id:
+        api.set_default_config_id(default_config_id)  # Call function
+
     uvicorn.run(server_app, port=port, log_level="info", host="0.0.0.0")
+
+
+_AVAILABLE_OPTIONS = ["1.0", "2.0-alpha"]
+
+
+@app.command()
+def convert(
+    path: str = typer.Argument(
+        ..., help="The path to the file or directory to migrate."
+    ),
+    from_version: str = typer.Option(
+        default="1.0",
+        help=f"The version of the colang files to migrate from. Available options: {_AVAILABLE_OPTIONS}.",
+    ),
+    verbose: bool = typer.Option(
+        default=False,
+        help="If the migration should be verbose and output detailed logs.",
+    ),
+    validate: bool = typer.Option(
+        default=False,
+        help="If the migration should validate the output using Colang Parser.",
+    ),
+    use_active_decorator: bool = typer.Option(
+        default=True,
+        help="If the migration should use the active decorator.",
+    ),
+    include_main_flow: bool = typer.Option(
+        default=True,
+        help="If the migration should add a main flow to the config.",
+    ),
+):
+    """Convert Colang files and configs from older version to the latest."""
+
+    if verbose:
+        logging.getLogger().setLevel(logging.INFO)
+
+    absolute_path = os.path.abspath(path)
+
+    migrate(
+        path=absolute_path,
+        include_main_flow=include_main_flow,
+        use_active_decorator=use_active_decorator,
+        from_version=from_version,
+        validate=validate,
+    )
 
 
 @app.command("actions-server")
@@ -178,6 +236,6 @@ def version_callback(value: bool):
 def cli(
     _: Optional[bool] = typer.Option(
         None, "-v", "--version", callback=version_callback, is_eager=True
-    )
+    ),
 ):
     pass

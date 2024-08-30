@@ -17,11 +17,13 @@ import dataclasses
 import importlib.resources as pkg_resources
 import json
 import os
+import random
+import re
 import uuid
 from collections import namedtuple
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, Tuple
 
 import yaml
 from rich.console import Console
@@ -29,11 +31,27 @@ from rich.console import Console
 # Global console object to be used throughout the code base.
 console = Console()
 
+secure_random = random.SystemRandom()
 
-def new_uid() -> str:
-    """Helper to create a new UID."""
+_FIRST_CAP_PATTERN = re.compile("(.)([A-Z][a-z0-9]+)")
+_ALL_CAP_PATTERN = re.compile("([a-z0-9])([A-Z])")
 
-    return str(uuid.uuid4())
+
+def init_random_seed(seed: int) -> None:
+    """Init random generator with seed."""
+    global secure_random
+    random.seed(seed)
+    secure_random = random
+
+
+def new_uuid() -> str:
+    """Helper to generate new UUID v4.
+
+    In testing mode, it will generate a predictable set of UUIDs to help debugging if random seed was set dependent on
+    the environment variable DEBUG_MODE.
+    """
+    random_bits = secure_random.getrandbits(128)
+    return str(uuid.UUID(int=random_bits, version=4))
 
 
 # Very basic event validation - will be replaced by validation based on pydantic models
@@ -110,11 +128,15 @@ _action_to_modality_info: Dict[str, Tuple[str, str]] = {
     "UtteranceBotAction": ("bot_speech", "replace"),
     "UtteranceUserAction": ("user_speech", "replace"),
     "TimerBotAction": ("time", "parallel"),
+    "FacialGestureBotAction": ("bot_gesture", "override"),
     "GestureBotAction": ("bot_gesture", "override"),
+    "FacialGestureBotAction": ("bot_face", "replace"),
     "PostureBotAction": ("bot_posture", "override"),
     "VisualChoiceSceneAction": ("information", "override"),
     "VisualInformationSceneAction": ("information", "override"),
     "VisualFormSceneAction": ("information", "override"),
+    "MotionEffectCameraAction": ("camera_motion_effect", "override"),
+    "ShotCameraAction": ("camera_shot", "override"),
 }
 
 
@@ -123,8 +145,9 @@ def _add_modality_info(event_dict: Dict[str, Any]) -> None:
     for action_name, modality_info in _action_to_modality_info.items():
         modality_name, modality_policy = modality_info
         if action_name in event_dict["type"]:
-            event_dict["action_info_modality"] = modality_name
-            event_dict["action_info_modality_policy"] = modality_policy
+            event_dict.setdefault("action_info_modality", modality_name)
+            event_dict.setdefault("action_info_modality_policy", modality_policy)
+            return
 
 
 def _update_action_properties(event_dict: Dict[str, Any]) -> None:
@@ -134,7 +157,7 @@ def _update_action_properties(event_dict: Dict[str, Any]) -> None:
         event_dict["action_started_at"] = datetime.now(timezone.utc).isoformat()
     elif "Start" in event_dict["type"]:
         if "action_uid" not in event_dict:
-            event_dict["action_uid"] = new_uid()
+            event_dict["action_uid"] = new_uuid()
     elif "Updated" in event_dict["type"]:
         event_dict["action_updated_at"] = datetime.now(timezone.utc).isoformat()
     elif "Finished" in event_dict["type"]:
@@ -166,7 +189,7 @@ def new_event_dict(event_type: str, **payload) -> Dict[str, Any]:
 
     event: Dict[str, Any] = {
         "type": event_type,
-        "uid": new_uid(),
+        "uid": new_uuid(),
         "event_created_at": datetime.now(timezone.utc).isoformat(),
         "source_uid": "NeMoGuardrails",
     }
@@ -226,7 +249,13 @@ def get_data_path(package_name: str, file_path: str) -> str:
     """Helper to get the path to the data directory."""
     try:
         # Try to get the path from the package resources
-        path = pkg_resources.files(package_name).joinpath(file_path)
+        if hasattr(pkg_resources, "files"):
+            path = pkg_resources.files(package_name).joinpath(file_path)
+        else:
+            # For Python 3.8 we need this approach
+            with pkg_resources.path(package_name, "__init__.py") as path:
+                path = path.parent.joinpath(file_path)
+
         if path.exists():
             return str(path)
     except FileNotFoundError:
@@ -248,3 +277,28 @@ def get_examples_data_path(file_path: str) -> str:
 def get_chat_ui_data_path(file_path: str) -> str:
     """Helper to get the path to the chat-ui data directory."""
     return get_data_path("nemoguardrails", f"chat-ui/{file_path}")
+
+
+def camelcase_to_snakecase(name: str) -> str:
+    """Converts a CamelCase string to snake_case.
+
+    Args:
+        name (str): The CamelCase string to convert.
+
+    Returns:
+        str: The converted snake_case string.
+    """
+    s1 = _FIRST_CAP_PATTERN.sub(r"\1_\2", name)
+    return _ALL_CAP_PATTERN.sub(r"\1_\2", s1).lower()
+
+
+def snake_to_camelcase(name: str) -> str:
+    """Converts a snake_case string to CamelCase.
+
+    Args:
+        name (str): The snake_case string to convert.
+
+    Returns:
+        str: The converted CamelCase string.
+    """
+    return "".join(n.capitalize() for n in name.split("_"))

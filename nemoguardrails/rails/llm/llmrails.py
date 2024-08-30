@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """LLM Rails entry point."""
+
 import asyncio
 import importlib.util
 import logging
@@ -22,9 +23,10 @@ import re
 import threading
 import time
 import warnings
-from typing import Any, AsyncIterator, List, Optional, Tuple, Type, Union, cast
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, Union, cast
 
 from langchain.llms.base import BaseLLM
+from langchain_core.language_models import BaseLanguageModel
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
@@ -32,7 +34,6 @@ from nemoguardrails.actions.v2_x.generation import LLMGenerationActionsV2dotx
 from nemoguardrails.colang import parse_colang_file
 from nemoguardrails.colang.v1_0.runtime.flows import compute_context
 from nemoguardrails.colang.v1_0.runtime.runtime import Runtime, RuntimeV1_0
-from nemoguardrails.colang.v2_x.lang.utils import new_uuid
 from nemoguardrails.colang.v2_x.runtime.flows import Action, State
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.colang.v2_x.runtime.serialization import (
@@ -47,6 +48,8 @@ from nemoguardrails.context import (
     streaming_handler_var,
 )
 from nemoguardrails.embeddings.index import EmbeddingsIndex
+from nemoguardrails.embeddings.providers import register_embedding_provider
+from nemoguardrails.embeddings.providers.base import EmbeddingModel
 from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.explain import ExplainInfo
@@ -54,7 +57,7 @@ from nemoguardrails.logging.processing_log import compute_generation_log
 from nemoguardrails.logging.stats import LLMStats
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
-from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
+from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, Model, RailsConfig
 from nemoguardrails.rails.llm.options import (
     GenerationLog,
     GenerationOptions,
@@ -62,7 +65,7 @@ from nemoguardrails.rails.llm.options import (
 )
 from nemoguardrails.rails.llm.utils import get_history_cache_key
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import get_or_create_event_loop, new_event_dict
+from nemoguardrails.utils import get_or_create_event_loop, new_event_dict, new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -137,10 +140,13 @@ class LLMRails:
                     # Extract the full path for the file
                     full_path = os.path.join(root, file)
                     if file.endswith(".co"):
+                        log.debug(f"Loading file: {full_path}")
                         with open(full_path, "r", encoding="utf-8") as f:
                             content = parse_colang_file(
                                 file, content=f.read(), version=config.colang_version
                             )
+                            if not content:
+                                continue
 
                         # We mark all the flows coming from the guardrails library as system flows.
                         for flow_config in content["flows"]:
@@ -158,11 +164,13 @@ class LLMRails:
 
         # Last but not least, we mark all the flows that are used in any of the rails
         # as system flows (so they don't end up in the prompt).
+
         rail_flow_ids = (
             config.rails.input.flows
             + config.rails.output.flows
             + config.rails.retrieval.flows
         )
+
         for flow_config in self.config.flows:
             if flow_config.get("id") in rail_flow_ids:
                 flow_config["is_system_flow"] = True
@@ -258,15 +266,24 @@ class LLMRails:
 
     def _validate_config(self):
         """Runs additional validation checks on the config."""
-        existing_flows_names = set([flow.get("id") for flow in self.config.flows])
+
+        if self.config.colang_version == "1.0":
+            existing_flows_names = set([flow.get("id") for flow in self.config.flows])
+        else:
+            existing_flows_names = set([flow.get("name") for flow in self.config.flows])
 
         for flow_name in self.config.rails.input.flows:
+            # content safety check input/output flows are special as they have parameters
+            if flow_name.startswith("content safety check"):
+                continue
             if flow_name not in existing_flows_names:
                 raise ValueError(
                     f"The provided input rail flow `{flow_name}` does not exist"
                 )
 
         for flow_name in self.config.rails.output.flows:
+            if flow_name.startswith("content safety check"):
+                continue
             if flow_name not in existing_flows_names:
                 raise ValueError(
                     f"The provided output rail flow `{flow_name}` does not exist"
@@ -301,6 +318,48 @@ class LLMRails:
         self.kb.init()
         await self.kb.build()
 
+    @staticmethod
+    def get_model_cls_and_kwargs(
+        model_config: Model,
+    ) -> Tuple[Type[BaseLanguageModel], Dict[str, Any]]:
+        """Helper to return the model class and kwargs for initialization."""
+        if model_config.engine not in get_llm_provider_names():
+            msg = f"Unknown LLM engine: {model_config.engine}."
+            if model_config.engine == "openai":
+                msg += " Please install langchain-openai using `pip install langchain-openai`."
+
+            raise Exception(msg)
+
+        provider_cls = get_llm_provider(model_config)
+        # We need to compute the kwargs for initializing the LLM
+        kwargs = model_config.parameters
+
+        # We also need to pass the model, if specified
+        if model_config.model:
+            # Some LLM providers use `model_name` instead of model. For backward compatibility
+            # we keep this hard-coded mapping.
+            if model_config.engine in [
+                "azure",
+                "openai",
+                "gooseai",
+                "nlpcloud",
+                "petals",
+                "trt_llm",
+                "vertexai",
+            ]:
+                kwargs["model_name"] = model_config.model
+            elif (
+                model_config.engine == "nvidia_ai_endpoints"
+                or model_config.engine == "nim"
+            ):
+                kwargs["model"] = model_config.model
+            else:
+                # The `__fields__` attribute is computed dynamically by pydantic.
+                if "model" in provider_cls.__fields__:
+                    kwargs["model"] = model_config.model
+
+        return provider_cls, kwargs
+
     def _init_llms(self):
         """
         Initializes the right LLM engines based on the configuration.
@@ -318,41 +377,12 @@ class LLMRails:
             self.runtime.register_action_param("llm", self.llm)
             return
 
+        llms = dict()
         for llm_config in self.config.models:
             if llm_config.type == "embeddings":
                 pass
             else:
-                if llm_config.engine not in get_llm_provider_names():
-                    msg = f"Unknown LLM engine: {llm_config.engine}."
-                    if llm_config.engine == "openai":
-                        msg += " Please install langchain-openai using `pip install langchain-openai`."
-
-                    raise Exception(msg)
-
-                provider_cls = get_llm_provider(llm_config)
-                # We need to compute the kwargs for initializing the LLM
-                kwargs = llm_config.parameters
-
-                # We also need to pass the model, if specified
-                if llm_config.model:
-                    # Some LLM providers use `model_name` instead of model. For backward compatibility
-                    # we keep this hard-coded mapping.
-                    if llm_config.engine in [
-                        "azure",
-                        "openai",
-                        "gooseai",
-                        "nlpcloud",
-                        "petals",
-                        "trt_llm",
-                        "vertexai",
-                    ]:
-                        kwargs["model_name"] = llm_config.model
-                    elif llm_config.engine == "nvidia_ai_endpoints":
-                        kwargs["model"] = llm_config.model
-                    else:
-                        # The `__fields__` attribute is computed dynamically by pydantic.
-                        if "model" in provider_cls.__fields__:
-                            kwargs["model"] = llm_config.model
+                provider_cls, kwargs = self.get_model_cls_and_kwargs(llm_config)
 
                 if self.config.streaming:
                     if "streaming" in provider_cls.__fields__:
@@ -372,6 +402,9 @@ class LLMRails:
                     self.runtime.register_action_param(
                         model_name, getattr(self, model_name)
                     )
+                    llms[llm_config.type] = getattr(self, model_name)
+
+            self.runtime.register_action_param("llms", llms)
 
     def _get_embeddings_search_provider_instance(
         self, esp_config: Optional[EmbeddingSearchProvider] = None
@@ -394,7 +427,13 @@ class LLMRails:
                 **{
                     k: v
                     for k, v in esp_config.parameters.items()
-                    if k in ["use_batching", "max_batch_size", "matx_batch_hold"]
+                    if k
+                    in [
+                        "use_batching",
+                        "max_batch_size",
+                        "matx_batch_hold",
+                        "search_threshold",
+                    ]
                     and v is not None
                 },
             )
@@ -667,6 +706,7 @@ class LLMRails:
         response_tool_calls = []
         response_events = []
         new_extra_events = []
+        exception = None
 
         # The processing is different for Colang 1.0 and 2.0
         if self.config.colang_version == "1.0":
@@ -677,6 +717,9 @@ class LLMRails:
                         responses = responses[0:-1]
                     else:
                         responses.append(event["script"])
+                elif event["type"].endswith("Exception"):
+                    exception = event
+
         else:
             for event in new_events:
                 start_action_match = re.match(r"Start(.*Action)", event["type"])
@@ -707,7 +750,10 @@ class LLMRails:
                     # We just append the event
                     response_events.append(event)
 
-        new_message = {"role": "assistant", "content": "\n".join(responses)}
+        if exception:
+            new_message = {"role": "exception", "content": exception}
+        else:
+            new_message = {"role": "assistant", "content": "\n".join(responses)}
         if response_tool_calls:
             new_message["tool_calls"] = response_tool_calls
         if response_events:
@@ -951,7 +997,10 @@ class LLMRails:
         return loop.run_until_complete(self.generate_events_async(events=events))
 
     async def process_events_async(
-        self, events: List[dict], state: Optional[dict] = None
+        self,
+        events: List[dict],
+        state: Optional[dict] = None,
+        blocking: bool = False,
     ) -> Tuple[List[dict], dict]:
         """Process a sequence of events in a given state.
 
@@ -975,7 +1024,7 @@ class LLMRails:
         # TODO (cschueller): Why is this?
         async with process_events_semaphore:
             output_events, output_state = await self.runtime.process_events(
-                events, state
+                events, state, blocking
             )
 
         took = time.time() - t0
@@ -987,7 +1036,10 @@ class LLMRails:
         return output_events, output_state
 
     def process_events(
-        self, events: List[dict], state: Optional[dict] = None
+        self,
+        events: List[dict],
+        state: Optional[dict] = None,
+        blocking: bool = False,
     ) -> Tuple[List[dict], dict]:
         """Synchronous version of `LLMRails.process_events_async`."""
 
@@ -998,7 +1050,9 @@ class LLMRails:
             )
 
         loop = get_or_create_event_loop()
-        return loop.run_until_complete(self.process_events_async(events, state))
+        return loop.run_until_complete(
+            self.process_events_async(events, state, blocking)
+        )
 
     def register_action(self, action: callable, name: Optional[str] = None):
         """Register a custom action for the rails configuration."""
@@ -1036,6 +1090,31 @@ class LLMRails:
 
         self.embedding_search_providers[name] = cls
 
+    def register_embedding_provider(
+        self, cls: Type[EmbeddingModel], name: Optional[str] = None
+    ) -> None:
+        """Register a custom embedding provider.
+
+        Args:
+            model (Type[EmbeddingModel]): The embedding model class.
+            name (str): The name of the embedding engine. If available in the model, it will be used.
+
+        Raises:
+            ValueError: If the engine name is not provided and the model does not have an engine name.
+            ValueError: If the model does not have 'encode' or 'encode_async' methods.
+        """
+        register_embedding_provider(engine_name=name, model=cls)
+
     def explain(self) -> ExplainInfo:
         """Helper function to return the latest ExplainInfo object."""
         return self.explain_info
+
+    def __getstate__(self):
+        return {"config": self.config}
+
+    def __setstate__(self, state):
+        if state["config"].config_path:
+            config = RailsConfig.from_path(state["config"].config_path)
+        else:
+            config = state["config"]
+        self.__init__(config=config, verbose=False)

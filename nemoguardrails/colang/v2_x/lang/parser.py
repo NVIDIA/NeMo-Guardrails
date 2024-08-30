@@ -59,26 +59,42 @@ class ColangParser:
 
         Currently, only the "..." is expanded.
         """
-        # Replace ..."NLD" with i"NLD"
-        content = re.sub(r"\.\.\.(['\"])(.*?)\1", r'i"\2"', content)
+        lines = content.split("\n")
 
-        # We make sure to capture the correct indentation level and use that.
-        content = re.sub(
-            r"\n( +)\.\.\.",
-            textwrap.dedent(
-                r"""
-                \1$flow_info = await GenerateFlowAction()
-                \1await AddFlowsAction(config=$flow_info['body'])
-                \1$instance_uid = uid()
-                \1send StartFlow(flow_id=$flow_info['name'], flow_instance_uid=$instance_uid, context=$self.context)
-                \1match FlowStarted(flow_instance_uid=$instance_uid)
-                \1match FlowFinished(flow_instance_uid=$instance_uid)
-                """
-            ),
-            content,
-        )
+        in_docstring = False
+        for i in range(len(lines)):
+            line = lines[i]
+            if (
+                not in_docstring
+                and line.strip().startswith('"""')
+                and line.strip().endswith('"""')
+                and line.strip() != '"""'
+            ):
+                pass
+            elif not in_docstring and line.strip().startswith('"""'):
+                in_docstring = True
+            elif in_docstring and line.strip().endswith('"""'):
+                in_docstring = False
+            elif in_docstring:
+                pass
+            else:
+                # We make sure to capture the correct indentation level and use that.
+                lines[i] = re.sub(
+                    r"^( +)\.\.\.",
+                    textwrap.dedent(
+                        r"""
+                        \1$flow_info = await GenerateFlowAction()
+                        \1await AddFlowsAction(config=$flow_info['body'])
+                        \1$instance_uid = uid()
+                        \1send StartFlow(flow_id=$flow_info['name'], flow_instance_uid=$instance_uid, context=$self.context)
+                        \1match FlowStarted(flow_instance_uid=$instance_uid)
+                        \1match FlowFinished(flow_instance_uid=$instance_uid)
+                        """
+                    ),
+                    line,
+                )
 
-        return content
+        return "\n".join(lines)
 
     def parse_content(
         self, content: str, print_tokens: bool = False, print_parsing_tree: bool = False
@@ -137,27 +153,20 @@ class ColangParser:
 
 
 def parse_colang_file(
-    _filename: str, content: str, include_source_mapping: bool = True
+    filename: str, content: str, include_source_mapping: bool = True
 ) -> dict:
     """Parse the content of a .co."""
 
     colang_parser = ColangParser(include_source_mapping=include_source_mapping)
     result = colang_parser.parse_content(content, print_tokens=False)
 
-    # flows = []
-    # for flow_data in result["flows"]:
-    #     # elements = parse_flow_elements(items)
-    #     # TODO: extract the source code here
-    #     source_code = ""
-    #     flows.append(
-    #         {
-    #             "id": flow_data["name"],
-    #             "elements": flow_data["elements"],
-    #             "source_code": source_code,
-    #         }
-    #     )
+    for flow in result["flows"]:
+        flow["file_info"]["name"] = filename
 
-    data = {"flows": result["flows"], "import_paths": result.get("import_paths", [])}
+    data = {
+        "flows": result["flows"],
+        "import_paths": result.get("import_paths", []),
+    }
 
     return data
 

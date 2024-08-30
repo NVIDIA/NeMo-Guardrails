@@ -1,10 +1,14 @@
-define subflow gotitai rag truthcheck
+flow gotitai rag truthcheck
   """Guardrail based on the maximum risk score."""
   if $check_facts == True
+    global $check_facts
     $check_facts = False
 
-    $result = execute call gotitai truthchecker api
+    $result = await call gotitai truthchecker api
 
     if $result.hallucination == "yes"
+      if $system.config.enable_rails_exceptions
+        send GotitaiHallucinationRailException(message="Hallucination detected. The previous answer may not be accurate")
+      else
         bot inform answer unknown
-        stop
+      abort

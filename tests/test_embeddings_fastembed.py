@@ -15,9 +15,7 @@
 
 import pytest
 
-from nemoguardrails.embeddings.embedding_providers.fastembed import (
-    FastEmbedEmbeddingModel,
-)
+from nemoguardrails.embeddings.providers.fastembed import FastEmbedEmbeddingModel
 
 
 def test_sync_embeddings():

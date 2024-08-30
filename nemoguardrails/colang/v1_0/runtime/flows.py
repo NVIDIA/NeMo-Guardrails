@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """A simplified modeling of the CoFlows engine."""
+
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -260,6 +261,12 @@ def _call_subflow(new_state: State, flow_state: FlowState) -> Optional[FlowState
     # Basic support for referring a subflow using a variable
     if subflow_id.startswith("$"):
         subflow_id = eval_expression(subflow_id, new_state.context)
+
+    # parameter support
+    if _flow_id_has_params(subflow_id):
+        flow_params = _get_flow_params(subflow_id)
+        subflow_id = _normalize_flow_id(subflow_id)
+        new_state.context_updates.update(flow_params)
 
     subflow_state = FlowState(
         flow_id=subflow_id,
@@ -708,3 +715,74 @@ def compute_context(history: List[dict]):
         context["event"] = history[-1]
 
     return context
+
+
+def _get_flow_params(flow_id: str) -> dict:
+    """Return the arguments in a flow id as a dictionary.
+
+    Args:
+        flow_id: The flow id.
+
+    Returns:
+        A dictionary of arguments in the flow id.
+    """
+    flow_id = flow_id.strip()
+    params = {}
+
+    if "(" in flow_id and ")" in flow_id:
+        arg_string = flow_id.split("(")[1].split(")")[0]
+    elif "$" in flow_id:
+        arg_string = flow_id.split("$")[1]
+    else:
+        return params
+
+    for arg in arg_string.split(","):
+        arg = arg.strip()
+        if "=" in arg:
+            key, value = arg.split("=")
+            # Remove single or double quotes from the value
+            if (value.startswith("'") and value.endswith("'")) or (
+                value.startswith('"') and value.endswith('"')
+            ):
+                value = value[1:-1]
+            params[key] = value
+        else:
+            params[arg] = None
+
+    return params
+
+
+def _flow_id_has_params(flow_id: str) -> bool:
+    """Check if a flow ID contains arguments.
+
+    A flow ID is considered to contain arguments if it contains both "(" and ")".
+
+    Args:
+        flow_id: The flow ID to check.
+
+    Returns:
+        True if the flow ID contains arguments, False otherwise.
+    """
+    return all(x in flow_id for x in "()") or all(x in flow_id for x in "$")
+
+
+def _normalize_flow_id(flow_id: str) -> str:
+    """Normalize the flow id by removing the arguments from the id.
+
+    Args:
+        flow_id(str): The flow id.
+
+    Example:
+
+        flow_id = "flow_id_v1(arg1, arg2)"
+        _normalize_flow_id(flow_id) -> "flow_id_v1"
+
+    """
+    flow_id = flow_id.strip()
+    if "(" in flow_id:
+        flow_id = flow_id.split("(")[0]
+
+    elif "$" in flow_id:
+        flow_id = flow_id.split("$")[0]
+
+    return flow_id.strip()

@@ -14,7 +14,7 @@
 # limitations under the License.
 import asyncio
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, cast
 
 import aiohttp
 from prompt_toolkit import HTML, PromptSession
@@ -22,11 +22,13 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.styles import Style
 
 from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.cli import debugger
 from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
+from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.logging import verbose
 from nemoguardrails.logging.verbose import console
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import new_event_dict, new_uid
+from nemoguardrails.utils import new_event_dict, new_uuid
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -131,6 +133,17 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
     session: PromptSession = PromptSession()
     status = console.status("[bold green]Working ...[/]")
+    events_counter = 0
+
+    def watcher(*args):
+        nonlocal events_counter
+        events_counter += 1
+        status.update(f"[bold green]Working ({events_counter} events processed)...[/]")
+
+    rails_app.runtime.watchers.append(watcher)
+
+    # Set the runtime for the debugger to work correctly.
+    debugger.set_runtime(cast(RuntimeV2_x, rails_app.runtime))
 
     # Start an asynchronous timer
     async def _start_timer(timer_name: str, delay_seconds: float, action_uid: str):
@@ -155,9 +168,6 @@ async def _run_chat_v2_x(rails_app: LLMRails):
         # We detect any "StartUtteranceBotAction" events, show the message, and
         # generate the corresponding Finished events as new input events.
         for event in output_events:
-            # Add all output events also to input events
-            input_events.append(event)
-
             if event["type"] == "StartUtteranceBotAction":
                 # We print bot messages in green.
                 if not verbose.verbose_mode_enabled:
@@ -381,14 +391,15 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 if action_uid in running_timer_tasks:
                     running_timer_tasks[action_uid].cancel()
                     running_timer_tasks.pop(action_uid)
+            elif event["type"].endswith("Exception"):
+                if event["type"].endswith("Exception"):
+                    console.print("[red]" + f"Event: {event}" + "[/]")
             elif event["type"] == "LocalAsyncCounter":
                 # if verbose.verbose_mode_enabled:
                 #     console.print(Styles.GREY + f"Event: {event}" + "[/]")
                 pass
             else:
-                if event["type"] not in ["LocalAsyncCounter"]:
-                    if not verbose.verbose_mode_enabled:
-                        console.print(f"Event: {event['type']}")
+                console.print(f"Event: {event['type']}")
 
         # TODO: deserialize the output state
         # state = State.from_dict(output_state)
@@ -409,10 +420,12 @@ async def _run_chat_v2_x(rails_app: LLMRails):
             if len(input_events) == 0:
                 input_events = [new_event_dict("CheckLocalAsync")]
 
-            output_events, output_state = await rails_app.process_events_async(
-                input_events, state
-            )
+            # We need to copy input events to prevent race condition
+            input_events_copy = input_events.copy()
             input_events = []
+            output_events, output_state = await rails_app.process_events_async(
+                input_events_copy, state
+            )
 
             # Process output_events and potentially generate new input_events
             _process_output()
@@ -425,6 +438,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 # If there are no pending actions, we stop
                 check_task.cancel()
                 check_task = None
+                debugger.set_output_state(output_state)
                 status.stop()
                 enable_input.set()
                 return
@@ -436,10 +450,14 @@ async def _run_chat_v2_x(rails_app: LLMRails):
     async def _process_input_events():
         nonlocal first_time, output_events, output_state, input_events, check_task
         while input_events or first_time:
-            output_events, output_state = await rails_app.process_events_async(
-                input_events, state
-            )
+            # We need to copy input events to prevent race condition
+            input_events_copy = input_events.copy()
             input_events = []
+            output_events, output_state = await rails_app.process_events_async(
+                input_events_copy, state
+            )
+            debugger.set_output_state(output_state)
+
             _process_output()
             # If we don't have a check task, we start it
             if check_task is None:
@@ -470,10 +488,20 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                     ),
                 )
                 enable_input.clear()
+                events_counter = 0
                 status.start()
                 waiting_user_input = False
                 if user_message == "":
                     input_events = [new_event_dict("CheckLocalAsync")]
+
+                # System commands
+                elif user_message.startswith("!"):
+                    command = user_message[1:]
+                    debugger.run_command(command)
+                    status.stop()
+                    enable_input.set()
+                    continue
+
                 elif user_message.startswith("/"):
                     # Non-UtteranceBotAction actions
                     event_input = user_message.lstrip("/")
@@ -489,7 +517,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         new_event_dict(
                             "UtteranceUserActionFinished",
                             final_transcript=user_message,
-                            action_uid=new_uid(),
+                            action_uid=new_uuid(),
                             is_success=True,
                         )
                     ]

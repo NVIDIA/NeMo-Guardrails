@@ -1,10 +1,10 @@
-define bot refuse to respond
-  "I'm sorry, I can't respond to that."
 
-
-define flow self check output
-  $allowed = execute self_check_output
+flow self check output
+  $allowed = await SelfCheckOutputAction
 
   if not $allowed
-    bot refuse to respond
-    stop
+    if $system.config.enable_rails_exceptions
+      send OutputRailException(message="Output not allowed. The output was blocked by the 'self check output' flow.")
+    else
+      bot refuse to respond
+      abort

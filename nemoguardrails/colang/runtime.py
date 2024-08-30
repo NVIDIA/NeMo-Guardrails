@@ -45,6 +45,13 @@ class Runtime:
         # Initialize the prompt renderer as well.
         self.llm_task_manager = LLMTaskManager(config)
 
+        # A set of watchers that are notified every time an event is processed.
+        # Used mainly for reporting the progress to the CLI.
+        self.watchers = []
+
+        # The maximum number of events to be processed in a processing loop
+        self.max_events = 500
+
     @abstractmethod
     def _init_flow_configs(self) -> None:
         pass

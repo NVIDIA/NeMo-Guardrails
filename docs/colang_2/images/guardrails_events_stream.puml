@@ -1,0 +1,65 @@
+@startuml
+actor "        User        " as User
+
+
+
+box "NeMo Guardrails" #e7fadf
+participant API
+participant "Events Stream" as Events
+participant "Colang\nRuntime" as Runtime <<LLMRails>>
+end box
+participant "LLM-based System" as System
+
+skinparam ParticipantPadding 20
+
+
+
+activate User
+User -> API: "hi"
+API -> Events
+note over Events: UserUtterance
+Events -> Runtime
+
+activate Runtime
+Runtime -> System
+activate System
+System -> Runtime
+deactivate System
+Runtime -> Events
+deactivate Runtime
+
+note over Events: BotUtterance
+
+Events -> API
+API -> User: "Hello!"
+deactivate User
+
+
+
+
+
+
+User -> API: "!#@$"
+activate User
+API -> Events
+
+note over Events: UserUtterance
+Events -> Runtime
+activate Runtime
+Runtime -> Events
+deactivate Runtime
+note over Events: InputRailTriggered
+note over Events: BotUtterance
+
+
+
+Events -> API
+API -> User: "Sorry, ..."
+
+
+
+
+hide footbox
+hide stereotype
+scale 2
+@enduml

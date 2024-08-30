@@ -23,6 +23,15 @@ NVIDIA NeMo Guardrails
    getting_started/6_topical_rails/README
    getting_started/7_rag/README
 
+.. toctree::
+   :caption: Colang 2.0
+   :name: Colang 2.0
+   :maxdepth: 2
+
+   colang_2/overview
+   colang_2/whats-changed
+   colang_2/getting_started/index
+   colang_2/language_reference/index
 
 .. toctree::
    :caption: User Guides

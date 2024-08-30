@@ -229,9 +229,12 @@ def test_expressions_in_strings():
 
     content = """
     flow main
-      start UtteranceBotAction(script="Roger") as $ref
+      $xyz = 'x\\'y\\'z\\n'
+      $test = '''Roger's
+                test:\n {$xyz}'''
+      start UtteranceBotAction(script=$test) as $ref
       start UtteranceBotAction(script="It's {{->}}")
-      start UtteranceBotAction(script='It"s {{->}} \\'{$ref.start_event_arguments.script}!\\'')
+      await UtteranceBotAction(script='It"s {{->}} \\'{$ref.start_event_arguments.script}!\\'')
     """
 
     config = _init_state(content)
@@ -241,7 +244,7 @@ def test_expressions_in_strings():
         [
             {
                 "type": "StartUtteranceBotAction",
-                "script": "Roger",
+                "script": "Roger's\n                test:\n x'y'z\n",
             },
             {
                 "type": "StartUtteranceBotAction",
@@ -249,8 +252,32 @@ def test_expressions_in_strings():
             },
             {
                 "type": "StartUtteranceBotAction",
-                "script": "It\"s {->} 'Roger!'",
+                "script": "It\"s {->} 'Roger's\n                test:\n x'y'z\n!'",
             },
+        ],
+    )
+
+
+def test_multiline_string():
+    """Test string expression evaluation."""
+
+    content = '''
+    flow main
+      $var = "Test"
+      $string = """This is a multiline
+      string! '{$var}' "hi" """
+      start UtteranceBotAction(script=$string)
+    '''
+
+    config = _init_state(content)
+    state = run_to_completion(config, start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "StartUtteranceBotAction",
+                "script": "This is a multiline\n      string! 'Test' \"hi\" ",
+            }
         ],
     )
 
@@ -950,4 +977,4 @@ def test_expression_evaluation():
 
 
 if __name__ == "__main__":
-    test_expression_evaluation()
+    test_multiline_string()

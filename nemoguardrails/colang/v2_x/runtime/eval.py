@@ -26,9 +26,12 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import Element
 from nemoguardrails.colang.v2_x.runtime import system_functions
 from nemoguardrails.colang.v2_x.runtime.errors import ColangValueError
 from nemoguardrails.colang.v2_x.runtime.flows import FlowState, State
-from nemoguardrails.colang.v2_x.runtime.utils import AttributeDict
-from nemoguardrails.eval.cli.simplify_formatter import SimplifyFormatter
-from nemoguardrails.utils import new_uid
+from nemoguardrails.colang.v2_x.runtime.utils import (
+    AttributeDict,
+    escape_special_string_characters,
+)
+from nemoguardrails.logging.simplify_formatter import SimplifyFormatter
+from nemoguardrails.utils import new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -67,14 +70,17 @@ def eval_expression(expr: str, context: dict) -> Any:
 
     # We search for all expressions in strings within curly brackets and evaluate them first
     # Find first all strings
-    string_pattern = r'("(?:\\"|[^"])*?")|(\'(?:\\\'|[^\'])*?\')'
+    string_pattern = (
+        r'("""|\'\'\')((?:\\\1|(?!\1)[\s\S])*?)\1|("|\')((?:\\\3|(?!\3).)*?)\3'
+    )
     string_expressions_matches = re.findall(string_pattern, expr)
     string_expression_values = []
     for string_expression_match in string_expressions_matches:
+        character = string_expression_match[0] or string_expression_match[2]
         string_expression = (
-            string_expression_match[0]
-            if string_expression_match[0]
-            else string_expression_match[1]
+            character
+            + (string_expression_match[1] or string_expression_match[3])
+            + character
         )
         if string_expression:
             # Find expressions within curly brackets, ignoring double curly brackets
@@ -89,7 +95,12 @@ def eval_expression(expr: str, context: dict) -> Any:
                         raise ColangValueError(
                             f"Error evaluating inner expression: '{inner_expression}'"
                         ) from ex
-                    value = str(value).replace('"', '\\"').replace("'", "\\'")
+
+                    value = str(value)
+
+                    # Escape special characters
+                    value = escape_special_string_characters(value)
+
                     inner_expression_values.append(value)
                 string_expression = re.sub(
                     expression_pattern,
@@ -143,7 +154,7 @@ def eval_expression(expr: str, context: dict) -> Any:
                 "regex": _create_regex,
                 "search": _regex_search,
                 "find_all": _regex_findall,
-                "uid": new_uid,
+                "uid": new_uuid,
                 "pretty_str": _pretty_str,
                 "escape": _escape_string,
                 "is_int": _is_int,
@@ -157,10 +168,13 @@ def eval_expression(expr: str, context: dict) -> Any:
                 "greater_than": _greater_than_operator,
                 "equal_greater_than": _equal_or_greater_than_operator,
                 "not_equal_to": _not_equal_to_operator,
+                "list": list,
             }
         )
-        if "_state" in context:
-            functions.update({"flows_info": partial(_flows_info, context["_state"])})
+        if "system" in context and "state" in context["system"]:
+            functions.update(
+                {"flows_info": partial(_flows_info, context["system"]["state"])}
+            )
 
         # TODO: replace this with something even more restrictive.
         s = EvalWithCompoundTypes(
@@ -184,7 +198,7 @@ def eval_expression(expr: str, context: dict) -> Any:
 
         return result
     except Exception as e:
-        raise ColangValueError(f"Error evaluating '{expr}'") from e
+        raise ColangValueError(f"Error evaluating '{expr}', {e}")
 
 
 def _create_regex(pattern: str) -> re.Pattern:
@@ -208,7 +222,13 @@ def _pretty_str(data: Any) -> str:
 
 def _escape_string(string: str) -> str:
     """Escape a string and inner expressions."""
-    return string.replace("\\", "\\\\").replace("{{", "\\{").replace("}}", "\\}")
+    return (
+        string.replace("\\", "\\\\")
+        .replace("{{", "\\{")
+        .replace("}}", "\\}")
+        .replace("'", "\\'")
+        .replace('"', '\\"')
+    )
 
 
 def _is_int(val: Any) -> bool:

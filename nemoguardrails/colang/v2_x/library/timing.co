@@ -1,9 +1,5 @@
 # meta: exclude from llm
 
-flow wait indefinitely
-  """Little helper flow to wait indefinitely."""
-  match NeverComingEvent()
-
 @loop("NEW")
 flow wait $time_s $timer_id = "wait_timer_{uid()}"
   """Wait the specified number of seconds before continuing."""
@@ -15,7 +11,7 @@ flow repeating timer $timer_id $interval_s
     await wait $interval_s $timer_id
 
 @loop("user_was_silent")
-@meta(user_intent=True)
+@meta(user_action=True)
 flow user was silent $time_s
   """Wait for when user was silent for $time_s seconds."""
   while True
@@ -29,7 +25,7 @@ flow user was silent $time_s
       send $timer_ref.Stop()
 
 @loop("user_did_not_respond")
-@meta(user_intent=True)
+@meta(user_action=True)
 flow user didnt respond $time_s
   """Wait for when user was silent for $time_s seconds while bot was silent."""
   while True
@@ -46,7 +42,7 @@ flow user didnt respond $time_s
       send $timer_ref.Stop()
 
 @loop("bot_was_silent")
-@meta(bot_intent=True)
+@meta(bot_action=True)
 flow bot was silent $time_s
   """Wait for the bot to be silent (no utterance) for given time."""
   while True

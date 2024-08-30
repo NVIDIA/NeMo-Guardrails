@@ -11,8 +11,11 @@ flow _user_said $text -> $event
   else
     match UtteranceUserAction.Finished() as $event
 
+  $text = $event.final_transcript
+
 flow _user_saying $text -> $event
   """The internal flow for all semantic 'user saying' flows."""
+
   if $text
     if is_regex($text)
       match UtteranceUserAction.TranscriptUpdated(interim_transcript=$text) as $event
@@ -22,9 +25,15 @@ flow _user_saying $text -> $event
   else
     match UtteranceUserAction.TranscriptUpdated() as $event
 
+  $text = $event.interim_transcript
+
 flow _user_said_something_unexpected -> $event
   """The internal flow for all semantic 'user said something unexpected' flows."""
+  global $last_user_message
   match UnhandledEvent(event="UtteranceUserActionFinished", loop_ids={$self.loop_id}) as $event
+
+  $text = $event.final_transcript
+  $last_user_message = $text
 
 @meta(user_action='user said "{$transcript}"')
 flow user said $text -> $transcript
@@ -73,10 +82,17 @@ flow user said something unexpected -> $event, $transcript
 
 flow _bot_say $text -> $action
   """The internal flow for all semantic level bot utterance flows."""
-  if is_str($text)
-    await UtteranceBotAction(script=$text) as $action
-  else
+
+  if not is_str($text):
     log "UtteranceBotAction expected parameter `script` of type `string` but got `{type($text)}`: {$text}"
+
+  global $bot_message
+  global $last_bot_message
+
+  $bot_message = $text
+  $last_bot_message = $text
+
+  await UtteranceBotAction(script=$text) as $action
 
 @meta(bot_action=True)
 flow bot say $text
@@ -155,6 +171,9 @@ flow bot suggested something -> $text
   $text = $event.text
 
 
+flow bot refuse to respond
+    bot say "I'm sorry, I can't respond to that."
+
 # -----------------------------------
 # State Tracking Flows
 # -----------------------------------
@@ -163,12 +182,19 @@ flow bot suggested something -> $text
 flow tracking bot talking state
   """tracking bot talking state in global variable $bot_talking_state."""
   global $bot_talking_state
+
+  # TODO: keeping both for backwards compatibility reason. To clean up.
+  global $last_bot_script
+  global $last_bot_message
+
   if $bot_talking_state == None
     $bot_talking_state = False
   await bot started saying something
   $bot_talking_state = True
-  await bot said something
+  await bot said something as $bot_said_flow
   $bot_talking_state = False
+  $last_bot_script = $bot_said_flow.text
+  $last_bot_message = $bot_said_flow.text
 
 @loop("state_tracking")
 flow tracking user talking state
@@ -179,9 +205,9 @@ flow tracking user talking state
     $user_talking_state = False
   await user started saying something
   $user_talking_state = True
-  await user said something
+  await user said something as $user_said_flow
   $user_talking_state = False
-  $last_user_transcript = $event.final_transcript
+  $last_user_transcript = $user_said_flow.transcript
 
 
 # ----------------------------------------------------------
@@ -248,3 +274,18 @@ flow observation of flow finished $flow_name
 flow observation of flow failed $flow_name
   match FlowFailed(flow_id=$flow_name) as $ref
   log "Flow failed: `{$ref.flow_instance_uid}` {$ref.arguments.get('$0','')} {$ref.arguments.get('$1','')} {$ref.arguments.get('$2','')}"
+
+# -----------------------------------
+# Utility Flows
+# -----------------------------------
+
+flow wait indefinitely
+  """Little helper flow to wait indefinitely."""
+  match NeverComingEvent()
+
+flow await_flow_by_name $flow_name
+  """Start a flow with the provided name and wait for it to finish."""
+  $new_flow_instance_uid = "({$flow_name}){uid()}"
+  send StartFlow(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid)
+  match FlowStarted(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
+  match $event_ref.flow.Finished()

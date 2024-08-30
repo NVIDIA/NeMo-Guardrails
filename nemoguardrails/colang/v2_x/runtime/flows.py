@@ -34,7 +34,7 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
 )
 from nemoguardrails.colang.v2_x.runtime.errors import ColangSyntaxError
 from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
-from nemoguardrails.utils import new_uid
+from nemoguardrails.utils import new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ class Action:
         self, name: str, arguments: Dict[str, Any], flow_uid: Optional[str] = None
     ) -> None:
         # The unique id of the action
-        self.uid: str = new_uid()
+        self.uid: str = new_uuid()
 
         # Name of the action
         self.name = name
@@ -264,11 +264,14 @@ class Action:
     def get_event(self, name: str, arguments: dict) -> ActionEvent:
         """Returns the corresponding action event."""
         if name.endswith("Updated"):
-            split_name = name.rsplit("Updated", 1)
-            if split_name[0] == "":
-                raise ColangSyntaxError(f"Invalid action event {name}!")
-            arguments.update({"event_parameter_name": split_name[0]})
-            name = "Updated"
+            if len(name) > 7:
+                split_name = name.rsplit("Updated", 1)
+                if split_name[0] == "":
+                    raise ColangSyntaxError(f"Invalid action event {name}!")
+                arguments.update({"event_parameter_name": split_name[0]})
+                name = "Updated"
+            else:
+                arguments.update({"event_parameter_name": ""})
         if name not in Action._event_name_map:
             raise ColangSyntaxError(f"Invalid action event {name}!")
         func = getattr(self, Action._event_name_map[name])
@@ -372,6 +375,9 @@ class FlowConfig:
     # The actual source code, if available
     source_code: Optional[str] = None
 
+    # The name of the source code file
+    source_file: Optional[str] = None
+
     @property
     def loop_id(self) -> Optional[str]:
         """Return the interaction loop id if set."""
@@ -443,8 +449,7 @@ class FlowHead:
     # If a flow head is forked it will create new child heads
     child_head_uids: List[str] = field(default_factory=list)
 
-    # If set, a flow failure will be forwarded to the label, otherwise it will abort/fail the flow
-    # Mainly used to simplify inner flow logic
+    # If set, a flow failure (abort) will be forwarded to the label, otherwise it will abort/fail the flow
     catch_pattern_failure_label: List[str] = field(default_factory=list)
 
     # Callback that can be registered to get informed about head position updates
@@ -764,6 +769,9 @@ class State:
     # The configuration of all the flows that are available.
     flow_configs: Dict[str, FlowConfig]
 
+    # The full rails configuration object
+    rails_config: Optional["RailsConfig"] = None
+
     # All actions that were instantiated in a flow that is still referenced somewhere
     actions: Dict[str, Action] = field(default_factory=dict)
 
@@ -786,7 +794,7 @@ class State:
 
     # The updates to the context that should be applied before the next step
     # TODO: This would be needed if we decide to implement assignments of global variables via context updates
-    # context_updates: dict = field(default_factory=dict)
+    context_updates: dict = field(default_factory=dict)
 
     ########################
     # Helper data structures
