@@ -323,7 +323,6 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         user_intent = get_first_nonempty_line(result)
 
-        # GTP-4o often adds 'user intent: ' in front
         if user_intent and ":" in user_intent:
             temp_user_intent = get_first_user_intent([user_intent])
             if temp_user_intent:
@@ -549,6 +548,9 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         with llm_params(llm, temperature=temperature):
             result = await llm_call(llm, prompt)
 
+        # TODO: Currently, we only support generating a bot action as continuation. This could be generalized
+        # Colang statements.
+
         lines = _remove_leading_empty_lines(result).split("\n")
 
         if len(lines) == 0 or (len(lines) == 1 and lines[0] == ""):
@@ -564,25 +566,28 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             }
 
         line_0 = lines[0].lstrip(" ")
-        uuid = new_uuid()[0:8]
+        bot_intent = remove_action_intent_identifiers([line_0])[0].strip(" ")
+        if not bot_intent.startswith("bot "):
+            bot_intent = get_first_bot_intent(result.splitlines())
+        bot_action = get_first_bot_action(result.splitlines())
 
-        intent = escape_flow_name(
-            remove_action_intent_identifiers([line_0])[0].strip(" ")
-        )
-        flow_name = f"_dynamic_{uuid} {intent}"
+        if bot_action is None:
+            raise LlmResponseError(f"Issue with LLM response: {result}")
+
+        if bot_intent:
+            bot_intent = escape_flow_name(bot_intent.strip(" "))
+
+        uuid = new_uuid()[0:8]
+        flow_name = f"_dynamic_{uuid} {bot_intent}"
         # TODO: parse potential parameters from flow name with a regex
         flow_parameters: List[Any] = []
-        lines = lines[1:]
-
-        lines = remove_action_intent_identifiers(lines)
-        lines = get_initial_actions(lines)
 
         return {
             "name": flow_name,
             "parameters": flow_parameters,
-            "body": f'@meta(bot_intent="{intent}")\n'
+            "body": f'@meta(bot_intent="{bot_intent}")\n'
             + f"flow {flow_name}\n"
-            + "\n".join(["  " + l.strip(" ") for l in lines]),
+            + f"  {bot_action}",
         }
 
     @action(name="CreateFlowAction", is_system_action=True, execute_async=True)
