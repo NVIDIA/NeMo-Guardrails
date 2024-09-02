@@ -254,6 +254,8 @@ prompts:
           content: |-
               Complete the following flow based on its name:
               flow {{ flow_name }}
+      stop:
+        - "\nflow"
 
       # Prompt for generating the continuation for the current conversation.
     - task: generate_flow_continuation

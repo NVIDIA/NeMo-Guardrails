@@ -4,7 +4,7 @@ prompts:
 
     - task: general
       models:
-        - openai/gpt-3.5-turbo-instruct
+          - openai/gpt-3.5-turbo-instruct
       content: |-
           {{ general_instructions }}
 
@@ -21,7 +21,7 @@ prompts:
     # Prompt for detecting the user message canonical form.
     - task: generate_user_intent
       models:
-        - openai/gpt-3.5-turbo-instruct
+          - openai/gpt-3.5-turbo-instruct
       content: |-
           """
           {{ general_instructions }}
@@ -41,7 +41,7 @@ prompts:
     # Prompt for generating the next steps.
     - task: generate_next_steps
       models:
-        - openai/gpt-3.5-turbo-instruct
+          - openai/gpt-3.5-turbo-instruct
       content: |-
           """
           {{ general_instructions }}
@@ -60,7 +60,7 @@ prompts:
     # Prompt for generating the bot message from a canonical form.
     - task: generate_bot_message
       models:
-        - openai/gpt-3.5-turbo-instruct
+          - openai/gpt-3.5-turbo-instruct
       content: |-
           """
           {{ general_instructions }}
@@ -86,7 +86,7 @@ prompts:
     # Prompt for generating the user intent, next steps and bot message in a single call.
     - task: generate_intent_steps_message
       models:
-        - openai/gpt-3.5-turbo-instruct
+          - openai/gpt-3.5-turbo-instruct
       content: |-
           """
           {{ general_instructions }}
@@ -106,7 +106,7 @@ prompts:
     # Prompt for generating the value of a context variable.
     - task: generate_value
       models:
-        - openai/gpt-3.5-turbo-instruct
+          - openai/gpt-3.5-turbo-instruct
       content: |-
           """
           {{ general_instructions }}
@@ -215,6 +215,8 @@ prompts:
 
           # Complete the following flow based on its name:
           flow {{ flow_name }}
+      stop:
+          - "\nflow"
 
       # Prompt for generating the continuation for the current conversation.
     - task: generate_flow_continuation
@@ -232,7 +234,6 @@ prompts:
           {{ history | colang }}
 
           bot intent:
-
 
     - task: generate_flow_continuation_from_flow_nld
       models:
