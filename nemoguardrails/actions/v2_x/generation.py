@@ -173,7 +173,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 and "flow_id" in event.arguments
             ):
                 flow_id = event.arguments["flow_id"]
-                if not isinstance(flow_id, str):
+                if not isinstance(flow_id, str) or flow_id not in state.flow_id_states:
                     continue
 
                 flow_config = state.flow_configs.get(flow_id, None)
@@ -493,17 +493,10 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         lines = _remove_leading_empty_lines(result).split("\n")
 
-        if lines[0].startswith("  "):
-            # print(f"Generated flow:\n{result}\n")
-            return f"flow {name}\n" + "\n".join(lines)
+        if lines[0].startswith("flow"):
+            return f"flow {lines[0][5:]}\n" + "\n".join(lines[1:])
         else:
-            response = "\n".join(lines)
-            log.warning(
-                "GenerateFlowFromNameAction\nFAILING-PROMPT ::\n%s\n FAILING-RESPONSE: %s\n",
-                prompt,
-                response,
-            )
-            return "flow bot express unsure\n  bot say 'I don't know how to do that.'"
+            return f"flow {name}\n  " + "\n  ".join([line.lstrip() for line in lines])
 
     @action(
         name="GenerateFlowContinuationAction", is_system_action=True, execute_async=True
