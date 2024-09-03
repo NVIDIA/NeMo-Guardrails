@@ -225,6 +225,9 @@ def convert_colang_1_syntax(lines: List[str]) -> List[str]:
             # We convert "define subflow" to "flow"
             line = re.sub(r"define subflow", "flow", line)
 
+        if line.lstrip().startswith("bot") or line.lstrip().startswith("user"):
+            line = re.sub(r"[-']", " ", line)
+
         # Convert "create event ..." to "send  ..." while preserving indentation
         line = re.sub(r"(^\s*)create event", r"\1send", line)
 
