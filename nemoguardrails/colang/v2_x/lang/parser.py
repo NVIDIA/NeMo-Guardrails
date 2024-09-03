@@ -83,7 +83,7 @@ class ColangParser:
                     r"^( +)\.\.\.",
                     textwrap.dedent(
                         r"""
-                        \1$flow_info = await GenerateFlowAction()
+                        \1$flow_info = await GenerateFlowAction(flow_id=$self.flow_id)
                         \1await AddFlowsAction(config=$flow_info['body'])
                         \1$instance_uid = uid()
                         \1send StartFlow(flow_id=$flow_info['name'], flow_instance_uid=$instance_uid, context=$self.context)

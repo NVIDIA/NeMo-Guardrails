@@ -703,23 +703,13 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         state: State,
         events: List[dict],
         llm: Optional[BaseLLM] = None,
+        flow_id: Optional[str] = None,
     ) -> dict:
         """Generate the body for a flow."""
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
 
-        event = events[-1]
-        assert event["type"] == "StartGenerateFlowAction"
-        action_uid = event["action_uid"]
-
-        # We need to search for the flow that is waiting on this action
-        triggering_flow_id = None
-        for _, flow_state in state.flow_states.items():
-            if action_uid in flow_state.action_uids:
-                triggering_flow_id = flow_state.flow_id
-                break
-
-        assert triggering_flow_id is not None
+        triggering_flow_id = flow_id
 
         flow_config = state.flow_configs[triggering_flow_id]
         docstrings = re.findall(r'"""(.*?)"""', flow_config.source_code, re.DOTALL)
