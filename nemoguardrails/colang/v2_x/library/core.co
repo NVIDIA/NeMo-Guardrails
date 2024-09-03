@@ -82,6 +82,10 @@ flow user said something unexpected -> $event, $transcript
 
 flow _bot_say $text -> $action
   """The internal flow for all semantic level bot utterance flows."""
+
+  if not is_str($text):
+    log "UtteranceBotAction expected parameter `script` of type `string` but got `{type($text)}`: {$text}"
+
   global $bot_message
   global $last_bot_message
 
@@ -206,41 +210,70 @@ flow tracking user talking state
   $last_user_transcript = $user_said_flow.transcript
 
 
-# -----------------------------------
-# Development Helper Flows
-# -----------------------------------
+# ----------------------------------------------------------
+# Flows that help in the development and debugging of Colang
+# ----------------------------------------------------------
 
-@loop("colang_errors_warning")
-flow notification of colang errors $bot_message = "Excuse me, there was an internal Colang error."
-  """Notify about runtime Colang errors."""
+flow debugging helpers
+  """Activate all debugging helper flows."""
+  activate warning of colang errors
+  activate warning of undefined flow start
+
+flow warning of colang errors
+  """Print and log warning about runtime Colang errors."""
   match ColangError() as $event
   $info = "Colang error: {$event.type} - {escape($event.error)}"
   log $info
-  print $info
-  if $bot_message
-    bot say $bot_message
 
-flow notification of undefined flow start $bot_message = "Failed to start an undefined flow!"
-  """Notify about the start of an undefined flow."""
-  priority 0.1
+flow warning of undefined flow start
+  """Print and log warning about the start of an undefined flow."""
   match UnhandledEvent(event="StartFlow") as $event
   $info = "Failed to start undefined flow: '{$event.flow_id}' {$event.loop_ids}"
   log $info
-  print $info
-  if $bot_message
-    bot say $bot_message
+
+flow warning of unexpected user utterance
+  """Print and log warning about an unhandled user utterance."""
+  match UnhandledEvent(event="UtteranceUserActionFinished") as $event
+  $info = "Unexpected user utterance: '{$event.final_transcript}'"
+  log $info
+
+flow notification of colang errors $bot_message = "Excuse me, there was an internal Colang error."
+  """Notify user about runtime Colang errors."""
+  match ColangError() as $event
+  bot say $bot_message
+
+flow notification of undefined flow start $bot_message = "Failed to start an undefined flow!"
+  """Notify user about the start of an undefined flow."""
+  priority 0.1
+  match UnhandledEvent(event="StartFlow") as $event
+  bot say $bot_message
   # We need to abort the flow that sent the FlowStart event since it might be waiting for it
   send StopFlow(flow_instance_uid=$event.source_flow_instance_uid)
 
 flow notification of unexpected user utterance $bot_message = "I don't know how to respond to that!"
-  """Notify about an unhandled user utterance."""
+  """Notify user about an unhandled user utterance."""
   priority 0.1
   match UnhandledEvent(event="UtteranceUserActionFinished") as $event
-  $info = "Unexpected user utterance: '{$event.final_transcript}'"
-  log $info
-  print $info
-  if $bot_message
-    bot say $bot_message
+  bot say $bot_message
+
+@loop("observation of flow")
+flow observation of flow $flow_name
+  """Activate to start logging the flow events of a flow by its name."""
+  activate observation of flow start $flow_name
+  activate observation of flow finished $flow_name
+  activate observation of flow failed $flow_name
+
+flow observation of flow start $flow_name
+  match StartFlow(flow_id=$flow_name) as $ref
+  log "Flow start: `{$ref.flow_instance_uid}` {$ref.arguments.get('$0','')} {$ref.arguments.get('$1','')} {$ref.arguments.get('$2','')}"
+
+flow observation of flow finished $flow_name
+  match FlowFinished(flow_id=$flow_name) as $ref
+  log "Flow finished: `{$ref.flow_instance_uid}` {$ref.arguments.get('$0','')} {$ref.arguments.get('$1','')} {$ref.arguments.get('$2','')}"
+
+flow observation of flow failed $flow_name
+  match FlowFailed(flow_id=$flow_name) as $ref
+  log "Flow failed: `{$ref.flow_instance_uid}` {$ref.arguments.get('$0','')} {$ref.arguments.get('$1','')} {$ref.arguments.get('$2','')}"
 
 # -----------------------------------
 # Utility Flows

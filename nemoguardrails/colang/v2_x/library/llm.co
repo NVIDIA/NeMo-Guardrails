@@ -17,6 +17,7 @@ flow bot say something like $text
 # LLM Utilities
 # -----------------------------------
 
+@active
 @loop("llm_response_polling")
 flow polling llm request response $interval=1.0
   """Start response polling for any LLM invocation."""
