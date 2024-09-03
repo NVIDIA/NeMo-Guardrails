@@ -246,14 +246,29 @@ prompts:
         - llama-3.1
       messages:
         - type: system
+          content: |
+              {{ general_instructions }}
+
+              Your task is to generate a flow from the provided flow name ${{ flow_name }}.
+              Do not provide any explanations, just output value.
+
+        - type: system
+          content: "This is the current conversation between the user and the bot:"
+        - "{{ history | colang | to_messages_v2}}"
+
+        - type: system
           content: |-
-              Example flows:
+              These are some example flows:
               {{ examples }}
 
         - type: system
           content: |-
               Complete the following flow based on its name:
               flow {{ flow_name }}
+
+              Do not provide any explanations, just output value.
+      stop:
+        - "\nflow"
 
       # Prompt for generating the continuation for the current conversation.
     - task: generate_flow_continuation

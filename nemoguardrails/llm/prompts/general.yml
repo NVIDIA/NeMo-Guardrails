@@ -189,6 +189,8 @@ prompts:
           # Complete the following flow based on its instruction:
           flow {{ flow_name }}
             """{{ instructions }}"""
+      stop:
+          - "\nflow"
 
     # Prompt for generating a flow from name.
     - task: generate_flow_from_name

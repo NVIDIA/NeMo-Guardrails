@@ -250,9 +250,10 @@ flow wait indefinitely
   """Little helper flow to wait indefinitely."""
   match NeverComingEvent()
 
-flow await_flow_by_name $flow_name
+flow await_flow_by_name $flow_name $new_flow_instance_uid = None
   """Start a flow with the provided name and wait for it to finish."""
-  $new_flow_instance_uid = "({$flow_name}){uid()}"
+  if $new_flow_instance_uid is None
+    $new_flow_instance_uid = "({$flow_name}){uid()}"
   send StartFlow(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid)
   match FlowStarted(flow_id=$flow_name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
   match $event_ref.flow.Finished()

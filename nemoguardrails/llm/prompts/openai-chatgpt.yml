@@ -238,6 +238,17 @@ prompts:
       - openai/gpt-4
     messages:
       - type: system
+        content: |
+          {{ general_instructions }}
+
+          Your task is to generate a flow from the provided flow name ${{ flow_name }}.
+          Do not provide any explanations, just output value.
+
+      - type: system
+        content: "This is the current conversation between the user and the bot:"
+      - "{{ history | colang | to_messages_v2}}"
+
+      - type: system
         content: |-
           Example flows:
           {{ examples }}
@@ -246,26 +257,8 @@ prompts:
         content: |-
           Complete the following flow based on its name:
           flow {{ flow_name }}
-
-  # Prompt for generating the continuation for the current conversation.
-  - task: generate_flow_continuation
-    models:
-      - openai/gpt-3.5-turbo
-      - openai/gpt-4
-    messages:
-      - type: system
-        content: "{{ general_instructions }}"
-
-      - type: system
-        content: "This is how a conversation between a user and the bot can go:"
-      - "{{ sample_conversation | to_messages_v2 }}"
-
-      - type: system
-        content: "This is the current conversation between the user and the bot:"
-      - "{{ history | colang | to_messages_v2 }}"
-
-      - type: system
-        content: "Continuation of interaction:"
+    stop:
+      - "\nflow"
 
   # Prompt for generating the continuation for the current conversation.
   - task: generate_flow_continuation
