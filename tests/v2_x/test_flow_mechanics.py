@@ -1490,6 +1490,70 @@ def test_interaction_loop_with_new():
     )
 
 
+def test_interaction_loop_priorities():
+    """Test that processing order of interaction loops dependent on their priority."""
+
+    content = """
+    @loop("b", priority=5)
+    flow b
+      match Event1()
+      send EventB()
+
+    @loop("c", 1)
+    flow c
+      match Event1()
+      send EventC()
+
+    @loop(id="a", priority=10)
+    flow a
+      match Event2()
+      match Event1()
+      send EventA()
+
+    flow main
+      activate a and c and b
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {"type": "EventB"},
+            {"type": "EventC"},
+        ],
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event2",
+        },
+    )
+    state = run_to_completion(
+        state,
+        {
+            "type": "Event1",
+        },
+    )
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {"type": "EventA"},
+            {"type": "EventB"},
+            {"type": "EventC"},
+        ],
+    )
+
+
 def test_flow_overriding():
     """Test flow overriding mechanic."""
 
@@ -2277,4 +2341,4 @@ def test_single_flow_activation_3():
 
 
 if __name__ == "__main__":
-    test_deactivate_flow_mechanism()
+    test_interaction_loop_priorities()

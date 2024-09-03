@@ -21,8 +21,14 @@ from rich.table import Table
 from rich.tree import Tree
 
 from nemoguardrails.colang.v2_x.lang.colang_ast import SpecOp, SpecType
-from nemoguardrails.colang.v2_x.runtime.flows import FlowState, State
+from nemoguardrails.colang.v2_x.runtime.flows import (
+    FlowConfig,
+    FlowState,
+    InteractionLoopType,
+    State,
+)
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
+from nemoguardrails.colang.v2_x.runtime.statemachine import is_active_flow
 from nemoguardrails.utils import console
 
 runtime: Optional[RuntimeV2_x] = None
@@ -31,10 +37,15 @@ state: Optional[State] = None
 app = typer.Typer(name="!!!", no_args_is_help=True, add_completion=False)
 
 
+def set_chat_state(_chat_state: "ChatState"):
+    """Register the chat state that will be used by the debugger."""
+    global chat_state
+    chat_state = _chat_state
+
+
 def set_runtime(_runtime: RuntimeV2_x):
     """Registers the runtime that will be used by the debugger."""
     global runtime
-
     runtime = _runtime
 
 
@@ -45,27 +56,121 @@ def set_output_state(_state: State):
 
 
 @app.command()
-def list_flows(
-    active: bool = typer.Option(default=False, help="Only show active flows.")
+def restart():
+    """Restart the current Colang script."""
+    chat_state.state = None
+    chat_state.input_events = []
+    chat_state.first_time = True
+
+
+@app.command()
+def pause():
+    """Pause current interaction."""
+    chat_state.paused = True
+
+
+@app.command()
+def resume():
+    """Pause current interaction."""
+    chat_state.paused = False
+
+
+@app.command()
+def flow(
+    flow_name: str = typer.Argument(help="Name of flow or uid of a flow instance."),
 ):
+    """Shows all details about a flow or flow instance."""
+    assert state
+
+    if flow_name in state.flow_configs:
+        flow_config = state.flow_configs[flow_name]
+        console.print(flow_config)
+    else:
+        matches = [
+            (uid, item) for uid, item in state.flow_states.items() if flow_name in uid
+        ]
+        if matches:
+            flow_instance = matches[0][1]
+            console.print(flow_instance.__dict__)
+        else:
+            console.print(f"Flow '{flow_name}' does not exist.")
+            return
+
+
+@app.command()
+def flows(
+    all: bool = typer.Option(
+        default=False, help="Show all flows (including inactive)."
+    ),
+    order_by_name: bool = typer.Option(
+        default=False,
+        help="Order flows by flow name, otherwise its ordered by event processing priority.",
+    ),
+):
+    """Shows a table with all (active) flows ordered in terms of there interaction loop priority and name."""
+    assert state
+
     """List the flows from the current state."""
 
     table = Table(header_style="bold magenta")
 
-    table.add_column("ID", style="dim", width=12)
+    table.add_column("ID", style="dim", width=9)
     table.add_column("Flow Name")
+    table.add_column("Loop (Priority | Type | Id)")
+    table.add_column("Flow Instances")
     table.add_column("Source")
+
+    def get_loop_info(flow_config: FlowConfig) -> str:
+        if flow_config.loop_type == InteractionLoopType.NAMED:
+            return (
+                f"{flow_config.loop_priority} │ "
+                + flow_config.loop_type.value.capitalize()
+                + f" │ '{flow_config.loop_id}'"
+            )
+        else:
+            return f"{flow_config.loop_priority} │ " + flow_config.loop_type.value
 
     rows = []
     for flow_id, flow_config in state.flow_configs.items():
         source = flow_config.source_file
-        if "nemoguardrails" in source:
+        if source and "nemoguardrails" in source:
             source = source.rsplit("nemoguardrails", 1)[1]
 
-        # if active and state.flow_id_states[flow_id]
-        rows.append([flow_id, source])
+        if not all:
+            # Show only active flows
+            active_instances = []
+            if flow_id in state.flow_id_states:
+                for flow_instance in state.flow_id_states[flow_id]:
+                    if is_active_flow(flow_instance):
+                        active_instances.append(flow_instance.uid.split(")")[1][:5])
+                if active_instances:
+                    rows.append(
+                        [
+                            flow_id,
+                            get_loop_info(state.flow_configs[flow_id]),
+                            ",".join(active_instances),
+                            source,
+                        ]
+                    )
+        else:
+            instances = []
+            if flow_id in state.flow_id_states:
+                instances = [
+                    i.uid.split(")")[1][:5] for i in state.flow_id_states[flow_id]
+                ]
+            rows.append(
+                [
+                    flow_id,
+                    get_loop_info(state.flow_configs[flow_id]),
+                    ",".join(instances),
+                    source,
+                ]
+            )
 
-    rows.sort(key=lambda x: x[0])
+    if order_by_name:
+        rows.sort(key=lambda x: x[0])
+    else:
+        rows.sort(key=lambda x: (-state.flow_configs[x[0]].loop_priority, x[0]))
 
     for i, row in enumerate(rows):
         table.add_row(f"{i+1}", *row)
@@ -74,7 +179,11 @@ def list_flows(
 
 
 @app.command()
-def tree():
+def tree(
+    all: bool = typer.Option(
+        default=False, help="Show all flow instances (including inactive)."
+    )
+):
     """Lists the tree of all active flows."""
     main_flow = state.flow_id_states["main"][0]
 
@@ -89,8 +198,17 @@ def tree():
         elements = flow_config.elements
 
         for child_uid in flow_state.child_flow_uids:
+            child_flow_config = state.flow_configs[state.flow_states[child_uid].flow_id]
             child_flow_state = state.flow_states[child_uid]
+
+            if not all and not is_active_flow(child_flow_state):
+                continue
+
             child_uid_short = child_uid.split(")")[1][0:3] + "..."
+            parameter_values = ""
+            for param in child_flow_config.parameters:
+                value = child_flow_state.context[param.name]
+                parameter_values += f" `{value}`"
 
             # We also want to figure out if the flow is actually waiting on this child
             waiting_on = False
@@ -110,10 +228,12 @@ def tree():
             child_flow_label = (
                 ("[green]>[/] " if waiting_on else "")
                 + child_flow_state.flow_id
-                + " "
+                + parameter_values
+                + " ("
                 + child_uid_short
-                + " "
+                + " ,"
                 + child_flow_state.status.value
+                + ")"
             )
 
             child_node = node.add(child_flow_label)
