@@ -21,7 +21,7 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
    - [Got It AI RAG TruthChecker](#got-it-ai)
    - [AutoAlign](#autoalign)
    - [Cleanlab Trustworthiness Score](#cleanlab)
-   - [GCP Text Moderation](#gcpnlp)
+   - [GCP Text Moderation](#gcp-text-moderation)
    - OpenAI Moderation API - *[COMING SOON]*
 
 4. Other
