@@ -102,6 +102,10 @@ class InteractionSet(BaseModel):
         description="Additional context that can be used when evaluating the compliance for various policies. "
         "Can be used in the prompt templates. ",
     )
+    tags: List[str] = Field(
+        default_factory=list,
+        description="A list of tags that should be associated with the interactions. Useful for filtering when reporting.",
+    )
 
     @root_validator(pre=True)
     def instantiate_expected_output(cls, values: Any):
