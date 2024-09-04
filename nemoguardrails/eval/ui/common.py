@@ -18,7 +18,7 @@ import pandas as pd
 import streamlit as st
 from pandas import DataFrame
 
-from nemoguardrails.eval.models import EvalConfig
+from nemoguardrails.eval.models import EvalConfig, EvalOutput
 from nemoguardrails.eval.ui.chart_utils import (
     plot_as_series,
     plot_bar_series,
@@ -35,9 +35,12 @@ from nemoguardrails.eval.ui.utils import (
 pd.options.mode.chained_assignment = None
 
 
-def _render_sidebar(output_names: List[str], policy_options: List[str]):
+def _render_sidebar(
+    output_names: List[str], policy_options: List[str], tags: List[str]
+):
     _output_names = []
     _policy_options = []
+    _tags = []
 
     with st.sidebar:
         st.write(
@@ -64,7 +67,12 @@ def _render_sidebar(output_names: List[str], policy_options: List[str]):
             if st.checkbox(policy, True):
                 _policy_options.append(policy)
 
-    return _output_names, _policy_options
+    with st.sidebar.expander("Tags", expanded=True):
+        for tag in tags:
+            if st.checkbox(tag, True, key=f"tag-{tag}"):
+                _tags.append(tag)
+
+    return _output_names, _policy_options, _tags
 
 
 def _get_compliance_df(
@@ -116,6 +124,7 @@ def _render_compliance_data(
     eval_data: EvalData,
     short: bool = False,
 ):
+    st.text(f"({len(eval_data.eval_outputs[output_names[0]].results)} interactions)")
     st.header("Compliance")
     st.markdown(
         """
@@ -503,13 +512,52 @@ def render_summary(short: bool = False):
     st.title("Evaluation Summary")
 
     # Load the evaluation data
-    eval_data = load_eval_data()
+    eval_data = load_eval_data().copy()
     eval_config = eval_data.eval_config
+
+    # Extract the list of tags from the interactions
+    all_tags = []
+    for interaction_set in eval_config.interactions:
+        for tag in interaction_set.tags:
+            if tag not in all_tags:
+                all_tags.append(tag)
+
     output_names = list(eval_data.eval_outputs.keys())
     policy_options = [policy.id for policy in eval_config.policies]
 
     # Sidebar
-    output_names, policy_options = _render_sidebar(output_names, policy_options)
+    output_names, policy_options, tags = _render_sidebar(
+        output_names, policy_options, all_tags
+    )
+
+    # If all tags are selected, we don't do the filtering.
+    # Like this, interactions without tags will also be included.
+    if len(tags) != len(all_tags):
+        # We filter the interactions to only those that have the right tags
+        filtered_interaction_ids = []
+        for interaction_set in eval_config.interactions:
+            include = False
+            for tag in tags:
+                if tag in interaction_set.tags:
+                    include = True
+                    break
+            if include:
+                filtered_interaction_ids.append(interaction_set.id)
+
+        new_eval_outputs = {}
+        for output_name in output_names:
+            eval_output = eval_data.eval_outputs[output_name]
+            _results = []
+            _logs = []
+            for i in range(len(eval_output.results)):
+                interaction_id = eval_output.results[i].id.split("/")[0]
+                if interaction_id in filtered_interaction_ids:
+                    _results.append(eval_output.results[i])
+                    _logs.append(eval_output.logs[i])
+
+            new_eval_outputs[output_name] = EvalOutput(results=_results, logs=_logs)
+
+        eval_data.eval_outputs = new_eval_outputs
 
     # Compliance data
     _render_compliance_data(output_names, policy_options, eval_data, short=short)
