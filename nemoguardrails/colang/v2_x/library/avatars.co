@@ -81,7 +81,10 @@ flow user interrupted bot talking $sentence_length=15 $pattern="stop"
 @meta(bot_action=True)
 flow bot gesture $gesture
   """Trigger a specific bot gesture."""
-  await GestureBotAction(gesture=$gesture) as $action
+  if is_str($gesture)
+    await GestureBotAction(gesture=$gesture) as $action
+  else
+    log "Flow `bot gesture` expected parameter $gesture of type `string` but got `{type($gesture)}`: {$gesture}"
 
 @meta(bot_action=True)
 flow bot gesture with delay $gesture $delay
@@ -92,27 +95,43 @@ flow bot gesture with delay $gesture $delay
 @meta(bot_action=True)
 flow bot posture $posture
   """Trigger a specific bot posture."""
-  await PostureBotAction(posture=$posture) as $action
+  if is_str($posture)
+    await PostureBotAction(posture=$posture) as $action
+  else
+    log "Flow `bot posture` expected parameter $posture of type `string` but got `{type($posture)}`: {$posture}"
 
 @meta(bot_action=True)
 flow scene show choice $prompt
   """Show a 2D UI with some options to select from"""
-  await VisualChoiceSceneAction(prompt=$prompt,choice_type="selection", allow_multiple_choices=False) as $action
+  if is_str($prompt)
+    await VisualChoiceSceneAction(prompt=$prompt,choice_type="selection", allow_multiple_choices=False) as $action
+  else
+    log "Flow `scene show choice` expected parameter $prompt of type `string` but got `{type($prompt)}`: {$prompt}"
 
 @meta(bot_action=True)
 flow scene show textual information $title $text $header_image
   """Show a 2D UI with detailed information."""
-  await VisualInformationSceneAction(title=$title, support_prompts=[], content=[{"image":$header_image},{"text":$text}]) as $action
+  if is_str($title) and is_str($text) and is_str($header_image)
+    await VisualInformationSceneAction(title=$title, support_prompts=[], content=[{"image":$header_image},{"text":$text}]) as $action
+  else
+    log "Flow `scene show textual information` expected parameters of type `(string, string, string)` but got `({type($title)}, {type($text)}, {type($header_image)})`"
+
 
 @meta(bot_action=True)
 flow scene show short information $info
   """Show a 2D UI with a short information."""
-  await VisualInformationSceneAction(title=$info, support_prompts=[], content=[]) as $action
+  if is_str($info)
+    await VisualInformationSceneAction(title=$info, support_prompts=[], content=[]) as $action
+  else
+    log "Flow `scene show short information` expected parameter $info of type `string` but got `{type($info)}`: {$info}"
 
 @meta(bot_action=True)
 flow scene show form $prompt
   """Show a 2D UI with some input fields to be filled in."""
-  await VisualInformationSceneAction(prompt=$prompt) as $action
+  if is_str($prompt)
+    await VisualInformationSceneAction(prompt=$prompt) as $action
+  else
+    log "Flow `scene show form` expected parameter $prompt of type `string` but got `{type($prompt)}`: {$prompt}"
 
 # ----------------------------------
 # Bot Event Flows
@@ -146,7 +165,7 @@ flow bot started an action -> $action
 # State Tracking Flows
 # -----------------------------------
 
-@loop("state_tracking")
+@loop("state_tracking", 10)
 flow tracking visual choice selection state
   global $choice_selection_state
   when VisualChoiceSceneAction.Started()

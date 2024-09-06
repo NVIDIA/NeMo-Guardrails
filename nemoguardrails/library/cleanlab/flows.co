@@ -5,13 +5,15 @@ https://help.cleanlab.ai/tutorials/tlm/#how-does-the-tlm-trustworthiness-score-w
 
 """
 
-define subflow cleanlab trustworthiness
+flow cleanlab trustworthiness
   """Guardrail based on the trustworthiness score."""
-  $result = execute call cleanlab api
-
+  $result = await CallCleanlabApiAction
   if $result.trustworthiness_score < 0.6
-    bot response untrustworthy
-    stop
+    if $system.config.enable_rails_exceptions
+      send CleanlabTrustworthinessRailException(message="Trustworthiness score is below threshold")
+    else
+      bot response untrustworthy
+    abort
 
-define bot response untrustworthy
-  "$bot_message \nCAUTION: THIS ANSWER HAS BEEN FLAGGED AS POTENTIALLY UNTRUSTWORTHY"
+flow bot response untrustworthy
+  bot say "$bot_message \nCAUTION: THIS ANSWER HAS BEEN FLAGGED AS POTENTIALLY UNTRUSTWORTHY"

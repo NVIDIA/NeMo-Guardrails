@@ -44,6 +44,7 @@ from nemoguardrails.colang.v2_x.lang.colang_ast import (
     When,
     While,
 )
+from nemoguardrails.colang.v2_x.runtime.errors import ColangSyntaxError
 
 
 class ColangTransformer(Transformer):
@@ -233,8 +234,13 @@ class ColangTransformer(Transformer):
     def __parse_classical_arguments(self, arg_elements: list) -> dict:
         arguments = {}
         positional_index = 0
+        named_parameter = None
         for arg_element in arg_elements:
             if arg_element["_type"] == "expr":
+                if named_parameter:
+                    raise ColangSyntaxError(
+                        f"Positional parameter '{arg_element['elements'][0]}' cannot be used after named parameter '{named_parameter}'! (Line: {arg_element['_source']['line']}, Column: {arg_element['_source']['column']})"
+                    )
                 arguments[f"${positional_index}"] = arg_element["elements"][0]
                 positional_index += 1
             else:
@@ -242,6 +248,10 @@ class ColangTransformer(Transformer):
 
                 if len(arg_element["elements"]) == 1:
                     expr_element = arg_element["elements"][0]
+                    if named_parameter:
+                        raise ColangSyntaxError(
+                            f"Positional parameter '{expr_element['elements'][0]}' cannot be used after named parameter '{named_parameter}'! (Line: {expr_element['_source']['line']}, Column: {expr_element['_source']['column']})"
+                        )
                     assert expr_element["_type"] == "expr"
                     arguments[f"${positional_index}"] = expr_element["elements"][0]
                     positional_index += 1
@@ -250,6 +260,7 @@ class ColangTransformer(Transformer):
                     expr_el = arg_element["elements"][1]
                     expr = expr_el["elements"][0]
                     arguments[name] = expr
+                    named_parameter = name
         return arguments
 
     def _spec(self, children: List[dict], _meta: Meta) -> Spec:

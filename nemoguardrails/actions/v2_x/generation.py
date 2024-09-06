@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """A set of actions for generating various types of completions using an LLMs."""
+
 import logging
 import re
 import textwrap
@@ -146,21 +147,45 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
     async def _collect_user_intent_and_examples(
         self, state: State, user_action: str, max_example_flows: int
-    ) -> Tuple[List[str], str]:
+    ) -> Tuple[List[str], str, bool]:
         # We search for the most relevant similar user intents
         examples = ""
         potential_user_intents = []
+        embedding_only = False
 
         if self.user_message_index:
+            threshold = None
+
+            if self.config.rails.dialog.user_messages:
+                threshold = (
+                    self.config.rails.dialog.user_messages.embeddings_only_similarity_threshold
+                )
+
             results = await self.user_message_index.search(
-                text=user_action, max_results=max_example_flows
+                text=user_action, max_results=max_example_flows, threshold=threshold
             )
 
-            # We add these in reverse order so the most relevant is towards the end.
-            for result in reversed(results):
-                examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
-                if result.meta["intent"] not in potential_user_intents:
-                    potential_user_intents.append(result.meta["intent"])
+            if results and self.config.rails.dialog.user_messages.embeddings_only:
+                intent = results[0].meta["intent"]
+                potential_user_intents.append(intent)
+                embedding_only = True
+
+            elif (
+                self.config.rails.dialog.user_messages.embeddings_only
+                and self.config.rails.dialog.user_messages.embeddings_only_fallback_intent
+            ):
+                intent = (
+                    self.config.rails.dialog.user_messages.embeddings_only_fallback_intent
+                )
+                potential_user_intents.append(intent)
+                embedding_only = True
+
+            else:
+                # We add these in reverse order so the most relevant is towards the end.
+                for result in reversed(results):
+                    examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
+                    if result.meta["intent"] not in potential_user_intents:
+                        potential_user_intents.append(result.meta["intent"])
 
         # We add all currently active user intents (heads on match statements)
         heads = find_all_active_event_matchers(state)
@@ -173,7 +198,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 and "flow_id" in event.arguments
             ):
                 flow_id = event.arguments["flow_id"]
-                if not isinstance(flow_id, str):
+                if not isinstance(flow_id, str) or flow_id not in state.flow_id_states:
                     continue
 
                 flow_config = state.flow_configs.get(flow_id, None)
@@ -196,8 +221,10 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                     elif flow_id not in potential_user_intents:
                         examples += f"user intent: {flow_id}\n\n"
                         potential_user_intents.append(flow_id)
+
         examples = examples.strip("\n")
-        return (potential_user_intents, examples)
+
+        return potential_user_intents, examples, embedding_only
 
     @action(name="GetLastUserMessageAction", is_system_action=True)
     async def get_last_user_message(
@@ -225,9 +252,12 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         (
             potential_user_intents,
             examples,
+            embedding_only,
         ) = await self._collect_user_intent_and_examples(
             state, user_action, max_example_flows
         )
+        if embedding_only:
+            return f"{potential_user_intents[0]}"
 
         prompt = self.llm_task_manager.render_task_prompt(
             task=Task.GENERATE_USER_INTENT_FROM_USER_ACTION,
@@ -294,6 +324,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         (
             potential_user_intents,
             examples,
+            embedding_only,
         ) = await self._collect_user_intent_and_examples(
             state, user_action, max_example_flows
         )
@@ -323,7 +354,6 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         user_intent = get_first_nonempty_line(result)
 
-        # GTP-4o often adds 'user intent: ' in front
         if user_intent and ":" in user_intent:
             temp_user_intent = get_first_user_intent([user_intent])
             if temp_user_intent:
@@ -485,23 +515,18 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             },
         )
 
+        stop = self.llm_task_manager.get_stop_tokens(Task.GENERATE_FLOW_FROM_NAME)
+
         # We make this call with temperature 0 to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
-            result = await llm_call(llm, prompt)
+            result = await llm_call(llm, prompt, stop)
 
         lines = _remove_leading_empty_lines(result).split("\n")
 
-        if lines[0].startswith("  "):
-            # print(f"Generated flow:\n{result}\n")
-            return f"flow {name}\n" + "\n".join(lines)
+        if lines[0].startswith("flow"):
+            return f"flow {lines[0][5:]}\n" + "\n".join(lines[1:])
         else:
-            response = "\n".join(lines)
-            log.warning(
-                "GenerateFlowFromNameAction\nFAILING-PROMPT ::\n%s\n FAILING-RESPONSE: %s\n",
-                prompt,
-                response,
-            )
-            return "flow bot express unsure\n  bot say 'I don't know how to do that.'"
+            return f"flow {name}\n  " + "\n  ".join([line.lstrip() for line in lines])
 
     @action(
         name="GenerateFlowContinuationAction", is_system_action=True, execute_async=True
@@ -554,6 +579,9 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         with llm_params(llm, temperature=temperature):
             result = await llm_call(llm, prompt)
 
+        # TODO: Currently, we only support generating a bot action as continuation. This could be generalized
+        # Colang statements.
+
         lines = _remove_leading_empty_lines(result).split("\n")
 
         if len(lines) == 0 or (len(lines) == 1 and lines[0] == ""):
@@ -569,25 +597,28 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             }
 
         line_0 = lines[0].lstrip(" ")
-        uuid = new_uuid()[0:8]
+        bot_intent = remove_action_intent_identifiers([line_0])[0].strip(" ")
+        if not bot_intent.startswith("bot "):
+            bot_intent = get_first_bot_intent(result.splitlines())
+        bot_action = get_first_bot_action(result.splitlines())
 
-        intent = escape_flow_name(
-            remove_action_intent_identifiers([line_0])[0].strip(" ")
-        )
-        flow_name = f"_dynamic_{uuid} {intent}"
+        if bot_action is None:
+            raise LlmResponseError(f"Issue with LLM response: {result}")
+
+        if bot_intent:
+            bot_intent = escape_flow_name(bot_intent.strip(" "))
+
+        uuid = new_uuid()[0:8]
+        flow_name = f"_dynamic_{uuid} {bot_intent}"
         # TODO: parse potential parameters from flow name with a regex
         flow_parameters: List[Any] = []
-        lines = lines[1:]
-
-        lines = remove_action_intent_identifiers(lines)
-        lines = get_initial_actions(lines)
 
         return {
             "name": flow_name,
             "parameters": flow_parameters,
-            "body": f'@meta(bot_intent="{intent}")\n'
+            "body": f'@meta(bot_intent="{bot_intent}")\n'
             + f"flow {flow_name}\n"
-            + "\n".join(["  " + l.strip(" ") for l in lines]),
+            + f"  {bot_action}",
         }
 
     @action(name="CreateFlowAction", is_system_action=True, execute_async=True)
@@ -703,23 +734,13 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         state: State,
         events: List[dict],
         llm: Optional[BaseLLM] = None,
+        flow_id: Optional[str] = None,
     ) -> dict:
         """Generate the body for a flow."""
         # Use action specific llm if registered else fallback to main llm
         llm = llm or self.llm
 
-        event = events[-1]
-        assert event["type"] == "StartGenerateFlowAction"
-        action_uid = event["action_uid"]
-
-        # We need to search for the flow that is waiting on this action
-        triggering_flow_id = None
-        for _, flow_state in state.flow_states.items():
-            if action_uid in flow_state.action_uids:
-                triggering_flow_id = flow_state.flow_id
-                break
-
-        assert triggering_flow_id is not None
+        triggering_flow_id = flow_id
 
         flow_config = state.flow_configs[triggering_flow_id]
         docstrings = re.findall(r'"""(.*?)"""', flow_config.source_code, re.DOTALL)

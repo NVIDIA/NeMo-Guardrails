@@ -17,6 +17,7 @@ flow bot say something like $text
 # LLM Utilities
 # -----------------------------------
 
+@active
 @loop("llm_response_polling")
 flow polling llm request response $interval=1.0
   """Start response polling for any LLM invocation."""
@@ -157,8 +158,8 @@ flow unhandled user intent -> $intent
 
 flow continuation on unhandled user intent
   """Generate and start new flow to continue the interaction for an unhandled user intent."""
-  await unhandled user intent
-  log "unhandled user intent: `{$user_intent}`"
+  await unhandled user intent as $flow
+  log "unhandled user intent: `{$flow.intent}`"
 
   $flow_name = await llm generate interaction continuation flow
 
@@ -171,12 +172,15 @@ flow continuation on unhandled user intent
       log "bot action flow failed: `{$flow_name}`"
       await RemoveFlowsAction(flow_ids=[$flow_name])
 
-
+# TODO: We currently need to make each instance of this flow an independent loop, since otherwise we have conflicting
+# events (RemoveFlowsActionStart) for recursive flow generations. We would better have a way of defining non-competing
+# events.
+@loop("NEW")
 flow continuation on undefined flow
   """Generate and start a new flow to continue the interaction for the start of an undefined flow."""
   activate polling llm request response
   match UnhandledEvent(event="StartFlow") as $event
-  log 'unhandled start of flow: `{$event.flow_id}`'
+  log 'unhandled start of flow: `{$event.flow_id}` ({$event.flow_instance_uid})'
 
   # We explicitly set this here so this can start again recursively if needed.
   start_new_flow_instance:
@@ -199,7 +203,7 @@ flow continuation on undefined flow
 
     # Start and wait for it to finish
     log "start flow: `{$event.flow_id}`"
-    when await_flow_by_name $event.flow_id
+    when await_flow_by_name $event.flow_id $event.flow_instance_uid
       log "flow finished: `{$event.flow_id}`"
       await RemoveFlowsAction(flow_ids=[$event.flow_id])
     else

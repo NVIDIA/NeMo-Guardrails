@@ -28,7 +28,6 @@ from nemoguardrails.cli.chat import run_chat
 from nemoguardrails.cli.migration import migrate
 from nemoguardrails.eval import cli
 from nemoguardrails.logging.verbose import set_verbose
-from nemoguardrails.server import api
 from nemoguardrails.utils import init_random_seed
 
 app = typer.Typer()
@@ -137,6 +136,9 @@ def server(
     ),
 ):
     """Start a NeMo Guardrails server."""
+
+    from nemoguardrails.server import api
+
     if config:
         # We make sure there is no trailing separator, as that might break things in
         # single config mode.

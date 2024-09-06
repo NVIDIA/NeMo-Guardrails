@@ -266,7 +266,7 @@ def get_data_path(package_name: str, file_path: str) -> str:
     if os.path.exists(path):
         return path
 
-    raise FileNotFoundError(f"File not found: {file_path}")
+    raise FileNotFoundError(f"File not found: {path}")
 
 
 def get_examples_data_path(file_path: str) -> str:

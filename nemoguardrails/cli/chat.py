@@ -14,6 +14,7 @@
 # limitations under the License.
 import asyncio
 import os
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, cast
 
 import aiohttp
@@ -24,6 +25,7 @@ from prompt_toolkit.styles import Style
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.cli import debugger
 from nemoguardrails.colang.v2_x.runtime.eval import eval_expression
+from nemoguardrails.colang.v2_x.runtime.flows import State
 from nemoguardrails.colang.v2_x.runtime.runtime import RuntimeV2_x
 from nemoguardrails.logging import verbose
 from nemoguardrails.logging.verbose import console
@@ -122,34 +124,43 @@ async def _run_chat_v1_0(
         history.append(bot_message)
 
 
-async def _run_chat_v2_x(rails_app: LLMRails):
-    """Simple chat loop for v2.x using the stateful events API."""
-    state = None
-    waiting_user_input = False
-    running_timer_tasks: Dict[str, asyncio.Task] = {}
-    input_events: List[dict] = []
-    output_events: List[dict] = []
-    output_state = None
-
+@dataclass
+class ChatState:
+    state: Optional[State] = None
+    waiting_user_input: bool = False
+    paused: bool = False
+    running_timer_tasks: Dict[str, asyncio.Task] = field(default_factory=dict)
+    input_events: List[dict] = field(default_factory=list)
+    output_events: List[dict] = field(default_factory=list)
+    output_state: Optional[State] = None
     session: PromptSession = PromptSession()
     status = console.status("[bold green]Working ...[/]")
     events_counter = 0
+    first_time: bool = False
+
+
+async def _run_chat_v2_x(rails_app: LLMRails):
+    """Simple chat loop for v2.x using the stateful events API."""
+    chat_state = ChatState()
 
     def watcher(*args):
-        nonlocal events_counter
-        events_counter += 1
-        status.update(f"[bold green]Working ({events_counter} events processed)...[/]")
+        nonlocal chat_state
+        chat_state.events_counter += 1
+        chat_state.status.update(
+            f"[bold green]Working ({chat_state.events_counter} events processed)...[/]"
+        )
 
     rails_app.runtime.watchers.append(watcher)
 
     # Set the runtime for the debugger to work correctly.
+    debugger.set_chat_state(chat_state)
     debugger.set_runtime(cast(RuntimeV2_x, rails_app.runtime))
 
     # Start an asynchronous timer
     async def _start_timer(timer_name: str, delay_seconds: float, action_uid: str):
-        nonlocal input_events
+        nonlocal chat_state
         await asyncio.sleep(delay_seconds)
-        input_events.append(
+        chat_state.input_events.append(
             new_event_dict(
                 "TimerBotActionFinished",
                 action_uid=action_uid,
@@ -157,17 +168,22 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 timer_name=timer_name,
             )
         )
-        running_timer_tasks.pop(action_uid)
-        if waiting_user_input:
+        chat_state.running_timer_tasks.pop(action_uid)
+
+        # Pause here until chat is resumed
+        while chat_state.paused:
+            await asyncio.sleep(0.1)
+
+        if chat_state.waiting_user_input:
             await _process_input_events()
 
     def _process_output():
         """Helper to process the output events."""
-        nonlocal output_events, output_state, input_events, state
+        nonlocal chat_state
 
         # We detect any "StartUtteranceBotAction" events, show the message, and
         # generate the corresponding Finished events as new input events.
-        for event in output_events:
+        for event in chat_state.output_events:
             if event["type"] == "StartUtteranceBotAction":
                 # We print bot messages in green.
                 if not verbose.verbose_mode_enabled:
@@ -182,13 +198,13 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                             + "[/]"
                         )
 
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "UtteranceBotActionStarted",
                         action_uid=event["action_uid"],
                     )
                 )
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "UtteranceBotActionFinished",
                         action_uid=event["action_uid"],
@@ -207,13 +223,13 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         "[black on blue]" + f"bot gesture: {event['gesture']}" + "[/]"
                     )
 
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "GestureBotActionStarted",
                         action_uid=event["action_uid"],
                     )
                 )
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "GestureBotActionFinished",
                         action_uid=event["action_uid"],
@@ -233,7 +249,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         + f"bot posture (start): (posture={event['posture']}, action_uid={event['action_uid']}))"
                         + "[/]"
                     )
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "PostureBotActionStarted",
                         action_uid=event["action_uid"],
@@ -248,7 +264,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         + "[/]"
                     )
 
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "PostureBotActionFinished",
                         action_uid=event["action_uid"],
@@ -272,7 +288,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         + "[/]"
                     )
 
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "VisualInformationSceneActionStarted",
                         action_uid=event["action_uid"],
@@ -287,7 +303,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         + "[/]"
                     )
 
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "VisualInformationSceneActionFinished",
                         action_uid=event["action_uid"],
@@ -307,7 +323,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         + f"scene form (start): (prompt={event['prompt']}, action_uid={event['action_uid']}, inputs={event['inputs']})"
                         + "[/]"
                     )
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "VisualFormSceneActionStarted",
                         action_uid=event["action_uid"],
@@ -321,7 +337,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         + f"scene form (stop): (action_uid={event['action_uid']})"
                         + "[/]"
                     )
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "VisualFormSceneActionFinished",
                         action_uid=event["action_uid"],
@@ -344,7 +360,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         + f"scene choice (start): (prompt={event['prompt']}, action_uid={event['action_uid']}, options={event['options']})"
                         + "[/]"
                     )
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "VisualChoiceSceneActionStarted",
                         action_uid=event["action_uid"],
@@ -358,7 +374,7 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                         + f"scene choice (stop): (action_uid={event['action_uid']})"
                         + "[/]"
                     )
-                input_events.append(
+                chat_state.input_events.append(
                     new_event_dict(
                         "VisualChoiceSceneActionFinished",
                         action_uid=event["action_uid"],
@@ -370,10 +386,10 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                 action_uid = event["action_uid"]
                 timer = _start_timer(event["timer_name"], event["duration"], action_uid)
                 # Manage timer tasks
-                if action_uid not in running_timer_tasks:
+                if action_uid not in chat_state.running_timer_tasks:
                     task = asyncio.create_task(timer)
-                    running_timer_tasks.update({action_uid: task})
-                input_events.append(
+                    chat_state.running_timer_tasks.update({action_uid: task})
+                chat_state.input_events.append(
                     new_event_dict(
                         "TimerBotActionStarted",
                         action_uid=event["action_uid"],
@@ -382,15 +398,15 @@ async def _run_chat_v2_x(rails_app: LLMRails):
 
             elif event["type"] == "StopTimerBotAction":
                 action_uid = event["action_uid"]
-                if action_uid in running_timer_tasks:
-                    running_timer_tasks[action_uid].cancel()
-                    running_timer_tasks.pop(action_uid)
+                if action_uid in chat_state.running_timer_tasks:
+                    chat_state.running_timer_tasks[action_uid].cancel()
+                    chat_state.running_timer_tasks.pop(action_uid)
 
             elif event["type"] == "TimerBotActionFinished":
                 action_uid = event["action_uid"]
-                if action_uid in running_timer_tasks:
-                    running_timer_tasks[action_uid].cancel()
-                    running_timer_tasks.pop(action_uid)
+                if action_uid in chat_state.running_timer_tasks:
+                    chat_state.running_timer_tasks[action_uid].cancel()
+                    chat_state.running_timer_tasks.pop(action_uid)
             elif event["type"].endswith("Exception"):
                 if event["type"].endswith("Exception"):
                     console.print("[red]" + f"Event: {event}" + "[/]")
@@ -406,79 +422,85 @@ async def _run_chat_v2_x(rails_app: LLMRails):
         # Simulate serialization for testing
         # data = pickle.dumps(output_state)
         # output_state = pickle.loads(data)
-        state = output_state
+        chat_state.state = chat_state.output_state
 
     async def _check_local_async_actions():
-        nonlocal output_events, output_state, input_events, check_task
+        nonlocal chat_state, check_task
 
         while True:
             # We only run the check when we wait for user input, but not the first time.
-            if not waiting_user_input or first_time:
+            if not chat_state.waiting_user_input or chat_state.first_time:
                 await asyncio.sleep(0.1)
                 continue
 
-            if len(input_events) == 0:
-                input_events = [new_event_dict("CheckLocalAsync")]
+            if len(chat_state.input_events) == 0:
+                chat_state.input_events = [new_event_dict("CheckLocalAsync")]
 
             # We need to copy input events to prevent race condition
-            input_events_copy = input_events.copy()
-            input_events = []
-            output_events, output_state = await rails_app.process_events_async(
-                input_events_copy, state
+            input_events_copy = chat_state.input_events.copy()
+            chat_state.input_events = []
+            (
+                chat_state.output_events,
+                chat_state.output_state,
+            ) = await rails_app.process_events_async(
+                input_events_copy, chat_state.state
             )
 
             # Process output_events and potentially generate new input_events
             _process_output()
 
             if (
-                len(output_events) == 1
-                and output_events[0]["type"] == "LocalAsyncCounter"
-                and output_events[0]["counter"] == 0
+                len(chat_state.output_events) == 1
+                and chat_state.output_events[0]["type"] == "LocalAsyncCounter"
+                and chat_state.output_events[0]["counter"] == 0
             ):
                 # If there are no pending actions, we stop
                 check_task.cancel()
                 check_task = None
-                debugger.set_output_state(output_state)
-                status.stop()
+                debugger.set_output_state(chat_state.output_state)
+                chat_state.status.stop()
                 enable_input.set()
                 return
 
-            output_events.clear()
+            chat_state.output_events.clear()
 
             await asyncio.sleep(0.2)
 
     async def _process_input_events():
-        nonlocal first_time, output_events, output_state, input_events, check_task
-        while input_events or first_time:
+        nonlocal chat_state, check_task
+        while chat_state.input_events or chat_state.first_time:
             # We need to copy input events to prevent race condition
-            input_events_copy = input_events.copy()
-            input_events = []
-            output_events, output_state = await rails_app.process_events_async(
-                input_events_copy, state
+            input_events_copy = chat_state.input_events.copy()
+            chat_state.input_events = []
+            (
+                chat_state.output_events,
+                chat_state.output_state,
+            ) = await rails_app.process_events_async(
+                input_events_copy, chat_state.state
             )
-            debugger.set_output_state(output_state)
+            debugger.set_output_state(chat_state.output_state)
 
             _process_output()
             # If we don't have a check task, we start it
             if check_task is None:
                 check_task = asyncio.create_task(_check_local_async_actions())
 
-            first_time = False
+            chat_state.first_time = False
 
     # Start the task for checking async actions
     check_task = asyncio.create_task(_check_local_async_actions())
 
     # And go into the default listening loop.
-    first_time = True
+    chat_state.first_time = True
     with patch_stdout(raw=True):
         while True:
-            if first_time:
-                input_events = []
+            if chat_state.first_time:
+                chat_state.input_events = []
             else:
-                waiting_user_input = True
+                chat_state.waiting_user_input = True
                 await enable_input.wait()
 
-                user_message: str = await session.prompt_async(
+                user_message: str = await chat_state.session.prompt_async(
                     HTML("<prompt>\n> </prompt>"),
                     style=Style.from_dict(
                         {
@@ -488,17 +510,17 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                     ),
                 )
                 enable_input.clear()
-                events_counter = 0
-                status.start()
-                waiting_user_input = False
+                chat_state.events_counter = 0
+                chat_state.status.start()
+                chat_state.waiting_user_input = False
                 if user_message == "":
-                    input_events = [new_event_dict("CheckLocalAsync")]
+                    chat_state.input_events = [new_event_dict("CheckLocalAsync")]
 
                 # System commands
                 elif user_message.startswith("!"):
                     command = user_message[1:]
                     debugger.run_command(command)
-                    status.stop()
+                    chat_state.status.stop()
                     enable_input.set()
                     continue
 
@@ -511,9 +533,9 @@ async def _run_chat_v2_x(rails_app: LLMRails):
                             "[white on red]" + f"Invalid event: {event_input}" + "[/]"
                         )
                     else:
-                        input_events = [event]
+                        chat_state.input_events = [event]
                 else:
-                    input_events = [
+                    chat_state.input_events = [
                         new_event_dict(
                             "UtteranceUserActionFinished",
                             final_transcript=user_message,

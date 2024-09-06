@@ -394,6 +394,17 @@ class FlowConfig:
         return None
 
     @property
+    def loop_priority(self) -> int:
+        """Return the interaction loop priority (default: 0)."""
+        if "loop" in self.decorators:
+            parameters = self.decorators["loop"]
+            if "priority" in parameters:
+                return parameters["priority"]
+            elif "$1" in parameters:
+                return parameters["$1"]
+        return 0
+
+    @property
     def loop_type(self) -> InteractionLoopType:
         """Return the interaction loop type."""
         loop_id = self.loop_id
@@ -803,7 +814,7 @@ class State:
     # Helper dictionary that maps from flow_id (name) to all available flow states
     flow_id_states: Dict[str, List[FlowState]] = field(default_factory=dict)
 
-    # Helper dictionary () that maps active event matchers (by event names) to relevant heads (flow_state_uid, head_uid)
+    # Helper dictionary that maps active event matchers (by event names) to relevant heads (flow_state_uid, head_uid)
     event_matching_heads: Dict[str, List[Tuple[str, str]]] = field(default_factory=dict)
 
     # Helper dictionary that maps active heads (flow_state_uid, head_uid) to event matching names

@@ -302,11 +302,11 @@ def cache_embeddings(func):
     async def wrapper_decorator(self, texts):
         results = []
 
-        embeddings_cache = EmbeddingsCache.from_config(self.cache_config)
-
         if not self.cache_config.enabled:
             # if cache is not enabled compute embeddings for the whole input
             return await func(self, texts)
+
+        embeddings_cache = EmbeddingsCache.from_config(self.cache_config)
 
         cached_texts = {}
         uncached_texts = []
