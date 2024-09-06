@@ -147,7 +147,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
     async def _collect_user_intent_and_examples(
         self, state: State, user_action: str, max_example_flows: int
-    ) -> Tuple[List[str], str]:
+    ) -> Tuple[List[str], str, bool]:
         # We search for the most relevant similar user intents
         examples = ""
         potential_user_intents = []
@@ -223,7 +223,8 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                         potential_user_intents.append(flow_id)
 
         examples = examples.strip("\n")
-        return (potential_user_intents, examples, embedding_only)
+
+        return potential_user_intents, examples, embedding_only
 
     @action(name="GetLastUserMessageAction", is_system_action=True)
     async def get_last_user_message(
@@ -323,6 +324,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         (
             potential_user_intents,
             examples,
+            embedding_only,
         ) = await self._collect_user_intent_and_examples(
             state, user_action, max_example_flows
         )
