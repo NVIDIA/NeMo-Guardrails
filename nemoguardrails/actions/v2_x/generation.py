@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """A set of actions for generating various types of completions using an LLMs."""
+
 import logging
 import re
 import textwrap
@@ -150,17 +151,41 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         # We search for the most relevant similar user intents
         examples = ""
         potential_user_intents = []
+        embedding_only = False
 
         if self.user_message_index:
+            threshold = None
+
+            if self.config.rails.dialog.user_messages:
+                threshold = (
+                    self.config.rails.dialog.user_messages.embeddings_only_similarity_threshold
+                )
+
             results = await self.user_message_index.search(
-                text=user_action, max_results=max_example_flows
+                text=user_action, max_results=max_example_flows, threshold=threshold
             )
 
-            # We add these in reverse order so the most relevant is towards the end.
-            for result in reversed(results):
-                examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
-                if result.meta["intent"] not in potential_user_intents:
-                    potential_user_intents.append(result.meta["intent"])
+            if results and self.config.rails.dialog.user_messages.embeddings_only:
+                intent = results[0].meta["intent"]
+                potential_user_intents.append(intent)
+                embedding_only = True
+
+            elif (
+                self.config.rails.dialog.user_messages.embeddings_only
+                and self.config.rails.dialog.user_messages.embeddings_only_fallback_intent
+            ):
+                intent = (
+                    self.config.rails.dialog.user_messages.embeddings_only_fallback_intent
+                )
+                potential_user_intents.append(intent)
+                embedding_only = True
+
+            else:
+                # We add these in reverse order so the most relevant is towards the end.
+                for result in reversed(results):
+                    examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
+                    if result.meta["intent"] not in potential_user_intents:
+                        potential_user_intents.append(result.meta["intent"])
 
         # We add all currently active user intents (heads on match statements)
         heads = find_all_active_event_matchers(state)
@@ -196,8 +221,9 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                     elif flow_id not in potential_user_intents:
                         examples += f"user intent: {flow_id}\n\n"
                         potential_user_intents.append(flow_id)
+
         examples = examples.strip("\n")
-        return (potential_user_intents, examples)
+        return (potential_user_intents, examples, embedding_only)
 
     @action(name="GetLastUserMessageAction", is_system_action=True)
     async def get_last_user_message(
@@ -225,9 +251,12 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         (
             potential_user_intents,
             examples,
+            embedding_only,
         ) = await self._collect_user_intent_and_examples(
             state, user_action, max_example_flows
         )
+        if embedding_only:
+            return f"{potential_user_intents[0]}"
 
         prompt = self.llm_task_manager.render_task_prompt(
             task=Task.GENERATE_USER_INTENT_FROM_USER_ACTION,
