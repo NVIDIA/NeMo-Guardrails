@@ -45,36 +45,67 @@ def config():
     )
 
 
+@pytest.fixture
+def colang_2_config():
+    return RailsConfig.from_content(
+        """
+        import core
+        import llm
+
+        flow main
+          activate greeting
+          activate llm continuation
+
+        flow user expressed greeting
+          user said "hi"
+
+        flow bot express greeting
+          bot say "Hello!"
+
+        flow greeting
+          user expressed greeting
+          bot express greeting
+        """,
+        """
+        colang_version: 2.x
+        rails:
+            dialog:
+                user_messages:
+                    embeddings_only: True
+                    embeddings_only_similarity_threshold: 0.8
+                    embeddings_only_fallback_intent: "user expressed greeting"
+        """,
+    )
+
+
+@pytest.mark.parametrize("config", ["config", "colang_2_config"], indirect=True)
 def test_greeting(config):
     """Test that the bot responds with 'Hello!' when the user says 'hello'."""
-
     chat = TestChat(
         config,
         llm_completions=[],
     )
-
     chat >> "hello"
     chat << "Hello!"
 
 
+@pytest.mark.parametrize("config", ["config", "colang_2_config"], indirect=True)
 def test_error_when_embeddings_only_is_false(config):
     """Test that an error is raised when the 'embeddings_only' option is False."""
-
     # Check that if we deactivate the embeddings_only option we get an error
     config.rails.dialog.user_messages.embeddings_only = False
     chat = TestChat(
         config,
         llm_completions=[],
     )
-
     with pytest.raises(LLMCallException):
         chat >> "hello"
         chat << "Hello!"
 
 
+@pytest.mark.parametrize("config", ["config", "colang_2_config"], indirect=True)
 def test_fallback_intent(config):
     """Test that the bot uses the fallback intent when it doesn't recognize the user's message."""
-
     rails = LLMRails(config)
     res = rails.generate(messages=[{"role": "user", "content": "lets use fallback"}])
     assert res["content"] == "Hello!"
@@ -83,5 +114,3 @@ def test_fallback_intent(config):
     rails = LLMRails(config)
     with pytest.raises(LLMCallException):
         rails.generate(messages=[{"role": "user", "content": "lets use fallback"}])
-    #
-    # Check the bot's response
