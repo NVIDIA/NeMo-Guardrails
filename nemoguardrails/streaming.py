@@ -143,6 +143,12 @@ class StreamingHandler(AsyncCallbackHandler, AsyncIterator):
         If we're in buffering mode, we just record it.
         If we need to pipe it to another streaming handler, we do that.
         """
+        # Don't process the chunk if it equals the entire sentence that has been streamed so far.
+        # This occurs when the streaming handler is used in actions that return the full completion; Which is useful in
+        # some cases of downstream processing.
+        if chunk == self.completion:
+            return
+
         if self.enable_buffer:
             self.buffer += chunk
 
