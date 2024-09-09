@@ -165,20 +165,20 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 text=user_action, max_results=max_example_flows, threshold=threshold
             )
 
-            if results and self.config.rails.dialog.user_messages.embeddings_only:
-                intent = results[0].meta["intent"]
-                potential_user_intents.append(intent)
-                embedding_only = True
+            if self.config.rails.dialog.user_messages.embeddings_only:
+                if results:
+                    intent = results[0].meta["intent"]
+                    potential_user_intents.append(intent)
+                    embedding_only = True
 
-            elif (
-                self.config.rails.dialog.user_messages.embeddings_only
-                and self.config.rails.dialog.user_messages.embeddings_only_fallback_intent
-            ):
-                intent = (
+                elif (
                     self.config.rails.dialog.user_messages.embeddings_only_fallback_intent
-                )
-                potential_user_intents.append(intent)
-                embedding_only = True
+                ):
+                    intent = (
+                        self.config.rails.dialog.user_messages.embeddings_only_fallback_intent
+                    )
+                    potential_user_intents.append(intent)
+                    embedding_only = True
 
             else:
                 # We add these in reverse order so the most relevant is towards the end.
