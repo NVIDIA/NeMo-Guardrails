@@ -489,6 +489,7 @@ class RuntimeV2_x(Runtime):
         # we continue the processing.
         events_counter = 0
         while input_events or local_running_actions:
+            new_outgoing_events = []
             for event in input_events:
                 events_counter += 1
                 if events_counter > self.max_events:
@@ -610,12 +611,13 @@ class RuntimeV2_x(Runtime):
                     pending_local_async_action_counter,
                 ) = await self._get_async_actions_finished_events(main_flow_uid)
                 local_action_finished_events.extend(new_local_action_finished_events)
+                new_outgoing_events.extend(state.outgoing_events)
 
             input_events.clear()
 
             # If we have outgoing events we are also processing them as input events
-            if state.outgoing_events:
-                input_events.extend(state.outgoing_events)
+            if new_outgoing_events:
+                input_events.extend(new_outgoing_events)
                 continue
 
             input_events.extend(local_action_finished_events)
