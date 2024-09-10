@@ -209,7 +209,7 @@ Interactive Avatar Modality Flows (`avatars.co <../../../nemoguardrails/colang/v
     flow bot posture $posture
 
     # Show a 2D UI with some options to select from
-    flow scene show choice $prompt
+    flow scene show choice $prompt $options
 
     # Show a 2D UI with detailed information
     flow scene show textual information $title $text $header_image
@@ -218,7 +218,7 @@ Interactive Avatar Modality Flows (`avatars.co <../../../nemoguardrails/colang/v
     flow scene show short information $info
 
     # Show a 2D UI with some input fields to be filled in
-    flow scene show form $prompt
+    flow scene show form $prompt $inputs
 
 **Bot Event Flows**
 
