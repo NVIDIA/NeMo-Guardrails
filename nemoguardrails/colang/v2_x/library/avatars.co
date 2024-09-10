@@ -101,10 +101,21 @@ flow bot posture $posture
     log "Flow `bot posture` expected parameter $posture of type `string` but got `{type($posture)}`: {$posture}"
 
 @meta(bot_action=True)
-flow scene show choice $prompt
-  """Show a 2D UI with some options to select from"""
+flow scene show choice $prompt $options
+  """
+  Show a 2D UI with some options to select from
+  Options need to be in the format (you can also use only text or only an image description). Example:
+  ```
+  $my_options = [
+     {"id": "option_1", "text": "First option", "image":"cat"},
+     {"id": "option_2", "text": "Only text"},
+     {"id": "option 3", "image":"city"}
+  ]
+  start scene show choice $prompt="This is a simple choice" $options=$my_options
+  ```
+  """
   if is_str($prompt)
-    await VisualChoiceSceneAction(prompt=$prompt,choice_type="selection", allow_multiple_choices=False) as $action
+    await VisualChoiceSceneAction(prompt=$prompt, support_prompts=["You can click on any option below"], choice_type="selection", allow_multiple_choices=False, options=$options) as $action
   else
     log "Flow `scene show choice` expected parameter $prompt of type `string` but got `{type($prompt)}`: {$prompt}"
 
@@ -126,10 +137,20 @@ flow scene show short information $info
     log "Flow `scene show short information` expected parameter $info of type `string` but got `{type($info)}`: {$info}"
 
 @meta(bot_action=True)
-flow scene show form $prompt
-  """Show a 2D UI with some input fields to be filled in."""
+flow scene show form $prompt $inputs
+  """
+  Show a 2D UI with some input fields to be filled in.
+  Inputs fields need to be in the following format:
+  ```
+  $my_inputs = [
+    {"id": "phone-number", "value": "+41", "description": "Phone number"},
+    {"id": "email", "value": "", "description": "Your E-Mail"}
+  ]
+  start scene show form $prompt="Please enter your phone number and e-mail address" $inputs=$my_inputs
+  ```
+  """
   if is_str($prompt)
-    await VisualInformationSceneAction(prompt=$prompt) as $action
+    await VisualFormSceneAction(prompt=$prompt, inputs=$inputs) as $action
   else
     log "Flow `scene show form` expected parameter $prompt of type `string` but got `{type($prompt)}`: {$prompt}"
 
