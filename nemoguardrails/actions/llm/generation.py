@@ -391,7 +391,7 @@ class LLMGenerationActions:
                         events=[new_event_dict("UserIntent", intent=intent)]
                     )
 
-                if (
+                elif (
                     config.rails.dialog.user_messages.embeddings_only
                     and config.rails.dialog.user_messages.embeddings_only_fallback_intent
                 ):
@@ -401,6 +401,10 @@ class LLMGenerationActions:
 
                     return ActionResult(
                         events=[new_event_dict("UserIntent", intent=intent)]
+                    )
+                else:
+                    results = await self.user_message_index.search(
+                        text=event["text"], max_results=5
                     )
                 # We add these in reverse order so the most relevant is towards the end.
                 for result in reversed(results):
