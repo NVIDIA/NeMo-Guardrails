@@ -756,6 +756,8 @@ define flow self check input
       stop
 ```
 
+> **Note**: In Colang 2.x, you must change `$config.enable_rails_exceptions` to `$system.config.enable_rails_exceptions` and `send` to `create event`.
+
 When the `self check input` rail is triggered, the following exception is returned.
 
 ```json
