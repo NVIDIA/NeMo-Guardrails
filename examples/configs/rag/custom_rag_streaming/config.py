@@ -82,10 +82,14 @@ async def rag(context: dict, llm: BaseLLM, kb: KnowledgeBase) -> ActionResult:
     config = RunnableConfig(callbacks=[local_streaming_handler])
     answer = await chain.ainvoke(input_variables, config)
 
-    return ActionResult(return_value=answer, context_updates=context_updates)
+    context_updates["streamed_bot_message"] = answer
+
+    return ActionResult(return_value=None, context_updates=context_updates)
 
 
-async def disclaimer() -> ActionResult:
+async def disclaimer(context: dict) -> ActionResult:
+    last_bot_message = context["streamed_bot_message"]
+
     return ActionResult(
         return_value="I learn something new every day, so my answers may not always be perfect."
     )
