@@ -194,6 +194,15 @@ prompts:
           content: "This is the current conversation between the user and the bot:"
         - "{{ history | colang | to_messages_v2}}"
 
+        - type: system
+          content: |
+            {% if context.relevant_chunks %}
+            # This is some additional context:
+            ```markdown
+            {{ context.relevant_chunks }}
+            ```
+            {% endif %}
+
         - type: user
           content: "user action: {{ user_action }}"
 
@@ -286,6 +295,15 @@ prompts:
         - type: system
           content: "This is the current conversation between the user and the bot:"
         - "{{ history | colang | to_messages_v2 }}"
+
+        - type: system
+          content: |
+            {% if context.relevant_chunks %}
+            # This is some additional context:
+            ```markdown
+            {{ context.relevant_chunks }}
+            ```
+            {% endif %}
 
         - type: system
           content: "Continuation of interaction:"
