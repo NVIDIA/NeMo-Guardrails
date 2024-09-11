@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from nemoguardrails import LLMRails, RailsConfig
@@ -22,7 +24,7 @@ from tests.utils import TestChat
 
 
 @pytest.fixture
-def config():
+def colang_1_config():
     return RailsConfig.from_content(
         """
         define user express greeting
@@ -80,11 +82,11 @@ def colang_2_config():
     )
 
 
-def test_greeting_1(config):
+def test_greeting_1(colang_1_config):
     """Test that the bot responds with 'Hello!' when the user says 'hello'."""
 
     chat = TestChat(
-        config,
+        colang_1_config,
         llm_completions=[],
     )
 
@@ -104,13 +106,13 @@ def test_greeting_2(colang_2_config):
     chat << "Hello!"
 
 
-def test_error_when_embeddings_only_is_false(config):
+def test_error_when_embeddings_only_is_false(colang_1_config):
     """Test that an error is raised when the 'embeddings_only' option is False."""
 
     # Check that if we deactivate the embeddings_only option we get an error
-    config.rails.dialog.user_messages.embeddings_only = False
+    colang_1_config.rails.dialog.user_messages.embeddings_only = False
     chat = TestChat(
-        config,
+        colang_1_config,
         llm_completions=[],
     )
 
@@ -134,15 +136,15 @@ def test_error_when_embeddings_only_is_false_2(colang_2_config):
         chat << "Hello!"
 
 
-def test_fallback_intent(config):
+def test_fallback_intent(colang_1_config):
     """Test that the bot uses the fallback intent when it doesn't recognize the user's message."""
 
-    rails = LLMRails(config)
+    rails = LLMRails(colang_1_config)
     res = rails.generate(messages=[{"role": "user", "content": "lets use fallback"}])
     assert res["content"] == "Hello!"
 
-    config.rails.dialog.user_messages.embeddings_only_fallback_intent = None
-    rails = LLMRails(config)
+    colang_1_config.rails.dialog.user_messages.embeddings_only_fallback_intent = None
+    rails = LLMRails(colang_1_config)
     with pytest.raises(LLMCallException):
         rails.generate(messages=[{"role": "user", "content": "lets use fallback"}])
 
@@ -158,3 +160,72 @@ def test_fallback_intent_2(colang_2_config):
     rails = LLMRails(colang_2_config)
     with pytest.raises(LLMCallException):
         rails.generate(messages=[{"role": "user", "content": "lets use fallback"}])
+
+
+def test_examples_included_in_prompts(colang_1_config):
+    colang_1_config.rails.dialog.user_messages.embeddings_only_fallback_intent = None
+    chat = TestChat(
+        colang_1_config,
+        llm_completions=[
+            " user express greeting",
+            ' bot respond to aditional context\nbot action: "Hello is there anything else" ',
+        ],
+    )
+
+    rails = chat.app
+
+    messages = [
+        {"role": "user", "content": "Hi!"},
+    ]
+
+    rails.generate(messages=messages)
+
+    info = rails.explain()
+    assert len(info.llm_calls) == 1
+    assert 'user "hi"' in info.llm_calls[0].prompt
+
+
+def test_examples_included_in_prompts_2(colang_2_config):
+    colang_2_config.rails.dialog.user_messages.embeddings_only_fallback_intent = None
+    chat = TestChat(
+        colang_2_config,
+        llm_completions=[
+            " user express greeting",
+            ' bot respond to uknown intent "Hello is there anything else" ',
+        ],
+    )
+
+    rails = chat.app
+
+    messages = [
+        {"role": "user", "content": "Hi"},
+    ]
+
+    rails.generate(messages=messages)
+
+    info = rails.explain()
+    assert len(info.llm_calls) == 2
+    assert 'user said "hi"' in info.llm_calls[0].prompt
+
+
+def test_no_llm_calls_embedding_only(colang_2_config):
+    colang_2_config.rails.dialog.user_messages.embeddings_only_fallback_intent = None
+    chat = TestChat(
+        colang_2_config,
+        llm_completions=[
+            " user express greeting",
+            ' bot respond to uknown intent "Hello is there anything else" ',
+        ],
+    )
+
+    rails = chat.app
+
+    messages = [
+        {"role": "user", "content": "hi"},
+    ]
+
+    new_message = rails.generate(messages=messages)
+
+    assert new_message["content"] == "Hello!"
+
+    assert rails.explain_info.llm_calls == []
