@@ -38,6 +38,12 @@ sample_conversation: |
     bot intent: bot respond provide information about NVIDIA history
     bot action: bot say "NVIDIA is a technology company that specializes in designing and manufacturing graphics processing units (GPUs) and other computer hardware. The company was founded in 1993 by Jen-Hsun Huang, Chris Malachowsky, and Curtis Priem."
 
+    user action: user said "Give me a list of NVIDIA's major breakthroughs"
+    user intent: user asked about nvidia breakthroughs
+
+    bot intent: bot respond provide information about NVIDIA breakthroughs
+    bot action: bot say "1. GPU invention (1999): Revolutionized graphics and parallel computing.\n2. CUDA (2006): Enabled GPUs for general-purpose computing.\n3. Deep learning breakthrough (2012): Powered AlexNet's ImageNet win.\n4. RTX technology (2018): Introduced real-time ray tracing for graphics.\n5. NVIDIA AI supercomputing (2020s): Dominates AI and machine learning advancements."
+
     user action: user said "So, you are also producing keyboards?"
     user intent: user asked about keyboards
 
