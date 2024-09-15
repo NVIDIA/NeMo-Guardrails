@@ -151,7 +151,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         # We search for the most relevant similar user intents
         examples = ""
         potential_user_intents = []
-        embedding_only = False
+        is_embedding_only = False
 
         if self.user_message_index:
             threshold = None
@@ -165,27 +165,33 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
                 text=user_action, max_results=max_example_flows, threshold=threshold
             )
 
-            if results and self.config.rails.dialog.user_messages.embeddings_only:
-                intent = results[0].meta["intent"]
-                potential_user_intents.append(intent)
-                embedding_only = True
+            if self.config.rails.dialog.user_messages.embeddings_only:
+                if results:
+                    intent = results[0].meta["intent"]
+                    potential_user_intents.append(intent)
+                    is_embedding_only = True
 
-            elif (
-                self.config.rails.dialog.user_messages.embeddings_only
-                and self.config.rails.dialog.user_messages.embeddings_only_fallback_intent
-            ):
-                intent = (
+                elif (
                     self.config.rails.dialog.user_messages.embeddings_only_fallback_intent
-                )
-                potential_user_intents.append(intent)
-                embedding_only = True
+                ):
+                    intent = (
+                        self.config.rails.dialog.user_messages.embeddings_only_fallback_intent
+                    )
+                    potential_user_intents.append(intent)
+                    is_embedding_only = True
+                else:
+                    # If we don't have a fallback intent, we run the search again
+                    results = await self.user_message_index.search(
+                        text=user_action, max_results=max_example_flows, threshold=None
+                    )
 
-            else:
-                # We add these in reverse order so the most relevant is towards the end.
-                for result in reversed(results):
-                    examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
-                    if result.meta["intent"] not in potential_user_intents:
-                        potential_user_intents.append(result.meta["intent"])
+                    is_embedding_only = False
+
+            # We add these in reverse order so the most relevant is towards the end.
+            for result in reversed(results):
+                examples += f"user action: user said \"{result.text}\"\nuser intent: {result.meta['intent']}\n\n"
+                if result.meta["intent"] not in potential_user_intents:
+                    potential_user_intents.append(result.meta["intent"])
 
         # We add all currently active user intents (heads on match statements)
         heads = find_all_active_event_matchers(state)
@@ -224,7 +230,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         examples = examples.strip("\n")
 
-        return potential_user_intents, examples, embedding_only
+        return potential_user_intents, examples, is_embedding_only
 
     @action(name="GetLastUserMessageAction", is_system_action=True)
     async def get_last_user_message(
@@ -252,11 +258,11 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         (
             potential_user_intents,
             examples,
-            embedding_only,
+            is_embedding_only,
         ) = await self._collect_user_intent_and_examples(
             state, user_action, max_example_flows
         )
-        if embedding_only:
+        if is_embedding_only:
             return f"{potential_user_intents[0]}"
 
         prompt = self.llm_task_manager.render_task_prompt(
@@ -324,7 +330,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         (
             potential_user_intents,
             examples,
-            embedding_only,
+            is_embedding_only,
         ) = await self._collect_user_intent_and_examples(
             state, user_action, max_example_flows
         )
