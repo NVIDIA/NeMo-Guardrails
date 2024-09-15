@@ -178,15 +178,6 @@ prompts:
       - "{{ sample_conversation | to_messages_v2 }}"
 
       - type: system
-        content: |-
-          "These are the most likely user intents:"
-          {{ examples }}
-
-      - type: system
-        content: "This is the current conversation between the user and the bot:"
-      - "{{ history | colang | to_messages_v2}}"
-
-      - type: system
         content: |
           {% if context.relevant_chunks %}
           # This is some additional context:
@@ -194,6 +185,15 @@ prompts:
           {{ context.relevant_chunks }}
           ```
           {% endif %}
+
+      - type: system
+        content: |-
+          "These are the most likely user intents:"
+          {{ examples }}
+
+      - type: system
+        content: "This is the current conversation between the user and the bot:"
+      - "{{ history | colang | to_messages_v2}}"
 
       - type: user
         content: "user action: {{ user_action }}"
