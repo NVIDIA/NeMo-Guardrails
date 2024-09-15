@@ -758,40 +758,53 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         else:
             docstring = self._last_docstring
 
+        response_format = "text-say"
+        if "colang" in docstring.lower() or "bot say" in docstring.lower():
+            response_format = "colang"
+        elif docstring.lower().strip().startswith(
+            "return"
+        ) or docstring.lower().strip().startswith("extract"):
+            response_format = "text-return"
+
         render_context = {}
         render_context.update(state.context)
         # TODO: Taking the last element is a shortcut.
         #   a more robust logic needs to be implemented.
         render_context.update(state.flow_id_states[triggering_flow_id][-1].context)
 
-        # We also extract dynamically the list of tools
-        tools = []
-        tool_names = []
-        for flow_config in state.flow_configs.values():
-            if flow_config.decorators.get("meta", {}).get("tool") is True:
-                # We get rid of the first line, which is the decorator
-                body = flow_config.source_code.split("\n", maxsplit=1)[1]
+        if response_format == "colang":
+            # We also extract dynamically the list of tools
+            tools = []
+            tool_names = []
+            for flow_config in state.flow_configs.values():
+                if flow_config.decorators.get("meta", {}).get("tool") is True:
+                    # We get rid of the first line, which is the decorator
+                    body = flow_config.source_code.split("\n", maxsplit=1)[1]
 
-                # We only need the part up to the docstring
-                # TODO: improve the logic below for extracting the "header"
-                lines = body.split("\n")
-                for i in range(len(lines)):
-                    if lines[i].endswith('"""'):
-                        lines = lines[0 : i + 1]
-                        break
+                    # We only need the part up to the docstring
+                    # TODO: improve the logic below for extracting the "header"
+                    lines = body.split("\n")
+                    for i in range(len(lines)):
+                        if lines[i].endswith('"""'):
+                            lines = lines[0 : i + 1]
+                            break
 
-                tools.append("\n".join(lines))
-                tool_names.append("`" + flow_config.id + "`")
+                    tools.append("\n".join(lines))
+                    tool_names.append("`" + flow_config.id + "`")
 
-        tools = textwrap.indent("\n\n".join(tools), "  ")
+            tools = textwrap.indent("\n\n".join(tools), "  ")
 
-        render_context["tools"] = tools
-        render_context["tool_names"] = ", ".join(tool_names)
+            render_context["tools"] = tools
+            render_context["tool_names"] = ", ".join(tool_names)
 
         # TODO: add the context of the flow
-        flow_nld = self.llm_task_manager._render_string(
-            textwrap.dedent(docstring), context=render_context, events=events
-        )
+        try:
+            flow_nld = self.llm_task_manager._render_string(
+                textwrap.dedent(docstring), context=render_context, events=events
+            )
+        except Exception as ex:
+            log.exception(f"Exception :: {ex}")
+            raise ex
 
         prompt = self.llm_task_manager.render_task_prompt(
             task=Task.GENERATE_FLOW_CONTINUATION_FROM_NLD,
@@ -814,46 +827,66 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         )
 
         result = _remove_leading_empty_lines(result)
-        lines = result.split("\n")
-        if "codeblock" in lines[0]:
-            lines = lines[1:]
 
-        if len(lines) == 0 or (len(lines) == 1 and lines[0] == ""):
-            return {
-                "name": "bot inform LLM issue",
-                "body": 'flow bot inform LLM issue\n  bot say "Sorry! There was an issue in the LLM result form GenerateFlowContinuationAction!"',
-            }
+        if response_format == "colang":
+            lines = result.split("\n")
+            if "codeblock" in lines[0]:
+                lines = lines[1:]
+            if lines[0] == "```colang":
+                lines = lines[1:]
+            if lines[-1] == "```":
+                lines = lines[:-1]
 
-        # We make sure that we stop at a user action, and replace it with "..."
-        for i in range(len(lines)):
-            if lines[i].startswith("  user "):
-                lines = lines[0:i]
-                lines.append("  wait user input")
-                lines.append("  ...")
-                break
-            elif "await " in lines[i]:
-                # Force to wait and continue the generation when the result is received
-                lines = lines[0 : i + 1]
-                lines.append("  ...")
-                break
-            elif lines[i].strip() == "...":
-                # Don't parse anything after "..."
-                lines = lines[0 : i + 1]
-                break
+            # Sometimes the LLM repeats what the user said, if that's the case, we just remove that line
+            if lines[0].strip().startswith("user said"):
+                lines = lines[1:]
 
-            elif re.match(r"  await .* -> \$.*", lines[i]):
-                # The LLM could be tempted to use the definition syntax when calling the flows
-                lines[i] = re.sub(r"  await (.*) -> (\$.*)", r"\2 = await \1", lines[i])
+            if len(lines) == 0 or (len(lines) == 1 and lines[0] == ""):
+                return {
+                    "name": "bot inform LLM issue",
+                    "body": 'flow bot inform LLM issue\n  bot say "Sorry! There was an issue in the LLM result form GenerateFlowContinuationAction!"',
+                }
 
-            elif lines[i].strip().startswith("bot say") and "..." in result:
-                # Always wait for user input after the bot says something
-                lines = lines[0 : i + 1]
-                lines.append("  wait user input")
-                lines.append("  ...")
-                break
+            # We make sure that we stop at a user action, and replace it with "..."
+            for i in range(len(lines)):
+                if lines[i].startswith("  user "):
+                    lines = lines[0:i]
+                    lines.append("  wait user input")
+                    lines.append("  ...")
+                    break
+                elif "await " in lines[i] or "match " in lines[i]:
+                    # Force to wait and continue the generation when the result is received
+                    lines = lines[0 : i + 1]
+                    lines.append("  ...")
+                    break
+                elif lines[i].strip() == "...":
+                    # Don't parse anything after "..."
+                    lines = lines[0 : i + 1]
+                    break
 
-            elif "user input" in lines[i] or "user select" in lines[i]:
-                lines[i] = "  wait user input"
+                elif re.match(r"  await .* -> \$.*", lines[i]):
+                    # The LLM could be tempted to use the definition syntax when calling the flows
+                    lines[i] = re.sub(
+                        r"  await (.*) -> (\$.*)", r"\2 = await \1", lines[i]
+                    )
+
+                elif lines[i].strip().startswith("bot say") and "..." in result:
+                    # Always wait for user input after the bot says something
+                    lines = lines[0 : i + 1]
+                    lines.append("  wait user input")
+                    lines.append("  ...")
+                    break
+
+                elif "user input" in lines[i] or "user select" in lines[i]:
+                    lines[i] = "  wait user input"
+        else:
+            # We make sure that any quote symbols are escaped
+            result = result.replace('"', '\\"')
+            result = result.replace("\n", "\\n")
+            if response_format == "text-say":
+                lines = [f'bot say "{result}"']
+            elif response_format == "text-return":
+                lines = [f'return "{result}"']
 
         uuid = new_uuid()[0:8]
 

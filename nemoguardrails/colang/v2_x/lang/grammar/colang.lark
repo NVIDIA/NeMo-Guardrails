@@ -169,8 +169,8 @@ sliceop: ":" [test]
 // rather than a spec (both expressions and specs can be just a variable).
 ?atom: var_name -> var
      | number
-     | string
      | doc_string
+     | string
      | "None"    -> const_none
      | "True"    -> const_true
      | "False"   -> const_false
@@ -222,6 +222,7 @@ COMMENT: /#[^\n]*/
 _NEWLINE: (/\r?\n[\t ]*/)+
 
 // Primitive values
+
 
 STRING: /(\.\.\.\s*)?("(?!"").*?(?<!\\)(\\\\)*?"|(\.\.\.\s*)?'(?!'').*?(?<!\\)(\\\\)*?')/i
 LONG_STRING: /(\.\.\.\s*)?(""".*?(?<!\\)(\\\\)*?"""|(\.\.\.\s*)?'''.*?(?<!\\)(\\\\)*?''')/is

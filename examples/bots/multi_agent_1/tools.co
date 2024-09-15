@@ -1,0 +1,11 @@
+@meta(tool=True)
+flow search $query
+  """Search the web for data.
+
+  Args:
+    query (str): The query to search for.
+  """
+  send StartTool(flow_name="search", query=$query)
+
+  thought "Searching the web for {$query}."
+  await SearchAction(query=$query)

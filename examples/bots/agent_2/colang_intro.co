@@ -1,0 +1,24 @@
+@active
+flow init colang intro
+  global $colang_intro
+
+  $colang_intro = """
+  Colang is an interaction modeling language similar to Python.
+  Below is a guide on how to model the interaction between the user and the bot.
+
+  When you want to say something, use the following syntax:
+
+    bot say "<the message>"
+
+  When you think of something before responding, use the following syntax:
+
+    thought "<the content of the thought>"
+
+  Example:
+
+    user said "What is the third month in alphabetical order?"
+    thought "The first three months in alphabetical order are April, August, December."
+    bot say "The third month is December."
+
+  ---
+  """

@@ -71,7 +71,10 @@ class ColangParser:
                 and line.strip() != '"""'
             ):
                 pass
-            elif not in_docstring and line.strip().startswith('"""'):
+            elif not in_docstring and line.count('"""') > 1:
+                pass
+            # elif not in_docstring and line.strip().startswith('"""'):
+            elif not in_docstring and '"""' in line:
                 in_docstring = True
             elif in_docstring and line.strip().endswith('"""'):
                 in_docstring = False

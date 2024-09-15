@@ -1,0 +1,111 @@
+import core
+import llm
+import guardrails
+
+# Basic example with a simple text response.
+flow main_1
+  """
+  Respond to the user's question.
+
+  User: {{ user_message }}
+  Assistant:
+  """
+  user said something
+  ...
+
+# Basic example with conversation history and text response.
+flow main_2
+  """
+  Continue the conversation with the user:
+
+  {{ history | user_assistant_sequence }}
+  Assistant:
+  """
+  user said something
+  ...
+
+flow solve math problem $math_problem
+  """ Solve the following math problem:
+
+  {{ math_problem }}
+
+  Return the response using Colang syntax in the following format:
+
+    return "<the final value>"
+  """
+  ...
+
+flow extract math problem
+  """Extract the math problem included in the user message.
+  Don't solve it. Return it in a condensed form.
+
+  User message: {{ user_message }}.
+  """
+  ...
+
+flow main_3
+  """
+  {{ history | user_assistant_sequence }}
+  Assistant:
+  """
+  global $user_message
+
+  user said something
+  if "math" in $user_message:
+    $math_problem = await extract math problem
+    $response = await solve math problem $math_problem
+    bot say $response
+  else
+    ...
+
+
+flow answer question $feedback
+  """Return the answer to the following user question:
+
+  {% if feedback %}
+  Feedback so far:
+  {{ feedback }}
+  {% endif %}
+
+  Question: {{ user_message }}
+  Answer:
+  """
+  ...
+
+flow check answer $answer $feedback
+  """Return whether the answer given by the assistant to the following user question is correct or not.
+
+  {% if feedback %}
+  Previous feedback:
+  {{ feedback }}
+  {% endif %}
+
+  User: {{ user_message }}
+  Assistant: {{ answer }}
+
+  If you can assess that the answer is correct, say "<<CORRECT>>.".
+  Otherwise, write some feedback or ask some clarifying question.
+  """
+  ...
+
+flow main
+  """
+  {{ history | user_assistant_sequence }}
+  Assistant:
+  """
+  global $user_message
+
+  user said something
+
+  $done = False
+  $feedback = ""
+  while not $done
+    $answer = await answer question $feedback
+    $new_feedback = await check answer $answer $feedback
+
+    $feedback = $feedback + "\nAnswer: " + $answer + "\n" + $new_feedback
+
+    if "<<CORRECT>>" in $new_feedback
+      $done = True
+
+  bot say $answer

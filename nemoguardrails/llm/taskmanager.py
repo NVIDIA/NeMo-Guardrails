@@ -27,6 +27,7 @@ from nemoguardrails.llm.filters import (
     indent,
     last_turns,
     remove_text_messages,
+    render_template,
     to_chat_messages,
     to_intent_messages,
     to_intent_messages_2,
@@ -61,6 +62,7 @@ class LLMTaskManager:
 
         # Register the default filters.
         self.env.filters["colang"] = colang
+        self.env.filters["render"] = render_template
         self.env.filters["co_v2"] = co_v2
         self.env.filters["colang_without_identifiers"] = colang_without_identifiers
         self.env.filters["remove_text_messages"] = remove_text_messages
@@ -150,6 +152,13 @@ class LLMTaskManager:
                         value = value()
 
                     render_context[variable] = value
+
+        # If the template renders a sub-template, we include the full context
+        # TODO: figure out a cleaner way
+        if "| render" in template_str:
+            for k, v in context.items():
+                if k not in render_context:
+                    render_context[k] = v
 
         return template.render(render_context)
 

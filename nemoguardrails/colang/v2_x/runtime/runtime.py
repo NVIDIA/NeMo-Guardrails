@@ -93,7 +93,7 @@ class RuntimeV2_x(Runtime):
             flow_name = flow_content.split("\n")[0].split(" ", maxsplit=1)[1]
             fixed_body = (
                 f"flow {flow_name}\n"
-                + f'  bot say "Internal error on flow `{flow_name}`."'
+                + f'  bot say "Internal error on flow `{flow_name}`: {e}"'
             )
             log.warning("Using the following flow instead:\n%s", fixed_body)
 

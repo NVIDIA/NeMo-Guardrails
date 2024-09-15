@@ -17,15 +17,23 @@ import re
 import textwrap
 from typing import List
 
+from jinja2 import Template, pass_context
+
 from nemoguardrails.actions.llm.utils import (
     get_colang_history,
     remove_action_intent_identifiers,
 )
+from nemoguardrails.colang.v2_x.runtime.flows import Event
 
 
 def colang(events: List[dict]) -> str:
     """Filter that turns an array of events into a colang history."""
     return get_colang_history(events)
+
+
+@pass_context
+def render_template(context, value):
+    return Template(value).render(context)
 
 
 def co_v2(
@@ -112,6 +120,9 @@ def co_v2(
                             continue
                         s += f' ${k}="{v}"'
                     history += s + "\n"
+
+                elif event["type"] == "Thought":
+                    history += f'  thought "{event["content"]}"\n'
 
                 elif (
                     event["type"].endswith("ActionFinished")
@@ -297,12 +308,29 @@ def user_assistant_sequence(events: List[dict]) -> str:
        Assistant: I can help with many things.
        ```
     """
+    # First, we detect if we have UserMessage. If we do, we use that instead of UtteranceUserActionFinished
+    has_user_message_event = False
+    for event in events:
+        if isinstance(event, dict):
+            if event["type"] == "UserMessage":
+                has_user_message_event = True
+
+    processed_ids = set()
     history_items = []
     for event in events:
-        if event["type"] == "UserMessage":
-            history_items.append("User: " + event["text"])
-        elif event["type"] == "StartUtteranceBotAction":
-            history_items.append("Assistant: " + event["script"])
+        if isinstance(event, dict):
+            if event.get("uid") is None or event["uid"] not in processed_ids:
+                if event["type"] == "UserMessage" and has_user_message_event:
+                    history_items.append("User: " + event["text"])
+                elif (
+                    event["type"] == "UtteranceUserActionFinished"
+                    and not has_user_message_event
+                ):
+                    history_items.append("User: " + event["final_transcript"])
+                elif event["type"] == "StartUtteranceBotAction":
+                    history_items.append("Assistant: " + event["script"])
+
+                processed_ids.add(event.get("uid"))
 
     return "\n".join(history_items)
 

@@ -1,0 +1,54 @@
+import core
+import llm
+import guardrails
+
+flow thought $thought
+  send Thought(content=$thought)
+
+@active
+flow agent researcher
+  """
+  {{ colang_intro | render }}
+
+  You are an agent specialized in doing research.
+  Respond to the user's questions using the Colang format.
+
+  When you reach the final response, send back the results using
+
+    send ResearchResult(content="<the content>")
+
+  Help with the following request: "{{ request.content }}"
+
+  {{ history | co_v2 }}
+  """
+  match ResearchRequest as $request
+  ...
+
+# Fetch the UK's GDP over the past 5 years, then draw a line graph of it.
+# What's the UKs GDP over the past 5 years.
+
+flow main
+  """
+  {{ colang_intro | render }}
+
+  ---
+
+  You are a helpful bot.
+  Respond to the user's questions using the Colang format.
+  Don't repeat the history, just continue the conversation.
+  Always end with a `bot say` to say something to the user.
+
+  If you need some research on a topic, e.g., to get some additional data,
+  send a request to the researcher agent, wait for the result,
+  and then continue the thinking (...). Here's the syntax:
+
+    send ResearchRequest(content="<the research request>")
+    match ResearchResult as $result
+    ...
+
+  Don't call any tools yourself.
+
+  {{ history | co_v2 }}
+  """
+  user said something
+  ...

@@ -118,29 +118,34 @@ def eval_expression(expr: str, context: dict) -> Any:
 
     # We search for all variable names starting with $, remove the $ and add
     # the value in the dict for eval
+
+    # TODO: figure out a better workaround. We don't want to do this when the expression is a string.
+    #  The replacement below should not happen inside strings.
     expr_locals = {}
-    regex_pattern = r"\$([a-zA-Z_][a-zA-Z0-9_]*)"
-    var_names = re.findall(regex_pattern, expr)
-    updated_expr = re.sub(regex_pattern, r"var_\1", expr)
+    updated_expr = expr
+    if not (expr.startswith('"') and expr.endswith('"')):
+        regex_pattern = r"\$([a-zA-Z_][a-zA-Z0-9_]*)"
+        var_names = re.findall(regex_pattern, expr)
+        updated_expr = re.sub(regex_pattern, r"var_\1", expr)
 
-    for var_name in var_names:
-        # if we've already computed the value, we skip
-        if f"var_{var_name}" in expr_locals:
-            continue
+        for var_name in var_names:
+            # if we've already computed the value, we skip
+            if f"var_{var_name}" in expr_locals:
+                continue
 
-        # Check if it is a global variable
-        global_var_name = f"_global_{var_name}"
-        if global_var_name in context:
-            val = context.get(global_var_name, None)
-        else:
-            val = context.get(var_name, None)
+            # Check if it is a global variable
+            global_var_name = f"_global_{var_name}"
+            if global_var_name in context:
+                val = context.get(global_var_name, None)
+            else:
+                val = context.get(var_name, None)
 
-        # We transform dicts to AttributeDict so we can access their keys as attributes
-        # e.g. write things like $speaker.name
-        if isinstance(val, dict):
-            val = AttributeDict(val)
+            # We transform dicts to AttributeDict so we can access their keys as attributes
+            # e.g. write things like $speaker.name
+            if isinstance(val, dict):
+                val = AttributeDict(val)
 
-        expr_locals[f"var_{var_name}"] = val
+            expr_locals[f"var_{var_name}"] = val
 
     # Finally, just evaluate the expression
     try:

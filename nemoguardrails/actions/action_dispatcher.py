@@ -259,7 +259,7 @@ class ActionDispatcher:
                         if k not in ["state", "events", "llm"]
                     }
                     log.warning(
-                        "Error while execution '%s' with parameters '%s': %s",
+                        "Error :: while execution '%s' with parameters '%s': %s",
                         action_name,
                         filtered_params,
                         e,
