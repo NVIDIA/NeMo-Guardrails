@@ -63,7 +63,7 @@ from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
 from nemoguardrails.rails.llm.config import EmbeddingSearchProvider, RailsConfig
 from nemoguardrails.rails.llm.options import GenerationOptions
 from nemoguardrails.streaming import StreamingHandler
-from nemoguardrails.utils import get_or_create_event_loop, new_event_dict
+from nemoguardrails.utils import get_or_create_event_loop, new_event_dict, new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -693,7 +693,7 @@ class LLMGenerationActions:
                         # We generate a random UUID as the flow_id
                         new_event_dict(
                             "start_flow",
-                            flow_id=str(uuid.uuid4()),
+                            flow_id=new_uuid(),
                             flow_body="\n".join(lines),
                         )
                     ]
