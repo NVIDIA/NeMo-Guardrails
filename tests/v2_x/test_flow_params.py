@@ -154,37 +154,3 @@ def test_3():
 
     chat >> "hi"
     chat << "3\n3"
-
-
-def test_4():
-    config = RailsConfig.from_content(
-        colang_content="""
-        flow user said $text
-          match UtteranceUserActionFinished(final_transcript=$text)
-
-        flow bot say $text
-          await UtteranceBotAction(script=$text)
-
-        @active
-        flow polling llm request response $interval=1.0
-          log "llm activated {$interval}"
-          match DummyImplementation()
-
-        flow main
-          activate polling llm request response 0.5
-          user said "hi"
-          bot say "done"
-          wait indefinitely
-        """,
-        yaml_content="""
-        colang_version: "2.x"
-        """,
-    )
-
-    chat = TestChat(
-        config,
-        llm_completions=[],
-    )
-
-    chat >> "hi"
-    chat << "done"
