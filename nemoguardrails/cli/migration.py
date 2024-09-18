@@ -837,6 +837,8 @@ def _process_config_files(config_files_to_process: List[str]) -> int:
     Args:
         config_files_to_process (List[str]): The list of config files to process.
 
+    Returns:
+        int: The total number of config files changed.
     """
     total_config_files_changed = 0
 
@@ -856,6 +858,9 @@ def _process_config_files(config_files_to_process: List[str]) -> int:
 
         # set colang version to 2.x
         _set_colang_version(version="2.x", file_path=file_path)
+
+        # Process the sample_conversation section
+        _process_sample_conversation_in_config(file_path)
 
     return total_config_files_changed
 
@@ -928,3 +933,125 @@ def _remove_files_from_path(path, filenames: list[str]):
         file_path = os.path.join(path, filename)
         if os.path.exists(file_path):
             os.remove(file_path)
+
+
+def convert_sample_conversation_syntax(lines: List[str]) -> List[str]:
+    """Converts the sample_conversation section from the old format to the new format.
+
+    Args:
+        lines (List[str]): The lines of the sample_conversation to convert.
+
+    Returns:
+        List[str]: The new lines of the sample_conversation after conversion.
+    """
+    new_lines = []
+    i = 0
+    while i < len(lines):
+        line = lines[i].rstrip("\n")
+        # skip empty lines
+        if line.strip() == "":
+            new_lines.append(line + "\n")
+            i += 1
+            continue
+
+        # proccess 'user' lines
+        if line.startswith("user "):
+            # Check if line matches 'user "message"'
+            m = re.match(r'user\s+"(.*)"', line)
+            if m:
+                message = m.group(1)
+                new_lines.append(f'user action: user said "{message}"\n')
+                # We know that the  next line is intent
+                if i + 1 < len(lines):
+                    intent_line = lines[i + 1].strip()
+                    if intent_line:
+                        # Include 'user' prefix in the intent
+                        new_lines.append(f"user intent: user {intent_line}\n")
+                    i += 2
+                else:
+                    i += 1
+            else:
+                i += 1
+        elif line.startswith("bot "):
+            # Check wether line is 'bot intent'
+            m = re.match(r"bot\s+(.*)", line)
+            if m:
+                intent = m.group(1)
+                # include 'bot' prefix in the intent
+                new_lines.append(f"bot intent: bot {intent}\n")
+                # next line is message
+                if i + 1 < len(lines):
+                    message_line = lines[i + 1].strip()
+                    m2 = re.match(r'"(.*)"', message_line)
+                    if m2:
+                        message = m2.group(1)
+                        new_lines.append(f'bot action: bot say "{message}"\n')
+                        i += 2
+                    else:
+                        i += 1
+                else:
+                    i += 1
+            else:
+                i += 1
+        else:
+            # other lines remain as is
+            new_lines.append(line + "\n")
+            i += 1
+    return new_lines
+
+
+def _process_sample_conversation_in_config(file_path: str):
+    """Processes the sample_conversation section in the config file.
+
+    Args:
+        file_path (str): The path to the config file.
+    """
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+
+    # Find 'sample_conversation:' line
+    sample_conv_line_idx = None
+    for idx, line in enumerate(lines):
+        if re.match(r"^\s*sample_conversation:\s*\|", line):
+            sample_conv_line_idx = idx
+            break
+    if sample_conv_line_idx is None:
+        return  # No sample_conversation in file
+
+    # get the base indentation
+    base_indent = len(lines[sample_conv_line_idx]) - len(
+        lines[sample_conv_line_idx].lstrip()
+    )
+    sample_conv_indent = None
+
+    # get sample_conversation lines
+    sample_lines = []
+    i = sample_conv_line_idx + 1
+    while i < len(lines):
+        line = lines[i]
+        # Check if the line is indented more than base_indent
+        line_indent = len(line) - len(line.lstrip())
+        if line.strip() == "":
+            sample_lines.append(line)
+            i += 1
+            continue
+        if line_indent > base_indent:
+            if sample_conv_indent is None:
+                sample_conv_indent = line_indent
+            sample_lines.append(line)
+            i += 1
+        else:
+            # end of sample conversations lines
+            break
+    sample_conv_end_idx = i
+
+    stripped_sample_lines = [line[sample_conv_indent:] for line in sample_lines]
+    new_sample_lines = convert_sample_conversation_syntax(stripped_sample_lines)
+    # revert  the indentation
+    indented_new_sample_lines = [
+        " " * sample_conv_indent + line for line in new_sample_lines
+    ]
+    lines[sample_conv_line_idx + 1 : sample_conv_end_idx] = indented_new_sample_lines
+    # Write back the modified lines
+    with open(file_path, "w") as f:
+        f.writelines(lines)
