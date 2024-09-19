@@ -10,7 +10,8 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
-imagePullSecrets: [awsecr-cred]
+imagePullSecrets:
+- name: awsecr-cred
 nameOverride: ""
 fullnameOverride: ""
 
