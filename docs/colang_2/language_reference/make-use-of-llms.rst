@@ -17,7 +17,7 @@ To enable the LLM backend you first have to configure the LLM access in the `con
     models:
     - type: main
       engine: openai
-      model: gpt-3.5-turbo-instruct
+      model: gpt-4-turbo
 
 Make sure to also define the required API access key, e.g. for OpenAI you will have to set the ``OPENAI_API_KEY`` environment variable.
 
@@ -43,7 +43,12 @@ One of the main LLM generation mechanism in Colang are the so-called Natural Lan
     # Use an existing variable in NLD
     $response_to_user = ..."Provide a brief summary of the current order. Order Information: '{$order_information}'"
 
-Every NLD will be interpreted and replaced during runtime by the configured LLM backend and can be used in Colang to generate context dependent values. Alternatively, you can also describe the purpose and function of a flow using a docstring like NLD at the beginning of a flow. Using a standalone generation operator in the flow will use the flows NLD to infer the right flow expansion automatically:
+Every NLD will be interpreted and replaced during runtime by the configured LLM backend and can be used in Colang to generate context dependent values. With NLDs you are able to extract values and summarize content from the conversation with the user or based on results from other sources (like a database or an external service).
+
+.. note::
+    NLDs together with the variable name are interpreted by the LLM directly. Depending on the LLM you use you need to make sure to be very specific in what value you would like to generate. It is good practice to always clearly specify how you want the response to be formatted and what type it should have (e.g., ``$user_name = ..."Return the user name as single string between quotes''. If no user name is available return 'friend'"``.
+
+Alternatively, you can also describe the purpose and function of a flow using a docstring like NLD at the beginning of a flow. Using a standalone generation operator in the flow will use the flows NLD to infer the right flow expansion automatically:
 
 .. code-block:: colang
 
@@ -102,7 +107,7 @@ Note that there is no explicit control over the NLD response format and sometime
 User Intent Matching
 ----------------------------------------
 
-In section :ref:`Defining Flows<action-like-and-intent-like-flows>` we have already seen how we can define user intent flows. The limitation was that they did not generalize to variations of the given user intent examples. With the help of an LLM we can overcome this issue and use its reasoning power by importing the `llm` standard library module and activate the flows ``automating intent detection`` and ``generating user intent for unhandled user utterance`` (`Github link <../../../nemoguardrails/colang/v2_x/library/llm.co>`__) to match unexpected user utterances to currently active user intent flows.
+In section :ref:`Defining Flows<action-like-and-intent-like-flows>` we have already seen how we can define user intent flows. The limitation was that they did not generalize to variations of the given user intent examples. With the help of an LLM we can overcome this issue and use its reasoning power by importing the `llm` standard library module and activate the flows ``automating intent detection`` and ``generating user intent for unhandled user utterance`` (`Github link <https://github.com/NVIDIA/NeMo-Guardrails/blob/main/nemoguardrails/colang/v2_x/library/llm.co>`__) to match unexpected user utterances to currently active user intent flows.
 
 .. code-block:: colang
     :caption: llm/user_intent_match_example/main.co
