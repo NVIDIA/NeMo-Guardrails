@@ -43,6 +43,11 @@ One of the main LLM generation mechanism in Colang are the so-called Natural Lan
     # Use an existing variable in NLD
     $response_to_user = ..."Provide a brief summary of the current order. Order Information: '{$order_information}'"
 
+    # Multiline NLD using triple quotes
+    $story = ..."""Tell a story about '{$order_information}'.
+       But you must use child compliant language and include a character named "Tom"
+       """
+
 Every NLD will be interpreted and replaced during runtime by the configured LLM backend and can be used in Colang to generate context dependent values. With NLDs you are able to extract values and summarize content from the conversation with the user or based on results from other sources (like a database or an external service).
 
 .. note::

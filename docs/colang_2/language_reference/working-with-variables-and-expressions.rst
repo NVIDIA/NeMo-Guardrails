@@ -68,6 +68,11 @@ Here are some variable assignment examples:
     $list_of_integers = [1, 2, 3, 4]
     $set_of_floats = {0.1, 0.2, 0.3}
     $dictionary = {"value_a":1, "value_b": 2}
+    $multiline_string_value = """This is a list of options:
+      A) Item A
+      B) Item B"""
+
+Alternatively, for string and multiline string expressions, single quote characters ``'`` and ``'''`` can be used instead of double quotes.
 
 ----------------------------------------
 Expression Evaluation
