@@ -107,7 +107,7 @@ Note that there is no explicit control over the NLD response format and sometime
 User Intent Matching
 ----------------------------------------
 
-In section :ref:`Defining Flows<action-like-and-intent-like-flows>` we have already seen how we can define user intent flows. The limitation was that they did not generalize to variations of the given user intent examples. With the help of an LLM we can overcome this issue and use its reasoning power by importing the `llm` standard library module and activate the flows ``automating intent detection`` and ``generating user intent for unhandled user utterance`` (`Github link <https://github.com/NVIDIA/NeMo-Guardrails/blob/main/nemoguardrails/colang/v2_x/library/llm.co>`__) to match unexpected user utterances to currently active user intent flows.
+In section :ref:`Defining Flows<action-like-and-intent-like-flows>` we have already seen how we can define user intent flows. The limitation was that they did not generalize to variations of the given user intent examples. With the help of an LLM we can overcome this issue and use its reasoning power by importing the `llm` standard library module and activate the flows ``automating intent detection`` and ``generating user intent for unhandled user utterance`` (`Github link <../../../nemoguardrails/colang/v2_x/library/llm.co>`__) to match unexpected user utterances to currently active user intent flows.
 
 .. code-block:: colang
     :caption: llm/user_intent_match_example/main.co
