@@ -664,7 +664,7 @@ Under the hood, all interaction patterns are based on these internal events. Hav
     match $ref.Finished()
 
     # which is equivalent to
-    $uid = "{uid()}"
+    $uid = uid()
     send StartFlow(flow_id="pattern a", flow_instance_uid=$uid)
     match FlowStarted(flow_instance_uid=$uid) as $ref
     match FlowFinished(flow_instance_uid=$ref.flow.uid)
