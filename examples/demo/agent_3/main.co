@@ -1,0 +1,40 @@
+import core
+import llm
+import guardrails
+
+flow thought $thought
+  send Thought(content=$thought)
+
+
+@meta(tool=True)
+flow compute theta $number
+  """Computes the theta factor for a number.
+
+  Args:
+    number: The number for which we need to compute.
+  """
+  thought "Computing theta for {$number}."
+  $result = $number + $number * $number
+  thought "The result is {$result}."
+
+
+flow main
+  """
+  {{ colang_intro }}
+
+  {% if tools %}
+  The available tools in the current context are:
+  {{ tools }}
+  {% endif %}
+  ---
+
+  You are a helpful bot.
+  Respond to the user's questions.
+  Use the Colang format.
+  Don't repeat the history, just continue the conversation.
+  Always end with a `bot say` to say something to the user.
+
+  {{ history | co_v2 }}
+  """
+  user said something
+  ...

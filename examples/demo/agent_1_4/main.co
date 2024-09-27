@@ -1,0 +1,55 @@
+import core
+import llm
+import guardrails
+
+
+flow answer question $feedback
+  """Return the answer to the following user question:
+
+  {% if feedback %}
+  Feedback so far:
+  {{ feedback }}
+  {% endif %}
+
+  Question: {{ user_message }}
+  Answer:
+  """
+  ...
+
+flow check answer $answer $feedback
+  """Return whether the answer given by the assistant to the following user question is correct or not.
+
+  {% if feedback %}
+  Previous feedback:
+  {{ feedback }}
+  {% endif %}
+
+  User: {{ user_message }}
+  Assistant: {{ answer }}
+
+  If you can assess that the answer is correct, say "<<CORRECT>>.".
+  Otherwise, write some feedback or ask some clarifying question.
+  """
+  ...
+
+flow main
+  """
+  {{ history | user_assistant_sequence }}
+  Assistant:
+  """
+  global $user_message
+
+  user said something
+
+  $done = False
+  $feedback = ""
+  while not $done
+    $answer = await answer question $feedback
+    $new_feedback = await check answer $answer $feedback
+
+    $feedback = $feedback + "\nAnswer: " + $answer + "\n" + $new_feedback
+
+    if "<<CORRECT>>" in $new_feedback
+      $done = True
+
+  bot say $answer

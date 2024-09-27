@@ -1,0 +1,54 @@
+import llm
+
+
+flow user request about flight booking
+  user said "I want to book a flight."
+    or user said "I need to fly from NYC to SFO tomorrow afternoon."
+
+flow wait user input
+  """Just a different semantic wrapper to help with LLM completion."""
+  user said something
+
+
+flow booking
+  """
+  You need to gather the following information about the flight. These are the current values:
+
+  - $from_city = "{{ from_city }}"
+  - $to_city = "{{ to_city }}"
+  - $date = "{{ date }}"
+
+  If any of them is missing, you must ask the user to provide them.
+  Also, you must explicitly wait for the user input, as shown below:
+
+    bot say "What city do you want to fly from?"
+    wait user input
+
+  If a value is provided, you must record it. For example:
+
+    $from_city = "<city>"
+
+  If all values are provided, you must mark that as follows:
+
+    $done = True
+
+  Based on the conversation history below, follow the instructions above:
+
+  {{ history | co_v2 }}
+  """
+  user request about flight booking
+
+  $from_city = None
+  $to_city = None
+  $date = None
+
+  $done = False
+  while not $done
+    ...
+
+  bot say "Great, you provided all the info. You're flying from {from_city} to {to_city} on {date}."
+
+
+flow main
+  activate llm continuation
+  activate booking

@@ -1,0 +1,14 @@
+import core
+import llm
+import guardrails
+
+# Basic example with conversation history and text response.
+flow main_2
+  """
+  Continue the conversation with the user:
+
+  {{ history | user_assistant_sequence }}
+  Assistant:
+  """
+  user said something
+  ...

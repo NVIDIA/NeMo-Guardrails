@@ -1,0 +1,21 @@
+import core
+import llm
+import guardrails
+
+flow thought $thought
+  return
+
+# If you count back from 100 from 7 to 7, stop after 5 steps. Tell me the square root of that number. Just tell me the result.
+
+flow main
+  """
+  {{ colang_intro }}
+
+  You are a helpful bot.
+  Respond to the user's questions.
+  Use the Colang format.
+
+  {{ history | co_v2 }}
+  """
+  user said something
+  ...

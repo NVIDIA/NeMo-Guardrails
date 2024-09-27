@@ -1,0 +1,14 @@
+import core
+import llm
+import guardrails
+
+# Basic example with a simple text response.
+flow main_1
+  """
+  Respond to the user's question.
+
+  User: {{ user_message }}
+  Assistant:
+  """
+  user said something
+  ...

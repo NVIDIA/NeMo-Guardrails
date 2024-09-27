@@ -1,0 +1,6 @@
+flow wait user input
+  """Just a different semantic wrapper to help with LLM completion."""
+  user said something
+
+flow main
+  activate main po

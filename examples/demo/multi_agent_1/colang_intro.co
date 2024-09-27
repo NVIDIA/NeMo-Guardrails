@@ -1,0 +1,63 @@
+
+@active
+flow init colang intro
+  global $colang_intro
+
+  $colang_intro = """
+  Colang is an interaction modeling language similar to Python.
+  Below is a guide on how to model the interaction between the user and the bot.
+
+  When you want to say something, use the following syntax:
+
+    bot say "<the message>"
+
+  When you think of something before responding, use the following syntax:
+
+    thought "<the content of the thought>"
+
+  If there are existing tools that you want to invoke, use the following syntax:
+
+    await <name of the flow>
+    ...
+
+  If the tool needs parameters, pass them using the syntax.
+  The name of the parameters must have $ in front of them.
+
+    await <name of the flow> $param_1="value_1" $param_2="value_2"
+    ...
+
+  If you need to send a message to a different agent, use the following syntax:
+
+    send SomeMessage(content="<the content>")
+
+  Example 1:
+
+    user said "What is the third month in alphabetical order?"
+    thought "The first three months in alphabetical order are April, August, December."
+    bot say "The third month is December."
+
+  Example 2:
+
+    flow compute square root $number
+      ''' Compute the square root of the given number. '''
+
+    user said "What is the square root of two?"
+    await compute square root $number=2
+    ...
+
+  ---
+  {{% if tools %}}
+  The available tools in the current context are:
+  {{{{ tools }}}}
+
+  Remember, when calling tools, parameter names must start with a "$". For example:
+
+    await search $query="dfdf"
+
+  ---
+  {{% else %}}
+  No tools available.
+
+  ---{{% endif %}}
+
+  """

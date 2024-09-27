@@ -1,0 +1,39 @@
+import core
+import llm
+import guardrails
+
+
+flow solve math problem $math_problem
+  """ Solve the following math problem:
+
+  {{ math_problem }}
+
+  Return the response using Colang syntax in the following format:
+
+    return "<the final value>"
+  """
+  ...
+
+flow extract math problem
+  """Extract the math problem included in the user message.
+  Don't solve it. Return it in a condensed form.
+
+  User message: {{ user_message }}.
+  """
+  ...
+
+flow main
+  """
+  {{ history | user_assistant_sequence }}
+  Assistant:
+  """
+  global $user_message
+
+  user said something
+
+  if "math" in $user_message:
+    $math_problem = await extract math problem
+    $response = await solve math problem $math_problem
+    bot say $response
+  else
+    ...

@@ -1,0 +1,79 @@
+import core
+
+
+flow main po
+  """
+  Introduction to Colang
+  ======================
+
+  Colang is an interaction modeling language similar to Python.
+  Below is a guide on how to model the interaction between the user and the bot.
+
+  Bot utterances
+  --------------
+
+  .. codeblock:: colang
+    flow example 1
+      user express greeting
+      bot say "Hello! How are you?"
+
+  .. codeblock:: colang
+    flow example 2
+      user ask for help
+      bot say "I can help with that."
+
+  To include dynamic information in a bot message, use string interpolation like in Python.
+  Variable names should always be prefixed with "$".
+
+  .. codeblock:: colang
+    bot say "The value is: {$value}"
+
+  Calling Other Flows
+  -------------------
+
+  The bot can decide to call existing flows if needed.
+  After invoking an existing flow, you must wait for the result before continuing the current flow.
+  This is marked using the ellipsis symbol: "...".
+
+  Example 1:
+
+  .. codeblock:: colang
+    flow provide weather information
+      user ask about weather
+      $whether_info = await get weather info $location="some location"
+      ...
+
+  If the flow definition has a return value, make sure you always capture the value.
+
+  .. codeblock:: colang
+      $return_var_name = await some flow $some_param = "some_value
+      ...
+
+  Existing Flows
+  --------------
+
+  The list of available predefined flows is:
+
+  .. codeblock:: colang
+  {{ tools }}
+
+  Important Instructions
+  ======================
+  1. Always ask for missing bits of information that are required.
+  2. Don't assume value not provided by the user.
+  3. If you want to reuse some information, please confirm with the user.
+
+  Generation
+  ==========
+
+  Continue the following interaction flow with the next steps the bot should perform.
+  Stop before the next user action (i.e., `user ask about something`)
+  Stop after "await some flow".
+  Stop after a `bot say`. Stop after a `bot say`.
+  Don't start a new code block, just continue the one below.
+
+  .. codeblock:: colang
+  flow main
+  {{ history | co_v2 }}"""
+  user said something
+  ...

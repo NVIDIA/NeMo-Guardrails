@@ -1,0 +1,66 @@
+@meta(tool=True)
+flow get vendor $vendor_name -> $vendors
+  """Return the list of vendors matching the specified name.
+
+  Args:
+    vendor_name (str, required): The name (or part of the name) for the vendor.
+
+  Returns:
+    List[dict]: An array of matches. Each match is a dict with `vendor_name` and `vendor_id` as fields.
+  """
+  send StartTool(flow_name="get vendor", vendor_name=$vendor_name)
+
+  $matches = await GetVendorAction(vendor_name=$vendor_name)
+  return $matches
+
+
+@meta(tool=True)
+flow get weather info $location
+  """Return information about the weather in the specified location.
+
+  Args:
+    location (str, optional): A city name.
+
+  Returns:
+    dict: A dictionary with the fields `temperature` and `conditions`.
+
+  """
+  send StartTool(flow_name="get weather info", location=$location)
+
+  $weather_info = await GetWeatherInfoAction()
+  return $weather_info
+
+
+@meta(tool=True, scenario="...")
+flow create purchase requisition $vendor_id -> $pr_id
+  """Create a new purchase requisition.
+
+  Args:
+    vendor_id (str, required): The id of the vendor.
+
+  Returns:
+    str: The id of the PR (Purchase Requisition).
+
+  """
+  send StartTool(flow_name="create purchase requisition", vendor_id=$vendor_id)
+
+  $pr = await CreatePurchaseRequisitionAction(vendor_id=$vendor_id)
+  return $pr["pr_id"]
+
+
+@meta(tool=True)
+flow create purchase order $pr_id $target_date -> $po_id
+  """Create a new purchase order.
+
+  Args:
+    pr_id (str, required): The id of the purchase requisition.
+    target_date (str, required): The target date for the purchase order.
+
+  Returns:
+    str: The id of the PO (Purchase Order).
+
+  """
+  send StartTool(flow_name="create purchase order", pr_id=$pr_id, target_date=$target_date)
+
+  $po = await CreatePurchaseOrderAction(pr_id=$pr_id, target_date=$target_date)
+  return $po["po_id"]
