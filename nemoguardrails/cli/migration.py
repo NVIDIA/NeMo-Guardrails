@@ -411,7 +411,7 @@ def _revise_anonymous_flow(flow_content: str, first_message: str) -> str:
     # return re.sub(r"flow\s*$", f"flow anonymous_{uuid.uuid4().hex}", flow_content)
 
 
-def _get_flow_ids(content: str) -> list:
+def _get_flow_ids(content: str) -> List:
     """Returns the flow ids in the content.
 
     Args:
@@ -442,7 +442,7 @@ def _get_flow_ids(content: str) -> list:
     return root_flow_pattern.findall(content)
 
 
-def _get_flow_ids_from_newlines(new_lines: list) -> list:
+def _get_flow_ids_from_newlines(new_lines: List) -> List:
     """Returns the flow ids in the new lines.
     Args:
         new_lines (list): The new lines to search for flow ids.
@@ -457,13 +457,13 @@ def _get_flow_ids_from_newlines(new_lines: list) -> list:
     return _get_flow_ids(content)
 
 
-def _add_imports(new_lines: list, libraries: list[str]) -> list:
+def _add_imports(new_lines: List, libraries: List[str]) -> List:
     for library in libraries:
         new_lines.insert(0, f"import {library}\n")
     return new_lines
 
 
-def _add_main_co_file(file_path: str, libraries: Optional[list[str]] = None) -> bool:
+def _add_main_co_file(file_path: str, libraries: Optional[List[str]] = None) -> bool:
     """Add the main co file to the given file path.
     Args:
         file_path (str): The path to the file to add the main co file to.
@@ -485,7 +485,7 @@ def _add_main_co_file(file_path: str, libraries: Optional[list[str]] = None) -> 
     return _write_to_file(file_path, new_lines)
 
 
-def _generate_main_flow(new_lines: list) -> list:
+def _generate_main_flow(new_lines: List) -> List:
     """Adds a 'main' flow to the new lines that activates all other flows.
 
     The 'main' flow is added at the beginning of the new lines. It includes an 'activate' command for each flow id found in the new lines.
@@ -524,14 +524,14 @@ def _generate_main_flow(new_lines: list) -> list:
     return new_lines
 
 
-def _add_active_decorator(new_lines: list) -> list:
+def _add_active_decorator(new_lines: List) -> List:
     """Adds an '@active' decorator above each flow id in the new lines.
 
     Args:
-        new_lines (list): The lines to add the decorators to.
+        new_lines (List): The lines to add the decorators to.
 
     Returns:
-        list: The lines with the decorators added.
+        List: The lines with the decorators added.
     """
     decorated_lines = []
 
@@ -922,7 +922,7 @@ def _create_main_co_if_not_exists(file_path):
     return main_file_path
 
 
-def _remove_files_from_path(path, filenames: list[str]):
+def _remove_files_from_path(path, filenames: List[str]):
     """Remove files from the path.
 
     Args:
