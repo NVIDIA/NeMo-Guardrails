@@ -25,8 +25,8 @@ import time
 import warnings
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, Union, cast
 
-from langchain.llms.base import BaseLLM
 from langchain_core.language_models import BaseLanguageModel
+from langchain_core.language_models.llms import BaseLLM
 
 from nemoguardrails.actions.llm.generation import LLMGenerationActions
 from nemoguardrails.actions.llm.utils import get_colang_history
