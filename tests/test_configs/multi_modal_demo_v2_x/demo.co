@@ -269,11 +269,10 @@ flow showcase selector
 flow main
   #activate notification of unexpected user utterance
   activate ignored_utterance_action_bugfix
-  activate notification of undefined flow start "Excuse me, what did you say?"
-  activate notification of colang errors "Excuse me, what did you say?"
+  activate warning of undefined flow start
+  activate warning of colang errors
   activate automating intent detection
   activate tracking bot talking state
-  activate managing idle posture
   #activate faq
 
   start scene show textual information $title="Welcome to the Tech Demo of Colang 2.0" $text="" $header_image="https://blogs.nvidia.com/wp-content/uploads/2023/04/NeMo-Guardrails-KV-x1280.jpg" as $welcome_ui
