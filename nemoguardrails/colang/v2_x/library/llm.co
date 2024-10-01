@@ -322,17 +322,6 @@ flow tracking unhandled user intent state
 # Experimental flows (undocumented)
 # ----------------------------------
 
-# @meta(user_intent=True)
-# flow user requested a task
-#   user said "do something"
-#     or user said "can you do something"
-#     or user said "please do"
-
-flow custom instructions
-  user requested a task
-  $instructions = await GetLastUserMessageAction()
-  execute llm instruction $instructions
-
 flow execute llm instruction $instructions
   """This will create a new flow based on the provided instructions and start it."""
   activate polling llm request response
