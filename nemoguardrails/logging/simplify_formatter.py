@@ -25,7 +25,7 @@ class SimplifyFormatter(logging.Formatter):
         if isinstance(record, logging.LogRecord):
             text = super().format(record)
         else:
-            # Otherwise, assume it's a string
+            # Otherwise, assume we can convert it to a string
             text = str(record)
 
         # Replace all UUIDs
