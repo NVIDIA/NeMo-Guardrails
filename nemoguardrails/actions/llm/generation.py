@@ -347,7 +347,6 @@ class LLMGenerationActions:
             return await self.generate_intent_steps_message(
                 events=events, llm=llm, kb=kb
             )
-
         # The last event should be the "StartInternalSystemAction" and the one before it the "UtteranceUserActionFinished".
         event = get_last_user_utterance_event(events)
         assert event["type"] == "UserMessage"
@@ -525,7 +524,10 @@ class LLMGenerationActions:
                     chunks = await kb.search_relevant_chunks(event["text"])
                     relevant_chunks = "\n".join([chunk["body"] for chunk in chunks])
                 else:
-                    relevant_chunks = ""
+                    # in case there is  no user flow (user message) then we need the context update to work for relevant_chunks
+                    relevant_chunks = get_retrieved_relevant_chunks(
+                        events, skip_user_message=True
+                    )
 
                 # Otherwise, we still create an altered prompt.
                 prompt = self.llm_task_manager.render_task_prompt(
