@@ -334,16 +334,3 @@ flow execute llm instruction $instructions
   match FlowStarted(flow_id=$flow_info.name, flow_instance_uid=$new_flow_instance_uid) as $event_ref
   match $event_ref.flow.Finished()
   await RemoveFlowsAction(flow_ids=[$flow_info.name])
-
-
-@meta(user_intent=True)
-flow user requested a task
-  user said "do something"
-    or user said "can you do something"
-    or user said "please do"
-
-
-flow custom instructions
-  user requested a task
-  $instructions = await GetLastUserMessageAction()
-  execute llm instruction $instructions
