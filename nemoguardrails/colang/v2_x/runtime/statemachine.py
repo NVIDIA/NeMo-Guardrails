@@ -71,8 +71,7 @@ from nemoguardrails.colang.v2_x.runtime.flows import (
     InternalEvents,
     State,
 )
-from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
-from nemoguardrails.utils import console, new_event_dict, new_uuid
+from nemoguardrails.utils import console, new_event_dict, new_readable_uuid, new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -103,11 +102,12 @@ def initialize_state(state: State) -> None:
     # Create main flow state first
     main_flow_config = state.flow_configs["main"]
     main_flow = add_new_flow_instance(
-        state, create_flow_instance(main_flow_config, new_readable_uid("main"), "0", {})
+        state,
+        create_flow_instance(main_flow_config, new_readable_uuid("main"), "0", {}),
     )
     main_flow.activated = 1
     if main_flow_config.loop_id is None:
-        main_flow.loop_id = new_readable_uid("main")
+        main_flow.loop_id = new_readable_uuid("main")
     else:
         main_flow.loop_id = main_flow_config.loop_id
     state.main_flow_state = main_flow
