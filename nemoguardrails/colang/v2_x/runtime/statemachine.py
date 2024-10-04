@@ -652,8 +652,11 @@ def _get_reference_activated_flow_instance(
                 f"${idx}" in event.arguments and val == event.arguments[f"${idx}"]
             )
             # Default flow parameters
-            matched |= arg.default_value_expr is not None and val == eval_expression(
-                arg.default_value_expr, {}
+            matched |= (
+                arg.name not in event.arguments
+                and f"${idx}" not in event.arguments
+                and arg.default_value_expr is not None
+                and val == eval_expression(arg.default_value_expr, {})
             )
 
             if not matched:
