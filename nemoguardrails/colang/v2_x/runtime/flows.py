@@ -102,7 +102,7 @@ class Event:
     @classmethod
     def from_umim_event(cls, event: dict) -> Event:
         """Creates an event from a flat dictionary."""
-        new_event = Event(event["type"], {})
+        new_event = cls(event["type"], {})
         new_event.arguments = dict(
             [(key, event[key]) for key in event if key not in ["type"]]
         )
