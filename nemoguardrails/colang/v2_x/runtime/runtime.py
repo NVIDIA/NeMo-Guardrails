@@ -42,6 +42,7 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     initialize_state,
     run_to_completion,
 )
+from nemoguardrails.context import processing_log_var
 from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.utils import new_event_dict, new_readable_uuid
 
@@ -352,7 +353,8 @@ class RuntimeV2_x(Runtime):
         )
 
     async def _get_async_actions_finished_events(
-        self, main_flow_uid: str
+        self,
+        main_flow_uid: str,
     ) -> Tuple[List[dict], int]:
         """Helper to return the ActionFinished events for the local async actions that finished.
 
@@ -400,6 +402,7 @@ class RuntimeV2_x(Runtime):
         state: Union[Optional[dict], State] = None,
         blocking: bool = False,
         instant_actions: Optional[List[str]] = None,
+        processing_log: Optional[List[Dict]] = None,
     ) -> Tuple[List[Dict[str, Any]], State]:
         """Process a sequence of events in a given state.
 
@@ -432,7 +435,11 @@ class RuntimeV2_x(Runtime):
         output_events = []
         input_events: List[Union[dict, InternalEvent]] = events.copy()
         local_running_actions: List[asyncio.Task[dict]] = []
+        if processing_log is None:
+            processing_log = []
 
+        processing_log_var.set(processing_log)
+        processing_log.append({})
         if state is None or state == {}:
             state = State(
                 flow_states={}, flow_configs=self.flow_configs, rails_config=self.config
@@ -453,6 +460,7 @@ class RuntimeV2_x(Runtime):
             # Start the main flow
             input_event = InternalEvent(name="StartFlow", arguments={"flow_id": "main"})
             input_events.insert(0, input_event)
+
             main_flow_state = state.flow_id_states["main"][-1]
 
             # Start all module level flows before main flow
@@ -512,9 +520,11 @@ class RuntimeV2_x(Runtime):
 
                 # Advance the state machine
                 new_event: Optional[Union[dict, Event]] = event
+
+                log.info(f"Running to completion with event: {new_event}")
                 while new_event is not None:
                     try:
-                        run_to_completion(state, new_event)
+                        run_to_completion(state, new_event, processing_log)
                         new_event = None
                     except Exception as e:
                         log.warning("Colang runtime error!", exc_info=True)
@@ -535,7 +545,7 @@ class RuntimeV2_x(Runtime):
                 #     )
 
                 for out_event in state.outgoing_events:
-                    # We also record the out events in the recent history.
+                    processing_log.append(InternalEvent.from_umim_event(out_event))
                     state.last_events.append(out_event)
 
                     # We need to check if we need to run a locally registered action
