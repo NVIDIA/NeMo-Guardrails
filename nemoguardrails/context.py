@@ -32,3 +32,5 @@ llm_stats_var = contextvars.ContextVar("llm_stats", default=None)
 # The raw LLM request that comes from the user.
 # This is used in passthrough mode.
 raw_llm_request = contextvars.ContextVar("raw_llm_request", default=None)
+
+processing_log_var = contextvars.ContextVar("processing_log", default=None)
