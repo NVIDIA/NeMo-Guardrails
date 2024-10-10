@@ -2362,8 +2362,18 @@ def _generate_action_event_from_actionable_element(
         event = get_event_from_element(state, flow_state, element)
         umim_event = _generate_umim_event(state, event)
         if isinstance(event, ActionEvent):
-            event.action_uid = umim_event["action_uid"]
+            # Create Action with flow_uid
             assert isinstance(element.spec, Spec)
+            action = Action(
+                name=element.spec.name,  # By assuming element.spec.name is the action name
+                arguments=event.arguments,
+                flow_uid=flow_state.uid,  # We link Action to FlowState
+            )
+
+            # Add to state
+            state.actions[action.uid] = action
+
+            event.action_uid = action.uid
             # Assign action event to optional reference
             if element.spec.ref and isinstance(element.spec.ref, dict):
                 ref_name = element.spec.ref["elements"][0]["elements"][0].lstrip("$")
