@@ -888,6 +888,11 @@ class LLMRails:
                         res.log = GenerationLog()
 
                     res.log.internal_events = new_events
+                # TODO: figure out what is the issue here
+                if options.log.colang_history:
+                    if res.log is None:
+                        res.log = GenerationLog()
+                    res.log.colang_history = get_colang_history(events=events)
                 if options.llm_output:
                     # Currently, we include the output from the generation LLM calls.
                     for activated_rail in _log.activated_rails:
