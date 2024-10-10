@@ -521,7 +521,6 @@ class RuntimeV2_x(Runtime):
                 # Advance the state machine
                 new_event: Optional[Union[dict, Event]] = event
 
-                log.info(f"Running to completion with event: {new_event}")
                 while new_event is not None:
                     try:
                         run_to_completion(state, new_event, processing_log)
