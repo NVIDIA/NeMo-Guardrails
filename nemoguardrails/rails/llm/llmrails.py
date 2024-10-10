@@ -889,9 +889,13 @@ class LLMRails:
 
                     res.log.internal_events = new_events
                 if options.llm_output:
-                    raise ValueError(
-                        "The `llm_output` option is not supported for Colang 2.0 configurations."
-                    )
+                    # Currently, we include the output from the generation LLM calls.
+                    for activated_rail in _log.activated_rails:
+                        # TODO: fix or figure out generation flows in processing_log_v2
+                        if activated_rail.type in ["generation", "dialog"]:
+                            for executed_action in activated_rail.executed_actions:
+                                for llm_call in executed_action.llm_calls:
+                                    res.llm_output = llm_call.raw_response
 
             # Include the state
             if state is not None:
