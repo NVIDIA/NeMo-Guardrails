@@ -27,7 +27,8 @@ from functools import lru_cache
 from time import time
 from typing import Callable, List, Optional, cast
 
-from jinja2 import Environment, meta
+from jinja2 import meta
+from jinja2.sandbox import SandboxedEnvironment
 from langchain.llms import BaseLLM
 
 from nemoguardrails.actions.actions import ActionResult, action
@@ -114,7 +115,7 @@ class LLMGenerationActions:
         self.llm_task_manager = llm_task_manager
 
         # We also initialize the environment for rendering bot messages
-        self.env = Environment()
+        self.env = SandboxedEnvironment()
 
         # If set, in passthrough mode, this function will be used instead of
         # calling the LLM with the user input.
