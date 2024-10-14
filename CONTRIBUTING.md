@@ -18,7 +18,7 @@ Welcome to the NeMo Guardrails contributing guide. We're excited to have you her
 
 To get started quickly, follow the steps below.
 
-1. Ensure you have Python 3.8+ and [Git](https://git-scm.com/) installed on your system. You can check your Python version by running:
+1. Ensure you have Python 3.9+ and [Git](https://git-scm.com/) installed on your system. You can check your Python version by running:
 
    ```bash
    python --version
