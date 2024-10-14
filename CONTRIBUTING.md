@@ -69,7 +69,7 @@ To get started quickly, follow the steps below.
 7. Set up pre-commit hooks:
 
    ```
-   python -m pre-commit install
+   pre-commit install
    ```
 
    This will ensure that the pre-commit checks, including Black, are run before each commit.
