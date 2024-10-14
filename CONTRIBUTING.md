@@ -21,7 +21,7 @@ To get started quickly, follow the steps below.
 1. Ensure you have Python 3.8+ and [Git](https://git-scm.com/) installed on your system. You can check your Python version by running:
 
    ```bash
-   python3 --version
+   python --version or python3 --version
    ```
    If not present, please download latest python version from https://www.python.org/downloads/ and try above command
 
