@@ -23,7 +23,7 @@ To get started quickly, follow the steps below.
    ```bash
    python3 --version
    ```
-   If not present please download latest python version from https://www.python.org/downloads/ and try above command
+   If not present, please download latest python version from https://www.python.org/downloads/ and try above command
 
 2. Clone the project repository:
 
