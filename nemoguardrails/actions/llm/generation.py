@@ -28,7 +28,7 @@ from time import time
 from typing import Callable, List, Optional, cast
 
 from jinja2 import Environment, meta
-from langchain.llms import BaseLLM
+from langchain_core.language_models.llms import BaseLLM
 
 from nemoguardrails.actions.actions import ActionResult, action
 from nemoguardrails.actions.llm.utils import (
