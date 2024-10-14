@@ -33,7 +33,7 @@ To get started quickly, follow the steps below.
 3. Navigate to the project directory:
 
    ```bash
-   cd nemoguardrails
+   cd NeMo-Guardrails
    ```
 
 4. Create a virtual environment to isolate your project's dependencies:
