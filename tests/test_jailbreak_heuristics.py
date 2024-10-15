@@ -19,6 +19,7 @@ from time import time
 import pytest
 
 from nemoguardrails import RailsConfig
+from nemoguardrails.actions import action
 from tests.utils import TestChat
 
 try:
@@ -59,13 +60,27 @@ def test_jb_len_ppl_detected():
     (chat << "I'm sorry, I can't respond to that.")
 
 
-@pytest.mark.skipif(not torch_available, reason="Pytorch not installed.")
-def test_jb_ps_ppl_detected():
+def test_jb_ps_ppl_detected_exception():
     # Test 2 - should detect a jailbreak attempt via the check_jb_ps_ppl heuristic
+    async def jailbreak_detection_heuristics(llm_task_manager, context=None):
+        """Checks the user's prompt to determine if it is attempt to jailbreak the model."""
+        return True
+
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "jailbreak_heuristics"))
+    config.enable_rails_exceptions = True
+
     chat = TestChat(config)
-    chat >> ps_ppl
-    (chat << "I'm sorry, I can't respond to that.")
+    rails = chat.app
+    rails.register_action(
+        jailbreak_detection_heuristics, "jailbreak_detection_heuristics"
+    )
+    messages = [
+        {"role": "user", "content": ps_ppl},
+    ]
+    new_message = rails.generate(messages=messages)
+
+    assert new_message["role"] == "exception"
+    assert new_message["content"]["type"] == "JailbreakDetectionRailException"
 
 
 @pytest.mark.skipif(not torch_available, reason="Pytorch not installed.")

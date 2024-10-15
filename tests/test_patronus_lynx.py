@@ -267,3 +267,164 @@ def test_patronus_lynx_returns_no_hallucination_when_no_reasoning_in_llm_output(
 
     chat >> "Hi"
     chat << "Hi there! How are you doing?"
+
+
+@pytest.mark.asyncio
+async def test_patronus_lynx_returns_hallucination_exception():
+    """
+    Test that that bot output is successfully guarded against when
+    Patronus Lynx raise an exception.
+    """
+    config = RailsConfig.from_content(
+        colang_content=COLANG_CONFIG, yaml_content=YAML_CONFIG
+    )
+    config.enable_rails_exceptions = True
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "Mock generated user intent",  # mock response for the generate_user_intent action
+            "Mock generated next step",  # mock response for the generate_next_step action
+            "  Hi there! How are you doing?",  # mock response for the generate_bot_message action
+        ],
+    )
+
+    chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
+
+    patronus_lynx_llm = FakeLLM(
+        responses=[
+            '{"REASONING": ["There is a hallucination."], "SCORE": "FAIL"}',
+        ]
+    )
+    chat.app.register_action_param("patronus_lynx_llm", patronus_lynx_llm)
+
+    rails = chat.app
+
+    messages = [
+        {"role": "user", "content": "Hi"},
+    ]
+    new_message = await rails.generate_async(messages=messages)
+
+    assert new_message["role"] == "exception"
+    assert new_message["content"]["type"] == "PatronusAIHallucinationException"
+
+
+@pytest.mark.asyncio
+def test_patronus_lynx_parses_score_when_no_double_quote():
+    """
+    Test that that chat flow completes successfully when
+    Patronus Lynx returns "PASS" for the hallucination check
+    """
+    config = RailsConfig.from_content(
+        colang_content=COLANG_CONFIG, yaml_content=YAML_CONFIG
+    )
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "Mock generated user intent",  # mock response for the generate_user_intent action
+            "Mock generated next step",  # mock response for the generate_next_step action
+            "  Hi there! How are you doing?",  # mock response for the generate_bot_message action
+        ],
+    )
+
+    chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
+
+    patronus_lynx_llm = FakeLLM(
+        responses=[
+            '{"REASONING": ["There is no hallucination."], "SCORE": PASS}',
+        ]
+    )
+    chat.app.register_action_param("patronus_lynx_llm", patronus_lynx_llm)
+
+    chat >> "Hi"
+    chat << "Hi there! How are you doing?"
+
+
+@pytest.mark.asyncio
+def test_patronus_lynx_returns_no_hallucination_when_no_retrieved_context():
+    """
+    Test that that Patronus Lynx does not block the bot output
+    when no relevant context is given
+    """
+    config = RailsConfig.from_content(
+        colang_content=COLANG_CONFIG, yaml_content=YAML_CONFIG
+    )
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "Mock generated user intent",  # mock response for the generate_user_intent action
+            "Mock generated next step",  # mock response for the generate_next_step action
+            "  Hi there! How are you doing?",  # mock response for the generate_bot_message action
+        ],
+    )
+
+    patronus_lynx_llm = FakeLLM(
+        responses=[
+            '{"REASONING": ["There is a hallucination."], "SCORE": "FAIL"}',
+        ]
+    )
+    chat.app.register_action_param("patronus_lynx_llm", patronus_lynx_llm)
+
+    chat >> "Hi"
+    chat << "Hi there! How are you doing?"
+
+
+@pytest.mark.asyncio
+def test_patronus_lynx_returns_hallucination_when_no_score_in_llm_output():
+    """
+    Test that that Patronus Lynx defaults to blocking the bot output
+    when no score is returned in its response.
+    """
+    config = RailsConfig.from_content(
+        colang_content=COLANG_CONFIG, yaml_content=YAML_CONFIG
+    )
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "Mock generated user intent",  # mock response for the generate_user_intent action
+            "Mock generated next step",  # mock response for the generate_next_step action
+            "  Hi there! How are you doing?",  # mock response for the generate_bot_message action
+        ],
+    )
+
+    chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
+
+    patronus_lynx_llm = FakeLLM(
+        responses=[
+            '{"REASONING": ["Mock reasoning."]}',
+        ]
+    )
+    chat.app.register_action_param("patronus_lynx_llm", patronus_lynx_llm)
+
+    chat >> "Hi"
+    chat << "I don't know the answer to that."
+
+
+@pytest.mark.asyncio
+def test_patronus_lynx_returns_no_hallucination_when_no_reasoning_in_llm_output():
+    """
+    Test that that Patronus Lynx's hallucination check does not
+    depend on the reasoning provided in its response.
+    """
+    config = RailsConfig.from_content(
+        colang_content=COLANG_CONFIG, yaml_content=YAML_CONFIG
+    )
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "Mock generated user intent",  # mock response for the generate_user_intent action
+            "Mock generated next step",  # mock response for the generate_next_step action
+            "  Hi there! How are you doing?",  # mock response for the generate_bot_message action
+        ],
+    )
+
+    chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
+
+    patronus_lynx_llm = FakeLLM(
+        responses=[
+            '{"SCORE": "PASS"}',
+        ]
+    )
+    chat.app.register_action_param("patronus_lynx_llm", patronus_lynx_llm)
+
+    chat >> "Hi"
+    chat << "Hi there! How are you doing?"

@@ -65,6 +65,39 @@ async def test_hallucination(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_hallucination_exception(monkeypatch):
+    monkeypatch.setenv("GOTITAI_API_KEY", "xxx")
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "gotitai_truthchecker"))
+    config.enable_rails_exceptions = True
+    chat = TestChat(
+        config,
+        llm_completions=[
+            "user ask general question",  # user intent
+            "Yes, shipping can be done in 2 days.",  # bot response that will be intercepted
+        ],
+    )
+
+    with aioresponses() as m:
+        chat.app.register_action(retrieve_relevant_chunks, "retrieve_relevant_chunks")
+        m.post(
+            GOTITAI_API_URL,
+            payload={
+                "hallucination": "yes",
+            },
+        )
+
+        rails = chat.app
+
+        messages = [
+            {"role": "user", "content": "Do you ship within 2 days?"},
+        ]
+        new_message = await rails.generate_async(messages=messages)
+
+        assert new_message["role"] == "exception"
+        assert new_message["content"]["type"] == "GotitaiHallucinationRailException"
+
+
+@pytest.mark.asyncio
 async def test_not_hallucination(monkeypatch):
     monkeypatch.setenv("GOTITAI_API_KEY", "xxx")
     config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "gotitai_truthchecker"))
