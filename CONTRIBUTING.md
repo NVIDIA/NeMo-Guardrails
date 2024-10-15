@@ -22,6 +22,8 @@ To get started quickly, follow the steps below.
 
    ```bash
    python --version
+   # or
+   python3 --version
    ```
 
 2. Clone the project repository:
