@@ -362,10 +362,12 @@ def get_last_user_utterance(events: List[dict]) -> Optional[str]:
     return None
 
 
-def get_retrieved_relevant_chunks(events: List[dict]) -> Optional[str]:
+def get_retrieved_relevant_chunks(
+    events: List[dict], skip_user_message: Optional[bool] = False
+) -> Optional[str]:
     """Returns the retrieved chunks for current user utterance from the events."""
     for event in reversed(events):
-        if event["type"] == "UserMessage":
+        if not skip_user_message and event["type"] == "UserMessage":
             break
         if event["type"] == "ContextUpdate" and "relevant_chunks" in event.get(
             "data", {}

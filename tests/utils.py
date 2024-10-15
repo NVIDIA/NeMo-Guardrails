@@ -23,7 +23,7 @@ from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
-from langchain.llms.base import LLM
+from langchain_core.language_models.llms import LLM
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.colang import parse_colang_file

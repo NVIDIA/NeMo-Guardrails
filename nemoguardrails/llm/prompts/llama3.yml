@@ -186,6 +186,15 @@ prompts:
         - "{{ sample_conversation | to_messages_v2 }}"
 
         - type: system
+          content: |
+            {% if context.relevant_chunks %}
+            # This is some additional context:
+            ```markdown
+            {{ context.relevant_chunks }}
+            ```
+            {% endif %}
+
+        - type: system
           content: |-
               "These are the most likely user intents:"
               {{ examples }}
@@ -288,6 +297,15 @@ prompts:
         - "{{ history | colang | to_messages_v2 }}"
 
         - type: system
+          content: |
+            {% if context.relevant_chunks %}
+            # This is some additional context:
+            ```markdown
+            {{ context.relevant_chunks }}
+            ```
+            {% endif %}
+
+        - type: system
           content: "Continuation of interaction:"
 
 
@@ -298,6 +316,7 @@ prompts:
       messages:
         - type: system
           content: "Directly response with expected answer. Don't provide any pre- or post-explanations."
-        - type: user
+
+        - type: system
           content: |-
               {{ flow_nld }}

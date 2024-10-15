@@ -21,6 +21,7 @@ NeMo Guardrails comes with a library of built-in guardrails that you can easily 
    - [Got It AI RAG TruthChecker](#got-it-ai)
    - [AutoAlign](#autoalign)
    - [Cleanlab Trustworthiness Score](#cleanlab)
+   - [GCP Text Moderation](#gcp-text-moderation)
    - OpenAI Moderation API - *[COMING SOON]*
 
 4. Other
@@ -321,7 +322,7 @@ To use the hallucination rail, you should:
 
 ```yaml
 rails:
-  input:
+  output:
     flows:
       - self check hallucination
 ```
@@ -653,6 +654,21 @@ rails:
 ```
 
 For more details, check out the [Cleanlab Integration](./community/cleanlab.md) page.
+
+### GCP Text Moderation
+
+NeMo Guardrails supports using the GCP Text Moderation. You need to be authenticated with GCP, refer [here](https://cloud.google.com/docs/authentication/application-default-credentials) for auth details.
+
+#### Example usage
+
+```yaml
+rails:
+  input:
+    flows:
+      - gcpnlp moderation
+```
+
+For more details, check out the [GCP Text Moderation](./community/gcp-text-moderations.md) page.
 
 ## Other
 
