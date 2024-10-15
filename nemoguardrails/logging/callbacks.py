@@ -23,9 +23,13 @@ from langchain.callbacks.base import AsyncCallbackHandler, BaseCallbackManager
 from langchain.callbacks.manager import AsyncCallbackManagerForChainRun
 from langchain.schema import AgentAction, AgentFinish, BaseMessage, LLMResult
 
-from nemoguardrails.context import explain_info_var, llm_call_info_var, llm_stats_var
+from nemoguardrails.context import (
+    explain_info_var,
+    llm_call_info_var,
+    llm_stats_var,
+    processing_log_var,
+)
 from nemoguardrails.logging.explain import LLMCallInfo
-from nemoguardrails.logging.processing_log import processing_log_var
 from nemoguardrails.logging.stats import LLMStats
 
 log = logging.getLogger(__name__)
@@ -180,7 +184,9 @@ class LoggingCallbackHandler(AsyncCallbackHandler, StdOutCallbackHandler):
             llm_call_info.completion_tokens = token_usage.get("completion_tokens", 0)
 
         # Finally, we append the LLM call log to the processing log
+        # TODO: add support for Colang 2.x
         processing_log = processing_log_var.get()
+
         if processing_log:
             processing_log.append(
                 {"type": "llm_call_info", "timestamp": time(), "data": llm_call_info}

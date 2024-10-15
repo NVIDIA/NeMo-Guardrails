@@ -32,7 +32,7 @@ from nemoguardrails.colang.v1_0.runtime.flows import (
     compute_context,
     compute_next_steps,
 )
-from nemoguardrails.logging.processing_log import processing_log_var
+from nemoguardrails.context import processing_log_var
 from nemoguardrails.utils import new_event_dict, new_uuid
 
 log = logging.getLogger(__name__)

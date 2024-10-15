@@ -259,11 +259,15 @@ def _context_log(flow_state: FlowState) -> str:
     )
 
 
-def run_to_completion(state: State, external_event: Union[dict, Event]) -> State:
+def run_to_completion(
+    state: State, external_event: Union[dict, Event], processing_log=None
+) -> State:
     """
     Compute the next state of the flow-driven system.
     """
     log.info("[bold violet]-> External Event[/]: %s", external_event)
+
+    should_log = processing_log is not None
 
     # Convert to event type
     converted_external_event: Event
@@ -291,6 +295,11 @@ def run_to_completion(state: State, external_event: Union[dict, Event]) -> State
         while heads_are_merging:
             while state.internal_events:
                 event = state.internal_events.popleft()
+
+                # Enrich the event with flow information
+                if should_log:
+                    _log_event = _enrich_event_with_flow_info(event, state)
+                    processing_log.append(_log_event)
                 log.info("Process internal event: %s", event)
 
                 # Find all active interaction loops
@@ -2362,8 +2371,18 @@ def _generate_action_event_from_actionable_element(
         event = get_event_from_element(state, flow_state, element)
         umim_event = _generate_umim_event(state, event)
         if isinstance(event, ActionEvent):
-            event.action_uid = umim_event["action_uid"]
+            # Create Action with flow_uid
             assert isinstance(element.spec, Spec)
+            action = Action(
+                name=element.spec.name,  # By assuming element.spec.name is the action name
+                arguments=event.arguments,
+                flow_uid=flow_state.uid,  # We link Action to FlowState
+            )
+
+            # Add to state
+            state.actions[action.uid] = action
+
+            event.action_uid = action.uid
             # Assign action event to optional reference
             if element.spec.ref and isinstance(element.spec.ref, dict):
                 ref_name = element.spec.ref["elements"][0]["elements"][0].lstrip("$")
@@ -2424,3 +2443,46 @@ def _is_child_activated_flow(state: State, flow_state: FlowState) -> bool:
         and flow_state.parent_uid is not None
         and flow_state.flow_id == state.flow_states[flow_state.parent_uid].flow_id
     )
+
+
+def _enrich_event_with_flow_info(event: Event, state: State) -> Event:
+    """Enriches the event with flow and action information for logging purposes."""
+    event_copy = copy.deepcopy(event)
+
+    # to avoid filter validity failure
+    if "action" in event_copy.name.lower():
+        new_event = event
+    else:
+        # It will add 'event_created_at' to the event
+        umim_event = new_event_dict(event_copy.name, **event_copy.arguments)
+        new_event = InternalEvent.from_umim_event(umim_event)
+
+    # for ActionEvent we need to add flow_id, flow_instance_uid, source_flow_instance_uid, child_flow_uids
+    flow_id = None
+    flow_uid = None
+    parent_uid = None
+    child_uids = None
+
+    if isinstance(new_event, ActionEvent):
+        action_uid = event.arguments.get("action_uid")
+        if action_uid and action_uid in state.actions:
+            action = state.actions[action_uid]
+            flow_state_uid = action.flow_uid
+            if flow_state_uid in state.flow_states:
+                flow_state = state.flow_states[flow_state_uid]
+                flow_id = flow_state.flow_id
+                flow_uid = flow_state.uid
+                parent_uid = flow_state.parent_uid  # Already correct
+                child_uids = flow_state.child_flow_uids
+
+    update_dict = {
+        "flow_id": flow_id,
+        "flow_instance_uid": flow_uid,
+        "source_flow_instance_uid": parent_uid,
+        "child_flow_uids": child_uids,
+    }
+
+    # filter out None values and update new_event.arguments
+    new_event.arguments.update({k: v for k, v in update_dict.items() if v is not None})
+
+    return new_event
