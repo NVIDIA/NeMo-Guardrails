@@ -65,13 +65,13 @@ def test_privateai_pii_detection_input_output():
         ],
     )
 
-    def mock_detect_private_data(return_value=True):
+    def mock_detect_pii(return_value=True):
         def mock_request(*args, **kwargs):
             return return_value
 
         return mock_request
 
-    chat.app.register_action(mock_detect_private_data(True), "detect_private_data")
+    chat.app.register_action(mock_detect_pii(True), "detect_pii")
 
     # This will trigger the input rail
     chat >> "Hi! I am Mr. John! And my email is test@gmail.com"

@@ -2,7 +2,7 @@
 
 define subflow detect pii on input
   """Check if the user input has PII."""
-  $has_pii = execute detect_private_data(source="input", text=$user_message)
+  $has_pii = execute detect_pii(source="input", text=$user_message)
 
   if $has_pii
     bot inform answer unknown
@@ -13,7 +13,18 @@ define subflow detect pii on input
 
 define subflow detect pii on output
   """Check if the bot output has PII."""
-  $has_pii = execute detect_private_data(source="output", text=$bot_message)
+  $has_pii = execute detect_pii(source="output", text=$bot_message)
+
+  if $has_pii
+    bot inform answer unknown
+    stop
+
+
+# RETRIVAL RAILS
+
+define subflow detect pii on retrieval
+  """Check if the relevant chunks from the knowledge base have any PII."""
+  $has_pii = execute detect_pii(source="retrieval", text=$relevant_chunks)
 
   if $has_pii
     bot inform answer unknown
