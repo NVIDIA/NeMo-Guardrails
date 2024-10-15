@@ -28,8 +28,8 @@ def test_privateai_pii_detection_input_output():
               config:
                 privateai:
                   server_endpoint: https://dummy.private-ai.server/cloud/v3/process/text
+                  api_key: test_api_key
                   input:
-                    api_key: test_api_key
                     entities:
                       - EMAIL_ADDRESS
                       - NAME
