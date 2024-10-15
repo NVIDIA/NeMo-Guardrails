@@ -1,5 +1,5 @@
 # Use python:3.10 as the base image
-FROM python:3.10
+FROM python:3.13
 
 # Install git
 RUN apt-get update && apt-get install -y git

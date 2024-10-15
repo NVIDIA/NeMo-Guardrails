@@ -15,7 +15,7 @@ include:
 # Runs the tests suite
 test:
     stage: test
-    image: python:3.10
+    image: python:3.13
     cache:
         key: "feature--speed-up-ci-with-cache-non_protected"
         paths:
