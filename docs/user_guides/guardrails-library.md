@@ -322,7 +322,7 @@ To use the hallucination rail, you should:
 
 ```yaml
 rails:
-  input:
+  output:
     flows:
       - self check hallucination
 ```
