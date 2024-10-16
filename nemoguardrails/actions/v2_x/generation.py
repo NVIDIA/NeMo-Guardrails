@@ -21,7 +21,7 @@ import textwrap
 from ast import literal_eval
 from typing import Any, List, Optional, Tuple
 
-from langchain.llms import BaseLLM
+from langchain_core.language_models.llms import BaseLLM
 from rich.text import Text
 
 from nemoguardrails.actions.actions import action

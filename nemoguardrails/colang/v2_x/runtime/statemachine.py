@@ -71,8 +71,7 @@ from nemoguardrails.colang.v2_x.runtime.flows import (
     InternalEvents,
     State,
 )
-from nemoguardrails.colang.v2_x.runtime.utils import new_readable_uid
-from nemoguardrails.utils import console, new_event_dict, new_uuid
+from nemoguardrails.utils import console, new_event_dict, new_readable_uuid, new_uuid
 
 log = logging.getLogger(__name__)
 
@@ -103,11 +102,12 @@ def initialize_state(state: State) -> None:
     # Create main flow state first
     main_flow_config = state.flow_configs["main"]
     main_flow = add_new_flow_instance(
-        state, create_flow_instance(main_flow_config, new_readable_uid("main"), "0", {})
+        state,
+        create_flow_instance(main_flow_config, new_readable_uuid("main"), "0", {}),
     )
     main_flow.activated = 1
     if main_flow_config.loop_id is None:
-        main_flow.loop_id = new_readable_uid("main")
+        main_flow.loop_id = new_readable_uuid("main")
     else:
         main_flow.loop_id = main_flow_config.loop_id
     state.main_flow_state = main_flow
@@ -652,8 +652,11 @@ def _get_reference_activated_flow_instance(
                 f"${idx}" in event.arguments and val == event.arguments[f"${idx}"]
             )
             # Default flow parameters
-            matched |= arg.default_value_expr is not None and val == eval_expression(
-                arg.default_value_expr, {}
+            matched |= (
+                arg.name not in event.arguments
+                and f"${idx}" not in event.arguments
+                and arg.default_value_expr is not None
+                and val == eval_expression(arg.default_value_expr, {})
             )
 
             if not matched:
@@ -1241,19 +1244,14 @@ def slide(
                 break
 
         elif isinstance(element, Assignment):
-            # Check if we have a conflict with flow attribute
-            if element.key in flow_state.__dict__:
-                warning = f"Reserved flow attribute name '{element.key}' cannot be used as variable!"
-                log.warning(warning)
+            # We need to first evaluate the expression
+            expr_val = eval_expression(
+                element.expression, _get_eval_context(state, flow_state)
+            )
+            if f"_global_{element.key}" in flow_state.context:
+                state.context.update({element.key: expr_val})
             else:
-                # We need to first evaluate the expression
-                expr_val = eval_expression(
-                    element.expression, _get_eval_context(state, flow_state)
-                )
-                if f"_global_{element.key}" in flow_state.context:
-                    state.context.update({element.key: expr_val})
-                else:
-                    flow_state.context.update({element.key: expr_val})
+                flow_state.context.update({element.key: expr_val})
             head.position += 1
 
         elif isinstance(element, Return):

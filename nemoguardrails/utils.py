@@ -54,6 +54,16 @@ def new_uuid() -> str:
     return str(uuid.UUID(int=random_bits, version=4))
 
 
+def new_readable_uuid(name: str) -> str:
+    """Creates a new uuid with a human readable prefix."""
+    return f"({name}){new_uuid()}"
+
+
+def new_var_uuid() -> str:
+    """Creates a new uuid that is compatible with variable names."""
+    return new_uuid().replace("-", "_")
+
+
 # Very basic event validation - will be replaced by validation based on pydantic models
 Property = namedtuple("Property", ["name", "type"])
 Validator = namedtuple("Validator", ["description", "function"])
