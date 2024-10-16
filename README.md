@@ -86,9 +86,12 @@ from nemoguardrails import LLMRails, RailsConfig
 config = RailsConfig.from_path("PATH/TO/CONFIG")
 rails = LLMRails(config)
 
-completion = rails.generate(
-    messages=[{"role": "user", "content": "Hello world!"}]
-)
+try:
+  completion = rails.generate(
+      messages=[{"role": "user", "content": "Hello world!"}]
+  )
+except Exception as e:
+    completion = None
 ```
 
 Sample output:
