@@ -45,7 +45,7 @@ async def private_ai_detection_request(
     if "api.private-ai.com" in server_endpoint and not api_key:
         raise ValueError("'api_key' is required for Private AI cloud API.")
 
-    payload_dict: Dict[str, Any] = {
+    payload: Dict[str, Any] = {
         "text": [text],
         "link_batch": False,
         "entity_detection": {"accuracy": "high_automatic", "return_entity": False},
@@ -59,14 +59,12 @@ async def private_ai_detection_request(
         headers["x-api-key"] = api_key
 
     if enabled_entities:
-        payload_dict["entity_detection"]["entity_types"] = [
+        payload["entity_detection"]["entity_types"] = [
             {"type": "ENABLE", "value": enabled_entities}
         ]
 
-    payload = json.dumps(payload_dict)
-
     async with aiohttp.ClientSession() as session:
-        async with session.post(server_endpoint, data=payload, headers=headers) as resp:
+        async with session.post(server_endpoint, json=payload, headers=headers) as resp:
             if resp.status != 200:
                 raise ValueError(
                     f"Private AI call failed with status code {resp.status}.\n"
