@@ -46,9 +46,6 @@ async def detect_pii(source: str, text: str, config: RailsConfig):
         "retrieval",
     ], f"Private AI can only be defined in the input, output and retrieval flows. The current flow {source} is not allowed."
 
-    if len(pai_config.input.entities) == 0:
-        return False
-
     entity_detected = await private_ai_detection_request(
         text,
         getattr(pai_config, source).entities,
