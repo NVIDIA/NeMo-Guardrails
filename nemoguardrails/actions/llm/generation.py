@@ -958,14 +958,8 @@ class LLMGenerationActions:
                 context_updates=context_updates,
             )
         else:
-            # In streaming mode, we also push this.
-            bot_utterance = "I'm not sure what to say."
-            if streaming_handler:
-                await streaming_handler.push_chunk(bot_utterance)
-
-            return ActionResult(
-                events=[new_event_dict("BotMessage", text=bot_utterance)],
-                context_updates=context_updates,
+            log.info(
+                "Generated bot message: %s", bot_utterance if bot_utterance else "None"
             )
 
     @action(is_system_action=True)
@@ -1270,9 +1264,6 @@ class LLMGenerationActions:
                 bot_intent = bot_intent[12:]
             else:
                 bot_intent = "general response"
-
-            if not bot_message:
-                bot_message = "I'm not sure what to say."
 
             log.info(
                 "Canonical form for user intent: "
