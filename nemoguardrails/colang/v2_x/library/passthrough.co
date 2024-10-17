@@ -1,7 +1,7 @@
 
 import llm
 
-flow prompting llm with raw message $user_message
+flow prompting llm with raw message
   """Just make a call to LLM in passthrough mode"""
 
   activate polling llm request response
