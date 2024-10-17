@@ -40,11 +40,10 @@ async def private_ai_detection_request(
         api_key: The API key for the Private AI service.
 
     Returns:
-        True if entities detected, False if not, None if request failed.
+        True if PII is detected, False otherwise.
     """
     if "api.private-ai.com" in server_endpoint and not api_key:
-        log.error("'api_key' is required for Private AI cloud API.")
-        return None
+        raise ValueError("'api_key' is required for Private AI cloud API.")
 
     payload_dict: Dict[str, Any] = {
         "text": [text],
@@ -69,10 +68,10 @@ async def private_ai_detection_request(
     async with aiohttp.ClientSession() as session:
         async with session.post(server_endpoint, data=payload, headers=headers) as resp:
             if resp.status != 200:
-                log.error(
-                    f"Private AI detection API request failed with status {resp.status}"
+                raise ValueError(
+                    f"Private AI call failed with status code {resp.status}.\n"
+                    f"Details: {await resp.text()}"
                 )
-                return None
 
             result = await resp.json()
 
