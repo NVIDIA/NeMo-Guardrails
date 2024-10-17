@@ -40,7 +40,7 @@ async def detect_pii(source: str, text: str, config: RailsConfig):
 
     pai_config: PrivateAIDetection = getattr(config.rails.config, "privateai")
 
-    assert source in ["input", "output", "retrieval"]
+    assert source in ["input", "output", "retrieval"], f"Private AI can only be defined in the input, output and retrieval flows. The current flow {source} is not allowed."
 
     entity_detected = await private_ai_detection_request(
         text,
