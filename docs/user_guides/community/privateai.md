@@ -15,7 +15,7 @@ rails:
       server_endpoint: http://your-privateai-api-endpoint/process/text  # Replace this with your Private AI process text endpoint
       api_key: your-privateai-api-key  # Optional: Not needed for the containerized version
       input:
-        entities:
+        entities:  # If no entity is specified here, all supported entities will be detected by default.
           - NAME_FAMILY
           - LOCATION_ADDRESS_STREET
           - EMAIL_ADDRESS
