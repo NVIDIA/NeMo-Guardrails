@@ -4,15 +4,15 @@
 
 ## Setup
 
-1. Ensure you have access to a Private AI API endpoint running locally or in the cloud. To get started with the cloud version, you can use the [Private AI Portal](https://portal.private-ai.com). For containerized deployments check this [Quickstart Guide](https://docs.private-ai.com/quickstart/).
+1. Ensure that you have access to Private AI API server running locally or in the cloud. To get started with the cloud version, you can use the [Private AI Portal](https://portal.private-ai.com). For containerized deployments, check out this [Quickstart Guide](https://docs.private-ai.com/quickstart/).
 
-2. Configure your `config.yml` file to include the Private AI settings:
+2. Update your `config.yml` file to include the Private AI settings:
 
 ```yaml
 rails:
   config:
     privateai:
-      server_endpoint: http://your-privateai-api-endpoint/process/text  # Replace with your Private AI API endpoint
+      server_endpoint: http://your-privateai-api-endpoint/process/text  # Replace this with your Private AI process text endpoint
       api_key: your-privateai-api-key  # Optional: Not needed for the containerized version
       input:
         entities:
@@ -32,7 +32,7 @@ rails:
       - detect pii on output
 ```
 
-Replace `http://your-privateai-api-endpoint/process/text` with your actual Private AI API endpoint.
+Replace `http://your-privateai-api-endpoint/process/text` with your actual Private AI process text endpoint.
 
 3. You can customize the `entities` list under both `input` and `output` to include the PII types you want to detect. A full list of supported entities can be found [here](https://docs.private-ai.com/entities).
 
@@ -56,7 +56,7 @@ If the Private AI detection API request fails, the system will assume PII is pre
 
 ## Notes
 
-- Ensure that your Private AI API endpoint is properly set up and accessible from your NeMo Guardrails environment.
+- Ensure that your Private AI process text endpoint is properly set up and accessible from your NeMo Guardrails environment.
 - The integration currently supports PII detection only.
 
 For more information on Private AI and its capabilities, please refer to the [Private AI documentation](https://docs.private-ai.com).
