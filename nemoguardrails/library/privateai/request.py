@@ -34,13 +34,13 @@ async def private_ai_detection_request(
     Send a detection request to the Private AI API.
 
     Args:
-        text (str): The text to analyze.
-        enabled_entities (List[str]): List of entity types to detect.
-        server_endpoint (str): The API endpoint URL.
-        api_key (Optional[str]): The API key for the Private AI service.
+        text: The text to analyze.
+        enabled_entities: List of entity types to detect.
+        server_endpoint: The API endpoint URL.
+        api_key: The API key for the Private AI service.
 
     Returns:
-        bool or None: True if entities detected, False if not, None if request failed.
+        True if entities detected, False if not, None if request failed.
     """
     if "api.private-ai.com" in server_endpoint and not api_key:
         log.error("'api_key' is required for Private AI cloud API.")
