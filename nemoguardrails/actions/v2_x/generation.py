@@ -48,11 +48,19 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     get_element_from_head,
     get_event_from_element,
 )
+from nemoguardrails.context import (
+    generation_options_var,
+    llm_call_info_var,
+    raw_llm_request,
+    streaming_handler_var,
+)
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.filters import colang
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.types import Task
 from nemoguardrails.logging import verbose
+from nemoguardrails.logging.explain import LLMCallInfo
+from nemoguardrails.rails.llm.options import GenerationOptions
 from nemoguardrails.utils import console, new_uuid
 
 log = logging.getLogger(__name__)
@@ -389,6 +397,54 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             "bot_intent": bot_intent,
             "bot_action": bot_action,
         }
+
+    @action(name="PassthroughLLMAction", is_system_action=True, execute_async=True)
+    async def passthrough_llm_action(
+        self,
+        user_message: str,
+        state: State,
+        events: List[dict],
+        llm: Optional[BaseLLM] = None,
+    ):
+        event = get_last_user_utterance_event_v2_x(events)
+
+        # We check if we have a raw request. If the guardrails API is using
+        # the `generate_events` API, this will not be set.
+        raw_prompt = raw_llm_request.get()
+
+        if raw_prompt is None:
+            prompt = event["final_transcript"]
+        else:
+            if isinstance(raw_prompt, str):
+                # If we're in completion mode, we use directly the last $user_message
+                # as it may have been altered by the input rails.
+                prompt = event["final_transcript"]
+            elif isinstance(raw_prompt, list):
+                prompt = raw_prompt.copy()
+
+                # In this case, if the last message is from the user, we replace the text
+                # just in case the input rails may have altered it.
+                if prompt[-1]["role"] == "user":
+                    raw_prompt[-1]["content"] = event["final_transcript"]
+            else:
+                raise ValueError(f"Unsupported type for raw prompt: {type(raw_prompt)}")
+
+        # Initialize the LLMCallInfo object
+        llm_call_info_var.set(LLMCallInfo(task=Task.GENERAL.value))
+
+        generation_options: GenerationOptions = generation_options_var.get()
+
+        with llm_params(
+            llm,
+            **((generation_options and generation_options.llm_params) or {}),
+        ):
+            text = await llm_call(
+                llm,
+                user_message,
+                custom_callback_handlers=[streaming_handler_var.get()],
+            )
+
+        return text
 
     @action(name="CheckValidFlowExistsAction", is_system_action=True)
     async def check_if_flow_exists(self, state: "State", flow_id: str) -> bool:
