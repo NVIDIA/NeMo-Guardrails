@@ -49,7 +49,7 @@ async def private_ai_detection_request(
     payload_dict: Dict[str, Any] = {
         "text": [text],
         "link_batch": False,
-        "entity_detection": {"accuracy": "high", "return_entity": False},
+        "entity_detection": {"accuracy": "high_automatic", "return_entity": False},
     }
 
     headers: Dict[str, str] = {
@@ -76,5 +76,4 @@ async def private_ai_detection_request(
 
             result = await resp.json()
 
-            entity_detected = any(res["entities_present"] for res in result)
-            return entity_detected
+            return any(res["entities_present"] for res in result)
