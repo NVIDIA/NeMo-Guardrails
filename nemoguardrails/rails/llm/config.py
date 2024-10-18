@@ -24,6 +24,7 @@ import yaml
 from pydantic import BaseModel, ValidationError, root_validator
 from pydantic.fields import Field
 
+from nemoguardrails import utils
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
 from nemoguardrails.colang.v2_x.lang.utils import format_colang_parsing_error_message
@@ -551,11 +552,23 @@ def _load_path(
     if not os.path.exists(config_path):
         raise ValueError(f"Could not find config path: {config_path}")
 
+    # the first .railsignore file found from cwd down to its subdirectories
+    railsignore_path = utils.get_railsignore_path(config_path)
+    ignore_patterns = utils.get_railsignore_patterns(railsignore_path)
+
     if os.path.isdir(config_path):
         for root, _, files in os.walk(config_path, followlinks=True):
             # Followlinks to traverse symlinks instead of ignoring them.
 
             for file in files:
+                # Verify railsignore to skip loading
+                ignored_by_railsignore = utils.is_ignored_by_railsignore(
+                    file, ignore_patterns
+                )
+
+                if ignored_by_railsignore:
+                    continue
+
                 # This is the raw configuration that will be loaded from the file.
                 _raw_config = {}
 
