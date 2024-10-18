@@ -54,6 +54,7 @@ from nemoguardrails.kb.kb import KnowledgeBase
 from nemoguardrails.llm.providers import get_llm_provider, get_llm_provider_names
 from nemoguardrails.logging.explain import ExplainInfo
 from nemoguardrails.logging.processing_log import compute_generation_log
+from nemoguardrails.logging.processing_log_v2 import compute_generation_log_v2
 from nemoguardrails.logging.stats import LLMStats
 from nemoguardrails.logging.verbose import set_verbose
 from nemoguardrails.patch_asyncio import check_sync_call_from_async_loop
@@ -696,7 +697,11 @@ class LLMRails:
             # In generation mode, the processing is always blocking, i.e., it waits for
             # all local actions (sync and async).
             new_events, output_state = await runtime.process_events(
-                events, state=state, instant_actions=instant_actions, blocking=True
+                events,
+                state=state,
+                instant_actions=instant_actions,
+                blocking=True,
+                processing_log=processing_log,
             )
             # We also encode the output state as a JSON
             output_state = {"state": state_to_json(output_state), "version": "2.x"}
@@ -861,21 +866,41 @@ class LLMRails:
                     raise ValueError(
                         "The `output_vars` option is not supported for Colang 2.0 configurations."
                     )
+                _log = compute_generation_log_v2(processing_log)
+                if options.log.activated_rails or options.log.llm_calls:
+                    res.log = GenerationLog()
 
-                if (
-                    options.log.activated_rails
-                    or options.log.llm_calls
-                    or options.log.internal_events
-                    or options.log.colang_history
-                ):
-                    raise ValueError(
-                        "The `log` option is not supported for Colang 2.0 configurations."
-                    )
+                    # We always include the stats
+                    res.log.stats = _log.stats
+                    #
+                    if options.log.activated_rails:
+                        res.log.activated_rails = _log.activated_rails
 
+                    if options.log.llm_calls:
+                        res.log.llm_calls = []
+                        for activated_rail in _log.activated_rails:
+                            for executed_action in activated_rail.executed_actions:
+                                res.log.llm_calls.extend(executed_action.llm_calls)
+
+                # Include internal events if requested
+                if options.log.internal_events:
+                    if res.log is None:
+                        res.log = GenerationLog()
+
+                    res.log.internal_events = new_events
+                # TODO: figure out what is the issue here
+                if options.log.colang_history:
+                    if res.log is None:
+                        res.log = GenerationLog()
+                    res.log.colang_history = get_colang_history(events=events)
                 if options.llm_output:
-                    raise ValueError(
-                        "The `llm_output` option is not supported for Colang 2.0 configurations."
-                    )
+                    # Currently, we include the output from the generation LLM calls.
+                    for activated_rail in _log.activated_rails:
+                        # TODO: fix or figure out generation flows in processing_log_v2
+                        if activated_rail.type in ["generation", "dialog"]:
+                            for executed_action in activated_rail.executed_actions:
+                                for llm_call in executed_action.llm_calls:
+                                    res.llm_output = llm_call.raw_response
 
             # Include the state
             if state is not None:
@@ -1019,12 +1044,17 @@ class LLMRails:
         llm_stats = LLMStats()
         llm_stats_var.set(llm_stats)
 
+        processing_log = []
+
         # Compute the new events.
         # We need to protect 'process_events' to be called only once at a time
         # TODO (cschueller): Why is this?
         async with process_events_semaphore:
             output_events, output_state = await self.runtime.process_events(
-                events, state, blocking
+                events=events,
+                state=state,
+                blocking=blocking,
+                processing_log=processing_log,
             )
 
         took = time.time() - t0

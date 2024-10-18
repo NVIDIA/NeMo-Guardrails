@@ -48,11 +48,13 @@ from nemoguardrails.colang.v2_x.runtime.statemachine import (
     get_element_from_head,
     get_event_from_element,
 )
+from nemoguardrails.context import llm_call_info_var
 from nemoguardrails.embeddings.index import EmbeddingsIndex, IndexItem
 from nemoguardrails.llm.filters import colang
 from nemoguardrails.llm.params import llm_params
 from nemoguardrails.llm.types import Task
 from nemoguardrails.logging import verbose
+from nemoguardrails.logging.explain import LLMCallInfo
 from nemoguardrails.utils import console, new_uuid
 
 log = logging.getLogger(__name__)
@@ -279,6 +281,10 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             Task.GENERATE_USER_INTENT_FROM_USER_ACTION
         )
 
+        # Initialize the LLMCallInfo object
+        llm_call_info_var.set(
+            LLMCallInfo(task=Task.GENERATE_USER_INTENT_FROM_USER_ACTION.value)
+        )
         # We make this call with lowest temperature to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
             result = await llm_call(llm, prompt, stop=stop)
@@ -348,6 +354,13 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         stop = self.llm_task_manager.get_stop_tokens(
             Task.GENERATE_USER_INTENT_AND_BOT_ACTION_FROM_USER_ACTION
         )
+        #
+        # Initialize the LLMCallInfo object
+        llm_call_info_var.set(
+            LLMCallInfo(
+                task=Task.GENERATE_USER_INTENT_AND_BOT_ACTION_FROM_USER_ACTION.value
+            )
+        )
 
         # We make this call with lowest temperature to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
@@ -399,6 +412,23 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
     async def check_if_flow_defined(self, state: "State", flow_id: str) -> bool:
         """Return True if a flow with the provided flow_id is defined."""
         return flow_id in state.flow_configs
+
+    # @action(name="GetRailsFlowNameAction", is_system_action=True)
+    # async def get_input_or_output_rails_name(self, state: "State", flow_id: str) -> str:
+    #     """Return the input or output name of the flow with the provided flow_id."""
+    #     flow_config = state.flow_configs[flow_id]
+    #     for element in flow_config.elements:
+    #         if (
+    #             not isinstance(element, dict)
+    #             and hasattr(element, "op")
+    #             and element.op == "send"
+    #         ):
+    #             flow_name = (
+    #                 element.spec.arguments["flow_id"]
+    #                 if hasattr(element, "spec")
+    #                 else None
+    #             )
+    #             return flow_name
 
     @action(name="CheckForActiveEventMatchAction", is_system_action=True)
     async def check_for_active_flow_finished_match(
@@ -459,6 +489,10 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             },
         )
 
+        # Initialize the LLMCallInfo object
+        llm_call_info_var.set(
+            LLMCallInfo(task=Task.GENERATE_FLOW_FROM_INSTRUCTIONS.value)
+        )
         # We make this call with temperature 0 to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
             result = await llm_call(llm, prompt)
@@ -523,6 +557,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
 
         stop = self.llm_task_manager.get_stop_tokens(Task.GENERATE_FLOW_FROM_NAME)
 
+        llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_FLOW_FROM_NAME.value))
         # We make this call with temperature 0 to have it as deterministic as possible.
         with llm_params(llm, temperature=self.config.lowest_temperature):
             result = await llm_call(llm, prompt, stop)
@@ -581,6 +616,7 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             },
         )
 
+        llm_call_info_var.set(LLMCallInfo(task=Task.GENERATE_FLOW_CONTINUATION.value))
         # We make this call with temperature 0 to have it as deterministic as possible.
         with llm_params(llm, temperature=temperature):
             result = await llm_call(llm, prompt)
@@ -702,6 +738,9 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
             Task.GENERATE_USER_INTENT_FROM_USER_ACTION
         )
 
+        llm_call_info_var.set(
+            LLMCallInfo(task=Task.GENERATE_USER_INTENT_FROM_USER_ACTION.value)
+        )
         with llm_params(llm, temperature=0.1):
             result = await llm_call(llm, prompt, stop)
 
@@ -804,7 +843,9 @@ class LLMGenerationActionsV2dotx(LLMGenerationActions):
         stop = self.llm_task_manager.get_stop_tokens(
             Task.GENERATE_FLOW_CONTINUATION_FROM_NLD
         )
-
+        llm_call_info_var.set(
+            LLMCallInfo(task=Task.GENERATE_FLOW_CONTINUATION_FROM_NLD.value)
+        )
         with llm_params(llm, temperature=self.config.lowest_temperature):
             result = await llm_call(llm, prompt, stop)
 
