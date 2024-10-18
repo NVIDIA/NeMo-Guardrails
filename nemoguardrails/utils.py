@@ -341,7 +341,7 @@ def get_railsignore_path(path: Optional[str] = None) -> Optional[Path]:
     return None
 
 
-def get_railsignore_patterns(railsignore_path) -> Set[str]:
+def get_railsignore_patterns(railsignore_path: Path) -> Set[str]:
     """
     Helper to retrieve all specified patterns in railsignore.
     Returns:
@@ -351,8 +351,6 @@ def get_railsignore_patterns(railsignore_path) -> Set[str]:
 
     if railsignore_path is None:
         return ignored_patterns
-
-    # railsignore_path = get_railsignore_path()
 
     # File doesn't exist or is empty
     if not railsignore_path.exists() or not os.path.getsize(railsignore_path):
@@ -377,13 +375,13 @@ def get_railsignore_patterns(railsignore_path) -> Set[str]:
         return ignored_patterns
 
 
-def is_ignored_by_railsignore(filename, ignore_patterns) -> bool:
+def is_ignored_by_railsignore(filename: str, ignore_patterns: str) -> bool:
+    """Helper to verify if a filename should be ignored by a railsignore pattern"""
     ignore = False
-
-    # Load candidate patterns from railsignore
 
     for pattern in ignore_patterns:
         if fnmatch.fnmatch(filename, pattern):
             ignore = True
+            break
 
     return ignore
