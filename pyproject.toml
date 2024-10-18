@@ -94,6 +94,9 @@ dev = [
   "pytest-httpx>=0.22.0",
   "streamlit>=1.37.0"
 ]
+guardrails = [
+  "guardrails-ai>=0.5.10"
+]
 
 [project.urls]
 homepage = "https://github.com/NVIDIA/nemo-guardrails"
