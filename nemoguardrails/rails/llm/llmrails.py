@@ -112,6 +112,12 @@ class LLMRails:
         # Weather the main LLM supports streaming
         self.main_llm_supports_streaming = False
 
+        # InteractionLogAdapters used for tracing
+        if config.tracing:
+            from nemoguardrails.tracing import create_log_adapters
+
+            self._log_adapters = create_log_adapters(config.tracing)
+
         # We also load the default flows from the `default_flows.yml` file in the current folder.
         # But only for version 1.0.
         # TODO: decide on the default flows for 2.x.
@@ -789,6 +795,19 @@ class LLMRails:
             # print("Closing the stream handler explicitly")
             await streaming_handler.push_chunk(None)
 
+        # IF tracing is enabled we need to set GenerationLog attrs
+        if self.config.tracing.enabled:
+            if options is None:
+                options = GenerationOptions()
+            if (
+                not options.log.activated_rails
+                or not options.log.llm_calls
+                or not options.log.internal_events
+            ):
+                options.log.activated_rails = True
+                options.log.llm_calls = True
+                options.log.internal_events = True
+
         # If we have generation options, we prepare a GenerationResponse instance.
         if options:
             # If a prompt was used, we only need to return the content of the message.
@@ -881,6 +900,17 @@ class LLMRails:
             if state is not None:
                 res.state = output_state
 
+            if self.config.tracing.enabled:
+                # TODO: move it to the top once resolved circular dependency of eval
+                # lazy import to avoid circular dependency
+                from nemoguardrails.tracing import Tracer
+
+                # Create a Tracer instance with instantiated adapters
+                tracer = Tracer(
+                    input=messages, response=res, adapters=self._log_adapters
+                )
+                await tracer.export_async()
+                res = res.response[0]
             return res
         else:
             # If a prompt is used, we only return the content of the message.
