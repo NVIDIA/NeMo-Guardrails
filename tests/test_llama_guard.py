@@ -115,6 +115,40 @@ def test_llama_guard_check_input_unsafe():
     chat << "I'm sorry, I can't respond to that."
 
 
+def test_llama_guard_check_input_unsafe_exception():
+    """
+    Test the chat flow when the llama_guard_check_input action returns "unsafe" raises an exception
+    """
+    config = RailsConfig.from_content(
+        colang_content=COLANG_CONFIG, yaml_content=YAML_CONFIG
+    )
+    config.enable_rails_exceptions = True
+    chat = TestChat(
+        config,
+        llm_completions=[
+            # Since input is unsafe, the main llm doesn't need to perform any of
+            # generate_user_intent, generate_next_step, or generate_bot_message
+            # Dev note: iff the input was safe, this empty llm_completions list would result in a test failure.
+        ],
+    )
+
+    llama_guard_llm = FakeLLM(
+        responses=[
+            "unsafe",  # llama_guard_check_input
+        ]
+    )
+    chat.app.register_action_param("llama_guard_llm", llama_guard_llm)
+
+    rails = chat.app
+    messages = [
+        {"role": "user", "content": "Unsafe input"},
+    ]
+    new_message = rails.generate(messages=messages)
+
+    assert new_message["role"] == "exception"
+    assert new_message["content"]["type"] == "LlamaGuardInputRailException"
+
+
 def test_llama_guard_check_input_error():
     """
     Test the chat flow when the llama_guard_check_input action raises an error

@@ -736,3 +736,40 @@ async def test_pii_contextual_output():
         "predictions made by French mathematician Urbain Le Verrier. It takes Neptune about 165 Earth years to orbit "
         "the Sun, and a day on Neptune lasts about 16 hours and 6 minutes."
     )
+
+
+@pytest.mark.asyncio
+async def test_autoalign_exception():
+    config = RailsConfig.from_path(os.path.join(CONFIGS_FOLDER, "autoalign"))
+    config.enable_rails_exceptions = True
+
+    chat = TestChat(config)
+
+    async def mock_autoalign_input_api(context: Optional[dict] = None, **kwargs):
+        return {
+            "guardrails_triggered": True,
+            "gender_bias_detection": {
+                "guarded": True,
+                "response": "Stereotypical bias",
+            },
+            "harm_detection": {"guarded": False, "response": ""},
+            "text_toxicity_extraction": {"guarded": False, "response": ""},
+            "racial_bias_detection": {"guarded": False, "response": ""},
+            "confidential_detection": {"guarded": False, "response": ""},
+            "intellectual_property": {"guarded": False, "response": ""},
+            "jailbreak_detection": {"guarded": False, "response": ""},
+            "pii_fast": {"guarded": False, "response": ""},
+            "combined_response": "Stereotypical bias has been detected by AutoAlign; Sorry, can't process.",
+        }
+
+    chat.app.register_action(mock_autoalign_input_api, "autoalign_input_api")
+
+    rails = chat.app
+
+    messages = [
+        {"role": "user", "content": "Unsafe input"},
+    ]
+    new_message = await rails.generate_async(messages=messages)
+
+    assert new_message["role"] == "exception"
+    assert new_message["content"]["type"] == "AutoAlignInputRailException"
