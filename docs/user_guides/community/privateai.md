@@ -1,10 +1,10 @@
 # Private AI Integration
 
-[Private AI](https://docs.private-ai.com) allows you to detect and mask Personally Identifiable Information (PII) in your data. This integration enables NeMo Guardrails to use Private AI for PII detection in input, output and retrieval flows.
+[Private AI](http://docs.private-ai.com/?utm_medium=github&utm_campaign=nemo-guardrails) allows you to detect and mask Personally Identifiable Information (PII) in your data. This integration enables NeMo Guardrails to use Private AI for PII detection in input, output and retrieval flows.
 
 ## Setup
 
-1. Ensure that you have access to Private AI API server running locally or in the cloud. To get started with the cloud version, you can use the [Private AI Portal](https://portal.private-ai.com). For containerized deployments, check out this [Quickstart Guide](http://docs.private-ai.com/quickstart/?utm_medium=github&utm_campaign=nemo-guardrails).
+1. Ensure that you have access to Private AI API server running locally or in the cloud. To get started with the cloud version, you can use the [Private AI Portal](https://portal.private-ai.com/?utm_medium=github&utm_campaign=nemo-guardrails). For containerized deployments, check out this [Quickstart Guide](http://docs.private-ai.com/quickstart/?utm_medium=github&utm_campaign=nemo-guardrails).
 
 2. Update your `config.yml` file to include the Private AI settings:
 
