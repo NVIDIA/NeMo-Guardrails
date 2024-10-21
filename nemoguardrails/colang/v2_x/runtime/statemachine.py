@@ -2450,12 +2450,14 @@ def _enrich_event_with_flow_info(event: Event, state: State) -> Event:
     event_copy = copy.deepcopy(event)
 
     # to avoid filter validity failure
+    # TODO: Check if we can simplify this since we have the creation timestamp in the event itself now
     if "action" in event_copy.name.lower():
         new_event = event
     else:
         # It will add 'event_created_at' to the event
         umim_event = new_event_dict(event_copy.name, **event_copy.arguments)
         new_event = InternalEvent.from_umim_event(umim_event)
+        new_event.arguments["event_created_at"] = event_copy.created_at
 
     # for ActionEvent we need to add flow_id, flow_instance_uid, source_flow_instance_uid, child_flow_uids
     flow_id = None

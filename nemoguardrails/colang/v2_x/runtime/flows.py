@@ -21,7 +21,7 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Deque, Dict, List, Optional, Tuple, Union
 
@@ -84,6 +84,9 @@ class Event:
 
     # A list of matching scores from the event sequence triggered by an external event
     matching_scores: List[float] = field(default_factory=list)
+
+    # Timestamp of event creation
+    created_at: datetime = datetime.now(timezone.utc)
 
     def is_equal(self, other: Event) -> bool:
         """Compares two events in terms of their name and arguments."""
