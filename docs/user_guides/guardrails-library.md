@@ -673,7 +673,7 @@ For more details, check out the [GCP Text Moderation](./community/gcp-text-moder
 
 ### Private AI PII Detection
 
-NeMo Guardrails supports using [Private AI API](https://docs.private-ai.com) for PII detection in input, output and retrieval flows.
+NeMo Guardrails supports using [Private AI API](https://docs.private-ai.com/?utm_medium=github&utm_campaign=nemo-guardrails) for PII detection in input, output and retrieval flows.
 
 To activate the PII detection, you need specify `server_endpoint`, `api_key`, and the entities that you want to detect:
 
