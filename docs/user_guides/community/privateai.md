@@ -1,10 +1,10 @@
 # Private AI Integration
 
-[Private AI](http://docs.private-ai.com/?utm_medium=github&utm_campaign=nemo-guardrails) allows you to detect and mask Personally Identifiable Information (PII) in your data. This integration enables NeMo Guardrails to use Private AI for PII detection in input, output and retrieval flows.
+[Private AI](https://docs.private-ai.com/?utm_medium=github&utm_campaign=nemo-guardrails) allows you to detect and mask Personally Identifiable Information (PII) in your data. This integration enables NeMo Guardrails to use Private AI for PII detection in input, output and retrieval flows.
 
 ## Setup
 
-1. Ensure that you have access to Private AI API server running locally or in the cloud. To get started with the cloud version, you can use the [Private AI Portal](https://portal.private-ai.com/?utm_medium=github&utm_campaign=nemo-guardrails). For containerized deployments, check out this [Quickstart Guide](http://docs.private-ai.com/quickstart/?utm_medium=github&utm_campaign=nemo-guardrails).
+1. Ensure that you have access to Private AI API server running locally or in the cloud. To get started with the cloud version, you can use the [Private AI Portal](https://portal.private-ai.com/?utm_medium=github&utm_campaign=nemo-guardrails). For containerized deployments, check out this [Quickstart Guide](https://docs.private-ai.com/quickstart/?utm_medium=github&utm_campaign=nemo-guardrails).
 
 2. Update your `config.yml` file to include the Private AI settings:
 
@@ -34,7 +34,7 @@ rails:
 
 Replace `http://your-privateai-api-endpoint/process/text` with your actual Private AI process text endpoint.
 
-3. You can customize the `entities` list under both `input` and `output` to include the PII types you want to detect. A full list of supported entities can be found [here](http://docs.private-ai.com/entities/?utm_medium=github&utm_campaign=nemo-guardrails).
+3. You can customize the `entities` list under both `input` and `output` to include the PII types you want to detect. A full list of supported entities can be found [here](https://docs.private-ai.com/entities/?utm_medium=github&utm_campaign=nemo-guardrails).
 
 ## Usage
 
@@ -48,7 +48,7 @@ The `detect_pii` action in `nemoguardrails/library/privateai/actions.py` handles
 
 ## Customization
 
-You can customize the PII detection behavior by modifying the `entities` lists in the `config.yml` file. Refer to the Private AI documentation for a complete list of [supported entity types](http://docs.private-ai.com/entities/?utm_medium=github&utm_campaign=nemo-guardrails).
+You can customize the PII detection behavior by modifying the `entities` lists in the `config.yml` file. Refer to the Private AI documentation for a complete list of [supported entity types](https://docs.private-ai.com/entities/?utm_medium=github&utm_campaign=nemo-guardrails).
 
 ## Error Handling
 
