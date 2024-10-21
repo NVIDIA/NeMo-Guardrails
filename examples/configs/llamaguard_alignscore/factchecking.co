@@ -1,0 +1,4 @@
+define flow
+  user ask about report
+  $check_facts = True
+  bot provide report answer
