@@ -57,6 +57,30 @@ def test_send_umim_action_event():
     )
 
 
+def test_send_umim_action_event_overwriting_default_parameters():
+    """Test to send an UMIM event but overwrite default parameters."""
+
+    content = """
+    flow main
+      $fixed_timestamp = "2024-10-22T12:08:18.874224"
+      $uid = "1234"
+      send UtteranceBotActionFinished(final_script="Hello world", action_finished_at=$fixed_timestamp, action_uid=$uid, is_success=True)
+    """
+
+    state = run_to_completion(_init_state(content), start_main_flow_event)
+    assert is_data_in_events(
+        state.outgoing_events,
+        [
+            {
+                "type": "UtteranceBotActionFinished",
+                "final_script": "Hello world",
+                "action_uid": "1234",
+                "action_finished_at": "2024-10-22T12:08:18.874224",
+            }
+        ],
+    )
+
+
 def test_match_umim_action_event():
     """Test to match an UMIM event."""
 
