@@ -21,9 +21,10 @@ import warnings
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import yaml
-from pydantic import BaseModel, ValidationError, root_validator
+from pydantic import BaseModel, ConfigDict, ValidationError, root_validator
 from pydantic.fields import Field
 
+from nemoguardrails import utils
 from nemoguardrails.colang import parse_colang_file, parse_flow_elements
 from nemoguardrails.colang.v2_x.lang.colang_ast import Flow
 from nemoguardrails.colang.v2_x.lang.utils import format_colang_parsing_error_message
@@ -215,6 +216,19 @@ class TaskPrompt(BaseModel):
             )
 
         return values
+
+
+class LogAdapterConfig(BaseModel):
+    name: str = Field(default="FileSystem", description="The name of the adapter.")
+    model_config = ConfigDict(extra="allow")
+
+
+class TracingConfig(BaseModel):
+    enabled: bool = False
+    adapters: List[LogAdapterConfig] = Field(
+        default_factory=lambda: [LogAdapterConfig()],
+        description="The list of tracing adapters to use. If not specified, the default adapters are used.",
+    )
 
 
 class EmbeddingsCacheConfig(BaseModel):
@@ -542,6 +556,7 @@ def _join_config(dest_config: dict, additional_config: dict):
         "passthrough",
         "raw_llm_call_action",
         "enable_rails_exceptions",
+        "tracing",
     ]
 
     for field in additional_fields:
@@ -590,11 +605,23 @@ def _load_path(
     if not os.path.exists(config_path):
         raise ValueError(f"Could not find config path: {config_path}")
 
+    # the first .railsignore file found from cwd down to its subdirectories
+    railsignore_path = utils.get_railsignore_path(config_path)
+    ignore_patterns = utils.get_railsignore_patterns(railsignore_path)
+
     if os.path.isdir(config_path):
         for root, _, files in os.walk(config_path, followlinks=True):
             # Followlinks to traverse symlinks instead of ignoring them.
 
             for file in files:
+                # Verify railsignore to skip loading
+                ignored_by_railsignore = utils.is_ignored_by_railsignore(
+                    file, ignore_patterns
+                )
+
+                if ignored_by_railsignore:
+                    continue
+
                 # This is the raw configuration that will be loaded from the file.
                 _raw_config = {}
 
@@ -873,6 +900,11 @@ class RailsConfig(BaseModel):
         default=None,
         description="Weather the original prompt should pass through the guardrails configuration as is. "
         "This means it will not be altered in any way. ",
+    )
+
+    tracing: TracingConfig = Field(
+        default_factory=TracingConfig,
+        description="Configuration for tracing.",
     )
 
     @root_validator(pre=True, allow_reuse=True)
