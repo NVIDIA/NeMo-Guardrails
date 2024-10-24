@@ -24,7 +24,7 @@ def initialize_llm(model_config: Model):
     if model_config.engine not in get_llm_provider_names():
         raise Exception(f"Unknown LLM engine: {model_config.engine}")
     provider_cls = get_llm_provider(model_config)
-    kwargs = {"temperature": 0, "max_tokens": 10}
+    kwargs = {"temperature": 0 }
     if model_config.engine in [
         "azure",
         "openai",
