@@ -1,0 +1,69 @@
+{
+  "uid": "nemoguardrails-admission-queue",
+  "title": "NeMo Guardrails - Non-Streaming Admission Queue",
+  "tags": ["nemoguardrails"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "5s",
+  "time": {"from": "now-15m", "to": "now"},
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "label": "Instance",
+        "type": "query",
+        "datasource": {"type": "prometheus", "uid": "nemoguardrails-prometheus"},
+        "query": "label_values(guardrails_nonstream_active, instance)",
+        "includeAll": true,
+        "multi": true,
+        "current": {"text": "All", "value": "$__all"}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Queued vs. active requests",
+      "description": "guardrails_nonstream_queued: waiting in the admission queue. guardrails_nonstream_active: executing on a worker. Both are gauges read at scrape time.",
+      "gridPos": {"x": 0, "y": 0, "w": 16, "h": 9},
+      "datasource": {"type": "prometheus", "uid": "nemoguardrails-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}, "overrides": []},
+      "targets": [
+        {"refId": "A", "expr": "sum by (instance) (guardrails_nonstream_queued{instance=~\"$instance\"})", "legendFormat": "queued {{instance}}"},
+        {"refId": "B", "expr": "sum by (instance) (guardrails_nonstream_active{instance=~\"$instance\"})", "legendFormat": "active {{instance}}"}
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Rejections (last 5m)",
+      "description": "Increase of guardrails_nonstream_rejections_total: submissions shed with HTTP 503 because the admission queue was full.",
+      "gridPos": {"x": 16, "y": 0, "w": 8, "h": 9},
+      "datasource": {"type": "prometheus", "uid": "nemoguardrails-prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+        },
+        "overrides": []
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"},
+      "targets": [
+        {"refId": "A", "expr": "sum(increase(guardrails_nonstream_rejections_total{instance=~\"$instance\"}[5m]))", "legendFormat": "rejections"}
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Rejection rate",
+      "description": "rate(guardrails_nonstream_rejections_total[1m]) per instance. Any sustained non-zero value means the server is shedding load.",
+      "gridPos": {"x": 0, "y": 9, "w": 24, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "nemoguardrails-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps", "min": 0}, "overrides": []},
+      "targets": [
+        {"refId": "A", "expr": "sum by (instance) (rate(guardrails_nonstream_rejections_total{instance=~\"$instance\"}[1m]))", "legendFormat": "{{instance}}"}
+      ]
+    }
+  ]
+}

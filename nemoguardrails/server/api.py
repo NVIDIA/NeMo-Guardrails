@@ -65,6 +65,7 @@ from nemoguardrails.server.exception_handlers import (
     streaming_capacity_error_handler,
     validation_error_handler,
 )
+from nemoguardrails.server.metrics import shutdown_metrics_exporter, start_metrics_exporter
 from nemoguardrails.server.schemas.openai import (
     GuardrailCheckRequest,
     GuardrailCheckResponse,
@@ -136,6 +137,12 @@ async def lifespan(app: GuardrailsApp):
 
     set_deployment_type(DeploymentTypeEnum.API.value)
 
+    # Install the metrics exporter before anything can construct a rails
+    # instance so the first IORails metric lands on a real MeterProvider.
+    # No-op unless NEMO_GUARDRAILS_SERVER_METRICS_EXPORTER is set, and
+    # idempotent when the CLI already started it.
+    start_metrics_exporter()
+
     challenges_files = os.path.join(app.rails_config_path, "challenges.json")
 
     if os.path.exists(challenges_files):
@@ -182,8 +189,8 @@ async def lifespan(app: GuardrailsApp):
         if hasattr(app, "task") and app.task is not None:
             app.task.cancel()
         log.info("Shutting down file observer")
-    else:
-        pass
+
+    shutdown_metrics_exporter()
 
 
 app = GuardrailsApp(

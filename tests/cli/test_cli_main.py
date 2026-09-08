@@ -197,6 +197,50 @@ class TestServerCommand:
         assert result.exit_code == 0
         assert mock_app.disable_chat_ui is True
 
+    @patch("nemoguardrails.server.metrics.shutdown_metrics_exporter")
+    @patch("nemoguardrails.server.metrics.start_metrics_exporter")
+    @patch("uvicorn.run")
+    @patch("nemoguardrails.server.api.app")
+    def test_server_metrics_flags_forward_to_env_and_start_exporter(
+        self, mock_app, mock_uvicorn, mock_start, mock_shutdown
+    ):
+        with patch.dict(os.environ, {}, clear=True):
+            result = runner.invoke(
+                app,
+                ["server", "--metrics-exporter=prometheus", "--metrics-host=127.0.0.1", "--metrics-port=9500"],
+            )
+            assert result.exit_code == 0, result.output
+            assert os.environ["NEMO_GUARDRAILS_SERVER_METRICS_EXPORTER"] == "prometheus"
+            assert os.environ["NEMO_GUARDRAILS_SERVER_METRICS_HOST"] == "127.0.0.1"
+            assert os.environ["NEMO_GUARDRAILS_SERVER_METRICS_PORT"] == "9500"
+        mock_start.assert_called_once_with()
+        mock_uvicorn.assert_called_once()
+        mock_shutdown.assert_called_once_with()
+
+    @patch("nemoguardrails.server.metrics.shutdown_metrics_exporter")
+    @patch("nemoguardrails.server.metrics.start_metrics_exporter")
+    @patch("uvicorn.run")
+    @patch("nemoguardrails.server.api.app")
+    def test_server_without_metrics_flags_leaves_env_alone(self, mock_app, mock_uvicorn, mock_start, mock_shutdown):
+        with patch.dict(os.environ, {}, clear=True):
+            result = runner.invoke(app, ["server"])
+            assert result.exit_code == 0
+            assert "NEMO_GUARDRAILS_SERVER_METRICS_EXPORTER" not in os.environ
+        mock_start.assert_called_once_with()
+
+    @patch("nemoguardrails.server.metrics.start_metrics_exporter")
+    @patch("uvicorn.run")
+    @patch("nemoguardrails.server.api.app")
+    def test_server_exits_before_binding_when_metrics_config_is_invalid(self, mock_app, mock_uvicorn, mock_start):
+        from nemoguardrails.server.metrics import MetricsExporterConfigError
+
+        mock_start.side_effect = MetricsExporterConfigError("Unsupported exporter 'otlp'")
+        with patch.dict(os.environ, {}, clear=True):
+            result = runner.invoke(app, ["server", "--metrics-exporter=otlp"])
+        assert result.exit_code == 1
+        assert "Unsupported exporter 'otlp'" in result.output
+        mock_uvicorn.assert_not_called()
+
     @patch("uvicorn.run")
     @patch("nemoguardrails.server.api.app")
     def test_server_with_auto_reload(self, mock_app, mock_uvicorn):
