@@ -1,6 +1,6 @@
 .PHONY: help install
 .PHONY: test test-parallel test-serial test-benchmark test-watch test-coverage test-profile record-cassettes rewrite-cassettes replay-cassettes snapshot-cassettes check-record-test-env warm-fastembed-cache
-.PHONY: test-docs-scripts docs-fern-node-dependencies docs-fern docs-fern-strict docs-fern-check docs-fern-live docs-fern-preview-watch docs-fern-generate-sdk docs-fern-fix-empty-links docs-fern-publish-staging docs-fern-publish-public
+.PHONY: test-docs-scripts docs-fern-node-dependencies docs-fern docs-fern-strict docs-fern-live docs-fern-preview-watch docs-fern-generate-sdk docs-fern-fix-empty-links docs-fern-publish-staging docs-fern-publish-public
 .PHONY: pre-commit pre-commit-install
 
 .DEFAULT_GOAL := help
@@ -97,11 +97,6 @@ docs-fern: docs-fern-strict
 docs-fern-strict: docs-fern-generate-sdk
 	node scripts/run-fern-with-ref-sdk.mjs check
 
-# Token-free variant for environments without FERN_TOKEN (for example fork
-# pull requests): validates the docs without regenerating the SDK reference.
-docs-fern-check: docs-fern-node-dependencies
-	node scripts/run-fern-with-ref-sdk.mjs check
-
 docs-fern-live: docs-fern-generate-sdk
 	FERN_VERSION=$$(node -p "require('./fern/fern.config.json').version") && cd fern && npx --yes "fern-api@$${FERN_VERSION}" docs dev
 
@@ -163,7 +158,6 @@ help:
 		'  test-docs-scripts     Run unit tests for Fern documentation scripts' \
 		'  docs-fern             Check Fern docs using the pinned Fern CLI' \
 		'  docs-fern-strict      Check Fern docs using the pinned Fern CLI' \
-		'  docs-fern-check       Check Fern docs without regenerating the SDK reference (no FERN_TOKEN needed)' \
 		'  docs-fern-live        Serve Fern docs locally' \
 		'  docs-fern-publish-staging Publish Fern docs to the staging instance' \
 		'  docs-fern-publish-public Publish Fern docs to the public instance' \
