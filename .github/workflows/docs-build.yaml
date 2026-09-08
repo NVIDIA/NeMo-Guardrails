@@ -74,10 +74,19 @@ jobs:
       - name: Test Fern documentation scripts
         run: make test-docs-scripts
 
+      # Fork pull requests do not receive repository secrets, so FERN_TOKEN is
+      # empty there and the SDK reference cannot be regenerated. Fall back to the
+      # token-free docs check instead of failing before any docs are validated.
       - name: Check Fern docs
         env:
           FERN_TOKEN: ${{ secrets.DOCS_FERN_TOKEN }}
-        run: make docs-fern-strict
+        run: |
+          if [ -n "${FERN_TOKEN}" ]; then
+            make docs-fern-strict
+          else
+            echo "FERN_TOKEN is not available (fork pull request); running the token-free docs check."
+            make docs-fern-check
+          fi
 
   preview-docs:
     name: Publish Fern preview
