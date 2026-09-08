@@ -71,6 +71,7 @@ def reset_global_metrics_state():
 
     def _reset():
         shutdown_metrics_exporter()
+        server_metrics._installed_provider = None
         otel_metrics_internal._METER_PROVIDER = None
         otel_metrics_internal._METER_PROVIDER_SET_ONCE = otel_metrics_internal.Once()
         # Proxy meters created while no provider was installed replay their
@@ -225,23 +226,48 @@ class TestStartAndShutdown:
     def test_port_in_use_is_reported_with_the_override_hint(self):
         with patch.dict("os.environ", LOOPBACK_EPHEMERAL):
             first = start_metrics_exporter()
-        # Pretend nothing is running so the second start really tries to bind.
+        # Detach the running exporter so the next start really tries to bind
+        # the same port instead of returning the running instance.
         server_metrics._active_exporter = None
-        otel_metrics_internal._METER_PROVIDER = None
-        otel_metrics_internal._METER_PROVIDER_SET_ONCE = otel_metrics_internal.Once()
-        # Proxy meters created while no provider was installed replay their
-        # deferred instruments onto the next real provider.  Earlier tests
-        # that built IORails without a global provider would otherwise land
-        # their stale gauges on ours and shadow the ones under test.
-        otel_metrics_internal._PROXY_METER_PROVIDER._meters.clear()
-        otel_metrics_internal._PROXY_METER_PROVIDER._real_meter_provider = None
         try:
             busy = {**LOOPBACK_EPHEMERAL, ENV_PORT: str(first.port)}
             with patch.dict("os.environ", busy):
                 with pytest.raises(MetricsExporterConfigError, match="--metrics-port"):
                     start_metrics_exporter()
+            assert get_active_metrics_exporter() is None
         finally:
             first.shutdown()
+
+    def test_restart_after_shutdown_reuses_the_process_wide_provider(self):
+        """A second lifespan in the same process must be able to export again."""
+        with patch.dict("os.environ", LOOPBACK_EPHEMERAL):
+            first = start_metrics_exporter()
+            telemetry.get_meter().create_counter("guardrails.nonstream.rejections", unit="1").add(3)
+            shutdown_metrics_exporter()
+            second = start_metrics_exporter()
+
+        assert second is not first
+        assert second.provider is first.provider
+        assert otel_metrics.get_meter_provider() is first.provider
+        # State recorded before the restart is still served, and new
+        # recordings keep landing on the same instruments.
+        telemetry.get_meter().create_counter("guardrails.nonstream.rejections", unit="1").add(4)
+        output = _scrape(second.url)
+        rejections = next(
+            line for line in output.splitlines() if line.startswith("guardrails_nonstream_rejections_total{")
+        )
+        assert rejections.endswith(" 7.0")
+
+    def test_restart_with_a_different_service_name_keeps_the_original(self, caplog):
+        with patch.dict("os.environ", {**LOOPBACK_EPHEMERAL, ENV_SERVICE_NAME: "first"}):
+            start_metrics_exporter()
+            shutdown_metrics_exporter()
+        with caplog.at_level("WARNING", logger="nemoguardrails.server.metrics"):
+            with patch.dict("os.environ", {**LOOPBACK_EPHEMERAL, ENV_SERVICE_NAME: "second"}):
+                exporter = start_metrics_exporter()
+        telemetry.get_meter().create_counter("guardrails.nonstream.rejections", unit="1").add(1)
+        assert 'service_name="first"' in _scrape(exporter.url)
+        assert "keeping the original" in caplog.text
 
     def test_missing_optional_dependency_gives_install_hint(self):
         with patch.dict(sys.modules, {"opentelemetry.exporter.prometheus": None}):
@@ -262,6 +288,26 @@ class TestServerLifespan:
                 telemetry.get_meter().create_counter("guardrails.nonstream.rejections", unit="1").add(1)
                 assert "guardrails_nonstream_rejections_total{" in _scrape(exporter.url)
             assert get_active_metrics_exporter() is None
+
+    def test_lifespan_releases_exporter_when_startup_fails(self, tmp_path):
+        (tmp_path / "challenges.json").write_text("{not json")
+        with patch.dict("os.environ", LOOPBACK_EPHEMERAL), patch.object(api.app, "rails_config_path", str(tmp_path)):
+            with pytest.raises(Exception):
+                with TestClient(api.app):
+                    pass  # pragma: no cover - startup raises before the body runs
+        assert get_active_metrics_exporter() is None
+
+    def test_lifespan_can_run_twice_in_one_process(self, tmp_path):
+        with patch.dict("os.environ", LOOPBACK_EPHEMERAL), patch.object(api.app, "rails_config_path", str(tmp_path)):
+            with TestClient(api.app):
+                first_port = get_active_metrics_exporter().port
+            with TestClient(api.app):
+                second = get_active_metrics_exporter()
+                assert second is not None
+                telemetry.get_meter().create_counter("guardrails.nonstream.rejections", unit="1").add(1)
+                assert "guardrails_nonstream_rejections_total{" in _scrape(second.url)
+            assert get_active_metrics_exporter() is None
+        assert first_port != 0
 
     def test_lifespan_without_exporter_leaves_metrics_untouched(self, tmp_path):
         with patch.dict("os.environ", {}, clear=True), patch.object(api.app, "rails_config_path", str(tmp_path)):

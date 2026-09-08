@@ -152,7 +152,9 @@ cd examples/observability/prometheus-grafana
 docker compose up -d
 ```
 
-Open `http://localhost:3000` (user `admin`, password `admin`) and select the **NeMo Guardrails - Non-Streaming Admission Queue** dashboard in the **NeMo Guardrails** folder.
+Open `http://localhost:3000` and select the **NeMo Guardrails - Non-Streaming Admission Queue** dashboard in the **NeMo Guardrails** folder.
+Anonymous viewers can read the dashboard without signing in; to edit it, sign in as `admin` and set a password when Grafana prompts for one.
+Both containers publish their ports on `127.0.0.1` only.
 
 To connect an existing Grafana instance instead:
 

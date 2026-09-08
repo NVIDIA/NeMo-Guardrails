@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,12 +20,19 @@ something has to install an SDK ``MeterProvider`` or every emission is a
 silent no-op.  For library users that "something" is their application.  For
 the packaged ``nemoguardrails server`` command it is this module: it builds a
 ``MeterProvider`` backed by a ``PrometheusMetricReader``, serves the scrape
-endpoint on a dedicated port, and tears both down with the server.
+endpoint on a dedicated port, and stops the listener with the server.
 
 Scope is deliberately narrow.  Only the non-streaming admission-queue metrics
 are exported (see :data:`EXPORTED_INSTRUMENT_PATTERNS`); everything else the
 engine records is dropped by an SDK view so the scrape output stays small and
 stable while the GenAI semantic conventions are still evolving.
+
+Lifecycle: the OpenTelemetry API allows exactly one global ``MeterProvider``
+per process and never lets it be replaced, so the provider is installed once
+and kept for the life of the process (the SDK shuts it down at interpreter
+exit).  ``start``/``shutdown`` only manage the HTTP listener, which is what
+lets an embedded application or a test client cycle the server lifespan
+repeatedly without losing metrics export.
 
 All OpenTelemetry SDK and Prometheus imports are deferred into
 :func:`_load_sdk` so that importing this module never requires the optional
@@ -72,9 +79,10 @@ class MetricsExporter(str, Enum):
 class MetricsExporterConfigError(ValueError):
     """The metrics exporter cannot start with the current configuration.
 
-    Raised for invalid settings, missing optional dependencies, and a global
-    ``MeterProvider`` that some other code already installed.  Callers turn it
-    into a startup failure with the message shown to the operator verbatim.
+    Raised for invalid settings, missing optional dependencies, a port that
+    cannot be bound, and a global ``MeterProvider`` that some other code
+    already installed.  Callers turn it into a startup failure with the
+    message shown to the operator verbatim.
     """
 
 
@@ -170,38 +178,79 @@ def _is_meter_provider_configured(provider: object) -> bool:
     return not type(provider).__module__.startswith("opentelemetry.metrics")
 
 
-class PrometheusMetricsExporter:
-    """A running Prometheus scrape endpoint bound to a ``MeterProvider``.
+@dataclass(frozen=True)
+class _InstalledProvider:
+    """The process-wide ``MeterProvider`` this module installed, plus the
+    registry its Prometheus reader writes into."""
 
-    Create it through :func:`start_metrics_exporter`; the constructor performs
-    the side effects (HTTP listener + global ``MeterProvider`` registration) so
-    a half-built exporter is never handed out.
+    provider: "MeterProvider"
+    registry: "CollectorRegistry"
+    service_name: str
+
+
+_installed_provider: Optional[_InstalledProvider] = None
+
+
+def _install_meter_provider(settings: MetricsExporterSettings) -> _InstalledProvider:
+    """Install the global ``MeterProvider`` on first use and return it thereafter.
+
+    The OpenTelemetry API refuses to replace a provider once set, so this is
+    a one-way door per process: the first exporter start decides the
+    ``service.name`` resource and the export view, and later starts reuse
+    them.  The SDK registers its own ``atexit`` hook to shut the provider
+    down, so nothing here needs to.
+    """
+    global _installed_provider
+    from opentelemetry import metrics as otel_metrics
+
+    _, _, _, _, _, CollectorRegistry, _ = _load_sdk()
+
+    if _installed_provider is not None:
+        if _installed_provider.service_name != settings.service_name:
+            log.warning(
+                "Metrics exporter restarted with service.name=%s but the process-wide MeterProvider "
+                "already carries service.name=%s; keeping the original.",
+                settings.service_name,
+                _installed_provider.service_name,
+            )
+        return _installed_provider
+
+    if _is_meter_provider_configured(otel_metrics.get_meter_provider()):
+        raise MetricsExporterConfigError(
+            "A global OpenTelemetry MeterProvider is already configured, so the server cannot install "
+            f"its own. Unset {ENV_EXPORTER} and expose that provider yourself, or remove the other "
+            "MeterProvider setup (for example in a root config.py)."
+        )
+
+    registry = CollectorRegistry()
+    provider = build_meter_provider(settings, registry)
+    otel_metrics.set_meter_provider(provider)
+    _installed_provider = _InstalledProvider(provider=provider, registry=registry, service_name=settings.service_name)
+    return _installed_provider
+
+
+class PrometheusMetricsExporter:
+    """A running Prometheus scrape endpoint serving the installed provider's registry.
+
+    Create it through :func:`start_metrics_exporter`; the constructor binds
+    the listener so a half-built exporter is never handed out.  Only the HTTP
+    listener belongs to this object: the ``MeterProvider`` behind it is
+    process-wide (see :func:`_install_meter_provider`).
     """
 
-    def __init__(self, settings: MetricsExporterSettings):
-        from opentelemetry import metrics as otel_metrics
-
-        _, _, _, _, _, CollectorRegistry, start_http_server = _load_sdk()
-
-        if _is_meter_provider_configured(otel_metrics.get_meter_provider()):
-            raise MetricsExporterConfigError(
-                "A global OpenTelemetry MeterProvider is already configured, so the server cannot install "
-                f"its own. Unset {ENV_EXPORTER} and expose that provider yourself, or remove the other "
-                "MeterProvider setup (for example in a root config.py)."
-            )
+    def __init__(self, settings: MetricsExporterSettings, installed: _InstalledProvider):
+        _, _, _, _, _, _, start_http_server = _load_sdk()
 
         self.settings = settings
-        self.registry = CollectorRegistry()
-        self.provider = build_meter_provider(settings, self.registry)
+        self.provider = installed.provider
+        self.registry = installed.registry
         try:
             self._server, self._thread = start_http_server(settings.port, addr=settings.host, registry=self.registry)
         except OSError as e:
-            self.provider.shutdown()
             raise MetricsExporterConfigError(
                 f"Cannot bind the Prometheus metrics endpoint to {settings.host}:{settings.port}: {e}. "
                 f"Choose another port with {ENV_PORT} or --metrics-port."
             ) from e
-        otel_metrics.set_meter_provider(self.provider)
 
     @property
     def port(self) -> int:
@@ -213,9 +262,8 @@ class PrometheusMetricsExporter:
         return f"http://{self.settings.host}:{self.port}/metrics"
 
     def shutdown(self) -> None:
-        # ``MeterProvider.shutdown`` shuts the reader down (and unregisters its
-        # collector); calling the reader's shutdown as well raises KeyError.
-        self.provider.shutdown()
+        """Stop the listener and join its thread.  The provider keeps collecting
+        so a later :func:`start_metrics_exporter` resumes export seamlessly."""
         self._server.shutdown()
         self._server.server_close()
         self._thread.join(timeout=5)
@@ -229,12 +277,14 @@ def get_active_metrics_exporter() -> Optional[PrometheusMetricsExporter]:
 
 
 def start_metrics_exporter(settings: Optional[MetricsExporterSettings] = None) -> Optional[PrometheusMetricsExporter]:
-    """Start the configured exporter once per process and return it.
+    """Start the configured exporter and return it.
 
-    Returns ``None`` when no exporter is configured.  Repeated calls return the
-    running exporter, which lets both the CLI entry point and the FastAPI
-    lifespan call it without coordinating: whichever runs first wins, and the
-    provider is in place before the first ``IORails`` instance is built.
+    Returns ``None`` when no exporter is configured.  Repeated calls while an
+    exporter is running return it unchanged, which lets both the CLI entry
+    point and the FastAPI lifespan call it without coordinating: whichever
+    runs first wins, and the provider is in place before the first
+    ``IORails`` instance is built.  After :func:`shutdown_metrics_exporter`
+    the next call starts a fresh listener against the same provider.
     """
     global _active_exporter
     if _active_exporter is not None:
@@ -245,18 +295,19 @@ def start_metrics_exporter(settings: Optional[MetricsExporterSettings] = None) -
     if not settings.enabled:
         return None
 
-    _active_exporter = PrometheusMetricsExporter(settings)
+    installed = _install_meter_provider(settings)
+    _active_exporter = PrometheusMetricsExporter(settings, installed)
     log.info(
         "Prometheus metrics endpoint listening on %s (service.name=%s, exporting %s)",
         _active_exporter.url,
-        settings.service_name,
+        installed.service_name,
         ", ".join(EXPORTED_INSTRUMENT_PATTERNS),
     )
     return _active_exporter
 
 
 def shutdown_metrics_exporter() -> None:
-    """Stop the running exporter, if any.  Safe to call repeatedly."""
+    """Stop the running exporter's listener, if any.  Safe to call repeatedly."""
     global _active_exporter
     if _active_exporter is None:
         return

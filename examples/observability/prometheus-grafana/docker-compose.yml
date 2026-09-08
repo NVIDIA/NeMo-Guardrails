@@ -7,8 +7,9 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    # Bound to loopback: this example is for a local workstation, not a shared host.
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     # Lets the container reach the Guardrails server on the host as
     # host.docker.internal on Linux; Docker Desktop provides it already.
     extra_hosts:
@@ -17,13 +18,15 @@ services:
   grafana:
     image: grafana/grafana:12.1.0
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      # Read-only anonymous access is enough to view the provisioned dashboard.
+      # No administrator password is provisioned: Grafana asks you to set one
+      # on the first admin login.
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    # Bound to loopback so the instance is not reachable from other hosts.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus

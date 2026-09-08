@@ -140,57 +140,60 @@ async def lifespan(app: GuardrailsApp):
     # Install the metrics exporter before anything can construct a rails
     # instance so the first IORails metric lands on a real MeterProvider.
     # No-op unless NEMO_GUARDRAILS_SERVER_METRICS_EXPORTER is set, and
-    # idempotent when the CLI already started it.
+    # idempotent when the CLI already started it.  The try/finally below
+    # guarantees the listener is released even when startup fails after
+    # this point (for example a malformed challenges.json or config.py).
     start_metrics_exporter()
+    try:
+        challenges_files = os.path.join(app.rails_config_path, "challenges.json")
 
-    challenges_files = os.path.join(app.rails_config_path, "challenges.json")
+        if os.path.exists(challenges_files):
+            with open(challenges_files) as f:
+                register_challenges(json.load(f))
 
-    if os.path.exists(challenges_files):
-        with open(challenges_files) as f:
-            register_challenges(json.load(f))
+        # If there is a `config.yml` in the root `app.rails_config_path` (or in
+        # a `config/` subdirectory), set the app to single config mode.
+        if (
+            os.path.exists(os.path.join(app.rails_config_path, "config.yml"))
+            or os.path.exists(os.path.join(app.rails_config_path, "config.yaml"))
+            or os.path.exists(os.path.join(app.rails_config_path, "config", "config.yml"))
+            or os.path.exists(os.path.join(app.rails_config_path, "config", "config.yaml"))
+        ):
+            app.single_config_mode = True
+            app.single_config_id = os.path.basename(app.rails_config_path)
+        else:
+            # If we're not in single-config mode, we check if we have a config.py for the
+            # server configuration.
+            filepath = os.path.join(app.rails_config_path, "config.py")
+            if os.path.exists(filepath):
+                filename = os.path.basename(filepath)
+                spec = importlib.util.spec_from_file_location(filename, filepath)
+                if spec is not None and spec.loader is not None:
+                    config_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(config_module)
+                else:
+                    config_module = None
 
-    # If there is a `config.yml` in the root `app.rails_config_path` (or in
-    # a `config/` subdirectory), set the app to single config mode.
-    if (
-        os.path.exists(os.path.join(app.rails_config_path, "config.yml"))
-        or os.path.exists(os.path.join(app.rails_config_path, "config.yaml"))
-        or os.path.exists(os.path.join(app.rails_config_path, "config", "config.yml"))
-        or os.path.exists(os.path.join(app.rails_config_path, "config", "config.yaml"))
-    ):
-        app.single_config_mode = True
-        app.single_config_id = os.path.basename(app.rails_config_path)
-    else:
-        # If we're not in single-config mode, we check if we have a config.py for the
-        # server configuration.
-        filepath = os.path.join(app.rails_config_path, "config.py")
-        if os.path.exists(filepath):
-            filename = os.path.basename(filepath)
-            spec = importlib.util.spec_from_file_location(filename, filepath)
-            if spec is not None and spec.loader is not None:
-                config_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(config_module)
-            else:
-                config_module = None
+                # If there is an `init` function, we call it with the reference to the app.
+                if config_module is not None and hasattr(config_module, "init"):
+                    config_module.init(app)
 
-            # If there is an `init` function, we call it with the reference to the app.
-            if config_module is not None and hasattr(config_module, "init"):
-                config_module.init(app)
+        if app.auto_reload:
+            app.loop = asyncio.get_running_loop()
+            # Store the future directly as task
+            app.task = app.loop.run_in_executor(None, start_auto_reload_monitoring)
 
-    if app.auto_reload:
-        app.loop = asyncio.get_running_loop()
-        # Store the future directly as task
-        app.task = app.loop.run_in_executor(None, start_auto_reload_monitoring)
+        yield
 
-    yield
+        # Shutdown logic here
+        if app.auto_reload:
+            app.stop_signal = True
+            if hasattr(app, "task") and app.task is not None:
+                app.task.cancel()
+            log.info("Shutting down file observer")
 
-    # Shutdown logic here
-    if app.auto_reload:
-        app.stop_signal = True
-        if hasattr(app, "task") and app.task is not None:
-            app.task.cancel()
-        log.info("Shutting down file observer")
-
-    shutdown_metrics_exporter()
+    finally:
+        shutdown_metrics_exporter()
 
 
 app = GuardrailsApp(
