@@ -238,20 +238,28 @@ class TestStartAndShutdown:
         assert get_active_metrics_exporter() is None
 
     def test_port_in_use_is_reported_with_the_override_hint(self):
-        """A busy port fails with a message pointing at --metrics-port."""
-        with patch.dict("os.environ", LOOPBACK_EPHEMERAL):
-            first = start_metrics_exporter()
-        # Detach the running exporter so the next start really tries to bind
-        # the same port instead of returning the running instance.
-        server_metrics._active_exporter = None
-        try:
-            busy = {**LOOPBACK_EPHEMERAL, ENV_PORT: str(first.port)}
-            with patch.dict("os.environ", busy):
-                with pytest.raises(MetricsExporterConfigError, match="--metrics-port"):
+        """A bind failure fails with a message pointing at --metrics-port.
+
+        The failure is simulated rather than provoked with a second listener:
+        the WSGI server enables address reuse, and on Windows that lets a
+        second socket bind a port that is already listening, so a real
+        double bind is not a portable way to trigger EADDRINUSE.
+        """
+        import errno
+
+        import prometheus_client
+
+        def _refuse_bind(*args, **kwargs):
+            raise OSError(errno.EADDRINUSE, "Address already in use")
+
+        with patch.object(prometheus_client, "start_http_server", _refuse_bind):
+            with patch.dict("os.environ", {**LOOPBACK_EPHEMERAL, ENV_PORT: "9464"}):
+                with pytest.raises(MetricsExporterConfigError, match=r"127\.0\.0\.1:9464.*--metrics-port"):
                     start_metrics_exporter()
-            assert get_active_metrics_exporter() is None
-        finally:
-            first.shutdown()
+        assert get_active_metrics_exporter() is None
+        # The provider stays installed, so a retry on a free port succeeds.
+        with patch.dict("os.environ", LOOPBACK_EPHEMERAL):
+            assert start_metrics_exporter() is not None
 
     def test_restart_after_shutdown_reuses_the_process_wide_provider(self):
         """A second lifespan in the same process must be able to export again."""
