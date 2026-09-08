@@ -40,9 +40,9 @@ Prometheus scrapes `host.docker.internal:9464`. Edit
 
 | Prometheus metric | Panel |
 |---|---|
-| `guardrails_nonstream_queued` | Queued vs. active requests |
+| `guardrails_nonstream_queued` | Queued vs. active requests, Queue occupancy |
 | `guardrails_nonstream_active` | Queued vs. active requests |
-| `guardrails_nonstream_rejections_total` | Rejections (last 5m), Rejection rate |
+| `guardrails_nonstream_rejections_total` | Rejected in last 5 minutes, Rejection rate |
 
 ## Clean up
 
