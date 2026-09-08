@@ -65,6 +65,7 @@ def format_span_for_filesystem(span) -> Dict[str, Any]:
                     "name": event.name,
                     "timestamp": event.timestamp,
                     "attributes": event.attributes,
+                    "body": event.body,
                 }
                 for event in span.events
             ]

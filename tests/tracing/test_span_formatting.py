@@ -95,6 +95,7 @@ class TestFormatSpanForFilesystem:
                 name="test_event",
                 timestamp=0.5,
                 attributes={"key": "value"},
+                body={"content": "body_content"},
             )
         ]
         span = InteractionSpan(
@@ -115,6 +116,30 @@ class TestFormatSpanForFilesystem:
         assert result["events"][0]["name"] == "test_event"
         assert result["events"][0]["timestamp"] == 0.5
         assert result["events"][0]["attributes"] == {"key": "value"}
+        assert result["events"][0]["body"] == {"content": "body_content"}
+
+    def test_format_span_event_without_body(self):
+        events = [
+            SpanEvent(
+                name="test_event",
+                timestamp=0.5,
+                attributes={"key": "value"},
+            )
+        ]
+        span = InteractionSpan(
+            name="interaction",
+            span_id="span_1",
+            parent_id=None,
+            start_time=0.0,
+            end_time=1.0,
+            duration=1.0,
+            span_kind="server",
+            events=events,
+        )
+
+        result = format_span_for_filesystem(span)
+
+        assert result["events"][0]["body"] is None
 
     def test_format_span_with_error(self):
         span = ActionSpan(
