@@ -97,10 +97,12 @@ class MetricsExporterSettings:
 
     @property
     def enabled(self) -> bool:
+        """Whether an exporter is configured at all."""
         return self.exporter is not MetricsExporter.NONE
 
     @classmethod
     def from_env(cls, environ: Optional[Mapping[str, str]] = None) -> "MetricsExporterSettings":
+        """Resolve settings from environment variables, raising :class:`MetricsExporterConfigError` on invalid values."""
         env = os.environ if environ is None else environ
 
         raw_exporter = env.get(ENV_EXPORTER, MetricsExporter.NONE.value).strip().lower() or MetricsExporter.NONE.value
@@ -239,6 +241,7 @@ class PrometheusMetricsExporter:
     """
 
     def __init__(self, settings: MetricsExporterSettings, installed: _InstalledProvider):
+        """Bind the scrape listener for ``settings`` against ``installed``'s registry."""
         _, _, _, _, _, _, start_http_server = _load_sdk()
 
         self.settings = settings
@@ -259,6 +262,7 @@ class PrometheusMetricsExporter:
 
     @property
     def url(self) -> str:
+        """Scrape URL of the running listener."""
         return f"http://{self.settings.host}:{self.port}/metrics"
 
     def shutdown(self) -> None:
@@ -273,6 +277,7 @@ _active_exporter: Optional[PrometheusMetricsExporter] = None
 
 
 def get_active_metrics_exporter() -> Optional[PrometheusMetricsExporter]:
+    """Return the running exporter, or ``None`` when none is active."""
     return _active_exporter
 
 

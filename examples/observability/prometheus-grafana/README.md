@@ -18,20 +18,20 @@ The full walkthrough, including how to start the server, lives in the docs:
    nemoguardrails server --config ./config --metrics-exporter prometheus
    ```
 
-2. Start Prometheus and Grafana from this directory:
+2. Start Prometheus and Grafana from this directory. Pick the Grafana admin
+   password yourself; Compose refuses to start without it:
 
    ```bash
-   docker compose up -d
+   GRAFANA_ADMIN_PASSWORD='<choose a password>' docker compose up -d
    ```
 
-3. Open Grafana at <http://localhost:3000>. Anonymous viewers can see the
-   provisioned **NeMo Guardrails - Non-Streaming Admission Queue** dashboard in
-   the **NeMo Guardrails** folder without signing in; the Prometheus data source
-   is pre-configured. To edit anything, sign in as `admin` and set a password
-   when Grafana prompts for one.
+3. Open Grafana at <http://localhost:3000> and sign in as `admin` with that
+   password. The **NeMo Guardrails - Non-Streaming Admission Queue** dashboard
+   is in the **NeMo Guardrails** folder, and the Prometheus data source is
+   pre-configured.
 
-Both containers publish their ports on `127.0.0.1` only, so they are not
-reachable from other machines.
+Anonymous access is disabled, and both containers publish their ports on
+`127.0.0.1` only, so they are not reachable from other machines.
 
 Prometheus scrapes `host.docker.internal:9464`. Edit
 `prometheus/prometheus.yml` if the server runs on another host or port.

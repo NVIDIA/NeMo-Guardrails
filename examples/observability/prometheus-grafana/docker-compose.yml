@@ -18,11 +18,12 @@ services:
   grafana:
     image: grafana/grafana:12.1.0
     environment:
-      # Read-only anonymous access is enough to view the provisioned dashboard.
-      # No administrator password is provisioned: Grafana asks you to set one
-      # on the first admin login.
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      # No default credential ships with the example: Compose refuses to start
+      # until GRAFANA_ADMIN_PASSWORD is set in the shell, and anonymous access
+      # stays off so the dashboard needs that login.
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD before running docker compose}"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     # Bound to loopback so the instance is not reachable from other hosts.

@@ -70,6 +70,7 @@ def reset_global_metrics_state():
     """
 
     def _reset():
+        """Forget every process-wide singleton the exporter or the OTel API keeps."""
         shutdown_metrics_exporter()
         server_metrics._installed_provider = None
         otel_metrics_internal._METER_PROVIDER = None
@@ -90,6 +91,7 @@ def reset_global_metrics_state():
 
 
 def _scrape(url: str) -> str:
+    """GET a scrape URL and return the exposition text."""
     with urllib.request.urlopen(url, timeout=5) as response:
         assert response.status == 200
         return response.read().decode()
@@ -108,6 +110,7 @@ def _record_every_instrument_family(provider):
 
 class TestSettingsFromEnv:
     def test_defaults_to_no_exporter(self):
+        """No env vars means no exporter and the documented defaults."""
         settings = MetricsExporterSettings.from_env({})
         assert settings.exporter is MetricsExporter.NONE
         assert settings.enabled is False
@@ -116,6 +119,7 @@ class TestSettingsFromEnv:
         assert settings.service_name == "nemoguardrails-server"
 
     def test_reads_all_variables(self):
+        """Every documented env var is honoured, case-insensitively for the exporter name."""
         settings = MetricsExporterSettings.from_env(
             {ENV_EXPORTER: "Prometheus", ENV_HOST: "127.0.0.1", ENV_PORT: "9999", ENV_SERVICE_NAME: "gr-prod"}
         )
@@ -126,22 +130,26 @@ class TestSettingsFromEnv:
         assert settings.service_name == "gr-prod"
 
     def test_otel_service_name_is_the_fallback(self):
+        """OTEL_SERVICE_NAME is used unless the NEMO-specific variable overrides it."""
         assert MetricsExporterSettings.from_env({"OTEL_SERVICE_NAME": "from-otel"}).service_name == "from-otel"
         both = {"OTEL_SERVICE_NAME": "from-otel", ENV_SERVICE_NAME: "from-nemo"}
         assert MetricsExporterSettings.from_env(both).service_name == "from-nemo"
 
     def test_rejects_unknown_exporter(self):
+        """Unsupported exporter names fail with the list of supported values."""
         with pytest.raises(MetricsExporterConfigError, match="Unsupported .*otlp.*Supported values: none, prometheus"):
             MetricsExporterSettings.from_env({ENV_EXPORTER: "otlp"})
 
     @pytest.mark.parametrize("raw_port", ["abc", "-1", "70000"])
     def test_rejects_bad_port(self, raw_port):
+        """Non-integer and out-of-range ports fail with an actionable message."""
         with pytest.raises(MetricsExporterConfigError, match=ENV_PORT):
             MetricsExporterSettings.from_env({ENV_EXPORTER: "prometheus", ENV_PORT: raw_port})
 
 
 class TestExportView:
     def test_only_nonstream_admission_metrics_are_exported(self):
+        """The export view keeps the three admission-queue instruments and drops everything else."""
         registry = CollectorRegistry()
         provider = build_meter_provider(MetricsExporterSettings(service_name="scoped"), registry)
         try:
@@ -160,6 +168,7 @@ class TestExportView:
         assert "gen_ai_client_token_usage" not in output
 
     def test_prometheus_type_lines(self):
+        """Gauges export as Prometheus gauges and the counter gains the _total suffix."""
         registry = CollectorRegistry()
         provider = build_meter_provider(MetricsExporterSettings(), registry)
         try:
@@ -175,12 +184,14 @@ class TestExportView:
 
 class TestStartAndShutdown:
     def test_disabled_by_default(self):
+        """Without configuration nothing starts and the global provider stays untouched."""
         with patch.dict("os.environ", {}, clear=True):
             assert start_metrics_exporter() is None
         assert get_active_metrics_exporter() is None
         assert type(otel_metrics.get_meter_provider()).__module__.startswith("opentelemetry.metrics")
 
     def test_serves_scrape_endpoint_and_installs_global_provider(self):
+        """A started exporter serves /metrics and the library meter records into it."""
         with patch.dict("os.environ", LOOPBACK_EPHEMERAL):
             exporter = start_metrics_exporter()
         assert exporter is not None
@@ -197,12 +208,14 @@ class TestStartAndShutdown:
         assert "guardrails_nonstream_rejections_total{" in output
 
     def test_start_is_idempotent(self):
+        """Calling start while running returns the same exporter."""
         with patch.dict("os.environ", LOOPBACK_EPHEMERAL):
             first = start_metrics_exporter()
             assert start_metrics_exporter() is first
             assert get_active_metrics_exporter() is first
 
     def test_shutdown_closes_listener_and_is_repeatable(self):
+        """Shutdown closes the listener and a second shutdown is a no-op."""
         with patch.dict("os.environ", LOOPBACK_EPHEMERAL):
             exporter = start_metrics_exporter()
         url = exporter.url
@@ -215,6 +228,7 @@ class TestStartAndShutdown:
             urllib.request.urlopen(url, timeout=1)
 
     def test_refuses_when_a_meter_provider_is_already_installed(self):
+        """A foreign global MeterProvider makes start fail instead of silently exporting nothing."""
         from opentelemetry.sdk.metrics import MeterProvider
 
         otel_metrics.set_meter_provider(MeterProvider())
@@ -224,6 +238,7 @@ class TestStartAndShutdown:
         assert get_active_metrics_exporter() is None
 
     def test_port_in_use_is_reported_with_the_override_hint(self):
+        """A busy port fails with a message pointing at --metrics-port."""
         with patch.dict("os.environ", LOOPBACK_EPHEMERAL):
             first = start_metrics_exporter()
         # Detach the running exporter so the next start really tries to bind
@@ -259,6 +274,7 @@ class TestStartAndShutdown:
         assert rejections.endswith(" 7.0")
 
     def test_restart_with_a_different_service_name_keeps_the_original(self, caplog):
+        """The provider cannot be replaced, so a changed service.name on restart is logged and ignored."""
         with patch.dict("os.environ", {**LOOPBACK_EPHEMERAL, ENV_SERVICE_NAME: "first"}):
             start_metrics_exporter()
             shutdown_metrics_exporter()
@@ -270,6 +286,7 @@ class TestStartAndShutdown:
         assert "keeping the original" in caplog.text
 
     def test_missing_optional_dependency_gives_install_hint(self):
+        """A missing optional dependency fails with the server extra install hint."""
         with patch.dict(sys.modules, {"opentelemetry.exporter.prometheus": None}):
             with patch.dict("os.environ", LOOPBACK_EPHEMERAL):
                 with pytest.raises(MetricsExporterConfigError, match=r"nemoguardrails\[server\]"):
@@ -279,6 +296,7 @@ class TestStartAndShutdown:
 
 class TestServerLifespan:
     def test_lifespan_starts_and_stops_the_exporter(self, tmp_path):
+        """The FastAPI lifespan starts the exporter on startup and stops it on shutdown."""
         with patch.dict("os.environ", LOOPBACK_EPHEMERAL), patch.object(api.app, "rails_config_path", str(tmp_path)):
             with TestClient(api.app):
                 exporter = get_active_metrics_exporter()
@@ -290,6 +308,7 @@ class TestServerLifespan:
             assert get_active_metrics_exporter() is None
 
     def test_lifespan_releases_exporter_when_startup_fails(self, tmp_path):
+        """A startup failure after the exporter started still releases the listener."""
         (tmp_path / "challenges.json").write_text("{not json")
         with patch.dict("os.environ", LOOPBACK_EPHEMERAL), patch.object(api.app, "rails_config_path", str(tmp_path)):
             with pytest.raises(Exception):
@@ -298,6 +317,7 @@ class TestServerLifespan:
         assert get_active_metrics_exporter() is None
 
     def test_lifespan_can_run_twice_in_one_process(self, tmp_path):
+        """Back-to-back lifespans in one process both export metrics."""
         with patch.dict("os.environ", LOOPBACK_EPHEMERAL), patch.object(api.app, "rails_config_path", str(tmp_path)):
             with TestClient(api.app):
                 first_port = get_active_metrics_exporter().port
@@ -310,6 +330,7 @@ class TestServerLifespan:
         assert first_port != 0
 
     def test_lifespan_without_exporter_leaves_metrics_untouched(self, tmp_path):
+        """Without configuration the lifespan does not start an exporter."""
         with patch.dict("os.environ", {}, clear=True), patch.object(api.app, "rails_config_path", str(tmp_path)):
             with TestClient(api.app):
                 assert get_active_metrics_exporter() is None
@@ -320,6 +341,7 @@ class TestIORailsEndToEnd:
 
     @pytest.mark.asyncio
     async def test_admission_queue_gauges_track_a_live_request(self):
+        """A real IORails request shows up as active=1 on the scrape endpoint while it runs."""
         with patch.dict("os.environ", {**LOOPBACK_EPHEMERAL, "NVIDIA_API_KEY": "test-key"}):
             exporter = start_metrics_exporter()
             config = copy.deepcopy(CONTENT_SAFETY_CONFIG)
@@ -329,6 +351,7 @@ class TestIORailsEndToEnd:
         gate = asyncio.Event()
 
         async def _blocked_generate(messages, req_id, request_span=None, **kwargs):
+            """Stand-in pipeline that parks the request until the test releases the gate."""
             await gate.wait()
             return {"role": "assistant", "content": "done"}
 

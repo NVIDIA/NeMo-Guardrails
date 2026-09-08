@@ -152,8 +152,9 @@ def server(
     metrics_exporter: Optional[str] = typer.Option(
         default=None,
         help=(
-            "Export IORails metrics from the server. Supported: 'prometheus'. "
-            "Overrides NEMO_GUARDRAILS_SERVER_METRICS_EXPORTER; metrics are not exported by default."
+            "Expose the IORails non-streaming admission-queue metrics (guardrails.nonstream.*) on a scrape "
+            "endpoint. Supported: 'prometheus'. Overrides NEMO_GUARDRAILS_SERVER_METRICS_EXPORTER; "
+            "metrics are not exported by default."
         ),
     ),
     metrics_host: Optional[str] = typer.Option(

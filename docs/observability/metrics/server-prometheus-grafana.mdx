@@ -89,12 +89,15 @@ The environment variables also work when you run the app directly with `uvicorn 
 <Tab title="Docker">
 
 ```bash
-docker run -p 8000:8000 -p 9464:9464 \
+docker run -p 8000:8000 -p 127.0.0.1:9464:9464 \
   -e NEMO_GUARDRAILS_IORAILS_ENGINE=1 \
   -e NEMO_GUARDRAILS_SERVER_METRICS_EXPORTER=prometheus \
   -v ./config:/config \
   nemoguardrails server --config /config
 ```
+
+The metrics port is published on the loopback interface only, which is enough for a Prometheus instance on the same host.
+When Prometheus also runs in Docker, attach both containers to one Docker network and scrape the container name instead of publishing the port at all.
 
 </Tab>
 </Tabs>
@@ -108,6 +111,12 @@ docker run -p 8000:8000 -p 9464:9464 \
 
 The CLI flags take precedence over the environment variables.
 `prometheus` is the only supported exporter value.
+
+<Warning title="The endpoint is unauthenticated">
+The scrape endpoint has no authentication, and the default listen interface is `0.0.0.0`.
+Restrict who can reach it: set `--metrics-host 127.0.0.1` when Prometheus runs on the same host, or keep the default and allow inbound traffic on the metrics port only from your Prometheus servers with a firewall or network policy.
+Do not expose the metrics port to the public internet.
+</Warning>
 The server starts the exporter before it binds the API port and shuts it down with the server, so a misconfiguration fails at startup with the reason printed to the console.
 
 ## Verify the Endpoint
@@ -149,12 +158,11 @@ It starts Prometheus and Grafana with Docker Compose, provisions the Prometheus 
 
 ```bash
 cd examples/observability/prometheus-grafana
-docker compose up -d
+GRAFANA_ADMIN_PASSWORD='<choose a password>' docker compose up -d
 ```
 
-Open `http://localhost:3000` and select the **NeMo Guardrails - Non-Streaming Admission Queue** dashboard in the **NeMo Guardrails** folder.
-Anonymous viewers can read the dashboard without signing in; to edit it, sign in as `admin` and set a password when Grafana prompts for one.
-Both containers publish their ports on `127.0.0.1` only.
+The Compose file refuses to start without `GRAFANA_ADMIN_PASSWORD`, anonymous access is disabled, and both containers publish their ports on `127.0.0.1` only.
+Open `http://localhost:3000`, sign in as `admin` with the password you chose, and select the **NeMo Guardrails - Non-Streaming Admission Queue** dashboard in the **NeMo Guardrails** folder.
 
 To connect an existing Grafana instance instead:
 

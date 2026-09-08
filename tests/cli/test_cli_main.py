@@ -204,6 +204,7 @@ class TestServerCommand:
     def test_server_metrics_flags_forward_to_env_and_start_exporter(
         self, mock_app, mock_uvicorn, mock_start, mock_shutdown
     ):
+        """The metrics flags land in the env vars the lifespan reads, and the exporter starts and stops around uvicorn."""
         with patch.dict(os.environ, {}, clear=True):
             result = runner.invoke(
                 app,
@@ -222,6 +223,7 @@ class TestServerCommand:
     @patch("uvicorn.run")
     @patch("nemoguardrails.server.api.app")
     def test_server_without_metrics_flags_leaves_env_alone(self, mock_app, mock_uvicorn, mock_start, mock_shutdown):
+        """Omitting the metrics flags leaves the environment untouched so env-var configuration still applies."""
         with patch.dict(os.environ, {}, clear=True):
             result = runner.invoke(app, ["server"])
             assert result.exit_code == 0
@@ -232,6 +234,7 @@ class TestServerCommand:
     @patch("uvicorn.run")
     @patch("nemoguardrails.server.api.app")
     def test_server_exits_before_binding_when_metrics_config_is_invalid(self, mock_app, mock_uvicorn, mock_start):
+        """An exporter configuration error is printed and exits 1 before uvicorn binds the API port."""
         from nemoguardrails.server.metrics import MetricsExporterConfigError
 
         mock_start.side_effect = MetricsExporterConfigError("Unsupported exporter 'otlp'")
