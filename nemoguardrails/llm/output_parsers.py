@@ -14,7 +14,7 @@
 # limitations under the License.
 import json
 import re
-from typing import Sequence, Union
+from typing import List, Sequence, Union
 
 
 def _replace_prefix(s: str, prefix: str, repl: str):
@@ -318,3 +318,110 @@ def nemotron_reasoning_parse_response_safety(
         return [True]
     else:
         return [False]
+
+
+_THINK_OPEN_TAG = "<think>"
+
+_CONTENT_SAFETY_PARSE_ERROR = "Failed to parse content safety model response"
+
+
+def _extract_safety_verdict(response: str, field_name: str) -> str:
+    """Helper function to extract the safe/unsafe verdict for a given field.
+
+    Args:
+        response: The model response text, with or without a reasoning trace.
+        field_name: The field to look for (e.g. "User Safety" or "Response Safety").
+
+    Returns:
+        The extracted verdict, either "safe" or "unsafe".
+
+    Raises:
+        ValueError: If the field is absent, carries a value other than safe or unsafe, or the
+            reasoning trace is unterminated.
+    """
+    cleaned_response = _strip_think_tags(response)
+
+    # Reasoning traces may be truncated due to token limits.
+    # Make sure both think-tags were found and removed
+    if _THINK_OPEN_TAG in cleaned_response:
+        raise ValueError(_CONTENT_SAFETY_PARSE_ERROR)
+
+    # Anchored to the start of a line, and restricted to the two permitted values, so prose
+    # that merely mentions the field cannot be mistaken for a verdict.
+    pattern = rf"^\s*{re.escape(field_name)}\s*:\s*(safe|unsafe)\b"
+    match = re.search(pattern, cleaned_response, re.IGNORECASE | re.MULTILINE)
+    if match is None:
+        raise ValueError(_CONTENT_SAFETY_PARSE_ERROR)
+
+    return match.group(1).lower()
+
+
+def _extract_safety_categories(response: str) -> List[str]:
+    """Helper function to extract the violated safety categories.
+
+    Args:
+        response: The model response text, with or without a reasoning trace.
+
+    Returns:
+        The categories listed by the model, or an empty list when it omitted the line.
+    """
+    cleaned_response = _strip_think_tags(response)
+
+    match = re.search(r"^\s*Safety Categories\s*:\s*(.*)$", cleaned_response, re.IGNORECASE | re.MULTILINE)
+    if match is None:
+        return []
+
+    return [category.strip() for category in match.group(1).split(",") if category.strip()]
+
+
+def nemotron_content_safety_parse_prompt_safety(response: str) -> Sequence[Union[bool, str]]:
+    """Analyzes a response from the Nemotron Content Safety models and determines if the user input is safe.
+
+    These models emit plain lines rather than JSON. `Response Safety` is present only when the request
+    carried an assistant turn, and `Safety Categories` only when a verdict is unsafe:
+
+        User Safety: unsafe
+        Response Safety: safe
+        Safety Categories: Criminal Planning/Confessions, Violence
+
+    Args:
+        response (str): The response string to analyze.
+
+    Returns:
+        Sequence[Union[bool, str]]: A sequence where the first element is a boolean indicating the safety of the
+        content (True if safe, False otherwise), and the remaining elements are strings representing violated
+        safety categories, if any.
+
+    Raises:
+        ValueError: If the model response cannot be parsed as a content safety verdict.
+    """
+    if _extract_safety_verdict(response, "User Safety") == "safe":
+        return [True]
+
+    return [False] + _extract_safety_categories(response)
+
+
+def nemotron_content_safety_parse_response_safety(
+    response: str,
+) -> Sequence[Union[bool, str]]:
+    """Analyzes a response from the Nemotron Content Safety models and determines if the bot response is safe.
+
+    Reads `Response Safety` and never falls back to `User Safety`: the models rate the two turns
+    independently, so an unsafe user turn must not block a safe refusal.
+
+    Args:
+        response (str): The response string to analyze.
+
+    Returns:
+        Sequence[Union[bool, str]]: A sequence where the first element is a boolean indicating the safety of the
+        content (True if safe, False otherwise), and the remaining elements are strings representing violated
+        safety categories, if any.
+
+    Raises:
+        ValueError: If the model response cannot be parsed as a content safety verdict. A response with no
+            `Response Safety` line is unparseable rather than safe.
+    """
+    if _extract_safety_verdict(response, "Response Safety") == "safe":
+        return [True]
+
+    return [False] + _extract_safety_categories(response)

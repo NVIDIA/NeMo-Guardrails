@@ -19,14 +19,19 @@ These tests verify that the modified parser interface (list format instead of tu
 works correctly with the actual content safety actions and their iterable unpacking logic.
 """
 
+import copy
 import textwrap
-from unittest.mock import MagicMock
+from dataclasses import dataclass
+from typing import Tuple
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from nemoguardrails import RailsConfig
 from nemoguardrails.actions.rail_outcome import RailOutcome
 from nemoguardrails.guardrails.compiled_rail import RailDependencies, compile_rail
+from nemoguardrails.guardrails.iorails import REFUSAL_MESSAGE, IORails
+from nemoguardrails.guardrails.model_engine import ModelEngine
 from nemoguardrails.library.content_safety.actions import (
     content_safety_check_input,
     content_safety_check_output,
@@ -35,10 +40,13 @@ from nemoguardrails.llm.output_parsers import (
     is_content_safe,
     nemoguard_parse_prompt_safety,
     nemoguard_parse_response_safety,
+    nemotron_content_safety_parse_prompt_safety,
+    nemotron_content_safety_parse_response_safety,
     nemotron_reasoning_parse_prompt_safety,
     nemotron_reasoning_parse_response_safety,
 )
 from nemoguardrails.manifests import RailDirection
+from nemoguardrails.types import LLMResponse
 from tests.utils import FakeLLMModel, TestChat
 
 
@@ -443,3 +451,250 @@ class TestNemotronReasoningParserIntegration:
 
         assert result.is_blocked == (not expected_allowed)
         assert result.metadata["policy_violations"] == []
+
+
+PROMPT_SAFE = "User Safety: safe"
+PROMPT_UNSAFE = "User Safety: unsafe\nSafety Categories: Criminal Planning/Confessions"
+PROMPT_SAFE_RESPONSE_SAFE = "User Safety: safe\nResponse Safety: safe"
+PROMPT_SAFE_RESPONSE_UNSAFE = (
+    "User Safety: safe\nResponse Safety: unsafe\nSafety Categories: Violence, Criminal Planning/Confessions"
+)
+PROMPT_UNSAFE_RESPONSE_SAFE = (
+    "User Safety: unsafe\nResponse Safety: safe\nSafety Categories: Criminal Planning/Confessions, Violence"
+)
+PROMPT_UNSAFE_RESPONSE_UNSAFE = (
+    "User Safety: unsafe\nResponse Safety: unsafe\nSafety Categories: Criminal Planning/Confessions, Violence"
+)
+
+UNSAFE_CATEGORIES = ["Criminal Planning/Confessions", "Violence"]
+
+
+class TestNemotronContentSafetyParserIntegration:
+    """Integration tests for Nemotron content safety parsers with content safety actions."""
+
+    @pytest.mark.parametrize(
+        "response,expected_allowed,expected_violations",
+        [
+            (PROMPT_SAFE, True, []),
+            (PROMPT_UNSAFE, False, ["Criminal Planning/Confessions"]),
+            (PROMPT_SAFE_RESPONSE_SAFE, True, []),
+            (PROMPT_SAFE_RESPONSE_UNSAFE, True, []),
+            (PROMPT_UNSAFE_RESPONSE_SAFE, False, UNSAFE_CATEGORIES),
+            (PROMPT_UNSAFE_RESPONSE_UNSAFE, False, UNSAFE_CATEGORIES),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_content_safety_input_with_nemotron_content_safety_parser(
+        self, response, expected_allowed, expected_violations
+    ):
+        """Test input action with nemotron_content_safety_parse_prompt_safety parser."""
+        parsed_result = nemotron_content_safety_parse_prompt_safety(response)
+        llms, mock_task_manager = _create_mock_setup([response], parsed_result)
+        context = _create_input_context()
+
+        result = await content_safety_check_input(
+            llms=llms,
+            llm_task_manager=mock_task_manager,
+            model_name="test_model",
+            context=context,
+        )
+
+        assert result.is_blocked == (not expected_allowed)
+        assert sorted(result.metadata["policy_violations"]) == sorted(expected_violations)
+
+    @pytest.mark.parametrize(
+        "response,expected_allowed,expected_violations",
+        [
+            (PROMPT_SAFE_RESPONSE_SAFE, True, []),
+            (PROMPT_SAFE_RESPONSE_UNSAFE, False, UNSAFE_CATEGORIES),
+            (PROMPT_UNSAFE_RESPONSE_SAFE, True, []),
+            (PROMPT_UNSAFE_RESPONSE_UNSAFE, False, UNSAFE_CATEGORIES),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_content_safety_output_with_nemotron_content_safety_parser(
+        self, response, expected_allowed, expected_violations
+    ):
+        """Test output action with nemotron_content_safety_parse_response_safety parser."""
+        parsed_result = nemotron_content_safety_parse_response_safety(response)
+        llms, mock_task_manager = _create_mock_setup([response], parsed_result)
+        context = _create_output_context()
+
+        result = await content_safety_check_output(
+            llms=llms,
+            llm_task_manager=mock_task_manager,
+            model_name="test_model",
+            context=context,
+        )
+
+        assert result.is_blocked == (not expected_allowed)
+        assert sorted(result.metadata["policy_violations"]) == sorted(expected_violations)
+
+    @pytest.mark.parametrize(
+        ("action", "parser", "context"),
+        [
+            (
+                content_safety_check_input,
+                nemotron_content_safety_parse_prompt_safety,
+                _create_input_context("Some content"),
+            ),
+            (
+                content_safety_check_output,
+                nemotron_content_safety_parse_response_safety,
+                _create_output_context(),
+            ),
+        ],
+        ids=["input", "output"],
+    )
+    @pytest.mark.asyncio
+    async def test_content_safety_action_propagates_nemotron_parser_error(self, action, parser, context):
+        """Test an unparseable Nemotron verdict surfaces as an error rather than a silent block."""
+        llms, mock_task_manager = _create_mock_setup([""], None)
+        mock_task_manager.parse_task_output.side_effect = lambda task, output: parser(output)
+
+        with pytest.raises(ValueError, match="Failed to parse content safety model response"):
+            await action(
+                llms=llms,
+                llm_task_manager=mock_task_manager,
+                model_name="test_model",
+                context=context,
+            )
+
+    @pytest.mark.asyncio
+    async def test_content_safety_nemotron_parser_error_fails_closed_through_compiled_rail(self):
+        """Test a truncated Nemotron verdict fails the compiled rail closed with a parse reason."""
+        llms, mock_task_manager = _create_mock_setup([""], None)
+        mock_task_manager.parse_task_output.side_effect = lambda task, output: (
+            nemotron_content_safety_parse_prompt_safety(output)
+        )
+        dependencies = RailDependencies(llms=llms, llm_task_manager=mock_task_manager, config=MagicMock())
+
+        outcome = await compile_rail(
+            "content safety check input $model=test_model", RailDirection.INPUT, dependencies
+        ).run([{"role": "user", "content": "Some content"}])
+
+        assert outcome == RailOutcome.failure(
+            reason="content safety check input error: Failed to parse content safety model response"
+        )
+
+
+CROSS_ENGINE_USER_INPUT = "hello there"
+CROSS_ENGINE_MAIN_OUTPUT = "Hello! How can I help?"
+
+CROSS_ENGINE_CONFIG = {
+    "models": [
+        {"type": "main", "engine": "nim", "model": "meta/llama-3.3-70b-instruct"},
+        {"type": "content_safety", "engine": "nim", "model": "nvidia/nemotron-3.5-content-safety"},
+    ],
+    "rails": {
+        "input": {"flows": ["content safety check input $model=content_safety"]},
+        "output": {"flows": ["content safety check output $model=content_safety"]},
+    },
+    "prompts": [
+        {
+            "task": "content_safety_check_input $model=content_safety",
+            "content": "{{ user_input }}",
+            "output_parser": "nemotron_content_safety_parse_prompt_safety",
+            "max_tokens": 100,
+        },
+        {
+            "task": "content_safety_check_output $model=content_safety",
+            "content": "{{ user_input }}\n{{ bot_response }}",
+            "output_parser": "nemotron_content_safety_parse_response_safety",
+            "max_tokens": 100,
+        },
+    ],
+}
+
+
+@dataclass(frozen=True)
+class CrossEngineCase:
+    """One scripted content-safety verdict sequence and the outcome both engines must reach."""
+
+    case_id: str
+    safety_replies: Tuple[str, ...]
+    expect_blocked: bool
+    expected_safety_calls: int
+
+
+CROSS_ENGINE_CASES = [
+    CrossEngineCase(
+        case_id="input_safe",
+        safety_replies=(PROMPT_SAFE, PROMPT_SAFE_RESPONSE_SAFE),
+        expect_blocked=False,
+        expected_safety_calls=2,
+    ),
+    CrossEngineCase(
+        case_id="input_unsafe",
+        safety_replies=(PROMPT_UNSAFE,),
+        expect_blocked=True,
+        expected_safety_calls=1,
+    ),
+    CrossEngineCase(
+        case_id="input_safe_output_unsafe",
+        safety_replies=(PROMPT_SAFE, PROMPT_SAFE_RESPONSE_UNSAFE),
+        expect_blocked=True,
+        expected_safety_calls=2,
+    ),
+    CrossEngineCase(
+        case_id="input_unsafe_output_safe",
+        safety_replies=(PROMPT_UNSAFE, PROMPT_UNSAFE_RESPONSE_SAFE),
+        expect_blocked=True,
+        expected_safety_calls=1,
+    ),
+]
+
+
+def _assistant_content(response: object) -> str:
+    """Return the assistant message content from a generate_async result."""
+    assert isinstance(response, dict), f"expected a message dict, got {type(response).__name__}"
+    return response["content"]
+
+
+async def _llmrails_turn(safety_replies: Tuple[str, ...]) -> Tuple[str, int]:
+    """Run one turn through LLMRails with a scripted content-safety model."""
+    config = RailsConfig.from_content(config=copy.deepcopy(CROSS_ENGINE_CONFIG))
+    chat = TestChat(config, llm_completions=[CROSS_ENGINE_MAIN_OUTPUT])
+
+    safety_llm = FakeLLMModel(responses=list(safety_replies))
+    chat.app.runtime.registered_action_params["llms"]["content_safety"] = safety_llm
+
+    response = await chat.app.generate_async(messages=[{"role": "user", "content": CROSS_ENGINE_USER_INPUT}])
+    return _assistant_content(response), safety_llm.inference_count
+
+
+async def _iorails_turn(safety_replies: Tuple[str, ...]) -> Tuple[str, int]:
+    """Run one turn through IORails with a scripted content-safety model."""
+    with patch.dict("os.environ", {"NVIDIA_API_KEY": "test-key"}):
+        iorails = IORails(RailsConfig.from_content(config=copy.deepcopy(CROSS_ENGINE_CONFIG)))
+
+    async with iorails:
+        safety_mock = AsyncMock(side_effect=[LLMResponse(content=reply) for reply in safety_replies])
+        for name, engine in iorails.engine_registry._engines.items():
+            if not isinstance(engine, ModelEngine):
+                continue
+            if name == "main":
+                engine.chat_completion = AsyncMock(return_value=LLMResponse(content=CROSS_ENGINE_MAIN_OUTPUT))
+            else:
+                engine.chat_completion = safety_mock
+
+        response = await iorails.generate_async(messages=[{"role": "user", "content": CROSS_ENGINE_USER_INPUT}])
+        return _assistant_content(response), safety_mock.await_count
+
+
+ENGINE_RUNNERS = {"llmrails": _llmrails_turn, "iorails": _iorails_turn}
+
+
+class TestNemotronContentSafetyAcrossEngines:
+    """Both engines reach the same decision from one scripted Nemotron content-safety model."""
+
+    @pytest.mark.parametrize("engine", sorted(ENGINE_RUNNERS), ids=sorted(ENGINE_RUNNERS))
+    @pytest.mark.parametrize("case", CROSS_ENGINE_CASES, ids=[case.case_id for case in CROSS_ENGINE_CASES])
+    @pytest.mark.asyncio
+    async def test_engines_reach_the_same_decision(self, case: CrossEngineCase, engine: str):
+        """Test each engine blocks or allows as the scripted verdicts dictate, calling the guard equally often."""
+        content, safety_calls = await ENGINE_RUNNERS[engine](case.safety_replies)
+
+        expected_content = REFUSAL_MESSAGE if case.expect_blocked else CROSS_ENGINE_MAIN_OUTPUT
+        assert content == expected_content
+        assert safety_calls == case.expected_safety_calls
