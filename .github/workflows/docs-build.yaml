@@ -87,7 +87,8 @@ jobs:
 
       # Fork pull requests do not receive repository secrets, so FERN_TOKEN is
       # empty there and the SDK reference cannot be regenerated. Fall back to the
-      # token-free docs check instead of failing before any docs are validated.
+      # cache-only docs check instead of failing before any docs are validated;
+      # it never generates, and a cache miss fails with an explicit message.
       - name: Check Fern docs
         env:
           FERN_TOKEN: ${{ secrets.DOCS_FERN_TOKEN }}
