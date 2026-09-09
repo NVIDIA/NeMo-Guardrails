@@ -20,6 +20,34 @@ from pydantic import ValidationError
 from nemoguardrails.rails.llm.config import Model, RailsConfig, RailsConfigData, TaskPrompt
 
 
+@pytest.mark.parametrize(
+    "config_path",
+    [
+        pytest.param("config,comma", id="comma"),
+        pytest.param(" config", id="leading-space"),
+        pytest.param("config ", id="trailing-space"),
+        pytest.param("\tconfig", id="leading-tab"),
+        pytest.param("config\n", id="trailing-newline"),
+    ],
+)
+def test_from_path_rejects_ambiguous_path_characters(config_path):
+    with pytest.raises(
+        ValueError,
+        match="Paths cannot contain commas or begin or end with whitespace",
+    ):
+        RailsConfig.from_path(config_path)
+
+
+def test_from_path_allows_internal_spaces(tmp_path):
+    config_path = tmp_path / "config with spaces"
+    config_path.mkdir()
+    (config_path / "config.yml").write_text("models: []\n", encoding="utf-8")
+
+    config = RailsConfig.from_path(str(config_path))
+
+    assert config.config_path == str(config_path)
+
+
 def test_task_prompt_valid_content():
     prompt = TaskPrompt(task="example_task", content="This is a valid prompt.")
     assert prompt.task == "example_task"

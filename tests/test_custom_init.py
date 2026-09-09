@@ -77,20 +77,6 @@ def init(app):
     assert rails.runtime.llm_task_manager.output_parsers["policy_parser"]("raw output") == [False]
 
 
-def test_config_path_containing_comma_is_rejected(tmp_path):
-    config_path = tmp_path / "config,with-comma"
-    _write_config(
-        config_path,
-        """
-def init(app):
-    app.register_action_param("config_initialized", True)
-""",
-    )
-
-    with pytest.raises(ValueError, match="Commas are not supported"):
-        RailsConfig.from_path(str(config_path))
-
-
 def test_custom_init_deduplicates_imported_and_combined_config(tmp_path):
     imported_config_path = tmp_path / "imported"
     _write_config(
