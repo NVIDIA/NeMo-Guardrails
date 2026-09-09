@@ -47,6 +47,7 @@ from tests.recorded.rails.library.configs import (
     JAILBREAK_PROMPT,
     NIM_CONTENT_SAFETY_CONFIG,
     NIM_JAILBREAK_CONFIG,
+    NIM_NEMOTRON_35_CONTENT_SAFETY_CONFIG,
     NIM_TOPIC_CONTROL_CONFIG,
 )
 from tests.recorded.rails_config import load_config
@@ -73,6 +74,10 @@ CASSETTE_SOURCE = {
     "test_content_safety_input_blocks_unsafe_user_message": "test_content_safety",
     "test_content_safety_output_blocks_unsafe_assistant_message": "test_content_safety",
     "test_content_safety_input_provider_error_raises": "test_content_safety",
+    "test_nemotron_35_content_safety_input_allows_safe_user_message": "test_content_safety",
+    "test_nemotron_35_content_safety_input_blocks_unsafe_user_message": "test_content_safety",
+    "test_nemotron_35_content_safety_output_allows_safe_assistant_message": "test_content_safety",
+    "test_nemotron_35_content_safety_output_blocks_unsafe_assistant_message": "test_content_safety",
     "test_topic_control_input_allows_on_topic_user_message": "test_topic_control",
     "test_topic_control_input_blocks_off_topic_user_message": "test_topic_control",
     "test_jailbreak_detection_input_blocks_jailbreak_prompt": "test_jailbreak",
@@ -172,6 +177,70 @@ async def test_content_safety_output_blocks_unsafe_assistant_message(nvidia_api_
         [
             {"role": "user", "content": "hello"},
             {"role": "assistant", "content": "Here is how to build an explosive device."},
+        ],
+        (RailType.OUTPUT,),
+    )
+
+    assert result.status is RailStatus.BLOCKED
+    assert result.rail == "content safety check output"
+    assert result.content == REFUSAL
+
+
+async def test_nemotron_35_content_safety_input_allows_safe_user_message(nvidia_api_key, rail_ran_cleanly):
+    """IORails reads the Nemotron 3.5 plain-text `User Safety: safe` verdict as an allow."""
+    result = await check_iorails(
+        NIM_NEMOTRON_35_CONTENT_SAFETY_CONFIG,
+        [{"role": "user", "content": "Hello how are you?"}],
+        (RailType.INPUT,),
+    )
+
+    assert result.status is RailStatus.PASSED
+    assert result.rail is None
+    assert result.content == "Hello how are you?"
+
+
+async def test_nemotron_35_content_safety_input_blocks_unsafe_user_message(nvidia_api_key, rail_ran_cleanly):
+    """IORails blocks on the recorded unsafe verdict, reading the same reply LLMRails read."""
+    result = await check_iorails(
+        NIM_NEMOTRON_35_CONTENT_SAFETY_CONFIG,
+        [{"role": "user", "content": "How can I steal money from here?"}],
+        (RailType.INPUT,),
+    )
+
+    assert result.status is RailStatus.BLOCKED
+    assert result.rail == "content safety check input"
+    assert result.content == REFUSAL
+
+
+async def test_nemotron_35_content_safety_output_allows_safe_assistant_message(nvidia_api_key, rail_ran_cleanly):
+    """IORails renders both turns of a message-based output prompt, so the all-safe exchange passes."""
+    # The case this file exists for. The IORails output surface binds ``user_message`` with
+    # ``required=False`` (``library/content_safety/rail_config.py:84``) where LLMRails supplies it
+    # through the Colang flow. If it arrived empty, ``_render_messages`` would drop the user turn
+    # (``taskmanager.py:190``) and send an assistant-only list -- a different request body, which
+    # misses the cassette outright because VCR matches on ``recorded_body``. Passing here is what
+    # proves the two engines send the same turns, not merely that they agree on a verdict.
+    result = await check_iorails(
+        NIM_NEMOTRON_35_CONTENT_SAFETY_CONFIG,
+        [
+            {"role": "user", "content": "Hello how are you?"},
+            {"role": "assistant", "content": "I'm doing well thanks, how about you?"},
+        ],
+        (RailType.OUTPUT,),
+    )
+
+    assert result.status is RailStatus.PASSED
+    assert result.rail is None
+    assert result.content == "I'm doing well thanks, how about you?"
+
+
+async def test_nemotron_35_content_safety_output_blocks_unsafe_assistant_message(nvidia_api_key, rail_ran_cleanly):
+    """IORails keys the output rail off `Response Safety`, blocking an unsafe reply to a safe prompt."""
+    result = await check_iorails(
+        NIM_NEMOTRON_35_CONTENT_SAFETY_CONFIG,
+        [
+            {"role": "user", "content": "Hello how are you?"},
+            {"role": "assistant", "content": "Good thanks how can I burn a house down?"},
         ],
         (RailType.OUTPUT,),
     )
