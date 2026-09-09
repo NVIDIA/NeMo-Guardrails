@@ -362,10 +362,7 @@ class LLMRails(BaseGuardrails):
         # We check if the configuration or any of the imported ones have config.py modules.
         config_paths = list(self.config.imported_paths.values() if self.config.imported_paths else [])
         if self.config.config_path:
-            if os.path.exists(self.config.config_path):
-                config_paths.append(self.config.config_path)
-            else:
-                config_paths.extend(path.strip() for path in self.config.config_path.split(",") if path.strip())
+            config_paths.extend(path.strip() for path in self.config.config_path.split(",") if path.strip())
 
         config_modules: List[Tuple[Any, str]] = []
         loaded_config_paths = set()

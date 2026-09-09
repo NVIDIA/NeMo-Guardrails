@@ -15,6 +15,7 @@
 
 import os
 import re
+from pathlib import Path
 
 import pytest
 
@@ -44,9 +45,10 @@ def _write_config(config_path, config_module, config_content="models: []\n"):
     return (config_path / "config.py").write_text(config_module, encoding="utf-8")
 
 
-def test_custom_init_runs_for_each_combined_config(tmp_path):
-    first_config_path = tmp_path / "first"
-    second_config_path = tmp_path / "second"
+def test_custom_init_runs_for_each_combined_config(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    first_config_path = Path("first")
+    second_config_path = Path("second")
     _write_config(
         first_config_path,
         """
@@ -65,6 +67,7 @@ def init(app):
     app.register_action_param("second_config_initialized", True)
 """,
     )
+    Path("first,second").mkdir()
 
     config = RailsConfig.from_path(str(first_config_path)) + RailsConfig.from_path(str(second_config_path))
     rails = LLMRails(config, llm=FakeLLMModel(responses=[]))
@@ -74,7 +77,7 @@ def init(app):
     assert rails.runtime.llm_task_manager.output_parsers["policy_parser"]("raw output") == [False]
 
 
-def test_custom_init_preserves_single_config_path_containing_comma(tmp_path):
+def test_config_path_containing_comma_is_rejected(tmp_path):
     config_path = tmp_path / "config,with-comma"
     _write_config(
         config_path,
@@ -84,9 +87,8 @@ def init(app):
 """,
     )
 
-    rails = LLMRails(RailsConfig.from_path(str(config_path)), llm=FakeLLMModel(responses=[]))
-
-    assert rails.runtime.registered_action_params["config_initialized"] is True
+    with pytest.raises(ValueError, match="Commas are not supported"):
+        RailsConfig.from_path(str(config_path))
 
 
 def test_custom_init_deduplicates_imported_and_combined_config(tmp_path):
