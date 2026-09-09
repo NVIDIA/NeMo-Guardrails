@@ -19,10 +19,10 @@ These tests verify that the modified parser interface (list format instead of tu
 works correctly with the actual content safety actions and their iterable unpacking logic.
 """
 
-import copy
 import textwrap
 from dataclasses import dataclass
-from typing import Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Sequence, Tuple
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -581,30 +581,47 @@ class TestNemotronContentSafetyParserIntegration:
 CROSS_ENGINE_USER_INPUT = "hello there"
 CROSS_ENGINE_MAIN_OUTPUT = "Hello! How can I help?"
 
-CROSS_ENGINE_CONFIG = {
-    "models": [
-        {"type": "main", "engine": "nim", "model": "meta/llama-3.3-70b-instruct"},
-        {"type": "content_safety", "engine": "nim", "model": "nvidia/nemotron-3.5-content-safety"},
-    ],
-    "rails": {
-        "input": {"flows": ["content safety check input $model=content_safety"]},
-        "output": {"flows": ["content safety check output $model=content_safety"]},
-    },
-    "prompts": [
-        {
-            "task": "content_safety_check_input $model=content_safety",
-            "content": "{{ user_input }}",
-            "output_parser": "nemotron_content_safety_parse_prompt_safety",
-            "max_tokens": 100,
-        },
-        {
-            "task": "content_safety_check_output $model=content_safety",
-            "content": "{{ user_input }}\n{{ bot_response }}",
-            "output_parser": "nemotron_content_safety_parse_response_safety",
-            "max_tokens": 100,
-        },
-    ],
-}
+EXAMPLE_CONFIG_PATH = Path(__file__).parent.parent / "examples" / "configs" / "nemotron-3.5-content-safety"
+
+EXAMPLE_CHAT_TEMPLATE_KWARGS = {"enable_thinking": False, "request_categories": "/categories"}
+
+
+def _load_example_config() -> RailsConfig:
+    """Load the shipped example config, so these tests break when it drifts."""
+    return RailsConfig.from_path(str(EXAMPLE_CONFIG_PATH))
+
+
+def _turns(messages: Sequence[Any]) -> Tuple[Tuple[str, str], ...]:
+    """Normalise ChatMessage objects (LLMRails) or wire dicts (IORails) to (role, content) pairs."""
+    normalised = []
+    for message in messages:
+        if isinstance(message, dict):
+            normalised.append((message["role"], message["content"]))
+        else:
+            normalised.append((message.role.value, message.content))
+    return tuple(normalised)
+
+
+class _RecordingFakeLLMModel(FakeLLMModel):
+    """FakeLLMModel that also records the messages of every call."""
+
+    def __init__(self, responses: List[str]):
+        super().__init__(responses=responses)
+        self.recorded_messages: List[Any] = []
+
+    async def generate_async(self, prompt, *, stop=None, **kwargs):
+        self.recorded_messages.append(prompt)
+        return await super().generate_async(prompt, stop=stop, **kwargs)
+
+
+@dataclass(frozen=True)
+class EngineRun:
+    """What one turn through an engine produced, and what the guard model was asked for."""
+
+    content: str
+    safety_calls: int
+    safety_turns: Tuple[Tuple[Tuple[str, str], ...], ...]
+    safety_params: Tuple[Dict[str, Any], ...]
 
 
 @dataclass(frozen=True)
@@ -644,6 +661,8 @@ CROSS_ENGINE_CASES = [
     ),
 ]
 
+ALL_SAFE_REPLIES = (PROMPT_SAFE, PROMPT_SAFE_RESPONSE_SAFE)
+
 
 def _assistant_content(response: object) -> str:
     """Return the assistant message content from a generate_async result."""
@@ -651,22 +670,27 @@ def _assistant_content(response: object) -> str:
     return response["content"]
 
 
-async def _llmrails_turn(safety_replies: Tuple[str, ...]) -> Tuple[str, int]:
+async def _llmrails_turn(safety_replies: Tuple[str, ...]) -> EngineRun:
     """Run one turn through LLMRails with a scripted content-safety model."""
-    config = RailsConfig.from_content(config=copy.deepcopy(CROSS_ENGINE_CONFIG))
-    chat = TestChat(config, llm_completions=[CROSS_ENGINE_MAIN_OUTPUT])
+    chat = TestChat(_load_example_config(), llm_completions=[CROSS_ENGINE_MAIN_OUTPUT])
 
-    safety_llm = FakeLLMModel(responses=list(safety_replies))
+    safety_llm = _RecordingFakeLLMModel(list(safety_replies))
     chat.app.runtime.registered_action_params["llms"]["content_safety"] = safety_llm
 
     response = await chat.app.generate_async(messages=[{"role": "user", "content": CROSS_ENGINE_USER_INPUT}])
-    return _assistant_content(response), safety_llm.inference_count
+    return EngineRun(
+        content=_assistant_content(response),
+        safety_calls=safety_llm.inference_count,
+        safety_turns=tuple(_turns(messages) for messages in safety_llm.recorded_messages),
+        # The fake replaces the configured model outright, so there is no request body to inspect.
+        safety_params=(),
+    )
 
 
-async def _iorails_turn(safety_replies: Tuple[str, ...]) -> Tuple[str, int]:
+async def _iorails_turn(safety_replies: Tuple[str, ...]) -> EngineRun:
     """Run one turn through IORails with a scripted content-safety model."""
     with patch.dict("os.environ", {"NVIDIA_API_KEY": "test-key"}):
-        iorails = IORails(RailsConfig.from_content(config=copy.deepcopy(CROSS_ENGINE_CONFIG)))
+        iorails = IORails(_load_example_config())
 
     async with iorails:
         safety_mock = AsyncMock(side_effect=[LLMResponse(content=reply) for reply in safety_replies])
@@ -679,7 +703,14 @@ async def _iorails_turn(safety_replies: Tuple[str, ...]) -> Tuple[str, int]:
                 engine.chat_completion = safety_mock
 
         response = await iorails.generate_async(messages=[{"role": "user", "content": CROSS_ENGINE_USER_INPUT}])
-        return _assistant_content(response), safety_mock.await_count
+        return EngineRun(
+            content=_assistant_content(response),
+            safety_calls=safety_mock.await_count,
+            safety_turns=tuple(_turns(call.args[0]) for call in safety_mock.await_args_list),
+            # generate_from_messages merges the model's `parameters` into the per-call kwargs before
+            # reaching chat_completion, so the mock observes the request body the engine assembled.
+            safety_params=tuple(dict(call.kwargs) for call in safety_mock.await_args_list),
+        )
 
 
 ENGINE_RUNNERS = {"llmrails": _llmrails_turn, "iorails": _iorails_turn}
@@ -693,8 +724,38 @@ class TestNemotronContentSafetyAcrossEngines:
     @pytest.mark.asyncio
     async def test_engines_reach_the_same_decision(self, case: CrossEngineCase, engine: str):
         """Test each engine blocks or allows as the scripted verdicts dictate, calling the guard equally often."""
-        content, safety_calls = await ENGINE_RUNNERS[engine](case.safety_replies)
+        run = await ENGINE_RUNNERS[engine](case.safety_replies)
 
         expected_content = REFUSAL_MESSAGE if case.expect_blocked else CROSS_ENGINE_MAIN_OUTPUT
-        assert content == expected_content
-        assert safety_calls == case.expected_safety_calls
+        assert run.content == expected_content
+        assert run.safety_calls == case.expected_safety_calls
+
+
+class TestNemotronContentSafetyExampleConfigWiring:
+    """The shipped example config renders the turns and request parameters the model requires."""
+
+    @pytest.mark.parametrize("engine", sorted(ENGINE_RUNNERS), ids=sorted(ENGINE_RUNNERS))
+    @pytest.mark.asyncio
+    async def test_input_rail_sends_only_the_user_turn(self, engine: str):
+        """Test the input rail sends a lone user turn, which is why the model omits Response Safety there."""
+        run = await ENGINE_RUNNERS[engine](ALL_SAFE_REPLIES)
+        assert run.safety_turns[0] == (("user", CROSS_ENGINE_USER_INPUT),)
+
+    @pytest.mark.parametrize("engine", sorted(ENGINE_RUNNERS), ids=sorted(ENGINE_RUNNERS))
+    @pytest.mark.asyncio
+    async def test_output_rail_sends_the_user_turn_then_the_assistant_turn(self, engine: str):
+        """Test the output rail sends both turns in the order the model's chat template requires."""
+        run = await ENGINE_RUNNERS[engine](ALL_SAFE_REPLIES)
+        assert run.safety_turns[1] == (
+            ("user", CROSS_ENGINE_USER_INPUT),
+            ("assistant", CROSS_ENGINE_MAIN_OUTPUT),
+        )
+
+    @pytest.mark.asyncio
+    async def test_chat_template_kwargs_reach_every_guard_request(self):
+        """Test the example config's chat_template_kwargs are merged into every content-safety request."""
+        run = await _iorails_turn(ALL_SAFE_REPLIES)
+
+        assert len(run.safety_params) == 2
+        for params in run.safety_params:
+            assert params["chat_template_kwargs"] == EXAMPLE_CHAT_TEMPLATE_KWARGS
