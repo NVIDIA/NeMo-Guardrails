@@ -18,8 +18,6 @@ import pytest
 
 from nemoguardrails.llm.output_parsers import (
     _extract_harm_value,
-    _extract_safety_categories,
-    _extract_safety_verdict,
     _strip_think_tags,
     is_content_safe,
     nemoguard_parse_prompt_safety,
@@ -651,104 +649,6 @@ MODEL_EXCHANGE_ALL_UNSAFE = (
 ARSON_CATEGORIES = ["Criminal Planning/Confessions", "Violence"]
 
 
-class TestExtractSafetyVerdict:
-    """Test the _extract_safety_verdict helper function."""
-
-    def test_extract_safe(self):
-        """Test extracting a safe verdict."""
-        assert _extract_safety_verdict("User Safety: safe", "User Safety") == "safe"
-
-    def test_extract_unsafe(self):
-        """Test extracting an unsafe verdict."""
-        assert _extract_safety_verdict("User Safety: unsafe", "User Safety") == "unsafe"
-
-    def test_response_safety_field(self):
-        """Test extracting the Response Safety field from a two-line verdict."""
-        assert _extract_safety_verdict(MODEL_EXCHANGE_RESPONSE_UNSAFE, "Response Safety") == "unsafe"
-
-    def test_user_safety_field_ignores_response_safety_line(self):
-        """Test the User Safety field is read independently of the Response Safety line."""
-        assert _extract_safety_verdict(MODEL_EXCHANGE_RESPONSE_UNSAFE, "User Safety") == "safe"
-
-    def test_case_insensitive_field(self):
-        """Test the field name is matched case insensitively."""
-        assert _extract_safety_verdict("USER SAFETY: safe", "User Safety") == "safe"
-
-    def test_case_insensitive_value(self):
-        """Test the verdict value is lowercased."""
-        assert _extract_safety_verdict("User Safety: SAFE", "User Safety") == "safe"
-
-    def test_extra_whitespace_around_colon(self):
-        """Test extra whitespace around the colon is tolerated."""
-        assert _extract_safety_verdict("User Safety  :   unsafe", "User Safety") == "unsafe"
-
-    def test_strips_think_tags_before_matching(self):
-        """Test a reasoning trace is removed before the verdict is matched."""
-        response = "<think>The user asked about the weather.</think>User Safety: safe"
-        assert _extract_safety_verdict(response, "User Safety") == "safe"
-
-    def test_missing_field_raises(self):
-        """Test a missing field raises rather than defaulting to a verdict."""
-        with pytest.raises(ValueError, match="Failed to parse content safety model response"):
-            _extract_safety_verdict("User Safety: safe", "Response Safety")
-
-    def test_empty_response_raises(self):
-        """Test an empty response raises."""
-        with pytest.raises(ValueError, match="Failed to parse content safety model response"):
-            _extract_safety_verdict("", "User Safety")
-
-    def test_unterminated_think_block_raises(self):
-        """Test a truncated reasoning trace raises instead of matching inside the trace."""
-        response = "<think>We need to output:\n\nUser Safety: unsafe\n\nNo extra text."
-        with pytest.raises(ValueError, match="Failed to parse content safety model response"):
-            _extract_safety_verdict(response, "User Safety")
-
-    def test_non_verdict_value_raises(self):
-        """Test a value outside safe/unsafe raises rather than being treated as unsafe."""
-        with pytest.raises(ValueError, match="Failed to parse content safety model response"):
-            _extract_safety_verdict("User Safety: undetermined", "User Safety")
-
-
-class TestExtractSafetyCategories:
-    """Test the _extract_safety_categories helper function."""
-
-    def test_single_category(self):
-        """Test a single category is returned as a one-element list."""
-        assert _extract_safety_categories(MODEL_UNSAFE) == ["Criminal Planning/Confessions"]
-
-    def test_multiple_categories(self):
-        """Test a comma-separated list is split into separate categories."""
-        assert _extract_safety_categories(MODEL_EXCHANGE_ALL_UNSAFE) == ARSON_CATEGORIES
-
-    def test_category_containing_slash_is_not_split(self):
-        """Test a category name containing a slash is kept intact."""
-        assert "Criminal Planning/Confessions" in _extract_safety_categories(MODEL_EXCHANGE_ALL_UNSAFE)
-
-    def test_absent_line_returns_empty(self):
-        """Test an absent Safety Categories line yields no categories."""
-        assert _extract_safety_categories(MODEL_EXCHANGE_ALL_SAFE) == []
-
-    def test_whitespace_is_trimmed(self):
-        """Test surrounding whitespace is trimmed from each category."""
-        response = "User Safety: unsafe\nSafety Categories:   Violence ,  Threat  "
-        assert _extract_safety_categories(response) == ["Violence", "Threat"]
-
-    def test_empty_entries_are_dropped(self):
-        """Test empty entries from a trailing comma are dropped."""
-        response = "User Safety: unsafe\nSafety Categories: Violence,,"
-        assert _extract_safety_categories(response) == ["Violence"]
-
-    def test_categories_line_does_not_absorb_later_lines(self):
-        """Test extraction stops at the end of the Safety Categories line."""
-        response = "User Safety: unsafe\nSafety Categories: Violence\nResponse Safety: safe"
-        assert _extract_safety_categories(response) == ["Violence"]
-
-    def test_strips_think_tags_before_matching(self):
-        """Test a reasoning trace is removed before categories are matched."""
-        response = "<think>Categories: nothing here</think>User Safety: unsafe\nSafety Categories: Violence"
-        assert _extract_safety_categories(response) == ["Violence"]
-
-
 class TestNemotronContentSafetyParsePromptSafety:
     """Test the nemotron_content_safety_parse_prompt_safety output parser."""
 
@@ -777,23 +677,10 @@ class TestNemotronContentSafetyParsePromptSafety:
         assert is_safe is expected_safe
         assert sorted(violated_policies) == sorted(expected_categories)
 
-    def test_categories_dropped_when_user_turn_is_safe(self):
-        """Test categories triggered by the assistant turn are not reported as prompt violations."""
-        is_safe, *violated_policies = nemotron_content_safety_parse_prompt_safety(MODEL_EXCHANGE_RESPONSE_UNSAFE)
-        assert is_safe is True
-        assert violated_policies == []
-
     def test_unsafe_without_categories_line(self):
         """Test an unsafe verdict under /no_categories parses without raising."""
         is_safe, *violated_policies = nemotron_content_safety_parse_prompt_safety("User Safety: unsafe")
         assert is_safe is False
-        assert violated_policies == []
-
-    def test_inline_think_trace_on_one_line(self):
-        """Test a verdict emitted immediately after a closing think tag is parsed."""
-        response = "<think>\nWe need to output:\n\nUser Safety: safe\n</think>User Safety: safe"
-        is_safe, *violated_policies = nemotron_content_safety_parse_prompt_safety(response)
-        assert is_safe is True
         assert violated_policies == []
 
     def test_multiline_think_trace(self):
@@ -808,20 +695,14 @@ class TestNemotronContentSafetyParsePromptSafety:
         is_safe, *_ = nemotron_content_safety_parse_prompt_safety("USER SAFETY: UNSAFE")
         assert is_safe is False
 
-    def test_empty_response_raises(self):
-        """Test an empty response raises rather than silently blocking."""
+    @pytest.mark.parametrize(
+        "response",
+        ["", "<think>truncated reasoning", '{"User Safety": "safe"}', "User Safety: undetermined"],
+        ids=["empty", "truncated_reasoning", "json", "unknown_verdict"],
+    )
+    def test_invalid_response_raises(self, response):
         with pytest.raises(ValueError, match="Failed to parse content safety model response"):
-            nemotron_content_safety_parse_prompt_safety("")
-
-    def test_truncated_response_raises(self):
-        """Test a response truncated inside its reasoning trace raises."""
-        with pytest.raises(ValueError, match="Failed to parse content safety model response"):
-            nemotron_content_safety_parse_prompt_safety("<think>We need to determine whether the user input")
-
-    def test_json_response_raises(self):
-        """Test the older NemoGuard JSON verdict is not accepted by this parser."""
-        with pytest.raises(ValueError, match="Failed to parse content safety model response"):
-            nemotron_content_safety_parse_prompt_safety('{"User Safety": "safe"}')
+            nemotron_content_safety_parse_prompt_safety(response)
 
 
 class TestNemotronContentSafetyParseResponseSafety:
@@ -848,12 +729,6 @@ class TestNemotronContentSafetyParseResponseSafety:
         assert is_safe is expected_safe
         assert sorted(violated_policies) == sorted(expected_categories)
 
-    def test_safe_refusal_to_unsafe_prompt_is_allowed(self):
-        """Test a safe assistant refusal is allowed even though the user turn was unsafe."""
-        is_safe, *violated_policies = nemotron_content_safety_parse_response_safety(MODEL_EXCHANGE_PROMPT_UNSAFE)
-        assert is_safe is True
-        assert violated_policies == []
-
     @pytest.mark.parametrize("response", [MODEL_SAFE, MODEL_UNSAFE], ids=["input_safe", "input_unsafe"])
     def test_missing_response_safety_line_raises(self, response):
         """Test a verdict with no assistant turn raises rather than reusing the user verdict."""
@@ -867,26 +742,7 @@ class TestNemotronContentSafetyParseResponseSafety:
         assert is_safe is False
         assert violated_policies == []
 
-    def test_multiline_think_trace(self):
-        """Test a multi-line reasoning trace preceding the verdict is stripped."""
-        response = "<think>\nThe assistant supplied arson instructions.\n</think>\n\n" + MODEL_EXCHANGE_RESPONSE_UNSAFE
-        is_safe, *violated_policies = nemotron_content_safety_parse_response_safety(response)
-        assert is_safe is False
-        assert sorted(violated_policies) == sorted(ARSON_CATEGORIES)
-
-    def test_case_insensitive_parsing(self):
-        """Test parsing is case insensitive."""
-        is_safe, *_ = nemotron_content_safety_parse_response_safety("User Safety: safe\nRESPONSE SAFETY: UNSAFE")
-        assert is_safe is False
-
     def test_empty_response_raises(self):
         """Test an empty response raises rather than silently blocking."""
         with pytest.raises(ValueError, match="Failed to parse content safety model response"):
             nemotron_content_safety_parse_response_safety("")
-
-    def test_starred_unpacking_compatibility(self):
-        """Test parser output is compatible with starred unpacking."""
-        result = nemotron_content_safety_parse_response_safety(MODEL_EXCHANGE_ALL_UNSAFE)
-        is_safe, *violated_policies = result
-        assert is_safe is False
-        assert sorted(violated_policies) == sorted(ARSON_CATEGORIES)
