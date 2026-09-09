@@ -360,19 +360,34 @@ class LLMRails(BaseGuardrails):
                 flow_config["is_subflow"] = True
 
         # We check if the configuration or any of the imported ones have config.py modules.
-        config_modules = []
-        for _path in list(self.config.imported_paths.values() if self.config.imported_paths else []) + [
-            self.config.config_path
-        ]:
-            if _path:
-                filepath = os.path.join(_path, "config.py")
-                if os.path.exists(filepath):
+        config_paths = list(self.config.imported_paths.values() if self.config.imported_paths else [])
+        if self.config.config_path:
+            if os.path.exists(self.config.config_path):
+                config_paths.append(self.config.config_path)
+            else:
+                config_paths.extend(path.strip() for path in self.config.config_path.split(",") if path.strip())
+
+        config_modules: List[Tuple[Any, str]] = []
+        loaded_config_paths = set()
+        for _path in config_paths:
+            canonical_path = os.path.realpath(_path)
+            if canonical_path in loaded_config_paths:
+                continue
+            loaded_config_paths.add(canonical_path)
+
+            filepath = os.path.join(_path, "config.py")
+            if os.path.exists(filepath):
+                try:
                     filename = os.path.basename(filepath)
                     spec = importlib.util.spec_from_file_location(filename, filepath)
-                    if spec and spec.loader:
-                        config_module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(config_module)
-                        config_modules.append(config_module)
+                    if not spec or not spec.loader:
+                        raise ImportError("Could not create a module loader.")
+
+                    config_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(config_module)
+                except Exception as exc:
+                    raise RuntimeError(f"Failed to load configuration module at {filepath}.") from exc
+                config_modules.append((config_module, filepath))
 
         colang_version_to_runtime: Dict[str, Type[Runtime]] = {
             "1.0": RuntimeV1_0,
@@ -389,9 +404,12 @@ class LLMRails(BaseGuardrails):
         # If we have a config_modules with an `init` function, we call it.
         # We need to call this here because the `init` might register additional
         # LLM providers.
-        for config_module in config_modules:
+        for config_module, filepath in config_modules:
             if hasattr(config_module, "init"):
-                config_module.init(self)
+                try:
+                    config_module.init(self)
+                except Exception as exc:
+                    raise RuntimeError(f"Failed to initialize configuration module at {filepath}.") from exc
 
         # If we have a customized embedding model, we'll use it.
         for model in self.config.models:

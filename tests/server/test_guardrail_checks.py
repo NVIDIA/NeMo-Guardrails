@@ -21,8 +21,11 @@ pytest.importorskip("openai", reason="openai is required for server tests")
 from fastapi.testclient import TestClient
 
 from nemoguardrails.exceptions import RailTypeNotConfiguredError
+from nemoguardrails.rails import LLMRails
+from nemoguardrails.rails.llm.config import RailsConfig
 from nemoguardrails.rails.llm.options import RailsResult, RailStatus, RailType
 from nemoguardrails.server import api
+from nemoguardrails.testing.fake_model import FakeLLMModel
 
 client = TestClient(api.app)
 
@@ -129,6 +132,90 @@ def test_config_id_resolves():
 
     assert resp.status_code == 200
     mock_get.assert_called_once_with(["my_config"], model_name="test")
+
+
+def test_config_py_parser_has_library_and_service_parity_for_single_and_multiple_configs(tmp_path, monkeypatch):
+    first_config_path = tmp_path / "first"
+    first_config_path.mkdir()
+    (first_config_path / "config.yml").write_text(
+        """
+models: []
+rails:
+  input:
+    flows:
+      - self check input
+prompts:
+  - task: self_check_input
+    content: "{{ user_input }}"
+    output_parser: policy_parser
+""",
+        encoding="utf-8",
+    )
+    (first_config_path / "config.py").write_text(
+        """
+def parse_policy_output(_response):
+    return [False]
+
+def init(app):
+    app.register_output_parser(parse_policy_output, "policy_parser")
+    app.register_action_param("first_config_initialized", True)
+""",
+        encoding="utf-8",
+    )
+
+    second_config_path = tmp_path / "second"
+    second_config_path.mkdir()
+    (second_config_path / "config.yml").write_text("models: []\n", encoding="utf-8")
+    (second_config_path / "config.py").write_text(
+        """
+def init(app):
+    app.register_action_param("second_config_initialized", True)
+""",
+        encoding="utf-8",
+    )
+
+    library_rails = LLMRails(
+        RailsConfig.from_path(str(first_config_path)),
+        llm=FakeLLMModel(responses=["unparsed output"]),
+    )
+    library_result = library_rails.check(
+        messages=[{"role": "user", "content": "hello"}],
+        rail_types=[RailType.INPUT],
+    )
+
+    created_rails = []
+
+    def create_service_rails(config, verbose=False):
+        rails = LLMRails(config, llm=FakeLLMModel(responses=["unparsed output"]), verbose=verbose)
+        created_rails.append(rails)
+        return rails
+
+    monkeypatch.setattr(api.app, "rails_config_path", str(tmp_path))
+    monkeypatch.setattr(api.app, "single_config_mode", False)
+    monkeypatch.setattr(api, "LLMRails", create_service_rails)
+
+    single_response = _post(
+        {
+            "model": "test",
+            "messages": [{"role": "user", "content": "hello"}],
+            "guardrails": {"config_id": "first", "rail_types": ["input"]},
+        }
+    )
+    multiple_response = _post(
+        {
+            "model": "test",
+            "messages": [{"role": "user", "content": "hello"}],
+            "guardrails": {"config_ids": ["first", "second"], "rail_types": ["input"]},
+        }
+    )
+
+    assert library_result.status is RailStatus.BLOCKED
+    assert single_response.status_code == 200
+    assert single_response.json()["status"] == library_result.status.value
+    assert multiple_response.status_code == 200
+    assert multiple_response.json()["status"] == RailStatus.BLOCKED.value
+    assert created_rails[1].runtime.registered_action_params["first_config_initialized"] is True
+    assert created_rails[1].runtime.registered_action_params["second_config_initialized"] is True
 
 
 def test_default_config_used_when_none_specified():

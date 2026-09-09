@@ -14,8 +14,12 @@
 # limitations under the License.
 
 import os
+import re
 
-from nemoguardrails import RailsConfig
+import pytest
+
+from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails.testing.fake_model import FakeLLMModel
 from tests.utils import TestChat
 
 CONFIGS_FOLDER = os.path.join(os.path.dirname(__file__), ".", "test_configs")
@@ -32,3 +36,96 @@ def test_custom_init():
 
     chat >> "hi"
     chat << "John"
+
+
+def _write_config(config_path, config_module, config_content="models: []\n"):
+    config_path.mkdir()
+    (config_path / "config.yml").write_text(config_content, encoding="utf-8")
+    return (config_path / "config.py").write_text(config_module, encoding="utf-8")
+
+
+def test_custom_init_runs_for_each_combined_config(tmp_path):
+    first_config_path = tmp_path / "first"
+    second_config_path = tmp_path / "second"
+    _write_config(
+        first_config_path,
+        """
+def parse_policy_output(_response):
+    return [False]
+
+def init(app):
+    app.register_output_parser(parse_policy_output, "policy_parser")
+    app.register_action_param("first_config_initialized", True)
+""",
+    )
+    _write_config(
+        second_config_path,
+        """
+def init(app):
+    app.register_action_param("second_config_initialized", True)
+""",
+    )
+
+    config = RailsConfig.from_path(str(first_config_path)) + RailsConfig.from_path(str(second_config_path))
+    rails = LLMRails(config, llm=FakeLLMModel(responses=[]))
+
+    assert rails.runtime.registered_action_params["first_config_initialized"] is True
+    assert rails.runtime.registered_action_params["second_config_initialized"] is True
+    assert rails.runtime.llm_task_manager.output_parsers["policy_parser"]("raw output") == [False]
+
+
+def test_custom_init_preserves_single_config_path_containing_comma(tmp_path):
+    config_path = tmp_path / "config,with-comma"
+    _write_config(
+        config_path,
+        """
+def init(app):
+    app.register_action_param("config_initialized", True)
+""",
+    )
+
+    rails = LLMRails(RailsConfig.from_path(str(config_path)), llm=FakeLLMModel(responses=[]))
+
+    assert rails.runtime.registered_action_params["config_initialized"] is True
+
+
+def test_custom_init_deduplicates_imported_and_combined_config(tmp_path):
+    imported_config_path = tmp_path / "imported"
+    _write_config(
+        imported_config_path,
+        """
+def init(app):
+    params = app.runtime.registered_action_params
+    app.register_action_param("init_count", params.get("init_count", 0) + 1)
+""",
+    )
+    importing_config_path = tmp_path / "importing"
+    _write_config(
+        importing_config_path,
+        "",
+        f'models: []\nimport_paths:\n  - "{imported_config_path}"\n',
+    )
+
+    config = RailsConfig.from_path(str(importing_config_path)) + RailsConfig.from_path(str(imported_config_path))
+    rails = LLMRails(config, llm=FakeLLMModel(responses=[]))
+
+    assert rails.runtime.registered_action_params["init_count"] == 1
+
+
+@pytest.mark.parametrize(
+    ("config_module", "error_message"),
+    [
+        ('raise ValueError("load failed")\n', "Failed to load configuration module"),
+        ('def init(_app):\n    raise ValueError("init failed")\n', "Failed to initialize configuration module"),
+    ],
+)
+def test_custom_init_failure_names_config_file(tmp_path, config_module, error_message):
+    config_path = tmp_path / "broken"
+    _write_config(config_path, config_module)
+    config_file = config_path / "config.py"
+    config = RailsConfig.from_path(str(config_path))
+
+    with pytest.raises(RuntimeError, match=rf"{error_message} at {re.escape(str(config_file))}") as exc_info:
+        LLMRails(config, llm=FakeLLMModel(responses=[]))
+
+    assert isinstance(exc_info.value.__cause__, ValueError)
