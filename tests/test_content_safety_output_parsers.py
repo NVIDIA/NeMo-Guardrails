@@ -659,6 +659,16 @@ MODEL_LEAKED_TRACE_WITH_REVISED_VERDICT = (
     "User Safety: unsafe"
 )
 
+# A repeat need not start its own line. Every one of these keeps a well-formed line for the other
+# field, so each case is red for the duplicate rather than for a field that is simply missing.
+MODEL_SAME_LINE_DUPLICATE_USER_SAFETY = "User Safety: safe; User Safety: unsafe\nResponse Safety: safe"
+MODEL_SAME_LINE_DUPLICATE_RESPONSE_SAFETY = "User Safety: safe\nResponse Safety: safe; Response Safety: unsafe"
+MODEL_SAME_LINE_DUPLICATE_COMMA_SEPARATED = "User Safety: unsafe, User Safety: safe\nResponse Safety: safe"
+
+# Trailing prose on an otherwise well-formed verdict line is tolerated rather than rejected, so a
+# single stray remark cannot take the rail down. Only a repeated field is treated as a malfunction.
+MODEL_VERDICT_WITH_TRAILING_PROSE = "User Safety: safe (no assistant response present)\nResponse Safety: safe"
+
 # Shaped after a reasoning_content trace captured from the live NIM, which quotes the verdict lines
 # back before restating them as the answer. Stripping has to happen before duplicates are counted.
 MODEL_THINK_TRACE_REPEATING_VERDICTS = (
@@ -789,8 +799,19 @@ class TestNemotronContentSafetyDuplicateVerdicts:
             MODEL_DUPLICATE_RESPONSE_SAFETY,
             MODEL_DUPLICATE_AGREEING_VERDICT,
             MODEL_LEAKED_TRACE_WITH_REVISED_VERDICT,
+            MODEL_SAME_LINE_DUPLICATE_USER_SAFETY,
+            MODEL_SAME_LINE_DUPLICATE_RESPONSE_SAFETY,
+            MODEL_SAME_LINE_DUPLICATE_COMMA_SEPARATED,
         ],
-        ids=["user_safety_twice", "response_safety_twice", "same_verdict_twice", "leaked_trace_revises_verdict"],
+        ids=[
+            "user_safety_twice",
+            "response_safety_twice",
+            "same_verdict_twice",
+            "leaked_trace_revises_verdict",
+            "user_safety_twice_on_one_line",
+            "response_safety_twice_on_one_line",
+            "same_line_comma_separated",
+        ],
     )
     def test_duplicate_verdict_field_raises(self, parser, response):
         """Test either field stated twice raises for both parsers, rather than trusting the first match."""
@@ -809,3 +830,13 @@ class TestNemotronContentSafetyDuplicateVerdicts:
         """Test verdicts repeated inside a stripped reasoning trace do not count toward the duplicate check."""
         is_safe, *_ = parser(MODEL_THINK_TRACE_REPEATING_VERDICTS)
         assert is_safe is expected_safe
+
+    @pytest.mark.parametrize(
+        "parser",
+        [nemotron_content_safety_parse_prompt_safety, nemotron_content_safety_parse_response_safety],
+        ids=["prompt", "response"],
+    )
+    def test_trailing_prose_on_a_verdict_line_is_not_a_duplicate(self, parser):
+        """Test a verdict line carrying trailing prose still parses, since the field is stated only once."""
+        is_safe, *_ = parser(MODEL_VERDICT_WITH_TRAILING_PROSE)
+        assert is_safe is True

@@ -327,11 +327,16 @@ _CONTENT_SAFETY_PARSE_ERROR = "Failed to parse content safety model response"
 _VERDICT_FIELDS = ("User Safety", "Response Safety")
 
 
-def _verdict_pattern(field_name: str) -> str:
-    """Helper function to build the pattern matching one verdict field."""
-    # Anchored to the start of a line, and restricted to the two permitted values, so prose
-    # that merely mentions the field cannot be mistaken for a verdict.
-    return rf"^\s*{re.escape(field_name)}\s*:\s*(safe|unsafe)\b"
+def _verdict_mention_pattern(field_name: str) -> str:
+    """Helper function to build the pattern matching one verdict field anywhere in the text."""
+    return rf"{re.escape(field_name)}\s*:\s*(safe|unsafe)\b"
+
+
+def _verdict_line_pattern(field_name: str) -> str:
+    """Helper function to build the pattern matching one verdict field at the start of a line."""
+    # Anchored to the start of a line, so prose that merely mentions the field cannot be
+    # mistaken for a verdict. Built from the mention pattern so the two cannot drift apart.
+    return rf"^\s*{_verdict_mention_pattern(field_name)}"
 
 
 def _reject_duplicate_verdicts(response: str) -> None:
@@ -345,10 +350,12 @@ def _reject_duplicate_verdicts(response: str) -> None:
             one is being read: a model that states a verdict twice has broken its own output
             contract, so no statement in the response can be trusted. Taking the first match
             would let a later contradicting verdict be silently discarded, which fails open
-            when the discarded one is the unsafe verdict.
+            when the discarded one is the unsafe verdict. A repeat counts wherever it appears,
+            not only where it starts a line, since `User Safety: safe; User Safety: unsafe`
+            contradicts itself just as much as the same two verdicts on separate lines.
     """
     for field_name in _VERDICT_FIELDS:
-        if len(re.findall(_verdict_pattern(field_name), response, re.IGNORECASE | re.MULTILINE)) > 1:
+        if len(re.findall(_verdict_mention_pattern(field_name), response, re.IGNORECASE)) > 1:
             raise ValueError(_CONTENT_SAFETY_PARSE_ERROR)
 
 
@@ -377,7 +384,7 @@ def _extract_safety_verdict(response: str, field_name: str) -> str:
     # restating them: counting duplicates first would reject every reasoning-enabled response.
     _reject_duplicate_verdicts(cleaned_response)
 
-    match = re.search(_verdict_pattern(field_name), cleaned_response, re.IGNORECASE | re.MULTILINE)
+    match = re.search(_verdict_line_pattern(field_name), cleaned_response, re.IGNORECASE | re.MULTILINE)
     if match is None:
         raise ValueError(_CONTENT_SAFETY_PARSE_ERROR)
 
