@@ -324,6 +324,33 @@ _THINK_OPEN_TAG = "<think>"
 
 _CONTENT_SAFETY_PARSE_ERROR = "Failed to parse content safety model response"
 
+_VERDICT_FIELDS = ("User Safety", "Response Safety")
+
+
+def _verdict_pattern(field_name: str) -> str:
+    """Helper function to build the pattern matching one verdict field."""
+    # Anchored to the start of a line, and restricted to the two permitted values, so prose
+    # that merely mentions the field cannot be mistaken for a verdict.
+    return rf"^\s*{re.escape(field_name)}\s*:\s*(safe|unsafe)\b"
+
+
+def _reject_duplicate_verdicts(response: str) -> None:
+    """Helper function to reject a response that states either verdict field more than once.
+
+    Args:
+        response: The model response text, with any reasoning trace already stripped.
+
+    Raises:
+        ValueError: If either field appears more than once. Both fields are checked whichever
+            one is being read: a model that states a verdict twice has broken its own output
+            contract, so no statement in the response can be trusted. Taking the first match
+            would let a later contradicting verdict be silently discarded, which fails open
+            when the discarded one is the unsafe verdict.
+    """
+    for field_name in _VERDICT_FIELDS:
+        if len(re.findall(_verdict_pattern(field_name), response, re.IGNORECASE | re.MULTILINE)) > 1:
+            raise ValueError(_CONTENT_SAFETY_PARSE_ERROR)
+
 
 def _extract_safety_verdict(response: str, field_name: str) -> str:
     """Helper function to extract the safe/unsafe verdict for a given field.
@@ -336,8 +363,8 @@ def _extract_safety_verdict(response: str, field_name: str) -> str:
         The extracted verdict, either "safe" or "unsafe".
 
     Raises:
-        ValueError: If the field is absent, carries a value other than safe or unsafe, or the
-            reasoning trace is unterminated.
+        ValueError: If the field is absent, carries a value other than safe or unsafe, is
+            stated more than once, or the reasoning trace is unterminated.
     """
     cleaned_response = _strip_think_tags(response)
 
@@ -346,10 +373,11 @@ def _extract_safety_verdict(response: str, field_name: str) -> str:
     if _THINK_OPEN_TAG in cleaned_response:
         raise ValueError(_CONTENT_SAFETY_PARSE_ERROR)
 
-    # Anchored to the start of a line, and restricted to the two permitted values, so prose
-    # that merely mentions the field cannot be mistaken for a verdict.
-    pattern = rf"^\s*{re.escape(field_name)}\s*:\s*(safe|unsafe)\b"
-    match = re.search(pattern, cleaned_response, re.IGNORECASE | re.MULTILINE)
+    # Checked after the strip, because a reasoning trace quotes the verdict lines back before
+    # restating them: counting duplicates first would reject every reasoning-enabled response.
+    _reject_duplicate_verdicts(cleaned_response)
+
+    match = re.search(_verdict_pattern(field_name), cleaned_response, re.IGNORECASE | re.MULTILINE)
     if match is None:
         raise ValueError(_CONTENT_SAFETY_PARSE_ERROR)
 
@@ -393,7 +421,8 @@ def nemotron_content_safety_parse_prompt_safety(response: str) -> Sequence[Union
         safety categories, if any.
 
     Raises:
-        ValueError: If the model response cannot be parsed as a content safety verdict.
+        ValueError: If the model response cannot be parsed as a content safety verdict, including
+            when either verdict field is stated more than once.
     """
     if _extract_safety_verdict(response, "User Safety") == "safe":
         return [True]
@@ -419,7 +448,8 @@ def nemotron_content_safety_parse_response_safety(
 
     Raises:
         ValueError: If the model response cannot be parsed as a content safety verdict. A response with no
-            `Response Safety` line is unparseable rather than safe.
+            `Response Safety` line is unparseable rather than safe, as is one that states either verdict
+            field more than once.
     """
     if _extract_safety_verdict(response, "Response Safety") == "safe":
         return [True]

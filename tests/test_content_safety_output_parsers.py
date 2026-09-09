@@ -648,6 +648,32 @@ MODEL_EXCHANGE_ALL_UNSAFE = (
 
 ARSON_CATEGORIES = ["Criminal Planning/Confessions", "Violence"]
 
+MODEL_DUPLICATE_USER_SAFETY = "User Safety: safe\nUser Safety: unsafe\nResponse Safety: safe"
+MODEL_DUPLICATE_RESPONSE_SAFETY = "User Safety: safe\nResponse Safety: safe\nResponse Safety: unsafe"
+MODEL_DUPLICATE_AGREEING_VERDICT = "User Safety: safe\nUser Safety: safe\nResponse Safety: safe"
+MODEL_LEAKED_TRACE_WITH_REVISED_VERDICT = (
+    "We need to decide.\n"
+    "Response Safety: safe\n"
+    "On reflection the assistant supplied arson instructions.\n"
+    "Response Safety: unsafe\n"
+    "User Safety: unsafe"
+)
+
+# Shaped after a reasoning_content trace captured from the live NIM, which quotes the verdict lines
+# back before restating them as the answer. Stripping has to happen before duplicates are counted.
+MODEL_THINK_TRACE_REPEATING_VERDICTS = (
+    "<think>\n"
+    "We need to output:\n\n"
+    "User Safety: unsafe\n"
+    "Response Safety: safe\n\n"
+    "Thus output exactly:\n\n"
+    "User Safety: unsafe\n"
+    "Response Safety: safe\n\n"
+    "No extra text.\n"
+    "</think>\n"
+    "User Safety: unsafe\nResponse Safety: safe"
+)
+
 
 class TestNemotronContentSafetyParsePromptSafety:
     """Test the nemotron_content_safety_parse_prompt_safety output parser."""
@@ -746,3 +772,40 @@ class TestNemotronContentSafetyParseResponseSafety:
         """Test an empty response raises rather than silently blocking."""
         with pytest.raises(ValueError, match="Failed to parse content safety model response"):
             nemotron_content_safety_parse_response_safety("")
+
+
+class TestNemotronContentSafetyDuplicateVerdicts:
+    """A verdict field stated more than once means the model contradicted itself and cannot be trusted."""
+
+    @pytest.mark.parametrize(
+        "parser",
+        [nemotron_content_safety_parse_prompt_safety, nemotron_content_safety_parse_response_safety],
+        ids=["prompt", "response"],
+    )
+    @pytest.mark.parametrize(
+        "response",
+        [
+            MODEL_DUPLICATE_USER_SAFETY,
+            MODEL_DUPLICATE_RESPONSE_SAFETY,
+            MODEL_DUPLICATE_AGREEING_VERDICT,
+            MODEL_LEAKED_TRACE_WITH_REVISED_VERDICT,
+        ],
+        ids=["user_safety_twice", "response_safety_twice", "same_verdict_twice", "leaked_trace_revises_verdict"],
+    )
+    def test_duplicate_verdict_field_raises(self, parser, response):
+        """Test either field stated twice raises for both parsers, rather than trusting the first match."""
+        with pytest.raises(ValueError, match="Failed to parse content safety model response"):
+            parser(response)
+
+    @pytest.mark.parametrize(
+        "parser,expected_safe",
+        [
+            (nemotron_content_safety_parse_prompt_safety, False),
+            (nemotron_content_safety_parse_response_safety, True),
+        ],
+        ids=["prompt", "response"],
+    )
+    def test_verdicts_quoted_inside_a_think_trace_are_not_duplicates(self, parser, expected_safe):
+        """Test verdicts repeated inside a stripped reasoning trace do not count toward the duplicate check."""
+        is_safe, *_ = parser(MODEL_THINK_TRACE_REPEATING_VERDICTS)
+        assert is_safe is expected_safe
