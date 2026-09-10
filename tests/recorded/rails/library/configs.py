@@ -26,6 +26,13 @@ INJECTION_CONFIG = RailsConfigSource.from_path(CONFIGS_DIR, "injection_detection
 INJECTION_OMIT_CONFIG = RailsConfigSource.from_path(CONFIGS_DIR, "injection_detection_omit")
 NIM_CONTENT_SAFETY_CONFIG = RailsConfigSource.from_path(CONFIGS_DIR, "nim_content_safety")
 CONTENT_SAFETY_INVALID_MODEL_CONFIG = RailsConfigSource.from_path(CONFIGS_DIR, "nim_content_safety_invalid_model")
+NIM_NEMOTRON_35_CONTENT_SAFETY_CONFIG = RailsConfigSource.from_path(CONFIGS_DIR, "nim_nemotron_35_content_safety")
+NIM_NEMOTRON_35_CONTENT_SAFETY_THINKING_CONFIG = RailsConfigSource.from_path(
+    CONFIGS_DIR, "nim_nemotron_35_content_safety_thinking"
+)
+NIM_NEMOTRON_35_CONTENT_SAFETY_TRUNCATING_CONFIG = RailsConfigSource.from_path(
+    CONFIGS_DIR, "nim_nemotron_35_content_safety_truncating"
+)
 NIM_TOPIC_CONTROL_CONFIG = RailsConfigSource.from_path(CONFIGS_DIR, "nim_topic_control")
 NIM_JAILBREAK_CONFIG = RailsConfigSource.from_path(CONFIGS_DIR, "nim_jailbreak")
 OPENAI_SELF_CHECK_CONFIG = RailsConfigSource.from_path(CONFIGS_DIR, "openai_self_check")
