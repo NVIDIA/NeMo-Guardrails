@@ -1258,6 +1258,11 @@ class RailsConfig(BaseModel):
 
         Supports loading a from a single file, or from a directory.
         """
+        if "," in config_path or config_path != config_path.strip():
+            raise ValueError(
+                f"Invalid config path {config_path!r}. Paths cannot contain commas or begin or end with whitespace."
+            )
+
         # If the config path is a file, we load the YAML content.
         # Otherwise, if it's a folder, we iterate through all files.
         if os.path.isfile(config_path) and config_path.endswith((".yaml", ".yml")):
