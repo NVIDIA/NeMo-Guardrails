@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from nemoguardrails import RailsConfig
 from nemoguardrails.actions import action
 from nemoguardrails.actions.actions import ActionResult
-from nemoguardrails.library.regex.actions import detect_regex_pattern
+from nemoguardrails.library.regex.actions import detect_regex_pattern, detect_tool_regex_pattern
 from tests.utils import TestChat
 
 
@@ -694,3 +694,108 @@ def test_regex_output_verdict_blocks_on_match():
 
     assert matched.is_blocked is True
     assert no_match.is_blocked is False
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_detect_tool_regex_pattern_rejects_invalid_source():
+    config = RailsConfig.from_content(yaml_content="models: []", colang_content="")
+
+    with pytest.raises(ValueError, match="source must be one of"):
+        await detect_tool_regex_pattern(source="bogus", tool_name="run_sql", text="hi", config=config)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_detect_tool_regex_pattern_allows_when_regex_detection_section_absent():
+    """No `regex_detection` section at all: fails open.
+
+    `RailsConfig` always populates `regex_detection` via a Pydantic default_factory, so
+    this hits the same "no pattern group for this tool" branch as an unconfigured tool
+    name. There is no separate `regex_config is None` branch, since it would be
+    unreachable through any real config.
+    """
+    config = RailsConfig.from_content(yaml_content="models: []", colang_content="")
+
+    result = await detect_tool_regex_pattern(
+        source="tool_output", tool_name="run_sql", text="DROP TABLE users", config=config
+    )
+
+    assert result.is_blocked is False
+    assert result.metadata["is_match"] is False
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_detect_tool_regex_pattern_allows_unconfigured_tool():
+    """A tool name with no configured pattern group fails open, rather than refusing.
+
+    This is the known gap load-time validation would close: a typo'd tool name in
+    `per_tool` silently never blocks anything, instead of failing config load.
+    """
+    config = RailsConfig.from_content(
+        yaml_content="""
+            models: []
+            rails:
+              config:
+                regex_detection:
+                  tool_output:
+                    run_sql:
+                      patterns:
+                        - "DROP\\\\s+TABLE"
+        """,
+        colang_content="",
+    )
+
+    result = await detect_tool_regex_pattern(
+        source="tool_output", tool_name="other_tool", text="DROP TABLE users", config=config
+    )
+
+    assert result.is_blocked is False
+    assert result.metadata["is_match"] is False
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_detect_tool_regex_pattern_allows_when_no_patterns_configured_for_tool():
+    config = RailsConfig.from_content(
+        yaml_content="""
+            models: []
+            rails:
+              config:
+                regex_detection:
+                  tool_output:
+                    run_sql: {}
+        """,
+        colang_content="",
+    )
+
+    result = await detect_tool_regex_pattern(
+        source="tool_output", tool_name="run_sql", text="DROP TABLE users", config=config
+    )
+
+    assert result.is_blocked is False
+    assert result.metadata["is_match"] is False
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_detect_tool_regex_pattern_allows_empty_text():
+    config = RailsConfig.from_content(
+        yaml_content="""
+            models: []
+            rails:
+              config:
+                regex_detection:
+                  tool_output:
+                    run_sql:
+                      patterns:
+                        - "DROP\\\\s+TABLE"
+        """,
+        colang_content="",
+    )
+
+    result = await detect_tool_regex_pattern(source="tool_output", tool_name="run_sql", text="", config=config)
+
+    assert result.is_blocked is False
+    assert result.metadata["is_match"] is False
