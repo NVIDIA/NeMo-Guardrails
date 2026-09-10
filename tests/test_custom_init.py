@@ -117,3 +117,19 @@ def test_custom_init_failure_names_config_file(tmp_path, config_module, error_me
         LLMRails(config, llm=FakeLLMModel(responses=[]))
 
     assert isinstance(exc_info.value.__cause__, ValueError)
+
+
+def test_custom_init_failure_when_module_loader_is_unavailable(tmp_path, monkeypatch):
+    config_path = tmp_path / "broken"
+    _write_config(config_path, "")
+    config_file = config_path / "config.py"
+    config = RailsConfig.from_path(str(config_path))
+    monkeypatch.setattr("nemoguardrails.rails.llm.llmrails.importlib.util.spec_from_file_location", lambda *_args: None)
+
+    with pytest.raises(
+        RuntimeError,
+        match=rf"Failed to load configuration module at {re.escape(str(config_file))}",
+    ) as exc_info:
+        LLMRails(config, llm=FakeLLMModel(responses=[]))
+
+    assert isinstance(exc_info.value.__cause__, ImportError)
