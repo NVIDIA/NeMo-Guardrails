@@ -18,6 +18,7 @@ import re
 from pathlib import Path
 
 import pytest
+import yaml
 
 from nemoguardrails import LLMRails, RailsConfig
 from nemoguardrails.testing.fake_model import FakeLLMModel
@@ -91,7 +92,10 @@ def init(app):
     _write_config(
         importing_config_path,
         "",
-        f'models: []\nimport_paths:\n  - "{imported_config_path}"\n',
+        yaml.safe_dump(
+            {"models": [], "import_paths": [str(imported_config_path)]},
+            sort_keys=False,
+        ),
     )
 
     config = RailsConfig.from_path(str(importing_config_path)) + RailsConfig.from_path(str(imported_config_path))
