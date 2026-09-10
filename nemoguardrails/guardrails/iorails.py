@@ -741,6 +741,8 @@ class IORails(BaseGuardrails):
             output_parallel=config.rails.output.parallel or False,
             tool_call_flows=config.rails.tool_output.flows,
             tool_result_flows=config.rails.tool_input.flows,
+            per_tool_call_flows=config.rails.tool_output.per_tool,
+            per_tool_result_flows=config.rails.tool_input.per_tool,
             tracer=self._tracer,
             content_capture_enabled=self._content_capture_enabled,
         )

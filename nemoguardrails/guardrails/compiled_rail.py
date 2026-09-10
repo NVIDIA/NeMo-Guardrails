@@ -24,6 +24,7 @@ the returned ``RailOutcome`` is passed back to the caller unchanged.
 
 from __future__ import annotations
 
+import contextvars
 import importlib.metadata
 import inspect
 import logging
@@ -155,12 +156,21 @@ class _ContextParameter:
 
 
 # The conversation variables IORails can supply to explicit context bindings.
-_CONTEXT_KEYS = ("user_message", "bot_message")
+_CONTEXT_KEYS = ("user_message", "bot_message", "tool_name", "tool_call", "tool_result")
+
+# Per-tool-call context, set by RailsManager's per-tool dispatch around one `execute()` call at a time.
+tool_context_var: contextvars.ContextVar[Optional[Mapping[str, str]]] = contextvars.ContextVar(
+    "tool_context", default=None
+)
 
 
 def _request_context(messages: LLMMessages, bot_response: Optional[str]) -> dict[str, str]:
     """Build the conversation variables for one request."""
-    return {"user_message": last_user_content(messages), "bot_message": bot_response or ""}
+    return {
+        "user_message": last_user_content(messages),
+        "bot_message": bot_response or "",
+        **(tool_context_var.get() or {}),
+    }
 
 
 class CompiledRail:

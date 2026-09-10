@@ -445,6 +445,10 @@ class ToolOutputRails(BaseModel):
         default_factory=list,
         description="The names of all the flows that implement tool output rails.",
     )
+    per_tool: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="Per-tool flows, keyed by tool name. Supplements the global `flows`, which run for every tool call.",
+    )
     parallel: Optional[bool] = Field(
         default=False,
         description="If True, the tool output rails are executed in parallel.",
@@ -461,6 +465,10 @@ class ToolInputRails(BaseModel):
     flows: List[str] = Field(
         default_factory=list,
         description="The names of all the flows that implement tool input rails.",
+    )
+    per_tool: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="Per-tool flows, keyed by tool name. Supplements the global `flows`, which run for every tool result.",
     )
     parallel: Optional[bool] = Field(
         default=False,
@@ -1507,6 +1515,23 @@ def _get_flow_model(flow_text) -> Optional[str]:
 
     _, parameters = parse_configured_surface(flow_text)
     return parameters.get("model")
+
+
+ARGUMENT_PREFIX = "$argument="
+
+
+def _get_flow_argument(flow_text) -> Optional[str]:
+    """Helper to return the `$argument=` parameter from a flow definition.
+
+    TODO: only a single argument name is supported today; add delimiter-separated
+    multi-argument support (e.g. `$argument=a,b`) as a follow-up.
+    """
+    if ARGUMENT_PREFIX not in flow_text:
+        return None
+    from nemoguardrails.manifests import parse_configured_surface
+
+    _, parameters = parse_configured_surface(flow_text)
+    return parameters.get("argument")
 
 
 def _validate_self_check_rail_prompts(
